@@ -1,11 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
   <title>Recommander</title>
-  <!-- L'idée : trois choses qu'on a déjà prises tiennent ensemble et laissent
-       entre elles un creux exactement à leur taille. La quatrième, celle qui
-       irait dedans, est simplement posée à côté. Personne ne l'a demandée,
-       aucune flèche ne l'y pousse : le voisinage seul la propose. -->
-  <rect x="32" y="96" width="88" height="88" fill="#C8BC9E"/>
-  <rect x="144" y="96" width="88" height="88" fill="#C8BC9E"/>
-  <rect x="32" y="208" width="88" height="88" fill="#C8BC9E"/>
-  <rect x="264" y="200" width="104" height="104" fill="#FFCE00" stroke="none"/>
+  <!-- L'idée : trois choses déjà prises laissent entre elles une place vide,
+       exactement à leur taille. La quatrième, celle qui irait dedans, est
+       posée juste à côté. Personne ne l'a demandée, aucune flèche ne l'y
+       pousse : recommander ne dessine pas ce qu'on a, ça dessine le creux. -->
+  <rect x="32" y="96" width="96" height="96" fill="#C8BC9E" stroke="none"/>
+  <rect x="144" y="96" width="96" height="96" fill="#C8BC9E" stroke="none"/>
+  <rect x="32" y="208" width="96" height="96" fill="#C8BC9E" stroke="none"/>
+  <rect x="152" y="216" width="80" height="80"/>
+  <rect x="272" y="208" width="96" height="96" fill="#FFCE00" stroke="none"/>
 </svg>

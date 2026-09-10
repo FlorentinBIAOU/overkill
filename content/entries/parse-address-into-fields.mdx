@@ -1,0 +1,159 @@
+---
+id: parse-address-into-fields
+family: extract
+status: published
+verdict: N1
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Découper une adresse en champs"
+  en: "Parse an address into fields"
+
+need:
+  fr: "Découper une adresse saisie sur une ligne en numéro, rue, complément, code postal et ville."
+  en: "Split an address typed as a single line into number, street, complement, postcode and town."
+
+scenario:
+  fr: "On voit passer un appel de modèle généraliste sur chaque adresse saisie dans un formulaire, pour en tirer un numéro, une rue, un code postal et une ville. La forme d'une adresse française est pourtant fixée par la convention postale : cinq chiffres suivis d'un nom de commune coupent la ligne en deux, sans qu'aucun modèle intervienne. La question n'est donc pas de savoir si un modèle sait découper une adresse, c'est de savoir ce qui, dans vos adresses à vous, casse la règle. La réponse tient le plus souvent en un mot : le complément."
+  en: "A common pattern is to send every address typed into a form to a general-purpose model, to get back a number, a street, a postcode and a town. The shape of a French address is fixed by postal convention, though: five digits followed by a town name cut the line in two, with no model involved. So the question is not whether a model can split an address, it is what breaks the rule in your own data. The answer is usually one thing: the complement."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Ancrage sur le code postal et dictionnaire de types de voie"
+      en: "Postcode anchor and street-type dictionary"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr: ["Aucun périmètre spécifique ajouté : l'adresse ne quitte pas votre infrastructure"]
+        en: ["No specific scope added: the address never leaves your infrastructure"]
+    code:
+      python: snippets/parse-address-into-fields/n0.py
+      javascript: snippets/parse-address-into-fields/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Le complément d'adresse n'a pas d'ancre à lui : dans « 8 rue des Lilas Bâtiment C Appartement 12, 75011 Paris », le bâtiment et l'appartement finissent dans le nom de la rue, et le même complément écrit devant prend la place du numéro. Hors de France, l'ancre elle-même tombe : « Hauptstrasse 5, 10115 Berlin » laisse le numéro dans la rue, et « 42 Rowan Street, Bristol BS1 4TQ », sans suite de cinq chiffres, ressort sans code postal ni ville."
+      en: "A complement has no anchor of its own: in 8 rue des Lilas Bâtiment C Appartement 12, 75011 Paris, the building and the flat end up inside the street name, and the same complement written first takes the house number's place. Outside France the anchor itself fails: Hauptstrasse 5, 10115 Berlin leaves the number inside the street, and 42 Rowan Street, Bristol BS1 4TQ, with no run of five digits, comes back with neither postcode nor town."
+    escalate_when:
+      fr: "Vos formulaires reçoivent des compléments — bâtiment, escalier, résidence, appartement — et vous les retrouvez collés au nom de la rue dans vos exports."
+      en: "Your forms are taking complements — building, staircase, residence, flat — and you find them glued to the street name in your exports."
+
+  - level: N1
+    available: true
+    name:
+      fr: "Étiquetage des jetons par régression logistique sur le contexte"
+      en: "Token labelling with a logistic regression on context"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Traitement de données personnelles sur votre infrastructure"
+          - "Le jeu d'entraînement est étiqueté à la main : constitué d'adresses réelles, il entre dans votre registre des traitements si vous en tenez un"
+        en:
+          - "Processing of personal data on your own infrastructure"
+          - "The training set is hand-tagged: built from real addresses, it belongs in your record of processing activities, where you keep one"
+    code:
+      python: snippets/parse-address-into-fields/n1.py
+      javascript: snippets/parse-address-into-fields/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Le modèle ne connaît que les conventions qu'on lui a étiquetées, et toutes les adresses de son jeu d'entraînement placent le numéro devant et cinq chiffres avant la ville. Sur « Hauptstrasse 5, 10115 Berlin », il rend une rue vide et un numéro qui vaut 5 ; sur « 42 Rowan Street, Bristol BS1 4TQ », ni code postal ni ville — et comme rien ne lui permet de dire qu'il n'a jamais vu ça, il étiquette quand même."
+      en: "The model knows only the conventions it was tagged on, and every address in its training set puts the number first and five digits before the town. On Hauptstrasse 5, 10115 Berlin it returns an empty street and a house number of 5; on 42 Rowan Street, Bristol BS1 4TQ, neither postcode nor town — and since nothing lets it say it has never seen this, it labels the tokens anyway."
+    escalate_when:
+      fr: "Des adresses étrangères arrivent, et couvrir chaque nouveau pays demanderait sa propre campagne d'étiquetage."
+      en: "Foreign addresses start arriving, and covering each new country would take its own round of hand tagging."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Analyseur d'adresses statistique auto-hébergé (libpostal)"
+      en: "Self-hosted statistical address parser (libpostal)"
+    cost: faible
+    latency: "~10 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Traitement de données personnelles sur votre infrastructure, dans un service permanent"
+          - "Aucun transfert à un tiers : le modèle et ses fichiers de données sont installés sur votre machine"
+        en:
+          - "Processing of personal data on your own infrastructure, inside a permanent service"
+          - "No transfer to a third party: the model and its data files are installed on your own machine"
+    code:
+      python: snippets/parse-address-into-fields/n2.py
+      javascript: snippets/parse-address-into-fields/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Il découpe, il ne vérifie pas. Une ligne qui n'est pas une adresse — « the meeting is at ten in room four » — ressort avec un numéro et une rue, et « 8 rue des Lilas, 75011 Lyon », qui pose un code postal parisien sur une autre ville, ressort en champs propres. L'analyseur ne rend ni score ni refus : rien, dans le code, ne distingue ce résultat d'un bon."
+      en: "It splits, it does not check. A line that is not an address at all — the meeting is at ten in room four — comes back with a house number and a street, and 8 rue des Lilas, 75011 Lyon, which puts a Paris postcode on another town, comes back as clean fields. The parser returns neither a score nor a refusal: nothing in the code tells that result from a good one."
+    escalate_when:
+      fr: "Ce que vous recevez n'est plus une ligne d'adresse mais du texte libre — une signature de courriel, un message où l'adresse est noyée dans une phrase — et il n'y a plus de ligne à découper."
+      en: "What you receive is no longer an address line but free text — an email signature, a message where the address sits inside a sentence — and there is no line left to split."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Découpage structuré par appel à un modèle généraliste"
+      en: "Structured splitting through a general-purpose model"
+    cost: élevé
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: high
+      regulatory:
+        fr:
+          - "Transfert de données personnelles à un sous-traitant, avec l'encadrement contractuel que cela suppose"
+          - "Localisation du traitement à vérifier auprès du fournisseur"
+          - "Ne vous dispense pas de vos propres obligations d'information et de minimisation"
+        en:
+          - "Transfer of personal data to a processor, with the contractual framing that implies"
+          - "Processing location to be confirmed with the provider"
+          - "Does not excuse you from your own duties of transparency and minimisation"
+    code:
+      python: snippets/parse-address-into-fields/n3.py
+      javascript: snippets/parse-address-into-fields/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "La garde de l'extrait vérifie d'où vient une valeur, pas si elle est à sa place. Sur « 12 rue de Lille, 59000 Lille », le modèle intervertit la rue et la ville ; les deux valeurs ayant bien été copiées de l'adresse, les deux passent le contrôle, et la réponse revient proprement structurée et fausse."
+      en: "The snippet's guard proves where a value came from, not that it belongs in that field. On 12 rue de Lille, 59000 Lille the model swaps the street and the town; both values were indeed copied from the address, so both pass the check, and the answer comes back neatly structured and wrong."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus."
+      en: "There is no rung above this one."
+
+verdict_rationale:
+  fr: "N1 pour une raison précise : le complément. Bâtiment, escalier, résidence, appartement, c'est ce que vos formulaires reçoivent vraiment, et N0 le colle dans le nom de la rue sans jamais le signaler. Le prix de N1 est un jeu de quelques dizaines d'adresses étiquetées à la main, qui reste chez vous et se mesure ; montez à N2 le jour où des adresses étrangères arrivent, parce qu'élargir l'étiquetage pays par pays coûte alors plus cher qu'installer un analyseur déjà entraîné sur le monde entier."
+  en: "N1, for one precise reason: the complement. Building, staircase, residence, flat — that is what your forms actually receive, and N0 buries it in the street name without ever flagging it. The price of N1 is a few dozen hand-tagged addresses, which stay on your infrastructure and can be measured; move up to N2 the day foreign addresses arrive, because widening the tagging country by country then costs more than installing a parser already trained on the whole world."
+
+further_reading:
+  - label: "libpostal — analyseur d'adresses international, entraîné sur données ouvertes"
+    url: "https://github.com/openvenues/libpostal"
+  - label: "Base Adresse Nationale — API de recherche et de validation d'adresses françaises"
+    url: "https://adresse.data.gouv.fr/outils/api-doc/adresse"
+  - label: "Michael Tandy — Falsehoods programmers believe about addresses"
+    url: "https://www.mjt.me.uk/posts/falsehoods-programmers-believe-about-addresses/"
+  - label: "OpenStreetMap — clé addr, le vocabulaire des composants d'adresse"
+    url: "https://wiki.openstreetmap.org/wiki/Key:addr"
+
+sources: []
+---

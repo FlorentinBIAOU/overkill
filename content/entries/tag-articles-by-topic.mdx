@@ -1,0 +1,155 @@
+---
+id: tag-articles-by-topic
+family: classify-route
+status: published
+verdict: N1
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Étiqueter des articles par thème"
+  en: "Tag articles by topic"
+
+need:
+  fr: "Attribuer à chaque article les thèmes qu'il traite, pris dans la liste de thèmes de la maison."
+  en: "Attach to every article the topics it covers, taken from the newsroom's own list."
+
+scenario:
+  fr: "On voit passer chaque article publié dans un appel de modèle généraliste, la liste des thèmes maison recopiée dans l'invite, pour récupérer deux ou trois étiquettes. Le fonds, lui, est déjà là : des années d'articles que la rédaction a étiquetés à la main, et dont personne ne se sert. La question n'est pas de savoir si un modèle sait poser une étiquette, c'est de savoir pourquoi on loue tous les mois une connaissance qu'on possède déjà."
+  en: "A common pattern is to push every published article through a general-purpose model call, the in-house topic list pasted into the prompt, and take back two or three tags. Meanwhile the archive sits right there: years of articles the newsroom tagged by hand, which nobody uses. The question is not whether a model can attach a label, it is why you would rent every month a knowledge you already own."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Vocabulaire contrôlé, correspondance de termes après lemmatisation"
+      en: "Controlled vocabulary, term matching after lemmatisation"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr: ["Aucun périmètre spécifique ajouté : l'article et la taxonomie ne quittent pas votre infrastructure"]
+        en: ["No specific scope added: the article and the taxonomy never leave your infrastructure"]
+    code:
+      python: snippets/tag-articles-by-topic/n0.py
+      javascript: snippets/tag-articles-by-topic/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Un thème traité de bout en bout sans jamais être nommé. « L'équipe ne se retrouve au bureau que le mardi, les réunions se tiennent en visioconférence » : c'est du télétravail du premier au dernier mot, aucun terme de la liste n'y figure, et l'article ressort sans étiquette. La seule réparation est d'ajouter un terme après chaque article manqué, indéfiniment."
+      en: "A topic covered from end to end without ever being named. “The team is only in the office on Tuesdays, meetings are held over video”: that is remote work from the first word to the last, not one term of the list appears in it, and the article comes back untagged. The only repair is to add a term after each missed article, for ever."
+    escalate_when:
+      fr: "Votre liste de termes s'allonge à chaque relecture éditoriale, parce que des articles ressortent vides alors qu'ils traitent bien d'un thème."
+      en: "Your term list grows at every editorial review, because articles keep coming back empty although they plainly cover a topic."
+
+  - level: N1
+    available: true
+    name:
+      fr: "TF-IDF et classification multi-étiquette un contre tous"
+      en: "TF-IDF features and one-versus-rest multi-label classification"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr: ["Aucun périmètre spécifique ajouté : le corpus étiqueté comme le modèle entraîné restent sur votre infrastructure"]
+        en: ["No specific scope added: both the labelled corpus and the trained model stay on your infrastructure"]
+    code:
+      python: snippets/tag-articles-by-topic/n1.py
+      javascript: snippets/tag-articles-by-topic/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Un thème que personne n'a étiqueté n'existe pas pour le modèle. L'article sur le guichet de subvention de la région ressort vide, et baisser le seuil pour le rattraper ne fait pas apparaître le thème manquant : il classe l'article en télétravail. Chaque thème ajouté à la taxonomie redemande une passe d'étiquetage à la main sur tout le fonds."
+      en: "A topic nobody labelled does not exist for the model. The article about a regional subsidy desk comes back empty, and lowering the threshold to catch it does not surface the missing topic: it files the article under remote work. Every topic added to the taxonomy asks for another hand-labelling pass over the whole archive."
+    escalate_when:
+      fr: "La rédaction ouvre une rubrique et attend des étiquettes le jour même, avant qu'un seul article n'ait été étiqueté à la main."
+      en: "The newsroom opens a new section and expects tags the same day, before a single article has been labelled by hand."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Similarité d'embeddings avec la description des thèmes, sans exemple étiqueté"
+      en: "Embedding similarity against the topic descriptions, with no labelled example"
+    cost: faible
+    latency: "~100 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Traitement sur votre infrastructure : ni l'article ni les descriptions de thèmes n'en sortent"
+          - "Les poids du modèle d'encodage viennent d'un tiers, avec la licence et la provenance des données d'entraînement que cela suppose"
+        en:
+          - "Processing on your own infrastructure: neither the article nor the topic descriptions leave it"
+          - "The encoder weights come from a third party, with the licence and training-data provenance that implies"
+    code:
+      python: snippets/tag-articles-by-topic/n2.py
+      javascript: snippets/tag-articles-by-topic/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le score est un cosinus, pas une probabilité, et il ne veut pas dire la même chose d'un thème à l'autre. Sur un article de quatre phrases de cybersécurité qui se termine par une ligne sur l'amende non déductible de l'impôt, la fiscalité passe sous le seuil ; le seuil qui la rattrape fait entrer aussi le télétravail, dont l'article ne parle jamais. Aucun seuil ne sépare les deux, et en régler un demande des articles déjà étiquetés à la main : le corpus que ce barreau devait épargner."
+      en: "The score is a cosine, not a probability, and it does not mean the same thing from one topic to the next. On an article that spends four sentences on computer security and closes with one line about a fine not being tax deductible, the tax topic falls below the threshold; the threshold that brings it back also lets in remote work, which the article never mentions. No threshold separates the two, and setting one calls for articles already tagged by hand: the very corpus this rung was meant to save."
+    escalate_when:
+      fr: "Aucun réglage du seuil ne vous donne à la fois les thèmes secondaires réels et le silence sur les thèmes absents, et vos relecteurs retirent plus d'étiquettes qu'ils n'en gardent."
+      en: "No setting of the threshold gives you both the real secondary topics and silence on the absent ones, and your reviewers remove more tags than they keep."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Étiquetage par appel à un modèle généraliste"
+      en: "Tagging through a general-purpose model call"
+    cost: élevé
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: high
+      regulatory:
+        fr:
+          - "Transfert du texte de l'article à un sous-traitant, avec l'encadrement contractuel que cela suppose"
+          - "Localisation du traitement à vérifier auprès du fournisseur"
+          - "Ne vous dispense pas des engagements de confidentialité pris sur les articles non encore publiés"
+        en:
+          - "Transfer of the article text to a processor, with the contractual framing that implies"
+          - "Processing location to be confirmed with the provider"
+          - "Does not excuse you from confidentiality commitments made on articles not yet published"
+    code:
+      python: snippets/tag-articles-by-topic/n3.py
+      javascript: snippets/tag-articles-by-topic/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le modèle peut répondre n'importe quoi, « Bien sûr ! Voici les thèmes de cet article : » là où du JSON était demandé. Or la liste vide est ici une réponse légitime, puisque des articles ne portent aucun thème : avaler l'erreur rendrait la panne indiscernable du résultat correct, et les articles tomberaient sans bruit de toutes les pages de rubrique. L'extrait lève une erreur, et l'appelant décide."
+      en: "The model can answer anything, prose where JSON was asked for. An empty list is a legitimate answer here, since plenty of articles carry no topic at all: swallowing the error would make a failure indistinguishable from a correct result, and articles would drop out of every section page without a sound. The snippet raises instead, and the caller decides."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus."
+      en: "There is no rung above this one."
+
+verdict_rationale:
+  fr: "N1 est le premier barreau qui voit des sujets plutôt que des mots : l'article de télétravail qui n'emploie aucun terme de la liste, et que le vocabulaire contrôlé laisse filer, il l'étiquette, et le test le mesure. Ce qu'il coûte n'est pas le code, qui tient sur une page, mais quelques centaines d'articles étiquetés à la main — qu'une rédaction qui étiquette depuis des années possède déjà. N2 lèverait la vraie limite de N1, l'ajout d'un thème sans corpus derrière lui, mais au prix d'un seuil qu'on ne peut plus calibrer et d'un service à tenir chaud : montez-y le jour où la taxonomie bouge plus vite que vous n'étiquetez."
+  en: "N1 is the first rung that sees subjects rather than words: the remote-work article that uses none of the listed terms, and slips past the controlled vocabulary, gets tagged here, and the test measures it. What it costs is not the code, which fits on a page, but a few hundred hand-tagged articles — which a newsroom that has been tagging for years already owns. N2 would lift N1's real limit, adding a topic with no corpus behind it, but it charges a threshold you can no longer calibrate and a service to keep warm: climb there the day your taxonomy moves faster than you can label."
+
+further_reading:
+  - label: "W3C — SKOS Reference, modéliser un vocabulaire contrôlé et ses termes"
+    url: "https://www.w3.org/TR/skos-reference/"
+  - label: "scikit-learn — Multiclass and multioutput algorithms, dont la classification un contre tous et multi-étiquette"
+    url: "https://scikit-learn.org/stable/modules/multiclass.html"
+  - label: "Introduction to Information Retrieval — Vector space classification, le fondement de TF-IDF appliqué à la classification"
+    url: "https://nlp.stanford.edu/IR-book/html/htmledition/vector-space-classification-1.html"
+  - label: "Sentence-Transformers — documentation de l'encodeur employé au barreau N2"
+    url: "https://www.sbert.net/"
+
+sources: []
+---

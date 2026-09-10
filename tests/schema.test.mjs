@@ -56,7 +56,7 @@ test('toutes les fixtures invalides du dossier sont couvertes par un test', () =
 
   // La fixture au fichier de code inexistant relève de check-content, pas de
   // Zod : le schéma ne voit pas le disque. Elle est testée ailleurs.
-  const horsZod = new Set(['invalide-code-inexistant']);
+  const horsZod = new Set(['invalide-code-inexistant', 'invalide-yaml-casse']);
   const attendues = new Set([...Object.keys(REJETS), ...horsZod]);
 
   for (const nom of presentes) {

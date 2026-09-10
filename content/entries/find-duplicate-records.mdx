@@ -1,0 +1,136 @@
+---
+id: find-duplicate-records
+family: detect-filter
+status: published
+verdict: N0
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Repérer les doublons dans un fichier"
+  en: "Find duplicate records in a file"
+
+need:
+  fr: "Retrouver les fiches qui désignent la même personne, ou la même entreprise, dans un fichier saisi par plusieurs mains."
+  en: "Find the records that stand for the same person or company in a file entered by several people."
+
+scenario:
+  fr: "On voit passer le fichier entier dans un modèle généraliste, paire par paire, pour lui demander si deux lignes désignent la même personne. Le problème n'est pourtant pas de juger une paire, il est de savoir laquelle regarder : dix mille fiches font cinquante millions de paires, et presque aucune n'a quoi que ce soit en commun. Tout l'art du rapprochement de fiches tient dans ce tri préalable, et il se fait avec une clé et une boucle."
+  en: "The usual reflex is to push the whole file through a general-purpose model, pair by pair, asking whether two lines are the same person. But judging a pair is not the hard part; knowing which pair to look at is. Ten thousand records make fifty million pairs, and almost none of them share anything at all. Record linkage lives or dies on that first sort, and a key and a loop are enough to do it."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Normalisation, clé de blocage, puis distance d'édition"
+      en: "Normalisation, blocking key, then edit distance"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le fichier ne quitte pas votre infrastructure"
+          - "Ne vous dispense pas de contrôler une fusion : l'extrait propose des paires et un score, il ne fusionne rien"
+        en:
+          - "No specific scope added: the file never leaves your infrastructure"
+          - "Does not stand in for a check before merging: the snippet proposes pairs and a score, it merges nothing"
+    code:
+      python: snippets/find-duplicate-records/n0.py
+      javascript: snippets/find-duplicate-records/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Deux graphies qui ne partagent pas la clé de blocage ne sont jamais comparées, quel que soit le seuil. Un chiffre faux dans le code postal, ou « Dupont Jean » saisi à la place de « Jean Dupont », suffit : le test montre les deux textes très au-dessus du seuil, et la paire absente du résultat, parce que la comparaison n'a jamais lieu."
+      en: "Two spellings that do not share the blocking key are never compared, whatever the threshold. One wrong digit in a postcode, or a name entered family-name first, is enough: the test scores the two texts far above the threshold and still returns nothing, because the comparison is never run."
+    escalate_when:
+      fr: "Vous retrouvez à la main des doublons dont le champ qui sert de clé diffère : un code postal saisi de travers, un nom et un prénom intervertis d'une source à l'autre."
+      en: "You keep finding duplicates by hand whose key field differs: a mistyped postcode, or a first name and a family name swapped between two sources."
+
+  - level: N1
+    available: true
+    name:
+      fr: "TF-IDF sur n-grammes de caractères, voisins par cosinus"
+      en: "Character n-gram TF-IDF, neighbours by cosine"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Traitement de données personnelles sur votre infrastructure"
+          - "Aucun corpus d'entraînement : rien du fichier n'est appris ni conservé au-delà de l'exécution"
+        en:
+          - "Processing of personal data on your own infrastructure"
+          - "No training corpus: nothing of the file is learnt or kept beyond the run"
+    code:
+      python: snippets/find-duplicate-records/n1.py
+      javascript: snippets/find-duplicate-records/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Les n-grammes de caractères mesurent l'orthographe, pas l'identité. « SNCF » et « Société Nationale des Chemins de Fer » sont une seule entreprise et ne partagent presque aucune tranche de lettres, tandis que « SNEF », qui en est une autre, obtient un meilleur score : baisser le seuil jusqu'à faire apparaître le vrai doublon fusionne d'abord les deux sociétés."
+      en: "Character n-grams measure spelling, not identity. SNCF and its spelled-out name are one company and share almost no letter slices, while SNEF, which is another company entirely, scores higher: lowering the threshold until the true duplicate appears merges the two companies first."
+    escalate_when:
+      fr: "Vos doublons sont deux désignations différentes de la même chose — un sigle et sa forme développée, un nom commercial et une raison sociale — et non des variantes d'une même graphie."
+      en: "Your duplicates are two different names for one thing — an acronym and its expansion, a trading name and a legal name — rather than variants of one spelling."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Encodeur de phrases auto-hébergé, comparaison par cosinus"
+      en: "Self-hosted sentence encoder, compared by cosine"
+    cost: faible
+    latency: "~100 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: high
+      regulatory:
+        fr:
+          - "Traitement de données personnelles sur votre infrastructure : le fichier ne part pas chez un tiers"
+          - "Les poids du modèle viennent d'un tiers, avec la licence et la provenance que cela suppose de vérifier"
+        en:
+          - "Processing of personal data on your own infrastructure: the file goes to no third party"
+          - "The model weights come from a third party, with the licence and provenance that implies checking"
+    code:
+      python: snippets/find-duplicate-records/n2.py
+      javascript: snippets/find-duplicate-records/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Une fiche est encodée en entier : le jeton qui distingue deux lignes pèse peu dans un vecteur construit sur tout ce qu'elles ont en commun. Dans le test, « Câble HDMI 2 m » est plus proche de « Câble HDMI 3 m » que de la même référence écrite « HDMI lead, 2 metres, black » ; au seuil par défaut, l'extrait rapproche les deux câbles différents et rate le vrai doublon. Le double local du test accentue l'écart ; le rapprochement de deux lignes presque identiques, lui, est ce que font aussi les vrais encodeurs."
+      en: "A record is encoded as a whole, so the one token that tells two lines apart is a small part of a vector built from everything they share. In the test, “Câble HDMI 2 m” lands closer to “Câble HDMI 3 m” than to the same item written “HDMI lead, 2 metres, black”: at the default threshold the snippet pairs the two different cables and misses the real duplicate. The local double sharpens the gap; pulling two near-identical lines together is what real encoders do too."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus dans cette fiche : au-delà, ce n'est plus un choix d'algorithme mais une relecture humaine des paires que le score laisse en zone grise."
+      en: "There is no rung above this one here: past it, the question is no longer which algorithm to use but who reads the pairs the score leaves in the grey zone."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Comparer les paires par appel à un modèle généraliste est quadratique : sur dix mille fiches, cela fait cinquante millions d'appels. Et l'appel ne répond qu'à la question facile, celle de juger une paire qu'on lui a déjà désignée : il faut de toute façon un barreau en dessous pour choisir laquelle."
+      en: "Comparing pairs through a general-purpose model is quadratic: ten thousand records make fifty million calls. And the call only answers the easy question, judging a pair somebody already picked out: a lower rung still has to choose which pair to send."
+
+verdict_rationale:
+  fr: "N0 est le seul barreau qui décide à l'avance quelles paires méritent un regard, et c'est ce qui le laisse tenir quand le fichier grossit : les deux autres comparent, dans le pire des cas, toutes les paires. Son prix est écrit dans le code, c'est la clé de blocage, et il est réglable : vous choisissez ce que vous acceptez de ne jamais comparer, et le test vous montre exactement ce que cela coûte. Montez à N1 le jour où vos doublons se cachent précisément dans le champ dont la clé est faite, pas avant."
+  en: "N0 is the only rung that decides in advance which pairs deserve a look, which is what keeps it standing as the file grows: the other two compare, in the worst case, every pair. Its price is written into the code as the blocking key, and it is yours to set: you choose what you agree never to compare, and the test shows you exactly what that costs. Move up to N1 the day your duplicates hide in the very field the key is made of, not before."
+
+further_reading:
+  - label: "Splink — règles de blocage, ou pourquoi on ne compare pas toutes les paires"
+    url: "https://moj-analytical-services.github.io/splink/topic_guides/blocking/blocking_rules.html"
+  - label: "Wikipedia — Record linkage, le vocabulaire du domaine"
+    url: "https://en.wikipedia.org/wiki/Record_linkage"
+  - label: "scikit-learn — TfidfVectorizer, analyseur char_wb et n-grammes de caractères"
+    url: "https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"
+  - label: "Sentence-Transformers — documentation des encodeurs de phrases auto-hébergés"
+    url: "https://www.sbert.net/"
+
+sources: []
+---

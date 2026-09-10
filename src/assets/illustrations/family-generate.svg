@@ -1,11 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
   <title>Générer</title>
-  <!-- L'idée : en haut un gabarit, et il est vide — il ne contient rien de ce
-       qui va sortir. En bas trois choses qui n'existaient pas : ni copies du
-       gabarit, ni copies l'une de l'autre. Un seul trait dit d'où elles
-       viennent ; le reste, c'est de la matière nouvelle. -->
-  <rect x="112" y="32" width="176" height="112"/>
-  <path d="M200 144V232"/>
+  <!-- L'idée : un gabarit ouvert par en dessous, et rien dedans — il ne
+       contient aucune des choses qui vont en sortir. Dessous, trois choses
+       qui n'existaient pas : ni copies du gabarit, ni copies l'une de
+       l'autre. Le même moule, et pourtant trois résultats différents. -->
+  <path d="M112 216V48H288V216"/>
   <rect x="32" y="256" width="112" height="112" fill="#FFCE00" stroke="none"/>
   <circle cx="216" cy="312" r="56" fill="#C8BC9E" stroke="none"/>
   <path d="M288 368H368L328 256Z" fill="currentColor" stroke="none"/>

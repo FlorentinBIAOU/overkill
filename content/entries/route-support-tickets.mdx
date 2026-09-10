@@ -1,0 +1,163 @@
+---
+id: route-support-tickets
+family: classify-route
+status: published
+verdict: N1
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Router un ticket de support vers la bonne équipe"
+  en: "Route a support ticket to the right team"
+
+need:
+  fr: "Envoyer chaque ticket de support entrant à l'équipe capable d'y répondre."
+  en: "Send each incoming support ticket to the team that can answer it."
+
+scenario:
+  fr: "Le premier réflexe est un appel de modèle par ticket entrant, avec les noms des équipes dans l'invite. Pendant ce temps, l'outil de ticketing contient déjà tous les tickets résolus, chacun étiqueté par l'équipe qui l'a fermé : un jeu d'entraînement payé depuis des années et laissé de côté. Et la difficulté du routage n'est pas le ticket qui appartient clairement à une équipe, c'est celui qui appartient à deux, ou à aucune : aucun barreau ne le supprime, et chacun doit dire ce qu'il en fait."
+  en: "The first move is usually one model call per inbound ticket, with the team names in the prompt. Meanwhile the ticketing system already holds every ticket the desk has resolved, each labelled with the team that closed it: a training set paid for years ago and left unused. And the hard part of routing is not the ticket that clearly belongs to one team, it is the one that belongs to two, or to none. No rung removes that ticket, and each has to say what it does with it."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Règles par mots-clés, avec priorité explicite et file par défaut"
+      en: "Keyword rules, with an explicit priority and a default queue"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr: ["Aucun périmètre spécifique ajouté : le ticket est traité là où il est déjà stocké"]
+        en: ["No specific scope added: the ticket is processed where it is already stored"]
+    code:
+      python: snippets/route-support-tickets/n0.py
+      javascript: snippets/route-support-tickets/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Le ticket qui appartient à deux équipes, et celui qui n'en déclenche aucune. « Le colis n'est jamais arrivé et le prélèvement est passé quand même » déclenche facturation et livraison ; la priorité tranche pour facturation, et la moitié colis disparaît sans trace dans la file qui reçoit le ticket. À l'autre bout, « je n'arrive plus à faire ce que je faisais avant » ne déclenche rien et part dans la file par défaut."
+      en: "The ticket that belongs to two teams, and the one that triggers none. « Le colis n'est jamais arrivé et le prélèvement est passé quand même » matches both billing and shipping; priority settles on billing, and the parcel half vanishes without a trace in the queue that receives it. At the other end, « je n'arrive plus à faire ce que je faisais avant » matches nothing and goes to the default queue."
+    escalate_when:
+      fr: "La file par défaut devient la file la plus remplie."
+      en: "The default queue becomes the busiest queue you have."
+
+  - level: N1
+    available: true
+    name:
+      fr: "TF-IDF et classifieur linéaire entraîné sur l'archive"
+      en: "TF-IDF and a linear classifier trained on the archive"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Constitution d'un corpus d'entraînement à partir de tickets clients réels, conservé à part des tickets dont il est tiré"
+          - "Le corpus entre dans votre registre des traitements si vous en tenez un"
+        en:
+          - "Creation of a training corpus from real customer tickets, kept apart from the tickets it was drawn from"
+          - "The corpus belongs in your record of processing activities, where you keep one"
+    code:
+      python: snippets/route-support-tickets/n1.py
+      javascript: snippets/route-support-tickets/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Le modèle connaît l'archive, et rien d'autre. « Votre entrepôt accepte-t-il les visites scolaires le mercredi » ne recoupe aucun mot des tickets déjà résolus : les trois équipes ressortent presque à égalité, le seuil de confiance n'est pas atteint, et le ticket repart dans la file par défaut. N1 n'a pas supprimé cette file, il l'a rétrécie."
+      en: "The model knows the archive and nothing else. « Votre entrepôt accepte-t-il les visites scolaires le mercredi » overlaps none of the words in the resolved tickets: the three teams come out nearly tied, the confidence floor is not cleared, and the ticket returns to the default queue. N1 did not remove that queue, it made it smaller."
+    escalate_when:
+      fr: "Vos agents ressortent régulièrement de la file par défaut des tickets qui se révèlent être des problèmes connus, décrits avec des mots absents de l'archive."
+      en: "Agents keep pulling tickets out of the default queue that turn out to be ordinary known problems, described in words the archive does not contain."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Encodeur de phrases auto-hébergé, vote des tickets résolus voisins"
+      en: "Self-hosted sentence encoder, vote of the nearest resolved tickets"
+    cost: faible
+    latency: "~100 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Copie encodée de l'archive conservée comme index sur votre infrastructure"
+          - "Une demande d'effacement portant sur un ticket archivé porte aussi sur l'index, qui en est une copie"
+          - "Modèle téléchargé auprès d'un tiers : sa licence et sa provenance sont à vérifier"
+        en:
+          - "An encoded copy of the archive kept as an index on your own infrastructure"
+          - "An erasure request on an archived ticket also reaches the index, which is a copy of it"
+          - "Model downloaded from a third party: its licence and its provenance are yours to check"
+    code:
+      python: snippets/route-support-tickets/n2.py
+      javascript: snippets/route-support-tickets/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Il n'y a pas de modèle des équipes ici, seulement une archive, et le ticket le plus proche n'est pas toujours un ticket pertinent. « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier » ne s'adresse à personne en particulier, et part chez facturation avec un score élevé : l'archive contient un ticket de facturation écrit avec les mêmes formules de politesse, et le vote y voit une forte ressemblance. Un vrai encodeur déplace l'accident, il ne le supprime pas : ce dont l'archive est faite est la politique de routage, y compris ce que personne n'y a choisi."
+      en: "There is no model of the teams on this rung, only an archive, and the nearest ticket is not always a relevant one. « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier » is addressed to nobody in particular and lands on billing with a high score: the archive happens to hold one billing ticket written with the same politeness formulas, and the vote reads that as a strong match. A real encoder moves where the accident happens, it does not remove it: whatever the archive is made of is the routing policy, including the parts nobody chose."
+    escalate_when:
+      fr: "Des tickets arrivent dans une langue absente de l'archive, ou la règle de routage existe sous forme de consigne écrite qu'aucun ticket résolu n'illustre."
+      en: "Tickets arrive in a language the archive does not contain, or the routing rule exists as a written instruction that no resolved ticket illustrates."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Classement par appel à un modèle généraliste, contre une liste fermée d'équipes"
+      en: "Classification through a general-purpose model, against a closed list of teams"
+    cost: élevé
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: high
+      regulatory:
+        fr:
+          - "Transfert du contenu des tickets à un sous-traitant, avec l'encadrement contractuel que cela suppose"
+          - "Un ticket est du texte libre : le transfert porte aussi sur ce que le client y a écrit sans qu'on le lui demande"
+          - "Localisation du traitement à vérifier auprès du fournisseur"
+          - "Ne vous dispense pas de vos propres obligations d'information et de minimisation"
+        en:
+          - "Transfer of ticket content to a processor, with the contractual framing that implies"
+          - "A ticket is free text: the transfer also covers whatever the customer wrote in it unprompted"
+          - "Processing location to be confirmed with the provider"
+          - "Does not excuse you from your own duties of transparency and minimisation"
+    code:
+      python: snippets/route-support-tickets/n3.py
+      javascript: snippets/route-support-tickets/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le modèle répond des mots, et les mots ne sont pas des files. Interrogé sur trois équipes, il en renvoie une quatrième qui sonne juste et n'existe pas : « customer success », en JSON parfaitement formé, sans la moindre hésitation. La liste fermée l'attrape et le ticket part dans la file par défaut ; retirez ce contrôle, comme le fait la première version de ce genre de code, et le ticket est classé dans une équipe que personne n'a créée et que personne ne surveille."
+      en: "The model answers words, and words are not queues. Asked to pick from three teams, it returns a fourth that sounds right and does not exist: « customer success », as well-formed JSON, with no hedging at all. The closed list catches it and the ticket goes to the default queue; take that check out, as the first version of this kind of code usually does, and the ticket is filed into a team nobody created and nobody watches."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus."
+      en: "There is no rung above this one."
+
+verdict_rationale:
+  fr: "N1 l'emporte parce que ses données d'entraînement existent déjà : l'archive des tickets résolus, chacun étiqueté par l'équipe qui l'a fermé, est à un export de distance, et elle route les formulations que la liste de mots-clés de N0 n'avait pas prévues. Elle remet aussi le ticket ambigu sur la table, puisque l'équipe suivante figure dans la réponse, là où N0 la laissait tomber sans le dire. N2 achète la reconnaissance des paraphrases au prix d'un fichier de modèle, d'un processus chaud et d'un index à ré-encoder à chaque mise à jour : ce prix se paie le jour où vos agents repêchent des problèmes connus dans la file par défaut, pas avant."
+  en: "N1 wins because its training data already exists: the archive of resolved tickets, each labelled with the team that closed it, is one export away, and it routes the phrasings N0's keyword list never anticipated. It also puts the ambiguous ticket back on the table, since the runner-up team is part of the answer, where N0 dropped it silently. N2 buys paraphrase matching at the price of a model file, a warm process and an index to re-encode on every upgrade: that price is worth paying the day your agents start fishing known problems out of the default queue, not before."
+
+further_reading:
+  - label: "scikit-learn — Extraction de caractéristiques sur du texte, TF-IDF"
+    url: "https://scikit-learn.org/stable/modules/feature_extraction.html#text-feature-extraction"
+  - label: "scikit-learn — Classification de documents texte, exemple complet"
+    url: "https://scikit-learn.org/stable/auto_examples/text/plot_document_classification_20newsgroups.html"
+  - label: "Introduction to Information Retrieval — la pondération tf-idf"
+    url: "https://nlp.stanford.edu/IR-book/html/htmledition/tf-idf-weighting-1.html"
+  - label: "Sentence Transformers — encodeurs de phrases auto-hébergés"
+    url: "https://sbert.net/"
+
+sources: []
+---

@@ -45,16 +45,35 @@ function formatIssues(error) {
     .join('\n      ');
 }
 
+/**
+ * Lit un dossier de documents.
+ *
+ * Un frontmatter YAML invalide fait lever l'analyseur. Sans ce filet, le
+ * contrôle s'arrêtait sur une trace de pile au lieu de nommer le fichier
+ * fautif et sa ligne : le message était inutilisable, et dans un enchaînement
+ * de commandes l'échec pouvait passer pour un succès.
+ */
 async function lireDossier(dossier) {
   if (!existsSync(dossier)) return [];
   const noms = (await readdir(dossier)).filter((f) => f.endsWith('.mdx') && !f.startsWith('_'));
-  return Promise.all(
-    noms.map(async (nom) => ({
-      nom,
-      chemin: join(dossier, nom),
-      ...matter(await readFile(join(dossier, nom), 'utf8')),
-    })),
-  );
+  const documents = [];
+
+  for (const nom of noms) {
+    const chemin = join(dossier, nom);
+    const brut = await readFile(chemin, 'utf8');
+    try {
+      documents.push({ nom, chemin, ...matter(brut) });
+    } catch (erreur) {
+      const detail = String(erreur.message ?? erreur).split('\n')[0];
+      echec(
+        chemin,
+        `frontmatter YAML illisible : ${detail}\n      ` +
+          `Cause fréquente : un guillemet droit à l'intérieur d'une valeur déjà entre ` +
+          `guillemets droits. Employer des guillemets typographiques, ou échapper.`,
+      );
+    }
+  }
+  return documents;
 }
 
 // ---------------------------------------------------------------- les fiches
