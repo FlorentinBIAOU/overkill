@@ -17,7 +17,7 @@
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:colour": "node scripts/check-colour-usage.mjs",
-    "check": "npm run check:content && npm run test:snippets && npm run build && npm run check:links && npm run check:weight && npm run check:a11y && npm run check:fonts && npm run check:contrast && npm run check:colour && npm run check:illustrations && npm run check:figures && npm run check:french && npm run test:schema && npm run test:harness && npm run test:routes && npm run build:dev && npm run test:components && npm run test:pages && npm run check:overflow && npm run build",
+    "check": "npm run check:content && npm run test:snippets && npm run build && npm run check:links && npm run check:weight && npm run check:a11y && npm run check:third-party && npm run check:fonts && npm run check:contrast && npm run check:colour && npm run check:illustrations && npm run check:figures && npm run check:french && npm run test:schema && npm run test:harness && npm run test:routes && npm run build:dev && npm run test:components && npm run test:pages && npm run check:overflow && npm run build",
     "check:french": "bash scripts/check-french.sh",
     "fix:accents": ".venv-tools/bin/python scripts/fix-accents.py",
     "check:content": "node --import tsx scripts/check-content.mjs",
@@ -37,7 +37,8 @@
     "check:links": "node scripts/check-links.mjs",
     "check:links:external": "node scripts/check-links.mjs --external",
     "check:a11y": "node scripts/check-a11y.mjs /fr /en /fr/familles/detect-filter /en/familles/detect-filter /fr/fiches/mask-personal-data-in-chat /fr/catalogue",
-    "check:illustrations": "node scripts/check-illustrations.mjs"
+    "check:illustrations": "node scripts/check-illustrations.mjs",
+    "check:third-party": "node scripts/check-third-party.mjs /fr /en /fr/catalogue /fr/fiches/mask-personal-data-in-chat /fr/familles/detect-filter /fr/methodologie /fr/feuille-de-route"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.3.14",
