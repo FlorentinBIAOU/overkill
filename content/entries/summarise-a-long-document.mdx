@@ -1,0 +1,161 @@
+---
+id: summarise-a-long-document
+family: transform
+status: published
+verdict: N3
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Résumer un document long"
+  en: "Summarise a long document"
+
+need:
+  fr: "Obtenir en quelques phrases ce que dit un document trop long pour être lu en entier."
+  en: "Get, in a few sentences, what a document too long to read says."
+
+scenario:
+  fr: "Le document entier part dans une fenêtre de conversation avec « résume-moi ça », le résumé revient en trois phrases nettes, et personne ne le relit contre la source. C'est l'une des rares fiches de ce catalogue où le barreau le plus cher est aussi le seul qui fasse le travail demandé : résumer, c'est reformuler, et une méthode qui ne reformule pas ne sait que citer. La question n'est donc pas de savoir s'il faut un modèle, elle est de savoir ce que vous faites d'un résumé dont aucun test ne peut établir qu'il est vrai."
+  en: "The whole document goes into a chat window with « summarise this », three clean sentences come back, and nobody reads them against the source. This is one of the few entries in the catalogue where the most expensive rung is also the only one that does the job asked of it: summarising means rewriting, and a method that cannot rewrite can only quote. So the question is not whether you need a model, it is what you do with a summary no test can show to be true."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Résumé extractif : densité des termes et bonus de position"
+      en: "Extractive summary: term density and a position bonus"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr: ["Aucun périmètre spécifique ajouté : le document ne quitte pas votre infrastructure"]
+        en: ["No specific scope added: the document never leaves your infrastructure"]
+    code:
+      python: snippets/summarise-a-long-document/n0.py
+      javascript: snippets/summarise-a-long-document/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Deux passages éloignés ne sont jamais reliés. Dans le document du test, une phrase dit que l'usine de Rouen fournit toutes les cellules de la ligne de Lyon ; dix phrases plus loin, une autre dit que Rouen ferme fin mars. La seconde est courte, tardive, écrite dans un vocabulaire que le reste du document ne reprend jamais : elle est la moins bien notée des onze et tombe la première, y compris quand on demande huit phrases sur onze. Et aucune phrase n'énonce ce qu'elles impliquent ensemble, donc aucune sélection, si large soit-elle, ne peut le rendre."
+      en: "Two distant passages are never joined. In the test document, one sentence says the Rouen plant supplies every cell used on the Lyon assembly line; ten sentences later, another says Rouen closes at the end of March. The second is short, late, and written in vocabulary the rest of the document never repeats: it scores lowest of the eleven and is dropped first, even when eight of the eleven are asked for. And no sentence states what the two imply together, so no selection, however wide, can return it."
+    escalate_when:
+      fr: "Vous vous surprenez à retoucher à la main le poids donné à l'ouverture, parce que dans vos documents c'est la phrase de conclusion qui compte."
+      en: "You catch yourself hand-tuning the bonus given to the opening, because in your documents it is the closing sentence that matters."
+
+  - level: N1
+    available: true
+    name:
+      fr: "Notation supervisée des phrases sur cinq traits de surface"
+      en: "Supervised sentence scoring on five surface features"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Traitement du document sur votre infrastructure"
+          - "Le corpus d'entraînement est fait de documents réels dont quelqu'un a coché les phrases : il entre dans votre registre des traitements si vous en tenez un"
+        en:
+          - "Processing of the document on your own infrastructure"
+          - "The training corpus is made of real documents whose sentences someone has ticked off: it belongs in your record of processing activities, where you keep one"
+    code:
+      python: snippets/summarise-a-long-document/n1.py
+      javascript: snippets/summarise-a-long-document/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Les traits décrivent l'aspect d'une phrase, pas ce qu'elle dit. Dans le test, une phrase placée tôt, portant un chiffre, ouverte par « Overall » et reprenant les mots de la première ligne est retenue alors qu'elle annonce une commande de porte-blocs, pendant que la vraie trouvaille de l'audit — un rayon mal compté depuis le printemps — n'a aucun de ces signes et reste dehors ; étiqueter davantage n'y change rien, puisque le sens n'est jamais montré au modèle. Et ce barreau reste extractif : sur le document à deux bouts il retrouve bien les deux prémisses, et n'énonce toujours pas la conclusion, parce que l'énoncer voudrait dire écrire une phrase que personne n'a écrite."
+      en: "The features describe what a sentence looks like, not what it says. In the test, a sentence that sits early, carries a figure, opens with « Overall » and echoes the words of the first line is kept although what it announces is an order of clipboards, while the audit's real finding — an aisle miscounted since the spring — carries none of those markers and is left out; more labelling changes nothing, since meaning is never shown to the model. And this rung is still extractive: on the two-ended document it does retrieve both premises, and still does not state the conclusion, because stating it would mean writing a sentence nobody wrote."
+    escalate_when:
+      fr: "Le résumé doit énoncer ce que le document démontre, et vous constatez qu'aucune phrase du document ne l'énonce."
+      en: "The summary has to state what the document demonstrates, and you find that no sentence of the document states it."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Modèle de résumé abstractif auto-hébergé, en deux passes"
+      en: "Self-hosted abstractive summariser, in two passes"
+    cost: modéré
+    latency: ">1 s"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: hard
+      vendor_lock: library
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Traitement du document sur votre infrastructure, y compris les données personnelles et les secrets d'affaires qu'il contient"
+          - "La licence des poids du modèle encadre son usage, usage commercial compris"
+        en:
+          - "Processing of the document on your own infrastructure, personal data and trade secrets included"
+          - "The licence attached to the model weights governs their use, commercial use included"
+    code:
+      python: snippets/summarise-a-long-document/n2.py
+      javascript: snippets/summarise-a-long-document/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le modèle écrit, donc il peut écrire ce que le document ne dit pas. Dans le test, le même document donne « la ligne de Lyon s'arrêtera quand Rouen fermera fin mars », qui en découle, et « la ligne de Lyon déménagera à Rouen en avril », qui n'y figure nulle part : la fonction rend les deux à l'identique, sans un avertissement, parce que la seule chose qu'elle sache vérifier d'une réponse est qu'elle n'est pas vide. La découpe s'y ajoute : dès qu'un document dépasse la fenêtre du modèle, la seconde passe résume les notes que le modèle a écrites, et plus jamais le document."
+      en: "The model writes, so it can write what the document does not say. In the test, the same document yields « the Lyon assembly line will stop when Rouen closes at the end of March », which follows from it, and « the Lyon assembly line will move to Rouen in April », which appears nowhere in it: the function returns both identically and without a warning, because the only thing it can check about an answer is that it is not empty. Chunking adds to that: as soon as a document overflows the model's window, the second pass summarises the notes the model itself wrote, and never the document again."
+    escalate_when:
+      fr: "Vous voulez une autre forme de sortie — trois phrases, ou une liste de points — et vous découvrez qu'il faudrait réaffiner le modèle pour l'obtenir."
+      en: "You want a different shape of answer — three sentences, or a list of points — and you find that getting it would mean fine-tuning the model again."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Résumé par appel à un modèle généraliste, réponse en JSON"
+      en: "Summary through a general-purpose model, answering in JSON"
+    cost: élevé
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: high
+      regulatory:
+        fr:
+          - "Transfert du document à un sous-traitant, avec l'encadrement contractuel que cela suppose"
+          - "Un document interne porte souvent des données personnelles de tiers collectées pour un autre usage, et des secrets d'affaires"
+          - "Localisation du traitement et conservation des requêtes à vérifier auprès du fournisseur"
+          - "Ne vous dispense pas de vos propres obligations d'information et de minimisation"
+        en:
+          - "Transfer of the document to a processor, with the contractual framing that implies"
+          - "An internal document often carries third-party personal data collected for another purpose, and trade secrets"
+          - "Processing location and request retention to be confirmed with the provider"
+          - "Does not excuse you from your own duties of transparency and minimisation"
+    code:
+      python: snippets/summarise-a-long-document/n3.py
+      javascript: snippets/summarise-a-long-document/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "L'instruction « n'utilise que ce que dit le document » est une demande, pas une contrainte. Dans le test, la réponse est du JSON valide, de la bonne forme, de la bonne longueur, fluide, et elle annonce un gain sur le temps de traitement des tickets ainsi qu'une seconde phase approuvée par le conseil : ni le conseil ni ce gain ne figurent dans le document. Tous les contrôles de l'extrait passent, parce qu'ils portent tous sur la forme ; qu'un résumé découle de sa source est une question de sens, et aucun analyseur ne la tranche."
+      en: "The instruction « use only what the document says » is a request, not a constraint. In the test, the answer is valid JSON, the right shape, the right length, fluent, and it announces a cut in ticket handling time along with a second phase approved by the board: neither the board nor that gain appears in the document. Every check in the snippet passes, because every check is about shape; whether a summary follows from its source is a question about meaning, and no parser settles it."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus."
+      en: "There is no rung above this one."
+
+verdict_rationale:
+  fr: "N3, parce que résumer c'est reformuler, et que c'est le seul barreau qui écrive une phrase que personne n'a écrite sans vous coûter un service d'inférence à exploiter, une découpe à surveiller et un réaffinage chaque fois que vous changez de format de sortie. Le prix est à dire à voix haute : le document part chez un tiers, chaque appel se paie, deux exécutions ne se ressemblent que tant que le fournisseur garde le même modèle, et vos tests ne savent vérifier que la forme — celui de cette fiche rend un résumé impeccable qui invente un conseil d'administration. Si votre document ne supporte pas ce risque, la réponse n'est pas un meilleur prompt : c'est quelqu'un qui relit la source à côté du résumé, ou N0, qui ne peut rien inventer parce qu'il ne sait que citer, au prix de ne jamais dire ce que le document démontre."
+  en: "N3, because summarising means rewriting, and this is the only rung that writes a sentence nobody wrote without costing you an inference service to run, a chunking pass to watch over, and a fine-tuning run every time you change the shape of the output. The price deserves saying out loud: the document goes to a third party, every call is billed, two runs match only as long as the provider keeps the same model behind the endpoint, and your tests can check the shape and nothing else — the one on this entry returns a flawless summary that invents a board of directors. If your document cannot carry that risk, the answer is not a better prompt: it is a person reading the source next to the summary, or N0, which cannot invent anything because all it can do is quote, at the price of never stating what the document demonstrates."
+
+further_reading:
+  - label: "Maynez et al., On Faithfulness and Factuality in Abstractive Summarization (ACL 2020)"
+    url: "https://aclanthology.org/2020.acl-main.173/"
+  - label: "Fabbri et al., SummEval — Re-evaluating Summarization Evaluation"
+    url: "https://arxiv.org/abs/2007.12626"
+  - label: "facebook/bart-large-cnn — la fiche du modèle utilisé au barreau N2"
+    url: "https://huggingface.co/facebook/bart-large-cnn"
+  - label: "scikit-learn — LogisticRegression, le classifieur du barreau N1"
+    url: "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html"
+
+sources: []
+---
