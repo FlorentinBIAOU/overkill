@@ -71,7 +71,12 @@ const filtres = [
     {/* La recherche a besoin de JavaScript ; les filtres, non. Les deux vivent
         dans un formulaire qui se soumet en GET, ce qui garde la page utilisable
         et l'état partageable par l'URL (CDC 9.2). */}
-    <form class="catalogue__controls" method="get" data-catalogue-form>
+    <form
+      class="catalogue__controls"
+      method="get"
+      data-catalogue-form
+      data-search-index={`/${lang}/search-index.json`}
+    >
       <div class="catalogue__search">
         <label for="q">{strings.catalogue.search}</label>
         <input
@@ -119,6 +124,7 @@ const filtres = [
       {
         entries.map((e) => (
           <EntryCard
+            id={e.id}
             href={route(lang, 'entries', e.id)}
             title={e.title[lang]}
             familyLabel={familyTitles[e.family] ?? e.family}
@@ -139,6 +145,10 @@ const filtres = [
     <EmptyState strings={strings} issueUrl={issueUrl} />
   </div>
 </SiteLayout>
+
+<script>
+  import '../scripts/catalogue.js';
+</script>
 
 <style>
   .catalogue {

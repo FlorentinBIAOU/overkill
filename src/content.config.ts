@@ -12,8 +12,19 @@ import { roadmapItemSchema } from './content/schema/roadmap';
  * serait l'usage d'Astro. L'API Content Layer d'Astro 5 le permet par `base`.
  */
 
+/**
+ * Le jeu de 200 fiches de test (CDC 6.2) ne rejoint la collection que derrière
+ * un drapeau. Il n'est jamais commité et ne se publie jamais : il sert à
+ * vérifier que la navigation, la recherche et les filtres tiennent à l'échelle
+ * visée.
+ */
+const AVEC_FIXTURES = process.env.OVERKILL_FIXTURES === '1';
+
 const entries = defineCollection({
-  loader: glob({ base: './content/entries', pattern: '**/[^_]*.mdx' }),
+  loader: glob({
+    base: AVEC_FIXTURES ? './content/entries-fixtures' : './content/entries',
+    pattern: '**/[^_]*.mdx',
+  }),
   schema: entrySchema,
 });
 

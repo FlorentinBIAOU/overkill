@@ -13,6 +13,8 @@ import type { Strings } from '../i18n';
 import type { Level } from '../content/schema/enums';
 
 export interface Props {
+  /** Identifiant de la fiche : la clé qui relie l'index de recherche au DOM. */
+  id: string;
   href: string;
   title: string;
   familyLabel: string;
@@ -27,13 +29,15 @@ export interface Props {
 }
 
 const {
-  href, title, familyLabel, family, verdict, available, egress, deterministic, strings, draft = false,
+  id, href, title, familyLabel, family, verdict, available, egress, deterministic, strings,
+  draft = false,
 } = Astro.props;
 ---
 
 <li
   class="entry-card"
   data-entry
+  data-entry-id={id}
   data-family={family}
   data-verdict={verdict}
   data-egress={egress}

@@ -1,0 +1,38 @@
+---
+/**
+ * Une page par famille (CDC 7.4).
+ */
+import FamilyLayout from '../../../layouts/FamilyLayout.astro';
+import { allFamilies, publishedEntries, allRoadmap, familyTitles, ISSUE_URL } from '../../../lib/content';
+import { LOCALES, type Locale } from '../../../i18n';
+
+export async function getStaticPaths() {
+  const familles = await allFamilies();
+  return LOCALES.flatMap((lang) =>
+    familles.map((f) => ({ params: { lang, family: f.data.id }, props: { family: f.data } })),
+  );
+}
+
+const lang = Astro.params.lang as Locale;
+const { family } = Astro.props;
+
+const toutes = await publishedEntries();
+const entries = toutes.filter((e) => e.data.family === family.id).map((e) => e.data);
+const titres = await familyTitles(lang);
+
+// Les intitulés de la feuille de route de cette famille qui n'ont pas encore
+// de fiche : c'est ce que le CDC demande d'afficher en grisé.
+const dejaEcrites = new Set(toutes.map((e) => e.data.id));
+const planned = (await allRoadmap())
+  .map((r) => r.data)
+  .filter((r) => r.family === family.id && !dejaEcrites.has(r.id));
+---
+
+<FamilyLayout
+  lang={lang}
+  family={family}
+  entries={entries}
+  familyTitles={titres}
+  planned={planned}
+  issueUrl={ISSUE_URL}
+/>

@@ -57,6 +57,7 @@ const strings = t(lang);
         {
           entries.map((e) => (
             <EntryCard
+              id={e.id}
               href={route(lang, 'entries', e.id)}
               title={e.title[lang]}
               familyLabel={familyTitles[e.family] ?? e.family}
