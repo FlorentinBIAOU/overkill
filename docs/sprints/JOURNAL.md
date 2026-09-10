@@ -384,3 +384,130 @@ de 200 fiches de test.
 **Prochaine étape**
 
 Lots 06 et 08 en cours par sous-agents. Lot 09 pendant ce temps.
+
+---
+
+## Lot 06 — Extraits de code et leurs tests
+
+**Terminé.** `node scripts/test-snippets.mjs` — 148 extraits exécutés, aucun échec.
+
+**Preuve**
+
+| Contrôle | Résultat |
+|---|---|
+| Extraits attendus par la matrice | 148, soit 296 fichiers |
+| Extraits présents et exécutés | 148 |
+| Échecs | 0 |
+| Extraits `executed` | 45, sur la totalité des barreaux N0 et N1 |
+| Extraits `stubbed` | 29, sur N2 et N3 |
+| Accès réseau pendant les tests | aucun, garde active dans les deux langages |
+
+**Décisions prises**
+
+- **Trois niveaux de preuve, dont deux employés.** `executed` quand l'extrait tourne avec ses
+  vraies dépendances, `stubbed` quand un double local remplace un service ou un modèle
+  externe. Le niveau est déclaré par extrait et **affiché sur la page**, au-dessus du code.
+  Aucun extrait N2 ou N3 ne prétend à une preuve qu'il n'a pas.
+- **La garde réseau est posée dans le harnais, pas dans un bac à sable extérieur.** Elle est
+  donc active partout, y compris sur la machine d'un contributeur. Vérifiée en tentant
+  d'ouvrir une connexion dans les deux langages : les deux gardes refusent.
+- **Chaque barreau porte un test qui démontre son point de rupture.** C'est ce qui rend vrai
+  ce que la fiche affirmera sur ses limites, au lieu de le rendre plausible.
+
+**Défauts trouvés en vérifiant, et corrigés**
+
+- **Le hachage du harnais ne donnait pas les mêmes valeurs dans les deux langages.** Python
+  faisait l'arithmétique FNV en entiers exacts, JavaScript perdait de la précision au-delà
+  de 2^53. Les deux encodeurs factices rangeaient donc les mêmes mots dans des cases
+  différentes, et un extrait N2 pouvait afficher deux scores différents pour ses deux
+  versions. Signalé par un rédacteur d'extraits, corrigé avec `Math.imul`, et couvert par
+  six tests de parité.
+- **Trois affirmations de performance non mesurées** traînaient dans des commentaires
+  d'extraits, du type « le modèle pèse quelques kilooctets et répond en moins d'une
+  milliseconde ». Retirées. `scripts/check-figures.mjs` a été écrit à cette occasion et
+  applique désormais l'interdit numéro 2 sur tout le contenu publié.
+
+**Écart à la charte, assumé**
+
+- **Plusieurs extraits N1 en JavaScript dépassent les quarante lignes**, entre 44 et 79.
+  Node n'a pas d'équivalent de scikit-learn : TF-IDF et la régression logistique y sont
+  écrits à la main. La charte range la lisibilité avant l'astuce, et c'est d'ailleurs
+  exactement la thèse du site : l'algorithme classique tient en quelques dizaines de lignes
+  qu'on peut lire en entier.
+
+---
+
+## Lot 09 — Pages éditoriales, légales, contribuer, feuille de route
+
+**Terminé.** Les quinze routes de la section 7.1 existent dans les deux langues.
+
+**Décisions prises**
+
+- **L'illustration large de la section 8.6 est employée dans la bande « comment lire une
+  fiche », et non dans le hero.** La section 7.2 interdit toute illustration décorative dans
+  le hero, où la typographie est l'objet visuel. Là où elle est placée, elle n'est pas
+  décorative : elle dit exactement ce que la bande explique.
+- **Les pages à propos et mentions légales sont marquées brouillon**, visiblement, sur la
+  page elle-même. Ce que seul le commanditaire peut fournir — parcours, liens, photographie,
+  statut juridique, coordonnées de l'hébergeur — est encadré et nommé comme à compléter.
+  Rien n'y est inventé, conformément à l'interdit numéro 10.
+- **La page méthodologie cite cinq travaux publiés**, chacun vérifié comme répondant :
+  Green Algorithms, l'étude d'empreinte de BLOOM, la spécification Software Carbon
+  Intensity, l'AFNOR SPEC 2314 et Boavizta. Le site n'annonce **aucun chiffre d'empreinte** :
+  il emploie des ordres de grandeur relatifs, et la page explique pourquoi une mesure exacte
+  est impossible côté client d'une API.
+
+---
+
+## Lot 11 — CI, gabarits GitHub, documentation de contribution
+
+**Terminé.** `npm run check` reproduit la CI dans le même ordre et passe.
+
+**Décisions prises**
+
+- **Les six contrôles contractuels tournent d'abord, chacun en étape distincte.** Les
+  contrôles complémentaires viennent après, pour qu'un échec contractuel reste identifiable
+  au premier coup d'œil dans le compte rendu.
+- **Un second gabarit d'issue, « signaler une erreur »**, non demandé par le CDC. Une fiche
+  fausse nuit plus qu'une fiche absente : le chemin pour la signaler doit être le plus court
+  du dépôt.
+- **La CI reconstruit trois fois.** Une fois en production pour les liens, le poids et
+  l'accessibilité ; une fois avec les pages de contrôle pour les tests de composants et de
+  gabarits ; une fois avec le jeu de deux cents fiches pour la recherche. Elle se termine sur
+  une construction de production, pour que la sortie soit dans l'état déployable.
+
+**Défauts trouvés en vérifiant, et corrigés**
+
+- **`check-links` prenait l'adresse de contact pour un lien interne mort.** Elle est encodée
+  en références numériques pour limiter l'aspiration ; le contrôle doit la décoder comme le
+  fait un navigateur.
+- **`check-content` s'arrêtait sur une trace de pile devant un frontmatter YAML illisible**,
+  au lieu de nommer le fichier et sa ligne. Signalé par un rédacteur de fiche qui avait vu le
+  contrôle passer au vert sur un fichier invalide. Corrigé, avec une fixture et un test.
+
+---
+
+## Lot 12 — Performance, accessibilité, déploiement
+
+**En cours.** Mesures et rapport à la fin.
+
+**Défauts trouvés par l'audit d'accessibilité, et corrigés**
+
+- **Un champ caché focalisable au clavier.** Le bouton copier lisait le code dans un
+  `textarea` masqué et marqué `aria-hidden` : un utilisateur au clavier y entrait sans le
+  voir. Supprimé ; le bouton lit désormais le bloc de code rendu, ce qui retire au passage
+  une seconde copie du code dans le HTML de chaque extrait.
+- **Les thèmes de coloration syntaxique par défaut échouent au seuil AA** sur notre fond de
+  bloc de code. Remplacés par les thèmes à contraste renforcé, et la seule couleur qui
+  échouait encore, le gris des commentaires à 4,39:1, est substituée par un gris de notre
+  propre palette à 5,23:1. Le code est le contenu le plus important du site.
+- **Deux repères de navigation portaient le même nom accessible**, en-tête et pied de page.
+- **Le jaune de marque était employé comme couleur de texte** à deux endroits, ce que la
+  section 8.3 interdit faute de contraste : le repère de l'en-tête et le bouton de l'accueil.
+  Signalé par `check-colour-usage`, corrigé.
+
+**Décision prise**
+
+- **Le poids affiché en pied de page n'apparaît que s'il a été mesuré.** La ligne reste
+  masquée sinon. Une ligne visible et vide dirait au lecteur que la page ne pèse rien :
+  l'interdit numéro 2 vaut aussi pour le site lui-même.
