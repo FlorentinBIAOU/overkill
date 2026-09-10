@@ -1,0 +1,138 @@
+---
+id: read-text-from-a-scanned-page
+family: recognize-transcribe
+status: published
+verdict: N2
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Lire le texte d'une page scannée"
+  en: "Read the text of a scanned page"
+
+need:
+  fr: "Récupérer le texte d'un document arrivé en PDF ou en image, pour l'indexer, l'archiver ou le relire."
+  en: "Get the text out of a document that arrived as a PDF or an image, to index it, file it or read it back."
+
+scenario:
+  fr: "On voit régulièrement des chaînes de traitement envoyer chaque page entrante à un moteur de reconnaissance, ou à un modèle multimodal, sans jamais demander au document s'il porte déjà son texte. Beaucoup de « scans » n'ont pourtant jamais été scannés : une facture sortie d'un logiciel de comptabilité, un relevé imprimé en PDF, un contrat exporté d'un traitement de texte transportent leur texte à côté de leurs instructions de dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater. Poser la question coûte un appel de fonction, et elle règle tout le besoin quand la réponse est oui. Quand elle est non, le vrai travail commence : quelque chose doit regarder les pixels."
+  en: "Pipelines routinely ship every incoming page off to a recognition engine, or to a multimodal model, without ever asking the document whether it already carries its text. Plenty of « scans » were never scanned: an invoice out of an accounting package, a statement printed to PDF, a contract exported from a word processor all carry their text next to their drawing instructions, already correct, with no recognition step and therefore nothing to get wrong. Asking costs one function call, and it settles the whole need whenever the answer is yes. When the answer is no, the real work starts: something has to look at the pixels."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Lire la couche de texte du document avant de sortir un OCR"
+      en: "Read the document's text layer before reaching for OCR"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le document ne quitte pas votre infrastructure"
+          - "Une page numérisée porte souvent des données personnelles, traitées ici sur votre seule infrastructure"
+        en:
+          - "No specific scope added: the document never leaves your infrastructure"
+          - "A digitised page often carries personal data, processed here on your own infrastructure alone"
+    code:
+      python: snippets/read-text-from-a-scanned-page/n0.py
+      javascript: snippets/read-text-from-a-scanned-page/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une page réellement scannée n'a pas de couche de texte, et aucune lecture n'en inventera une. Le document du test est valide, il compte une page, et cette page est une photographie dessinée en plein cadre : zéro caractère. Ce que l'extrait rend alors n'est pas une chaîne vide, qui se lirait « page blanche » et ferait classer un document non lu, mais un rapport qui nomme la raison et renvoie vers un OCR. Le tampon d'un numéro de page ne suffit pas non plus à faire une couche de texte : un caractère posé sur une image reste une image."
+      en: "A page that was really scanned has no text layer, and no amount of parsing will invent one. The test document is valid, it has one page, and that page is a photograph drawn edge to edge: zero characters. What the snippet returns then is not an empty string, which would read as « this page is blank » and file an unread document, but a report that names the reason and points at OCR. A stamped page number is no more a text layer than that: one character sitting on an image is still an image."
+    escalate_when:
+      fr: "Le rapport revient avec « pas de couche de texte » sur des documents qu'il faut bien lire."
+      en: "The report comes back « no text layer » on documents you still have to read."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Un OCR écrit à la main — segmentation des caractères, puis classifieur sur chaque glyphe — est un projet de plusieurs mois, dont le résultat reste en deçà des moteurs libres qui s'installent en une commande. Sur cette fiche, N2 n'est pas une montée en puissance, c'est le point d'entrée raisonnable."
+      en: "A hand-written OCR — character segmentation, then a classifier on each glyph — is a project of several months whose result stays below the free engines you install with a single command. On this entry, N2 is not a step up in power, it is the sensible entry point."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Moteur de reconnaissance optique auto-hébergé, avec seuil de relecture"
+      en: "Self-hosted optical recognition engine, with a review threshold"
+    cost: modéré
+    latency: "~1 s"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Traitement des documents sur votre infrastructure, données linguistiques du moteur comprises"
+          - "Les pages envoyées en relecture humaine sont vues par une personne : le périmètre des accès internes est à traiter comme tel"
+        en:
+          - "Processing of the documents on your own infrastructure, engine language data included"
+          - "Pages sent to human review are seen by a person: internal access is part of the scope and is handled as such"
+    code:
+      python: snippets/read-text-from-a-scanned-page/n2.py
+      javascript: snippets/read-text-from-a-scanned-page/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Une erreur sûre d'elle. Sur un scan net, le moteur lit la lettre O là où la facture imprimait un zéro et rend « N° 2O24-OOO431 » avec un score haut : le drapeau de relecture reste baissé, puisque le moteur n'a pas hésité. Relever le seuil n'y change rien, l'erreur est confiante. Ce qui la rattrape, c'est une règle sur la forme attendue de vos références, écrite à la main : N0 de nouveau."
+      en: "A confident mistake. On a clean scan, the engine reads the letter O where the invoice printed a zero and returns « N° 2O24-OOO431 » with a high score: the review flag stays down, because the engine never hesitated. Raising the threshold changes nothing, the mistake is confident. What catches it is a rule about the shape your references take, written by hand: rung N0 again."
+    escalate_when:
+      fr: "Vos pages portent ce qu'un moteur de lignes ne rend pas : une annotation manuscrite en marge, un tampon en travers d'un tableau, deux colonnes qu'il aplatit en une seule suite de lignes."
+      en: "Your pages carry what a line engine does not return: a handwritten note in the margin, a stamp across a table, two columns it flattens into a single run of lines."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Transcription par appel à un modèle généraliste multimodal"
+      en: "Transcription through a general-purpose multimodal model"
+    cost: élevé
+    latency: ">1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: high
+      regulatory:
+        fr:
+          - "Transfert des documents à un sous-traitant, avec l'encadrement contractuel que cela suppose"
+          - "Localisation du traitement à vérifier auprès du fournisseur"
+          - "Une page numérisée peut porter une pièce d'identité ou un document de santé, dont le transfert relève d'un régime distinct"
+        en:
+          - "Transfer of the documents to a processor, with the contractual framing that implies"
+          - "Processing location to be confirmed with the provider"
+          - "A digitised page may hold an identity document or a health record, whose transfer falls under a separate regime"
+    code:
+      python: snippets/read-text-from-a-scanned-page/n3.py
+      javascript: snippets/read-text-from-a-scanned-page/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "Un modèle qui lit est un modèle qui écrit. Le test lui remet une image qui porte un en-tête PNG et rien à lire ; il rend une facture entière et plausible — un fournisseur, une référence à la bonne forme, un montant à deux décimales — avec une liste de fragments illisibles vide, donc aucun doute et aucun drapeau de relecture. Toutes les assertions passent, et c'est le sujet : la tuyauterie est correcte, et l'appelant reçoit un total qui n'a jamais été imprimé sur aucune page."
+      en: "A model that reads is a model that writes. The test hands it an image carrying a PNG header and nothing to read; it returns a complete, plausible invoice — a supplier, a reference in the right shape, an amount with two decimals — with an empty list of unreadable fragments, so no doubt and no review flag. Every assertion passes, and that is the point: the plumbing is correct, and the caller receives a total that was never printed on any page."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus."
+      en: "There is no rung above this one."
+
+verdict_rationale:
+  fr: "N2, parce que sur une page réellement scannée il ne reste que les pixels, et que c'est le seul barreau qui les lise chez vous, sans clé ni quota, et deux fois de la même façon. N0 passe toujours en premier : il coûte un appel de fonction, il règle tout le besoin quand le document portait déjà son texte, et quand il ne le porte pas, il le dit au lieu de rendre une page vide — c'est le réflexe, pas la solution générale. N3 lit ce que N2 aplatit, une annotation en marge ou deux colonnes, et le paie de la seule chose qui compte ici : sa transcription peut avoir été écrite plutôt que lue, et rien dans le code ne peut s'en apercevoir."
+  en: "N2, because on a page that was really scanned nothing is left but the pixels, and this is the only rung that reads them on your own machine, with no key and no quota, and reads them the same way twice. N0 comes first every time: it costs one function call, it settles the whole need when the document was carrying its text all along, and when it is not, it says so instead of handing back a blank page — a first reflex, not a general solution. N3 reads what N2 flattens, a note in the margin or two columns, and pays for it with the one thing that matters here: its transcription may have been written rather than read, and nothing in the code can tell."
+
+further_reading:
+  - label: "PDF 32000-1:2008 — les opérateurs de texte d'un flux de contenu, section 9.4"
+    url: "https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf"
+  - label: "Tesseract OCR — le moteur nommé par l'extrait N2"
+    url: "https://github.com/tesseract-ocr/tesseract"
+  - label: "Tesseract — Improving the quality of the output, sur ce qui fait rater une page"
+    url: "https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html"
+  - label: "tesseract.js — le portage JavaScript utilisé par l'extrait N2"
+    url: "https://github.com/naptha/tesseract.js"
+
+sources: []
+---
