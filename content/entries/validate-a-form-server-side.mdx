@@ -1,0 +1,86 @@
+---
+id: validate-a-form-server-side
+family: decide-validate
+status: published
+verdict: N0
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Valider un formulaire côté serveur"
+  en: "Validate a form server-side"
+
+need:
+  fr: "Vérifier que les données reçues d'un formulaire sont complètes et cohérentes avant de les enregistrer."
+  en: "Check that the data received from a form is complete and coherent before storing it."
+
+scenario:
+  fr: "On voit des formulaires entiers confiés à un modèle généraliste, à charge pour lui de dire si la saisie est acceptable et, sinon, pourquoi. Les règles étaient pourtant écrites avant que quiconque tape quoi que ce soit : l'âge minimal est celui qu'on a choisi, la longueur d'un pseudonyme celle qu'on a fixée, les formats d'adresse acceptés ceux qu'on a décidé d'accepter. Un refus se montre à la personne qui a rempli le formulaire, et doit tenir quand elle le conteste — ce qui suppose que la même saisie reçoive deux fois la même réponse."
+  en: "Whole form submissions get handed to a general-purpose model, which is asked whether the entry is acceptable and, if not, why. The rules were written before anyone typed anything, though: the minimum age is the one you picked, the display name length is the one you set, the address formats you accept are the ones you decided to accept. A refusal is shown to the person who filled the form, and has to hold when they argue with it — which means the same submission must get the same answer twice."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Schéma déclaratif, un message d'erreur par champ"
+      en: "Declarative schema, one error message per field"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : la saisie ne quitte pas votre infrastructure"
+          - "Les messages renvoyés nomment le champ et la règle enfreinte, jamais la valeur saisie : ce qui atterrit dans vos journaux d'erreur reste ce que vous y mettez"
+        en:
+          - "No specific scope added: the submission never leaves your infrastructure"
+          - "Messages name the field and the rule it broke, never the value typed: what ends up in your error logs stays what you put there"
+    code:
+      python: snippets/validate-a-form-server-side/n0.py
+      javascript: snippets/validate-a-form-server-side/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Aucune règle ne dit si ce qui est saisi existe. Le test soumet `ada@no-such-mailbox.example` : la forme est correcte, le schéma accepte, et personne ne lit le courrier envoyé là. Le savoir demande une vérification externe — un message de confirmation, une interrogation du domaine — c'est-à-dire un autre besoin."
+      en: "No rule can tell whether what was typed exists. The test submits `ada@no-such-mailbox.example`: the shape is right, the schema accepts it, and nobody reads mail sent there. Finding out takes an external check — a confirmation message, a lookup on the domain — which is a different need."
+    escalate_when:
+      fr: "Des saisies bien formées mais fausses commencent à vous coûter quelque chose de visible : des comptes créés qui ne confirment jamais, des courriers qui reviennent. Aucun barreau au-dessus n'y répond ; ce qu'il vous faut est une vérification externe, qui est un autre besoin."
+      en: "Well-formed but false entries start costing you something you can see: accounts created that never confirm, mail that bounces. No rung above answers that; what you need is an external check, which is a different need."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n'y a rien à apprendre. L'âge minimal, la longueur d'un pseudonyme, le format d'adresse accepté : ce sont des décisions écrites et opposables, pas des régularités à retrouver dans des données. Un classifieur entraîné sur les saisies passées apprendrait ce qui a été accepté hier, erreurs comprises, et ne saurait toujours pas dire quel champ reprendre."
+      en: "There is nothing to learn. A minimum age, a display name length, an accepted address format: these are written decisions you can be held to, not regularities waiting in data. A classifier trained on past submissions would learn what was accepted yesterday, mistakes included, and still could not name the field to fix."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même raison qu'en N1, avec un service permanent à exploiter en plus. Un modèle auto-hébergé ne rend pas une règle plus juste : il rend son verdict plus cher à obtenir, plus lent à rendre, et impossible à relire dans le schéma que l'équipe maintient."
+      en: "The same reason as N1, plus a permanent service to run. A self-hosted model does not make a rule any more correct: it makes the verdict costlier to obtain, slower to return, and impossible to read back in the schema the team maintains."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Une validation doit refuser de façon déterministe, et justifier son refus devant la personne dont elle refuse la saisie. Un modèle qui accepte parfois et refuse parfois la même saisie ne valide rien : il donne un avis. Deux envois identiques doivent recevoir la même réponse, et cette réponse doit se lire dans une règle qu'on peut produire — un schéma, une ligne de code, un test — et non dans une phrase dont on ne peut ni rejouer la production ni montrer le fondement. S'y ajoute que le contenu d'un formulaire est du texte écrit par la personne validée : le confier à un modèle qui lit ce texte comme une consigne, c'est la laisser peser sur le verdict qui la concerne."
+      en: "A validation has to refuse deterministically, and to justify the refusal to the person whose entry it refuses. A model that sometimes accepts and sometimes refuses the same submission validates nothing: it offers an opinion. Two identical submissions must get the same answer, and that answer must be readable in a rule you can produce — a schema, a line of code, a test — not in a sentence whose production you can neither replay nor ground. On top of that, a form carries text written by the very person being validated: handing it to a model that reads text as instruction lets them lean on the verdict that concerns them."
+
+verdict_rationale:
+  fr: "N0 n'est pas ici le premier barreau d'un escalier, c'est le seul qui tienne. Une règle de formulaire est écrite avant d'être appliquée : elle se lit, elle se teste unitairement, et elle se montre à qui la conteste. Les trois barreaux au-dessus échangeraient cette propriété contre une décision qu'on ne peut ni rejouer ni justifier, ce qui est exactement ce qu'on demande à une validation."
+  en: "N0 is not the first step of a staircase here, it is the only step that holds. A form rule is written before it is enforced: you can read it, unit test it, and show it to whoever disputes it. The three rungs above would trade that property for a decision you can neither replay nor justify, which is precisely what a validation is asked for."
+
+further_reading:
+  - label: "JSON Schema — Validation, le vocabulaire d'un schéma déclaratif"
+    url: "https://json-schema.org/draft/2020-12/json-schema-validation"
+  - label: "OWASP — Input Validation Cheat Sheet"
+    url: "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html"
+  - label: "WHATWG HTML — définition normative d'une adresse électronique valide"
+    url: "https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address"
+  - label: "MDN — Validation de formulaire, et pourquoi le contrôle côté client ne suffit pas"
+    url: "https://developer.mozilla.org/docs/Learn_web_development/Extensions/Forms/Form_validation"
+
+sources: []
+---
