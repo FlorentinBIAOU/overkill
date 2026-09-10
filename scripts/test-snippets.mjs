@@ -34,6 +34,30 @@ const cible = args.find((a) => !a.startsWith('--'));
 /** Interpréteur Python : le venv d'outillage s'il existe, sinon python3. */
 const PYTHON = existsSync('.venv-tools/bin/python') ? '.venv-tools/bin/python' : 'python3';
 
+/*
+ * Les extraits Python ont besoin de pytest et de quelques bibliothèques. Sans
+ * elles, chaque fiche échouerait avec « No module named pytest », vingt-cinq
+ * fois de suite, ce qui donnerait à croire que le dépôt est cassé.
+ *
+ * On vérifie donc l'environnement d'abord, et on dit quoi installer.
+ */
+function verifierPython() {
+  const r = spawnSync(PYTHON, ['-c', 'import pytest, numpy, sklearn'], { encoding: 'utf8' });
+  if (r.status === 0) return;
+
+  const manquant = /No module named '?([\w.]+)/.exec(r.stderr ?? '')?.[1] ?? 'pytest';
+  console.error(
+    `\ntest-snippets : l'environnement Python n'est pas prêt (« ${manquant} » manque).\n\n` +
+      `Les extraits sont exécutés pour de bon, ils ont donc besoin de leurs dépendances :\n\n` +
+      `    python3 -m venv .venv-tools\n` +
+      `    .venv-tools/bin/pip install -r content/snippets/requirements-snippets.txt\n\n` +
+      `Puis relancer cette commande. Le détail est dans CONTRIBUTING.md.\n`,
+  );
+  process.exit(1);
+}
+
+verifierPython();
+
 const dossiers = (await readdir(RACINE, { withFileTypes: true }))
   .filter((e) => e.isDirectory() && !e.name.startsWith('_'))
   .map((e) => e.name)

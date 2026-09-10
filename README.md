@@ -26,7 +26,15 @@ et c'est ce qui rend crédibles celles qui recommandent l'inverse.
 
 ```bash
 npm install
+
+# Les extraits de code sont réellement exécutés : ils ont leurs dépendances.
+python3 -m venv .venv-tools
+.venv-tools/bin/pip install -r content/snippets/requirements-snippets.txt
 ```
+
+Le contrôle orthographique du français, facultatif en local, demande en plus le
+dictionnaire `hunspell-fr-classical` et `spylls`. S'ils manquent, le contrôle
+passe en le disant plutôt que d'échouer.
 
 ## Construire le site
 
