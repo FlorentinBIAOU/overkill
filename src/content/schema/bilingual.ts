@@ -1,4 +1,4 @@
-import { z } from 'astro:content';
+import { z } from 'zod';
 
 /**
  * Champ bilingue. Les deux langues sont obligatoires et non vides.

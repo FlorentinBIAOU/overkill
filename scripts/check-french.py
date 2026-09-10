@@ -88,6 +88,58 @@ def _masquer(texte: str, motif: re.Pattern) -> str:
     return motif.sub(lambda m: re.sub(r"\S", " ", m.group(0)), texte)
 
 
+FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
+
+
+def _prose_mdx(texte: str) -> str:
+    """
+    Une fiche est bilingue : la moitié de son contenu est légitimement en
+    anglais. Seules les valeurs françaises et les commentaires YAML sont
+    relus, le reste est masqué.
+    """
+    m = FRONTMATTER.match(texte)
+    if not m:
+        return _masquer(texte, re.compile(r"```.*?```", re.S))
+
+    debut, fin = m.start(1), m.end(1)
+    frontmatter = texte[debut:fin]
+    garde = [False] * len(frontmatter)
+
+    for ligne_m in re.finditer(r"[^\n]*", frontmatter):
+        ligne = ligne_m.group(0)
+        if not ligne:
+            continue
+        base = ligne_m.start()
+
+        # Commentaire YAML : rédigé en français, donc relu.
+        c = re.search(r"#(.*)$", ligne)
+        if c:
+            for i in range(base + c.start(1), base + c.end(1)):
+                garde[i] = True
+
+        # Valeur française d'un champ bilingue : relue.
+        v = re.match(r"\s*fr:\s*(.+?)\s*$", ligne)
+        if v:
+            for i in range(base + v.start(1), base + v.end(1)):
+                garde[i] = True
+
+    masque = list(texte)
+    for i in range(len(texte)):
+        if debut <= i < fin:
+            if not garde[i - debut] and not texte[i].isspace():
+                masque[i] = " "
+    corps = "".join(masque)
+
+    # Le corps du document reste de la prose, hors code.
+    for motif in (
+        re.compile(r"```.*?```", re.S),
+        re.compile(r"`[^`\n]*`"),
+        re.compile(r"<[^>]+>"),
+    ):
+        corps = _masquer(corps, motif)
+    return corps
+
+
 def prose_masque(chemin: Path) -> str:
     """
     Renvoie une chaîne de même longueur que le fichier, où tout ce qui n'est
@@ -100,7 +152,10 @@ def prose_masque(chemin: Path) -> str:
     texte = chemin.read_text(encoding="utf8")
     suffixe = chemin.suffix
 
-    if suffixe in {".md", ".mdx"}:
+    if suffixe == ".mdx":
+        return _prose_mdx(texte)
+
+    if suffixe == ".md":
         for motif in (
             re.compile(r"```.*?```", re.S),
             re.compile(r"~~~.*?~~~", re.S),

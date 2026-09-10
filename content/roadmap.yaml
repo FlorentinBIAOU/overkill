@@ -1,0 +1,10 @@
+# Feuille de route — les 200 intitulés de fiches (CDC 6.2).
+#
+# Ce ne sont pas des fiches : aucun contenu de barreau n'est produit pour eux.
+# Ils servent à montrer l'ampleur du catalogue visé, à vérifier que
+# l'architecture tient à 200 entrées, et à donner aux contributeurs une liste
+# dans laquelle se servir.
+#
+# Champs : id, family, title.{fr,en}, need.{fr,en}
+# Rempli au lot 09.
+[]

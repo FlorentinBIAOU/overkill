@@ -1,0 +1,74 @@
+---
+id: invalide-langue-manquante
+family: detect-filter
+status: published
+verdict: N0
+updated: 2026-09-01
+contributors: [florentin-biaou]
+
+title:
+  fr: "Fiche de test valide"
+
+need:
+  fr: "Vérifier que le schéma accepte une fiche conforme."
+  en: "Check that the schema accepts a conforming entry."
+
+scenario:
+  fr: "Cette fiche n'est pas publiée. Elle sert à prouver que la validation accepte ce qu'elle doit accepter."
+  en: "This entry is not published. It exists to prove the validation accepts what it should."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Normalisation puis expressions régulières"
+      en: "Normalisation then regular expressions"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr: ["Aucun périmètre spécifique ajouté"]
+        en: ["No specific scope added"]
+    code:
+      python: snippets/_fixture/n0.py
+      javascript: snippets/_fixture/n0.js
+      verification: executed
+    breaking_point:
+      fr: "L'obfuscation volontaire du texte d'entrée."
+      en: "Deliberate obfuscation of the input text."
+    escalate_when:
+      fr: "Vos utilisateurs contournent activement le filtre."
+      en: "Your users are actively working around the filter."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Sans intérêt ici : le barreau N0 couvre déjà le besoin."
+      en: "Not useful here: N0 already covers the need."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Sans intérêt ici : aucun gain sur un besoin déterministe."
+      en: "Not useful here: no gain on a deterministic need."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Sans intérêt ici : coût et latence sans contrepartie."
+      en: "Not useful here: cost and latency with nothing in return."
+
+verdict_rationale:
+  fr: "N0 suffit. Le besoin est déterministe et le volume de règles est faible."
+  en: "N0 is enough. The need is deterministic and the rule set is small."
+
+further_reading: []
+sources: []
+---
+
+Corps de la fiche de test.
