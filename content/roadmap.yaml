@@ -1,10 +1,1661 @@
 # Feuille de route — les 200 intitulés de fiches (CDC 6.2).
 #
-# Ce ne sont pas des fiches : aucun contenu de barreau n'est produit pour eux.
-# Ils servent à montrer l'ampleur du catalogue visé, à vérifier que
-# l'architecture tient à 200 entrées, et à donner aux contributeurs une liste
-# dans laquelle se servir.
+# Ce ne sont pas des fiches. Aucun contenu de barreau n'est produit pour eux
+# (interdit 7). Ils servent à trois choses : montrer l'ampleur du catalogue
+# visé, vérifier que l'architecture tient à 200 entrées, et donner aux
+# contributeurs une liste dans laquelle se servir.
 #
-# Champs : id, family, title.{fr,en}, need.{fr,en}
-# Rempli au lot 09.
-[]
+# Vingt intitulés par famille, sur les dix familles. Les 25 fiches du contenu
+# de lancement en font partie.
+#
+# Règles de rédaction : docs/sprints/CHARTE-ROADMAP.md
+
+# --------------------------------------------------------------------------
+# Détecter et filtrer
+# --------------------------------------------------------------------------
+
+- id: block-abusive-login-attempts
+  family: detect-filter
+  title:
+    fr: "Bloquer les tentatives de connexion abusives"
+    en: "Block abusive login attempts"
+  need:
+    fr: "Repérer les vagues d'essais de mots de passe sur un formulaire de connexion sans gêner les utilisateurs distraits."
+    en: "Spot waves of password guessing against a login form without punishing forgetful users."
+- id: blur-faces-in-photos
+  family: detect-filter
+  title:
+    fr: "Flouter les visages sur des photos"
+    en: "Blur faces in photos"
+  need:
+    fr: "Masquer le visage des personnes présentes sur une image avant de la publier ou de la transmettre."
+    en: "Hide the faces of the people caught in an image before publishing or sharing it."
+- id: detect-copied-text-between-documents
+  family: detect-filter
+  title:
+    fr: "Repérer un texte copié d'un document à l'autre"
+    en: "Detect text copied between documents"
+  need:
+    fr: "Retrouver les passages repris d'un document dans un autre, y compris quand quelques mots ont été changés."
+    en: "Find passages reused from one document in another, even when a few words were changed."
+- id: filter-out-bot-traffic-from-logs
+  family: detect-filter
+  title:
+    fr: "Écarter le trafic des robots dans les journaux"
+    en: "Filter bot traffic out of server logs"
+  need:
+    fr: "Distinguer les visites humaines des passages d'automates pour que les statistiques d'audience veuillent dire quelque chose."
+    en: "Separate human visits from automated crawls so that traffic figures mean something."
+- id: filter-noisy-alerts-before-paging
+  family: detect-filter
+  title:
+    fr: "Filtrer les alertes inutiles avant de réveiller quelqu'un"
+    en: "Filter noisy alerts before paging someone"
+  need:
+    fr: "Regrouper et écarter les alertes répétitives ou sans conséquence pour ne notifier une astreinte que sur un incident réel."
+    en: "Group and drop repetitive or harmless alerts so on-call is woken only for a real incident."
+- id: detect-secrets-in-source-code
+  family: detect-filter
+  title:
+    fr: "Repérer les identifiants oubliés dans du code"
+    en: "Find credentials left in source code"
+  need:
+    fr: "Trouver les clés d'accès, mots de passe et jetons laissés dans un dépôt avant qu'ils ne soient publiés."
+    en: "Find the access keys, passwords and tokens left in a repository before they get published."
+- id: find-duplicate-records
+  family: detect-filter
+  title:
+    fr: "Repérer les doublons dans une base clients"
+    en: "Find duplicate records in a customer database"
+  need:
+    fr: "Retrouver les fiches qui désignent la même personne malgré des orthographes, des abréviations ou des champs manquants."
+    en: "Find the records that describe the same person despite different spellings, abbreviations or missing fields."
+- id: find-personal-data-in-a-spreadsheet
+  family: detect-filter
+  title:
+    fr: "Repérer les données personnelles dans un tableur"
+    en: "Find personal data in a spreadsheet"
+  need:
+    fr: "Savoir quelles colonnes d'un fichier contiennent des données personnelles avant de le partager ou de l'archiver."
+    en: "Know which columns of a file hold personal data before sharing or archiving it."
+- id: find-duplicate-images-in-a-media-library
+  family: detect-filter
+  title:
+    fr: "Repérer deux fois la même image dans une médiathèque"
+    en: "Find the same image twice in a media library"
+  need:
+    fr: "Retrouver les visuels identiques, ou simplement recadrés, redimensionnés ou recompressés, qui encombrent une bibliothèque."
+    en: "Find visuals that are identical, or merely cropped, resized or recompressed, cluttering a library."
+- id: mask-personal-data-in-chat
+  family: detect-filter
+  title:
+    fr: "Masquer les coordonnées dans un message"
+    en: "Mask personal details in a message"
+  need:
+    fr: "Remplacer les numéros de téléphone, e-mails et adresses d'un message avant de l'afficher, de le stocker ou de le transmettre ailleurs."
+    en: "Replace the phone numbers, emails and addresses in a message before displaying, storing or forwarding it."
+- id: moderate-user-comments
+  family: detect-filter
+  title:
+    fr: "Modérer des commentaires publics"
+    en: "Moderate public comments"
+  need:
+    fr: "Écarter les commentaires insultants ou haineux avant leur publication, sans faire taire les critiques légitimes."
+    en: "Keep insulting or hateful comments off a public page without silencing legitimate criticism."
+- id: screen-uploaded-files-for-malware
+  family: detect-filter
+  title:
+    fr: "Contrôler les fichiers déposés par les utilisateurs"
+    en: "Screen the files users upload"
+  need:
+    fr: "Vérifier qu'un fichier reçu est bien du type annoncé et ne transporte rien de dangereux avant de le stocker."
+    en: "Check that an uploaded file really is what it claims to be and carries nothing harmful."
+- id: detect-fraudulent-payment-attempts
+  family: detect-filter
+  title:
+    fr: "Repérer une tentative de paiement frauduleuse"
+    en: "Spot a fraudulent payment attempt"
+  need:
+    fr: "Signaler les commandes suspectes au moment du paiement sans faire échouer les achats légitimes."
+    en: "Flag suspicious orders at checkout without turning away legitimate buyers."
+- id: detect-nudity-in-uploaded-images
+  family: detect-filter
+  title:
+    fr: "Repérer les images explicites envoyées par les utilisateurs"
+    en: "Spot explicit images among user uploads"
+  need:
+    fr: "Écarter les photos à caractère sexuel déposées par les utilisateurs avant qu'elles n'apparaissent sur le site."
+    en: "Keep sexually explicit uploads from ever appearing on a public site."
+- id: detect-fake-reviews
+  family: detect-filter
+  title:
+    fr: "Repérer les faux avis"
+    en: "Spot fake reviews"
+  need:
+    fr: "Signaler les avis rédigés en série ou achetés avant qu'ils ne faussent la note affichée d'un produit."
+    en: "Flag mass-produced or paid-for reviews before they distort the rating shown for a product."
+- id: detect-profanity-in-usernames
+  family: detect-filter
+  title:
+    fr: "Repérer les insultes dans les pseudonymes"
+    en: "Spot profanity in usernames"
+  need:
+    fr: "Refuser les pseudonymes grossiers, y compris quand ils sont écrits avec des chiffres ou des caractères détournés."
+    en: "Reject crude usernames, including the ones disguised with digits or lookalike characters."
+- id: detect-scam-links-in-messages
+  family: detect-filter
+  title:
+    fr: "Repérer les liens frauduleux dans les messages"
+    en: "Spot scam links in messages"
+  need:
+    fr: "Détecter les liens de hameçonnage ou de redirection douteuse postés par les utilisateurs avant qu'un lecteur ne clique."
+    en: "Catch phishing or shady redirect links posted by users before a reader clicks one."
+- id: detect-spam-in-contact-form
+  family: detect-filter
+  title:
+    fr: "Repérer le spam dans un formulaire de contact"
+    en: "Spot spam in a contact form"
+  need:
+    fr: "Écarter les envois automatiques et publicitaires reçus par un formulaire public sans bloquer les vraies demandes."
+    en: "Keep automated and promotional submissions out of a public form without blocking genuine enquiries."
+- id: detect-ai-generated-text
+  family: detect-filter
+  title:
+    fr: "Repérer un texte écrit par une machine"
+    en: "Tell whether a text was machine-written"
+  need:
+    fr: "Estimer si un texte reçu a été rédigé par un modèle de langue, et savoir ce que vaut cette estimation."
+    en: "Estimate whether a submitted text was written by a language model, and how much that estimate is worth."
+- id: block-disposable-email-addresses
+  family: detect-filter
+  title:
+    fr: "Écarter les adresses e-mail jetables"
+    en: "Turn away disposable email addresses"
+  need:
+    fr: "Refuser à l'inscription les adresses temporaires qui rendront le compte injoignable quelques heures plus tard."
+    en: "Refuse throwaway addresses at sign-up, since the account becomes unreachable within hours."
+
+# --------------------------------------------------------------------------
+# Extraire
+# --------------------------------------------------------------------------
+
+- id: extract-contact-details-from-a-web-page
+  family: extract
+  title:
+    fr: "Récupérer les coordonnées affichées sur une page"
+    en: "Collect the contact details listed on a page"
+  need:
+    fr: "Rassembler les téléphones, e-mails et adresses présents sur une page web pour alimenter une fiche."
+    en: "Gather the phones, emails and addresses shown on a web page to fill in a record."
+- id: extract-amounts-and-currencies-from-text
+  family: extract
+  title:
+    fr: "Extraire les montants d'un texte"
+    en: "Extract amounts and currencies from a text"
+  need:
+    fr: "Retrouver les sommes citées dans un message ou un document, avec leur devise, quelle que soit leur écriture."
+    en: "Find the sums quoted in a message or a document, with their currency, however they are written."
+- id: extract-dates-from-text
+  family: extract
+  title:
+    fr: "Extraire des dates d'un texte libre"
+    en: "Extract dates from free text"
+  need:
+    fr: "Retrouver les dates mentionnées dans un message ou un document, quel que soit leur format."
+    en: "Find the dates mentioned in a message or a document, whatever their format."
+- id: extract-measurements-from-a-product-description
+  family: extract
+  title:
+    fr: "Extraire les mesures d'une description produit"
+    en: "Extract measurements from a product description"
+  need:
+    fr: "Retrouver les dimensions, poids et volumes cités dans un texte libre et les ramener à une unité commune."
+    en: "Find the dimensions, weights and volumes quoted in free text and bring them to a common unit."
+- id: extract-opening-hours-from-a-business-page
+  family: extract
+  title:
+    fr: "Extraire les horaires d'ouverture d'un établissement"
+    en: "Extract opening hours from a business page"
+  need:
+    fr: "Transformer des horaires écrits en toutes lettres en créneaux qu'un programme peut comparer à l'heure courante."
+    en: "Turn opening hours written in plain words into slots a program can compare against the clock."
+- id: extract-structured-data-from-a-resume
+  family: extract
+  title:
+    fr: "Extraire les informations d'un CV"
+    en: "Extract the details held in a CV"
+  need:
+    fr: "Récupérer les coordonnées, les expériences, les formations et les compétences d'une candidature reçue en fichier."
+    en: "Recover the contact details, jobs, studies and skills from an application received as a file."
+- id: extract-fields-from-invoice
+  family: extract
+  title:
+    fr: "Extraire les champs d'une facture"
+    en: "Extract the fields of an invoice"
+  need:
+    fr: "Récupérer le numéro, la date, le montant et le fournisseur d'une facture, quelle que soit sa mise en page."
+    en: "Pull the number, date, total and supplier out of an invoice, whatever its layout."
+- id: extract-ingredients-and-steps-from-a-recipe
+  family: extract
+  title:
+    fr: "Extraire les ingrédients et les étapes d'une recette"
+    en: "Extract the ingredients and steps of a recipe"
+  need:
+    fr: "Séparer la liste des ingrédients, avec leurs quantités, de la suite des étapes de préparation."
+    en: "Separate the ingredient list, with its quantities, from the sequence of preparation steps."
+- id: extract-key-clauses-from-a-contract
+  family: extract
+  title:
+    fr: "Extraire les clauses clés d'un contrat"
+    en: "Extract the key clauses of a contract"
+  need:
+    fr: "Retrouver dans un contrat la durée, les échéances, le préavis et les conditions de résiliation."
+    en: "Locate the term, the deadlines, the notice period and the termination conditions inside a contract."
+- id: extract-key-terms-from-a-document
+  family: extract
+  title:
+    fr: "Extraire les mots-clés d'un document"
+    en: "Extract the key terms of a document"
+  need:
+    fr: "Dégager les termes qui caractérisent un document, pour l'indexer, l'étiqueter ou en donner un aperçu."
+    en: "Surface the terms that characterise a document, so it can be indexed, labelled or previewed."
+- id: extract-tables-from-a-pdf
+  family: extract
+  title:
+    fr: "Extraire les tableaux d'un PDF"
+    en: "Extract the tables from a PDF"
+  need:
+    fr: "Récupérer sous forme de lignes et de colonnes les tableaux d'un document conçu pour l'impression."
+    en: "Recover, as rows and columns, the tables inside a document laid out for print."
+- id: extract-people-and-companies-from-an-article
+  family: extract
+  title:
+    fr: "Repérer les personnes et organisations citées dans un article"
+    en: "Find the people and organisations named in an article"
+  need:
+    fr: "Lister les noms propres mentionnés dans un texte et savoir à quel type d'entité chacun correspond."
+    en: "List the proper names mentioned in a text and tell what kind of entity each one is."
+- id: extract-the-latest-reply-from-an-email-thread
+  family: extract
+  title:
+    fr: "Isoler la dernière réponse d'un fil d'e-mails"
+    en: "Isolate the newest reply in an email thread"
+  need:
+    fr: "Séparer le message qui vient d'arriver du texte cité et de la signature qui l'accompagnent."
+    en: "Separate the message that just arrived from the quoted history and signature wrapped around it."
+- id: extract-product-data-from-a-shop-page
+  family: extract
+  title:
+    fr: "Récupérer les données produit d'une page marchande"
+    en: "Pull product data from a shop page"
+  need:
+    fr: "Relever le nom, le prix, la disponibilité et les visuels d'un produit affiché sur un site marchand."
+    en: "Read the name, price, availability and images of a product shown on a shop site."
+- id: extract-quotes-from-an-interview-transcript
+  family: extract
+  title:
+    fr: "Extraire les citations d'un entretien"
+    en: "Pull quotes from an interview transcript"
+  need:
+    fr: "Retrouver dans une transcription les passages prononcés par chaque intervenant et utilisables tels quels."
+    en: "Find, in a transcript, the passages each speaker said that stand up as quotes."
+- id: extract-main-content-from-a-web-page
+  family: extract
+  title:
+    fr: "Isoler le contenu principal d'une page web"
+    en: "Pull the main content out of a web page"
+  need:
+    fr: "Récupérer le texte de l'article sans les menus, bandeaux et encarts qui l'entourent."
+    en: "Recover the article text without the menus, banners and side panels around it."
+- id: split-bibliography-into-references
+  family: extract
+  title:
+    fr: "Découper une bibliographie en références"
+    en: "Split a bibliography into references"
+  need:
+    fr: "Séparer une liste de références et retrouver l'auteur, le titre, l'année et la source de chacune."
+    en: "Split a reference list and recover the author, title, year and source of each entry."
+- id: parse-address-into-fields
+  family: extract
+  title:
+    fr: "Découper une adresse postale"
+    en: "Split a postal address into fields"
+  need:
+    fr: "Séparer la rue, le code postal, la ville et le pays d'une adresse saisie sur une seule ligne."
+    en: "Separate street, postcode, town and country from an address typed on a single line."
+- id: extract-fields-from-a-log-line
+  family: extract
+  title:
+    fr: "Découper des lignes de journal en champs"
+    en: "Split log lines into fields"
+  need:
+    fr: "Transformer des lignes de journal hétérogènes en champs nommés pour pouvoir les filtrer et les compter."
+    en: "Turn heterogeneous log lines into named fields so they can be filtered and counted."
+- id: extract-tracking-numbers-from-an-email
+  family: extract
+  title:
+    fr: "Repérer un numéro de suivi dans un e-mail"
+    en: "Spot a tracking number in an email"
+  need:
+    fr: "Retrouver la référence de colis dans une confirmation d'expédition et savoir de quel transporteur elle relève."
+    en: "Find the parcel reference in a shipping confirmation and tell which carrier it belongs to."
+
+# --------------------------------------------------------------------------
+# Classer et router
+# --------------------------------------------------------------------------
+
+- id: assign-expenses-to-accounting-categories
+  family: classify-route
+  title:
+    fr: "Affecter des dépenses à des catégories comptables"
+    en: "Assign expenses to accounting categories"
+  need:
+    fr: "Attribuer à chaque ligne de dépense le poste comptable qui convient, à partir de son libellé et de son émetteur."
+    en: "Give each expense line the accounting category it belongs to, from its label and its merchant."
+- id: classify-a-company-by-its-line-of-business
+  family: classify-route
+  title:
+    fr: "Classer une entreprise par secteur d'activité"
+    en: "Classify a company by its line of business"
+  need:
+    fr: "Rattacher une société à un secteur à partir de son nom, de sa description ou de son site."
+    en: "Assign a company to a sector using its name, its description or its website."
+- id: detect-language-of-text
+  family: classify-route
+  title:
+    fr: "Détecter la langue d'un texte"
+    en: "Detect the language of a text"
+  need:
+    fr: "Savoir dans quelle langue un message est écrit avant de le traiter ou de l'envoyer au bon interlocuteur."
+    en: "Work out which language a message is written in before processing it or passing it to the right person."
+- id: dispatch-jobs-to-the-right-processing-queue
+  family: classify-route
+  title:
+    fr: "Répartir des traitements dans la bonne file"
+    en: "Dispatch jobs to the right processing queue"
+  need:
+    fr: "Orienter chaque tâche entrante vers la file adaptée à sa taille et à son urgence, pour éviter les bouchons."
+    en: "Send each incoming job to the queue that suits its size and urgency, to avoid pile-ups."
+- id: gauge-the-sentiment-of-a-customer-review
+  family: classify-route
+  title:
+    fr: "Mesurer le ton d'un avis client"
+    en: "Gauge the tone of a customer review"
+  need:
+    fr: "Savoir si un avis est positif, négatif ou mitigé, pour suivre l'humeur générale et réagir aux plus mauvais."
+    en: "Tell whether a review is positive, negative or mixed, to follow overall mood and react to the worst ones."
+- id: group-free-text-survey-answers-into-themes
+  family: classify-route
+  title:
+    fr: "Regrouper des réponses libres par thème"
+    en: "Group free-text survey answers into themes"
+  need:
+    fr: "Faire ressortir les sujets récurrents d'un lot de réponses ouvertes au lieu de les lire une par une."
+    en: "Surface the recurring subjects in a batch of open answers instead of reading them one by one."
+- id: identify-the-intent-behind-a-user-message
+  family: classify-route
+  title:
+    fr: "Reconnaître l'intention derrière un message"
+    en: "Identify the intent behind a user message"
+  need:
+    fr: "Comprendre ce que la personne demande — annuler, s'informer, réclamer — pour déclencher la bonne suite."
+    en: "Work out what the person wants — cancel, ask, complain — so the right next step can start."
+- id: label-audio-clips-by-what-can-be-heard
+  family: classify-route
+  title:
+    fr: "Étiqueter des extraits sonores selon ce qu'on y entend"
+    en: "Label audio clips by what can be heard"
+  need:
+    fr: "Distinguer une alarme, une voix ou un bruit de fond dans un enregistrement pour déclencher la bonne réaction."
+    en: "Tell an alarm, a voice and background noise apart in a recording, so the right reaction follows."
+- id: label-contract-clauses-by-type
+  family: classify-route
+  title:
+    fr: "Étiqueter les clauses d'un contrat par nature"
+    en: "Label contract clauses by type"
+  need:
+    fr: "Repérer dans un contrat quelles clauses relèvent de la confidentialité, de la résiliation ou de la responsabilité."
+    en: "Find which clauses in a contract cover confidentiality, termination or liability."
+- id: label-log-lines-by-severity
+  family: classify-route
+  title:
+    fr: "Étiqueter des lignes de journal par gravité"
+    en: "Label log lines by severity"
+  need:
+    fr: "Distinguer ce qui mérite une alerte de ce qui n'est que du bruit, dans un flux de journaux hétérogènes."
+    en: "Tell what deserves an alert from what is only noise, in a stream of heterogeneous logs."
+- id: map-free-text-to-an-official-code-list
+  family: classify-route
+  title:
+    fr: "Rattacher un libellé libre à une nomenclature officielle"
+    en: "Map free text to an official code list"
+  need:
+    fr: "Faire correspondre une description écrite à la main au code exact d'une nomenclature imposée et volumineuse."
+    en: "Match a hand-written description to the exact code of a mandated, very long classification."
+- id: put-products-in-the-right-catalogue-category
+  family: classify-route
+  title:
+    fr: "Ranger des produits dans la bonne catégorie"
+    en: "Put products in the right catalogue category"
+  need:
+    fr: "Placer chaque référence dans l'arborescence du catalogue à partir de son nom et de sa description."
+    en: "Place each item in the catalogue tree using its name and its description."
+- id: recognise-the-type-of-an-uploaded-document
+  family: classify-route
+  title:
+    fr: "Reconnaître le type d'un document déposé"
+    en: "Recognise the type of an uploaded document"
+  need:
+    fr: "Distinguer une facture d'un contrat ou d'un justificatif dès le dépôt, pour l'envoyer dans le bon traitement."
+    en: "Tell an invoice from a contract or a receipt as soon as it lands, so it enters the right process."
+- id: route-a-request-to-the-smallest-model-that-can-handle-it
+  family: classify-route
+  title:
+    fr: "Envoyer une requête au plus petit modèle qui suffit"
+    en: "Route a request to the smallest model that fits"
+  need:
+    fr: "Décider en amont si une demande relève d'une règle, d'un petit modèle ou d'un gros, avant de la traiter."
+    en: "Decide up front whether a request needs a rule, a small model or a large one, before handling it."
+- id: route-support-tickets
+  family: classify-route
+  title:
+    fr: "Aiguiller des tickets vers la bonne équipe"
+    en: "Route support tickets to the right team"
+  need:
+    fr: "Envoyer chaque demande entrante à l'équipe qui saura la traiter, sans qu'une personne ait à tout relire."
+    en: "Send every incoming request to the team able to handle it, without someone reading the whole queue first."
+- id: sort-incoming-email-into-folders
+  family: classify-route
+  title:
+    fr: "Ranger les emails entrants dans des dossiers"
+    en: "Sort incoming email into folders"
+  need:
+    fr: "Classer les messages reçus dans des dossiers utiles plutôt que de laisser une boîte unique déborder."
+    en: "File incoming messages into useful folders instead of letting a single inbox overflow."
+- id: sort-photos-by-what-they-show
+  family: classify-route
+  title:
+    fr: "Trier des photos selon ce qu'elles montrent"
+    en: "Sort photos by what they show"
+  need:
+    fr: "Classer un lot d'images selon leur contenu pour retrouver ensuite une scène ou un objet précis."
+    en: "Organise a batch of images by their content, so a given scene or object can be found later."
+- id: spot-urgent-messages-in-a-shared-inbox
+  family: classify-route
+  title:
+    fr: "Repérer les messages urgents dans une boîte partagée"
+    en: "Spot urgent messages in a shared inbox"
+  need:
+    fr: "Faire remonter en tête les messages qui ne peuvent pas attendre, sans passer toute la boîte en revue."
+    en: "Bring the messages that cannot wait to the top, without reviewing the whole inbox by hand."
+- id: tag-articles-by-topic
+  family: classify-route
+  title:
+    fr: "Étiqueter des articles par thème"
+    en: "Tag articles by topic"
+  need:
+    fr: "Poser une ou plusieurs étiquettes de sujet sur des articles pour les regrouper et les retrouver ensuite."
+    en: "Put one or more topic labels on articles so they can be grouped and found again later."
+- id: tell-whether-a-message-needs-a-human-reply
+  family: classify-route
+  title:
+    fr: "Savoir si un message appelle une réponse humaine"
+    en: "Tell whether a message needs a human reply"
+  need:
+    fr: "Séparer ce qu'une réponse automatique règle de ce qui exige quelqu'un, sans laisser passer un cas sensible."
+    en: "Separate what an automatic reply can settle from what needs a person, without letting a sensitive case slip through."
+
+# --------------------------------------------------------------------------
+# Chercher
+# --------------------------------------------------------------------------
+
+- id: add-a-search-page-to-a-small-website
+  family: search
+  title:
+    fr: "Ajouter une recherche à un petit site"
+    en: "Add a search page to a small website"
+  need:
+    fr: "Offrir une recherche interne sur un site de taille modeste sans monter d'infrastructure dédiée."
+    en: "Offer site search on a modest website without standing up a dedicated infrastructure."
+- id: add-autocomplete-to-a-search-bar
+  family: search
+  title:
+    fr: "Autocomplétion sur une barre de recherche"
+    en: "Add autocomplete to a search bar"
+  need:
+    fr: "Proposer des suggestions pertinentes dès les premières lettres tapées, assez vite pour suivre la frappe."
+    en: "Offer useful suggestions from the first letters typed, fast enough to keep up with the typing."
+- id: answer-questions-from-an-internal-knowledge-base
+  family: search
+  title:
+    fr: "Répondre à des questions à partir d'une base interne"
+    en: "Answer questions from an internal knowledge base"
+  need:
+    fr: "Obtenir une réponse rédigée et sourcée à partir de la documentation maison, plutôt qu'une liste de liens."
+    en: "Get a written, sourced answer drawn from in-house documentation instead of a list of links to open."
+- id: combine-filters-and-keywords-in-a-product-search
+  family: search
+  title:
+    fr: "Croiser filtres et mots-clés dans une recherche produit"
+    en: "Combine filters and keywords in a product search"
+  need:
+    fr: "Laisser un visiteur affiner par taille, couleur ou marque tout en tapant du texte libre."
+    en: "Let a visitor narrow down by size, colour or brand while still typing free text."
+- id: find-visually-similar-images
+  family: search
+  title:
+    fr: "Retrouver des images visuellement proches"
+    en: "Find visually similar images"
+  need:
+    fr: "Retrouver dans une photothèque les images qui ressemblent à une image donnée, sans passer par des mots-clés."
+    en: "Find the pictures in a library that look like a given image, without going through keywords."
+- id: find-where-a-quoted-passage-comes-from
+  family: search
+  title:
+    fr: "Retrouver l'origine d'un passage cité"
+    en: "Find where a quoted passage comes from"
+  need:
+    fr: "Identifier le document source d'un extrait recopié, même s'il a été légèrement reformulé ou tronqué."
+    en: "Identify the source document of a copied extract, even when it was slightly reworded or cut short."
+- id: forgive-typos-in-a-search-box
+  family: search
+  title:
+    fr: "Tolérer les fautes de frappe dans une recherche"
+    en: "Forgive typos in a search box"
+  need:
+    fr: "Renvoyer des résultats utiles même quand la requête contient une faute, une inversion ou un accent manquant."
+    en: "Return useful results even when the query holds a misspelling, swapped letters or a missing accent."
+- id: handle-synonyms-and-jargon-in-a-search-index
+  family: search
+  title:
+    fr: "Gérer les synonymes et le jargon métier"
+    en: "Handle synonyms and in-house jargon"
+  need:
+    fr: "Faire correspondre le mot que tape l'utilisateur au terme employé dans les documents, quand ce n'est pas le même."
+    en: "Match the word a user types with the term the documents use, when the two are not the same."
+- id: keep-a-search-index-in-step-with-changing-data
+  family: search
+  title:
+    fr: "Maintenir un index de recherche à jour"
+    en: "Keep a search index in step with changing data"
+  need:
+    fr: "Faire apparaître une modification dans les résultats sans tout réindexer ni attendre le lendemain."
+    en: "Make a change show up in the results without reindexing everything or waiting until the next day."
+- id: make-a-pile-of-scanned-documents-searchable
+  family: search
+  title:
+    fr: "Rendre cherchable une pile de documents scannés"
+    en: "Make a pile of scanned documents searchable"
+  need:
+    fr: "Pouvoir chercher un mot dans des documents qui n'existent que sous forme d'images numérisées."
+    en: "Search for a word inside documents that exist only as scanned images."
+- id: match-a-postal-address-to-a-known-place
+  family: search
+  title:
+    fr: "Rapprocher une adresse postale d'un lieu connu"
+    en: "Match a postal address to a known place"
+  need:
+    fr: "Retrouver l'adresse officielle qui correspond à une saisie approximative, incomplète ou mal formatée."
+    en: "Find the official address behind an approximate, incomplete or badly formatted entry."
+- id: fuzzy-match-company-names
+  family: search
+  title:
+    fr: "Rapprocher des noms d'entreprises mal orthographiés"
+    en: "Match misspelled company names"
+  need:
+    fr: "Reconnaître qu'une même société apparaît sous plusieurs graphies dans deux fichiers d'origines différentes."
+    en: "Recognise that the same company appears under several spellings across two files of different origins."
+- id: query-a-database-in-plain-language
+  family: search
+  title:
+    fr: "Interroger une base de données en langage courant"
+    en: "Query a database in plain language"
+  need:
+    fr: "Permettre à quelqu'un qui n'écrit pas de requêtes d'obtenir un chiffre ou une liste depuis une base."
+    en: "Let someone who does not write queries pull a figure or a list out of a database."
+- id: search-a-large-log-archive
+  family: search
+  title:
+    fr: "Fouiller un grand volume de journaux techniques"
+    en: "Search a large archive of logs"
+  need:
+    fr: "Retrouver la trace d'un incident dans des journaux accumulés sur des mois, sans y passer la journée."
+    en: "Find the trace of an incident in logs piled up over months, without losing the day to it."
+- id: search-across-past-conversations
+  family: search
+  title:
+    fr: "Chercher dans l'historique des conversations"
+    en: "Search across past conversations"
+  need:
+    fr: "Remettre la main sur ce qui a été dit dans des fils de messagerie ou des comptes rendus de réunion."
+    en: "Track down what was said in chat threads or meeting notes."
+- id: search-in-one-language-and-find-results-in-another
+  family: search
+  title:
+    fr: "Chercher dans une langue, trouver dans une autre"
+    en: "Search in one language, find results in another"
+  need:
+    fr: "Interroger en français un fonds de documents rédigés en plusieurs langues et obtenir quand même les bons passages."
+    en: "Query a document collection written in several languages from one language and still get the right passages."
+- id: search-in-your-own-documents
+  family: search
+  title:
+    fr: "Chercher dans ses propres documents"
+    en: "Search in your own documents"
+  need:
+    fr: "Retrouver une information dans un ensemble de fichiers personnels ou d'entreprise sans se souvenir du bon fichier."
+    en: "Find a piece of information across personal or company files without remembering which file holds it."
+- id: search-inside-a-single-long-document
+  family: search
+  title:
+    fr: "Chercher à l'intérieur d'un seul document long"
+    en: "Search inside a single long document"
+  need:
+    fr: "Retrouver le passage utile dans un manuel, un contrat ou un rapport de plusieurs centaines de pages."
+    en: "Find the useful passage in a manual, a contract or a report of several hundred pages."
+- id: search-several-sources-from-one-search-box
+  family: search
+  title:
+    fr: "Chercher dans plusieurs sources depuis une seule barre"
+    en: "Search several sources from one search box"
+  need:
+    fr: "Interroger d'un coup des outils séparés et présenter les résultats dans une liste unique et cohérente."
+    en: "Query separate tools at once and present the results as a single, coherent list."
+- id: search-through-a-codebase
+  family: search
+  title:
+    fr: "Chercher dans un dépôt de code"
+    en: "Search through a codebase"
+  need:
+    fr: "Retrouver où une fonction est définie ou utilisée dans un projet trop gros pour être lu en entier."
+    en: "Find where a function is defined or used in a project too large to read end to end."
+
+# --------------------------------------------------------------------------
+# Recommander
+# --------------------------------------------------------------------------
+
+- id: mix-editorial-picks-with-automatic-suggestions
+  family: recommend
+  title:
+    fr: "Mêler sélection éditoriale et suggestions automatiques"
+    en: "Blend editorial picks with automatic suggestions"
+  need:
+    fr: "Faire cohabiter dans une même liste les choix faits par la rédaction et les résultats calculés."
+    en: "Let a single list hold both the newsroom's hand-picked choices and computed results."
+- id: rank-comments-to-show-first
+  family: recommend
+  title:
+    fr: "Choisir les commentaires à afficher en premier"
+    en: "Choose which comments to show first"
+  need:
+    fr: "Ordonner les réactions sous une publication pour mettre en avant les plus utiles à lire."
+    en: "Order the replies under a post so the most useful ones are read first."
+- id: explain-why-an-item-was-recommended
+  family: recommend
+  title:
+    fr: "Expliquer pourquoi un article est suggéré"
+    en: "Explain why an item was suggested"
+  need:
+    fr: "Accompagner chaque suggestion d'une raison compréhensible, tirée des données qui l'ont produite."
+    en: "Give each suggestion a plain reason, drawn from the data that produced it."
+- id: suggest-visually-similar-images
+  family: recommend
+  title:
+    fr: "Retrouver des images visuellement proches"
+    en: "Find visually similar images"
+  need:
+    fr: "Proposer, dans une photothèque, les visuels qui ressemblent à celui qu'on regarde."
+    en: "Offer, inside a picture library, the images that look like the one on screen."
+- id: promote-fresh-content-in-a-ranking
+  family: recommend
+  title:
+    fr: "Faire remonter le contenu récent"
+    en: "Give fresh content a lift"
+  need:
+    fr: "Donner leur chance aux publications récentes sans que les valeurs sûres disparaissent du classement."
+    en: "Give recent posts a chance without pushing the established favourites out of the ranking."
+- id: diversify-a-list-of-recommendations
+  family: recommend
+  title:
+    fr: "Éviter des suggestions toutes semblables"
+    en: "Keep suggestions from looking alike"
+  need:
+    fr: "Écarter les doublons thématiques d'une liste de suggestions pour qu'elle couvre plusieurs centres d'intérêt."
+    en: "Remove near-duplicates from a list of suggestions so it covers several interests."
+- id: match-offers-and-requests
+  family: recommend
+  title:
+    fr: "Rapprocher des offres et des demandes"
+    en: "Match offers with requests"
+  need:
+    fr: "Mettre en correspondance, sur une place de marché, les annonces publiées et les besoins exprimés."
+    en: "Pair two lists on a marketplace: the listings published and the needs people posted."
+- id: suggest-a-substitute-for-an-out-of-stock-item
+  family: recommend
+  title:
+    fr: "Proposer un remplacement pour un article épuisé"
+    en: "Offer a replacement for an out-of-stock item"
+  need:
+    fr: "Trouver l'article le plus proche encore disponible quand celui que le client voulait manque."
+    en: "Find the closest item still available when the one the customer wanted is missing."
+- id: personalise-a-home-page-feed
+  family: recommend
+  title:
+    fr: "Personnaliser le fil d'une page d'accueil"
+    en: "Personalise a home page feed"
+  need:
+    fr: "Composer la page d'accueil de chaque personne connectée à partir de ses consultations passées."
+    en: "Assemble each signed-in visitor's home page from what they have looked at before."
+- id: rank-products-by-relevance
+  family: recommend
+  title:
+    fr: "Trier des produits par pertinence"
+    en: "Rank products by relevance"
+  need:
+    fr: "Ordonner les produits d'une page de catalogue pour que les plus pertinents apparaissent en premier."
+    en: "Order the products on a catalogue page so the most relevant ones come first."
+- id: recommend-a-clothing-size
+  family: recommend
+  title:
+    fr: "Recommander une taille de vêtement"
+    en: "Recommend a clothing size"
+  need:
+    fr: "Conseiller la taille à commander d'après les mesures de l'article et les achats gardés ou retournés."
+    en: "Advise which size to order from the item's measurements and past purchases kept or returned."
+- id: recommend-the-next-video-to-watch
+  family: recommend
+  title:
+    fr: "Recommander la vidéo suivante"
+    en: "Recommend the next video"
+  need:
+    fr: "Choisir quoi lire ensuite quand une vidéo se termine, à partir de ce qui vient d'être regardé."
+    en: "Pick what to play next when a video ends, based on what was just watched."
+- id: recommend-a-plan-that-fits-the-usage
+  family: recommend
+  title:
+    fr: "Conseiller la formule adaptée à l'usage"
+    en: "Recommend the plan that fits the usage"
+  need:
+    fr: "Indiquer à un client quelle offre correspond à sa consommation réelle plutôt qu'à ses déclarations."
+    en: "Tell a customer which offer matches their actual usage rather than what they declared."
+- id: suggest-a-reviewer-for-a-change
+  family: recommend
+  title:
+    fr: "Proposer un relecteur pour une modification"
+    en: "Suggest a reviewer for a change"
+  need:
+    fr: "Désigner la personne qui connaît le mieux les fichiers touchés par une modification à relire."
+    en: "Point to the person who best knows the files touched by a change awaiting review."
+- id: suggest-people-to-follow
+  family: recommend
+  title:
+    fr: "Suggérer des comptes à suivre"
+    en: "Suggest accounts to follow"
+  need:
+    fr: "Proposer à un membre d'autres comptes du réseau, à partir de ceux qu'il suit déjà."
+    en: "Offer a member other accounts on the network, starting from the ones they already follow."
+- id: suggest-complementary-products
+  family: recommend
+  title:
+    fr: "Suggérer des produits complémentaires"
+    en: "Suggest products that go together"
+  need:
+    fr: "Proposer, à côté d'un article consulté, ce que les clients achètent habituellement avec lui."
+    en: "Offer, next to a viewed item, what customers usually buy along with it."
+- id: recommend-recipes-from-available-ingredients
+  family: recommend
+  title:
+    fr: "Proposer des recettes selon ce qu'on a"
+    en: "Suggest recipes from what is on hand"
+  need:
+    fr: "Trouver les plats réalisables avec les ingrédients déjà présents, en tolérant quelques manques."
+    en: "Find dishes that can be made with the ingredients already there, allowing a few gaps."
+- id: show-similar-articles
+  family: recommend
+  title:
+    fr: "Proposer des articles similaires"
+    en: "Suggest similar articles"
+  need:
+    fr: "Afficher, au bas d'un article, d'autres publications du site qui traitent du même sujet."
+    en: "Show, at the foot of an article, other pieces on the site about the same subject."
+- id: recommend-to-a-first-time-visitor
+  family: recommend
+  title:
+    fr: "Suggérer quelque chose à un visiteur inconnu"
+    en: "Suggest something to a brand-new visitor"
+  need:
+    fr: "Proposer un premier contenu pertinent quand on ne dispose d'aucun historique sur la personne."
+    en: "Offer a first sensible item when no history at all is available about the visitor."
+- id: suggest-the-next-action-in-an-app
+  family: recommend
+  title:
+    fr: "Proposer l'action suivante dans une interface"
+    en: "Suggest the next action in an app"
+  need:
+    fr: "Mettre en avant le geste que la personne fera vraisemblablement ensuite, d'après le parcours en cours."
+    en: "Highlight the step the person is likely to take next, from the journey so far."
+
+# --------------------------------------------------------------------------
+# Prédire
+# --------------------------------------------------------------------------
+
+- id: estimate-a-waiting-time
+  family: predict
+  title:
+    fr: "Annoncer un temps d'attente"
+    en: "Announce a waiting time"
+  need:
+    fr: "Indiquer aux personnes en file combien de temps il leur reste à patienter, et tenir l'annonce."
+    en: "Tell people in a queue how long they still have to wait, and hold to it."
+- id: anticipate-a-stock-shortage
+  family: predict
+  title:
+    fr: "Anticiper une rupture de stock"
+    en: "Anticipate a stock shortage"
+  need:
+    fr: "Prévenir avant qu'un article manque, en croisant le rythme des sorties et le délai de réapprovisionnement."
+    en: "Warn before an item runs out, combining how fast it leaves and how long restocking takes."
+- id: spot-a-drift-in-a-model
+  family: predict
+  title:
+    fr: "Vérifier qu'un modèle ne se dégrade pas"
+    en: "Check that a model is not drifting"
+  need:
+    fr: "Surveiller dans le temps la qualité des prévisions produites et alerter quand le modèle décroche."
+    en: "Watch forecast quality over time and raise a flag when the model comes loose."
+- id: estimate-the-carbon-footprint-of-a-delivery
+  family: predict
+  title:
+    fr: "Estimer l'empreinte carbone d'une livraison"
+    en: "Estimate a delivery's carbon footprint"
+  need:
+    fr: "Calculer l'émission associée à un envoi à partir du mode de transport et de la distance."
+    en: "Work out the emissions tied to a shipment from the transport mode and the distance."
+- id: estimate-a-second-hand-price
+  family: predict
+  title:
+    fr: "Estimer le prix d'un objet d'occasion"
+    en: "Estimate a second-hand price"
+  need:
+    fr: "Proposer au vendeur une fourchette cohérente avec les objets comparables déjà vendus sur le site."
+    en: "Offer the seller a range consistent with comparable items already sold on the site."
+- id: estimate-reading-time
+  family: predict
+  title:
+    fr: "Estimer le temps de lecture d'un texte"
+    en: "Estimate a text's reading time"
+  need:
+    fr: "Afficher au lecteur combien de temps lui prendra un article avant qu'il ne le commence."
+    en: "Show the reader how long an article will take before they start it."
+- id: estimate-attendance-at-an-event
+  family: predict
+  title:
+    fr: "Estimer la fréquentation d'un événement"
+    en: "Estimate attendance at an event"
+  need:
+    fr: "Prévoir combien de personnes viendront, afin de dimensionner l'accueil et les commandes."
+    en: "Work out how many people will turn up, so welcome desks and supplies can be sized."
+- id: estimate-how-long-a-job-takes
+  family: predict
+  title:
+    fr: "Estimer la durée d'une intervention"
+    en: "Estimate how long a job will take"
+  need:
+    fr: "Donner une durée probable à une intervention planifiée, d'après les interventions comparables déjà réalisées."
+    en: "Give a likely duration for a planned job, based on comparable jobs already carried out."
+- id: estimate-the-no-show-rate-for-a-slot
+  family: predict
+  title:
+    fr: "Estimer le taux de désistement d'un créneau"
+    en: "Estimate the no-show rate for a slot"
+  need:
+    fr: "Prévoir quelle part des réservations d'un créneau ne sera pas honorée, pour ajuster le remplissage."
+    en: "Work out what share of a slot's bookings will go unused, so filling can be adjusted."
+- id: fill-a-gap-in-a-series-of-measurements
+  family: predict
+  title:
+    fr: "Combler un trou dans une série de mesures"
+    en: "Fill a gap in a series of readings"
+  need:
+    fr: "Reconstituer les valeurs manquantes d'un relevé interrompu sans fausser les moyennes qu'on en tire."
+    en: "Rebuild the missing values of an interrupted record without distorting the averages drawn from it."
+- id: find-the-seasonality-in-a-series
+  family: predict
+  title:
+    fr: "Retrouver la saisonnalité d'une série"
+    en: "Find the seasonality in a series"
+  need:
+    fr: "Mettre en évidence les cycles hebdomadaires ou annuels d'une mesure avant de chercher à la prévoir."
+    en: "Bring out the weekly or yearly cycles in a measurement before trying to forecast it."
+- id: forecast-site-traffic
+  family: predict
+  title:
+    fr: "Prévoir la charge d'un site"
+    en: "Forecast site load"
+  need:
+    fr: "Estimer le trafic attendu afin de dimensionner l'infrastructure avant un pic connu."
+    en: "Estimate the traffic expected so the infrastructure is sized before a known peak."
+- id: forecast-staffing-needs-for-a-shift
+  family: predict
+  title:
+    fr: "Prévoir le personnel nécessaire sur un créneau"
+    en: "Forecast staffing needed for a shift"
+  need:
+    fr: "Estimer combien de personnes doivent être présentes à chaque heure d'ouverture, d'après l'activité passée."
+    en: "Estimate how many people must be on hand each opening hour, from past activity."
+- id: forecast-cash-flow
+  family: predict
+  title:
+    fr: "Prévoir la trésorerie des prochaines semaines"
+    en: "Forecast the coming weeks' cash"
+  need:
+    fr: "Projeter les encaissements et les décaissements attendus pour savoir si la trésorerie tiendra."
+    en: "Project the money coming in and going out to see whether the balance will hold."
+- id: forecast-weekly-sales
+  family: predict
+  title:
+    fr: "Prévoir des ventes hebdomadaires"
+    en: "Forecast weekly sales"
+  need:
+    fr: "Estimer les ventes des prochaines semaines à partir de l'historique, pour préparer les commandes."
+    en: "Estimate the coming weeks' sales from past figures, in order to plan purchasing."
+- id: estimate-a-delivery-date
+  family: predict
+  title:
+    fr: "Annoncer une date de livraison"
+    en: "Give a delivery date"
+  need:
+    fr: "Annoncer au client quand son colis arrivera, d'après les délais réellement constatés sur ce trajet."
+    en: "Tell the customer when their parcel will arrive, from delays actually seen on that route."
+- id: plan-maintenance-before-a-breakdown
+  family: predict
+  title:
+    fr: "Planifier l'entretien avant la panne"
+    en: "Plan maintenance before the breakdown"
+  need:
+    fr: "Repérer dans les relevés d'une machine les signes qui précèdent une défaillance, pour intervenir à temps."
+    en: "Read a machine's measurements for the signs that precede a failure, and step in on time."
+- id: attach-an-uncertainty-range-to-a-forecast
+  family: predict
+  title:
+    fr: "Donner une marge d'incertitude à une prévision"
+    en: "Put an uncertainty range on a forecast"
+  need:
+    fr: "Accompagner un chiffre prévu d'une fourchette honnête, pour que le lecteur sache quelle confiance lui accorder."
+    en: "Pair a forecast with an honest range, so the reader knows how far to trust it."
+- id: spot-a-change-of-trend
+  family: predict
+  title:
+    fr: "Repérer un changement durable de tendance"
+    en: "Spot a lasting change of trend"
+  need:
+    fr: "Distinguer un vrai retournement d'une variation passagère dans une courbe suivie au quotidien."
+    en: "Tell a real turning point from a passing wobble in a curve watched every day."
+- id: detect-anomalies-in-metrics
+  family: predict
+  title:
+    fr: "Repérer une anomalie dans des métriques"
+    en: "Spot an anomaly in metrics"
+  need:
+    fr: "Signaler qu'une mesure suivie s'écarte de son comportement habituel, sans noyer l'équipe sous les alertes."
+    en: "Flag when a tracked measurement leaves its usual behaviour, without drowning the team in alerts."
+
+# --------------------------------------------------------------------------
+# Générer
+# --------------------------------------------------------------------------
+
+- id: build-a-colour-palette-from-an-image
+  family: generate
+  title:
+    fr: "Tirer une palette de couleurs d'une image"
+    en: "Build a colour palette from an image"
+  need:
+    fr: "Choisir les couleurs d'une page ou d'une fiche à partir de la photo ou du logo qu'elle contient."
+    en: "Pick the colours of a page from the photo or the logo it contains."
+- id: generate-share-preview-images
+  family: generate
+  title:
+    fr: "Fabriquer les images d'aperçu pour le partage"
+    en: "Build preview images for shared links"
+  need:
+    fr: "Composer l'image qui accompagne une page quand son lien est partagé ailleurs, sans la dessiner à la main."
+    en: "Compose the image that goes with a page when its link is shared elsewhere, without drawing it by hand."
+- id: write-quiz-questions-from-a-lesson
+  family: generate
+  title:
+    fr: "Fabriquer des questions de quiz à partir d'un cours"
+    en: "Build quiz questions from a lesson"
+  need:
+    fr: "Créer des questions de contrôle sur un contenu pédagogique, avec des réponses fausses plausibles."
+    en: "Create test questions on a teaching text, with wrong answers that remain plausible."
+- id: draft-replies-to-common-emails
+  family: generate
+  title:
+    fr: "Préparer des brouillons de réponse aux courriels"
+    en: "Draft replies to common emails"
+  need:
+    fr: "Proposer une réponse prête à relire pour les demandes qui reviennent sans cesse dans une boîte partagée."
+    en: "Offer a ready-to-review answer for the requests that keep arriving in a shared inbox."
+- id: draw-a-diagram-from-a-description
+  family: generate
+  title:
+    fr: "Dessiner un schéma à partir d'une description"
+    en: "Draw a diagram from a description"
+  need:
+    fr: "Obtenir le schéma d'un enchaînement ou d'une architecture décrite en quelques phrases, et pouvoir le corriger ensuite."
+    en: "Get a diagram of a process or an architecture described in a few sentences, and be able to correct it afterwards."
+- id: create-default-avatars-for-users
+  family: generate
+  title:
+    fr: "Donner un avatar par défaut à chaque compte"
+    en: "Give every account a default avatar"
+  need:
+    fr: "Afficher une vignette reconnaissable pour les personnes qui n'ont déposé aucune photo."
+    en: "Show a recognisable thumbnail for the people who have uploaded no picture."
+- id: personalise-a-mass-mailing
+  family: generate
+  title:
+    fr: "Personnaliser un envoi en nombre"
+    en: "Personalise a mass mailing"
+  need:
+    fr: "Adapter chaque message d'une campagne aux données du destinataire sans écrire mille lettres à la main."
+    en: "Adapt each message of a campaign to the recipient's data without writing a thousand letters by hand."
+- id: generate-client-code-from-an-api-schema
+  family: generate
+  title:
+    fr: "Produire le code client à partir d'un schéma d'API"
+    en: "Produce client code from an API schema"
+  need:
+    fr: "Obtenir les fonctions d'appel d'un service à partir de sa description, sans les écrire une par une."
+    en: "Get the calling functions for a service from its published description, without writing them one by one."
+- id: generate-invoice-pdfs
+  family: generate
+  title:
+    fr: "Produire des factures en PDF"
+    en: "Produce invoices as PDF files"
+  need:
+    fr: "Éditer un document imprimable à partir des lignes d'une commande, avec une mise en page constante."
+    en: "Produce a printable document from the lines of an order, with a consistent layout."
+- id: generate-placeholder-images
+  family: generate
+  title:
+    fr: "Produire des images de remplacement"
+    en: "Produce placeholder images"
+  need:
+    fr: "Afficher une image provisoire là où la vraie manque encore, dans une maquette ou un catalogue incomplet."
+    en: "Show a stand-in image wherever the real one is still missing, in a mock-up or an unfinished catalogue."
+- id: generate-test-data
+  family: generate
+  title:
+    fr: "Produire des jeux de données de test"
+    en: "Produce test data sets"
+  need:
+    fr: "Remplir une base ou une maquette avec des données crédibles, sans jamais y verser de vraies données de clients."
+    en: "Fill a database or a mock-up with believable data, without ever pouring real customer records into it."
+- id: turn-a-question-into-a-database-query
+  family: generate
+  title:
+    fr: "Traduire une question en requête de base de données"
+    en: "Turn a question into a database query"
+  need:
+    fr: "Laisser une personne non technique interroger des données en posant sa question en langage courant."
+    en: "Let a non-technical person query data by asking the question in plain language."
+- id: create-url-slugs-from-titles
+  family: generate
+  title:
+    fr: "Fabriquer des adresses lisibles à partir des titres"
+    en: "Turn titles into readable web addresses"
+  need:
+    fr: "Transformer le titre d'une page en adresse courte, stable et lisible, malgré les accents et les titres identiques."
+    en: "Turn a page title into a short, stable, readable address, despite accents and repeated titles."
+- id: write-a-monthly-report-from-figures
+  family: generate
+  title:
+    fr: "Rédiger un rapport mensuel à partir de chiffres"
+    en: "Write a monthly report from figures"
+  need:
+    fr: "Transformer un tableau de résultats en commentaire écrit, régulier et comparable d'un mois sur l'autre."
+    en: "Turn a table of results into a written commentary, regular and comparable month to month."
+- id: write-alt-text-for-images
+  family: generate
+  title:
+    fr: "Rédiger le texte alternatif des images"
+    en: "Write alt text for images"
+  need:
+    fr: "Décrire chaque image d'un site pour les personnes qui ne la voient pas."
+    en: "Describe every image on a site for the people who cannot see it."
+- id: write-error-messages-for-users
+  family: generate
+  title:
+    fr: "Rédiger des messages d'erreur compréhensibles"
+    en: "Write error messages people can act on"
+  need:
+    fr: "Expliquer à la personne ce qui ne va pas et ce qu'elle peut faire, sans jargon technique."
+    en: "Tell the person what went wrong and what they can do about it, without technical jargon."
+- id: write-meta-descriptions-for-pages
+  family: generate
+  title:
+    fr: "Rédiger le descriptif des pages pour les moteurs"
+    en: "Write page descriptions for search engines"
+  need:
+    fr: "Donner à chaque page une phrase de présentation courte, distincte de celle des autres pages du site."
+    en: "Give each page a short description sentence, different from the ones on the site's other pages."
+- id: write-product-descriptions
+  family: generate
+  title:
+    fr: "Rédiger des descriptions produit"
+    en: "Write product descriptions"
+  need:
+    fr: "Écrire le texte de présentation de chaque article d'un catalogue à partir de ses caractéristiques."
+    en: "Write the sales text for every item in a catalogue, starting from its characteristics."
+- id: write-release-notes-from-commit-history
+  family: generate
+  title:
+    fr: "Rédiger les notes de version à partir de l'historique"
+    en: "Write release notes from the commit history"
+  need:
+    fr: "Dire ce qui a changé depuis la version précédente, dans des termes utiles aux personnes qui s'en servent."
+    en: "Say what changed since the previous version, in terms that matter to the people using it."
+- id: write-ad-copy-variants-to-test
+  family: generate
+  title:
+    fr: "Décliner un message en plusieurs variantes à tester"
+    en: "Write several variants of a message to test"
+  need:
+    fr: "Produire plusieurs formulations d'une même accroche pour voir laquelle fonctionne le mieux auprès du public."
+    en: "Produce several wordings of the same pitch to see which one works best with the audience."
+
+# --------------------------------------------------------------------------
+# Transformer
+# --------------------------------------------------------------------------
+
+- id: apply-a-house-style-to-a-text
+  family: transform
+  title:
+    fr: "Appliquer une charte rédactionnelle à un texte"
+    en: "Apply a house style to a text"
+  need:
+    fr: "Faire respecter les règles d'écriture maison : vocabulaire retenu, majuscules, tournures proscrites."
+    en: "Enforce the in-house writing rules: agreed vocabulary, capitals, wordings that are ruled out."
+- id: convert-messy-csv-to-clean-data
+  family: transform
+  title:
+    fr: "Nettoyer un CSV mal formé"
+    en: "Clean up a messy CSV file"
+  need:
+    fr: "Rendre exploitable un fichier exporté n'importe comment : colonnes décalées, séparateurs douteux, en-têtes changeants."
+    en: "Make a carelessly exported file usable: shifted columns, dubious separators, headers that keep changing."
+- id: expand-abbreviations-in-a-text
+  family: transform
+  title:
+    fr: "Développer les abréviations d'un texte"
+    en: "Expand the abbreviations in a text"
+  need:
+    fr: "Remplacer sigles et raccourcis par leur forme complète, pour la lecture à voix haute ou la recherche."
+    en: "Replace acronyms and shorthand with their full form, for reading aloud or for search."
+- id: fix-spelling-and-grammar
+  family: transform
+  title:
+    fr: "Corriger l'orthographe et la grammaire d'un texte"
+    en: "Fix the spelling and grammar of a text"
+  need:
+    fr: "Relever et corriger les fautes d'un texte avant publication, sans en changer le sens."
+    en: "Find and fix the mistakes in a text before publication, without changing its meaning."
+- id: flatten-nested-data-into-a-table
+  family: transform
+  title:
+    fr: "Aplatir des données imbriquées en tableau"
+    en: "Flatten nested data into a table"
+  need:
+    fr: "Mettre une réponse d'API en lignes et colonnes pour l'ouvrir dans un tableur ou la charger en base."
+    en: "Turn an API response into rows and columns, ready for a spreadsheet or a database load."
+- id: convert-a-pdf-to-plain-text
+  family: transform
+  title:
+    fr: "Récupérer le texte d'un PDF"
+    en: "Get the text out of a PDF"
+  need:
+    fr: "Sortir le contenu lisible d'un document, qu'il porte déjà du texte ou seulement une image de page."
+    en: "Pull the readable content out of a document, whether it already carries text or only a page image."
+- id: map-fields-between-two-formats
+  family: transform
+  title:
+    fr: "Faire correspondre les champs de deux formats"
+    en: "Map fields between two formats"
+  need:
+    fr: "Alimenter un système avec les données d'un autre quand les noms de champs et les valeurs ne coïncident pas."
+    en: "Feed one system with another's data when the field names and the values do not line up."
+- id: normalise-phone-numbers-to-one-format
+  family: transform
+  title:
+    fr: "Mettre les numéros de téléphone au même format"
+    en: "Put phone numbers into a single format"
+  need:
+    fr: "Uniformiser des numéros saisis de vingt façons différentes pour pouvoir les comparer et les appeler."
+    en: "Unify numbers typed in twenty different ways so they can be compared and dialled."
+- id: turn-a-web-page-into-clean-text
+  family: transform
+  title:
+    fr: "Ne garder que le contenu d'une page web"
+    en: "Reduce a web page to its content"
+  need:
+    fr: "Retirer menus, bandeaux et publicités pour ne conserver que l'article, ses titres et ses paragraphes."
+    en: "Drop menus, banners and adverts to keep only the article, its headings and its paragraphs."
+- id: remove-the-background-from-a-photo
+  family: transform
+  title:
+    fr: "Détourer un objet sur une photo"
+    en: "Remove the background from a photo"
+  need:
+    fr: "Isoler un produit ou une personne du décor pour l'afficher sur un fond uni."
+    en: "Cut a product or a person out of the scene to show it on a plain background."
+- id: repair-text-with-broken-encoding
+  family: transform
+  title:
+    fr: "Réparer un texte au mauvais encodage"
+    en: "Repair text with a broken encoding"
+  need:
+    fr: "Rétablir les accents et les caractères abîmés par un mauvais passage d'un système à un autre."
+    en: "Restore the accents and characters mangled by a bad hop from one system to another."
+- id: resize-and-crop-images-for-the-web
+  family: transform
+  title:
+    fr: "Redimensionner et recadrer des images pour le web"
+    en: "Resize and crop images for the web"
+  need:
+    fr: "Décliner une photo dans les formats d'affichage voulus sans couper la tête des personnes."
+    en: "Produce a photo in the display sizes you need without cutting people's heads off."
+- id: rewrite-a-text-in-plain-language
+  family: transform
+  title:
+    fr: "Réécrire un texte en langage clair"
+    en: "Rewrite a text in plain language"
+  need:
+    fr: "Rendre lisible une notice administrative ou juridique pour quelqu'un qui n'est pas du métier."
+    en: "Make an administrative or legal notice readable for someone outside the trade."
+- id: shorten-a-text-to-fit-a-space
+  family: transform
+  title:
+    fr: "Raccourcir un texte pour tenir dans un espace"
+    en: "Shorten a text to fit the space available"
+  need:
+    fr: "Ramener un titre ou un résumé à la longueur disponible sans le rendre incompréhensible."
+    en: "Bring a heading or a summary down to the room available without making it unreadable."
+- id: split-a-long-text-into-passages
+  family: transform
+  title:
+    fr: "Découper un texte long en passages cohérents"
+    en: "Split a long text into coherent passages"
+  need:
+    fr: "Préparer un document pour l'indexer ou le traiter morceau par morceau, sans couper au milieu d'une idée."
+    en: "Prepare a document to be indexed or handled piece by piece, without cutting through an idea."
+- id: clean-up-a-scanned-page
+  family: transform
+  title:
+    fr: "Redresser et nettoyer une page scannée"
+    en: "Straighten and clean up a scanned page"
+  need:
+    fr: "Rendre un scan de travers, gris ou taché exploitable avant de le lire ou de l'archiver."
+    en: "Make a skewed, grey or spotted scan usable before reading it or filing it away."
+- id: strip-quotes-and-signatures-from-emails
+  family: transform
+  title:
+    fr: "Retirer citations et signatures d'un fil d'e-mails"
+    en: "Strip quotes and signatures from emails"
+  need:
+    fr: "Ne garder que le message réellement écrit, sans l'historique recopié ni les mentions de bas de page."
+    en: "Keep only the message actually written, without the quoted history or the footer notices."
+- id: summarise-a-long-document
+  family: transform
+  title:
+    fr: "Résumer un document long"
+    en: "Summarise a long document"
+  need:
+    fr: "Obtenir l'essentiel d'un rapport ou d'un contrat sans avoir à le lire en entier."
+    en: "Get the essentials of a report or a contract without having to read all of it."
+- id: translate-interface-strings
+  family: transform
+  title:
+    fr: "Traduire les libellés d'une interface"
+    en: "Translate interface strings"
+  need:
+    fr: "Faire exister une application dans une autre langue, en gardant les variables et la place disponible à l'écran."
+    en: "Make an application exist in another language, keeping the placeholders and the room available on screen."
+- id: keep-translations-up-to-date-after-a-change
+  family: transform
+  title:
+    fr: "Mettre à jour les traductions après une modification"
+    en: "Update translations after the source text changes"
+  need:
+    fr: "Repérer ce qui a bougé dans la version d'origine et ne retraduire que cela."
+    en: "Spot what moved in the source version and retranslate only that."
+
+# --------------------------------------------------------------------------
+# Reconnaître et transcrire
+# --------------------------------------------------------------------------
+
+- id: align-a-transcript-with-its-audio
+  family: recognize-transcribe
+  title:
+    fr: "Caler une transcription sur son audio"
+    en: "Align a transcript with its audio"
+  need:
+    fr: "Associer chaque mot d'un texte déjà écrit au moment où il est prononcé dans l'enregistrement."
+    en: "Match each word of an existing text to the moment it is spoken in the recording."
+- id: check-that-a-scan-is-readable
+  family: recognize-transcribe
+  title:
+    fr: "Vérifier qu'un scan est exploitable"
+    en: "Check that a scan is usable"
+  need:
+    fr: "Repérer tout de suite qu'une image envoyée est floue, coupée ou trop sombre, et en redemander une autre."
+    en: "Spot straight away that an uploaded image is blurry, cropped or too dark, and ask for another."
+- id: detect-the-language-of-a-recording
+  family: recognize-transcribe
+  title:
+    fr: "Détecter la langue d'un enregistrement audio"
+    en: "Detect the language of an audio recording"
+  need:
+    fr: "Savoir dans quelle langue parle un fichier audio pour l'orienter vers le bon traitement."
+    en: "Find out which language an audio file is spoken in, to send it to the right processing."
+- id: detect-speech-segments-in-an-audio-file
+  family: recognize-transcribe
+  title:
+    fr: "Repérer les passages parlés d'un enregistrement"
+    en: "Find the spoken segments of a recording"
+  need:
+    fr: "Découper un long enregistrement en segments de parole et de silence avant de le transcrire ou de l'archiver."
+    en: "Split a long recording into speech and silence segments before transcribing or archiving it."
+- id: read-text-from-a-screenshot
+  family: recognize-transcribe
+  title:
+    fr: "Récupérer le texte d'une capture d'écran"
+    en: "Get the text out of a screenshot"
+  need:
+    fr: "Extraire le texte affiché dans une capture d'écran envoyée par un utilisateur, pour l'analyser ou le rechercher."
+    en: "Pull the text shown in a screenshot sent by a user, to analyse or search it."
+- id: identify-a-music-track-from-a-clip
+  family: recognize-transcribe
+  title:
+    fr: "Reconnaître un morceau à partir d'un extrait"
+    en: "Identify a music track from a short clip"
+  need:
+    fr: "Retrouver quel enregistrement musical correspond à un court extrait sonore, même bruité."
+    en: "Find which musical recording matches a short audio excerpt, noise included."
+- id: know-whether-a-pdf-needs-ocr
+  family: recognize-transcribe
+  title:
+    fr: "Savoir si un PDF a besoin d'OCR"
+    en: "Know whether a PDF needs OCR"
+  need:
+    fr: "Distinguer un PDF qui porte déjà son texte d'un PDF fait d'images, avant de lancer un traitement coûteux."
+    en: "Tell a PDF that already carries its text from one made of images, before running a costly pass."
+- id: read-a-barcode-from-a-photo
+  family: recognize-transcribe
+  title:
+    fr: "Lire un code-barres sur une photo"
+    en: "Read a barcode from a photo"
+  need:
+    fr: "Retrouver la référence inscrite dans un code-barres photographié au téléphone, même de travers ou mal éclairé."
+    en: "Get the reference encoded in a barcode photographed with a phone, even skewed or badly lit."
+- id: read-a-formula-from-an-image
+  family: recognize-transcribe
+  title:
+    fr: "Lire une formule mathématique sur une image"
+    en: "Read a mathematical formula from an image"
+  need:
+    fr: "Convertir une formule imprimée ou écrite à la main en notation réutilisable dans un document."
+    en: "Convert a printed or handwritten formula into notation reusable in a document."
+- id: read-a-qr-code-in-a-camera-stream
+  family: recognize-transcribe
+  title:
+    fr: "Lire un QR code dans un flux caméra"
+    en: "Read a QR code in a camera stream"
+  need:
+    fr: "Détecter et décoder un QR code en direct dans l'image de la caméra, sans faire prendre de photo."
+    en: "Detect and decode a QR code live in the camera image, without asking for a photo."
+- id: read-a-utility-meter-from-a-photo
+  family: recognize-transcribe
+  title:
+    fr: "Relever un compteur à partir d'une photo"
+    en: "Read a utility meter from a photo"
+  need:
+    fr: "Lire l'index affiché sur un compteur d'eau, de gaz ou d'électricité photographié par un technicien ou un client."
+    en: "Read the index shown on a water, gas or electricity meter photographed by a technician or a customer."
+- id: read-handwritten-notes
+  family: recognize-transcribe
+  title:
+    fr: "Lire des notes manuscrites"
+    en: "Read handwritten notes"
+  need:
+    fr: "Transformer en texte des notes écrites à la main, avec leurs ratures et une écriture irrégulière."
+    en: "Turn handwritten notes into text, crossings-out and uneven handwriting included."
+- id: read-text-from-a-scanned-page
+  family: recognize-transcribe
+  title:
+    fr: "Lire le texte d'une page scannée"
+    en: "Read text from a scanned page"
+  need:
+    fr: "Récupérer le texte d'un document papier numérisé pour pouvoir le chercher, le copier ou le retraiter."
+    en: "Turn a scanned paper document into text that can be searched, copied or processed."
+- id: read-checkboxes-on-a-paper-form
+  family: recognize-transcribe
+  title:
+    fr: "Relever les cases cochées d'un formulaire papier"
+    en: "Read the ticked boxes on a paper form"
+  need:
+    fr: "Savoir quelles cases ont été cochées sur un questionnaire imprimé puis numérisé, sans le ressaisir à la main."
+    en: "Find out which boxes were ticked on a printed then scanned questionnaire, without retyping it."
+- id: recognise-a-spoken-command
+  family: recognize-transcribe
+  title:
+    fr: "Reconnaître une commande vocale"
+    en: "Recognise a spoken command"
+  need:
+    fr: "Déclencher une action à partir d'un petit ensemble de phrases prononcées, sur un appareil ou dans une application."
+    en: "Trigger an action from a small set of spoken phrases, on a device or inside an application."
+- id: extract-a-table-from-a-scanned-page
+  family: recognize-transcribe
+  title:
+    fr: "Récupérer un tableau dans un document scanné"
+    en: "Recover a table from a scanned document"
+  need:
+    fr: "Retrouver les lignes et les colonnes d'un tableau imprimé pour en refaire un fichier exploitable."
+    en: "Recover the rows and columns of a printed table and rebuild a usable file."
+- id: spot-a-sound-event-in-a-recording
+  family: recognize-transcribe
+  title:
+    fr: "Repérer un bruit précis dans un enregistrement"
+    en: "Spot a specific sound in a recording"
+  need:
+    fr: "Détecter l'apparition d'un son attendu, alarme, choc ou machine qui fatigue, dans un flux audio continu."
+    en: "Detect an expected sound, an alarm, an impact or a struggling machine, in a continuous audio stream."
+- id: straighten-a-crooked-scan
+  family: recognize-transcribe
+  title:
+    fr: "Redresser un scan de travers"
+    en: "Straighten a crooked scan"
+  need:
+    fr: "Détecter l'inclinaison et l'orientation d'une page numérisée pour la remettre droite avant toute lecture."
+    en: "Detect the skew and orientation of a scanned page and set it straight before any reading."
+- id: subtitle-a-video
+  family: recognize-transcribe
+  title:
+    fr: "Sous-titrer une vidéo"
+    en: "Subtitle a video"
+  need:
+    fr: "Produire un fichier de sous-titres synchronisés à partir de la bande son d'une vidéo."
+    en: "Produce a synchronised subtitle file from the soundtrack of a video."
+- id: transcribe-a-meeting-recording
+  family: recognize-transcribe
+  title:
+    fr: "Transcrire l'enregistrement d'une réunion"
+    en: "Transcribe a meeting recording"
+  need:
+    fr: "Obtenir le texte de ce qui a été dit pendant une réunion enregistrée, pour le relire ou le rechercher."
+    en: "Get the text of what was said in a recorded meeting, to read back or search."
+
+# --------------------------------------------------------------------------
+# Décider et valider
+# --------------------------------------------------------------------------
+
+- id: apply-discount-rules-to-a-cart
+  family: decide-validate
+  title:
+    fr: "Appliquer des règles de remise à un panier"
+    en: "Apply discount rules to a cart"
+  need:
+    fr: "Décider quelles remises s'appliquent à une commande, dans quel ordre, et lesquelles ne se cumulent pas."
+    en: "Decide which discounts apply to an order, in what order, and which ones do not stack."
+- id: check-a-company-identification-number
+  family: decide-validate
+  title:
+    fr: "Contrôler un numéro d'identification d'entreprise"
+    en: "Check a company identification number"
+  need:
+    fr: "Vérifier qu'un identifiant d'entreprise est bien formé et correspond à une société réellement enregistrée."
+    en: "Check that a company identifier is well formed and matches a genuinely registered company."
+- id: check-a-configuration-before-deployment
+  family: decide-validate
+  title:
+    fr: "Contrôler une configuration avant mise en production"
+    en: "Check a configuration before deployment"
+  need:
+    fr: "Repérer une valeur manquante, incohérente ou dangereuse dans un fichier de configuration avant qu'il parte en production."
+    en: "Spot a missing, inconsistent or dangerous value in a configuration file before it reaches production."
+- id: check-a-file-is-really-the-format-it-claims
+  family: decide-validate
+  title:
+    fr: "Vérifier qu'un fichier est bien du type annoncé"
+    en: "Check a file is really the format claimed"
+  need:
+    fr: "S'assurer qu'un fichier déposé est réellement du format que son extension promet, avant de le traiter."
+    en: "Make sure an uploaded file really is the format its extension promises, before processing it."
+- id: check-a-password-against-a-policy
+  family: decide-validate
+  title:
+    fr: "Vérifier qu'un mot de passe respecte la politique"
+    en: "Check a password against a policy"
+  need:
+    fr: "Refuser un mot de passe trop faible ou déjà compromis, sans transformer l'inscription en parcours du combattant."
+    en: "Reject a weak or already-leaked password without turning sign-up into an obstacle course."
+- id: check-a-product-catalogue-for-inconsistencies
+  family: decide-validate
+  title:
+    fr: "Repérer les incohérences d'un catalogue produits"
+    en: "Check a product catalogue for inconsistencies"
+  need:
+    fr: "Trouver les unités mélangées, les catégories contradictoires et les champs vides dans un catalogue avant publication."
+    en: "Find mixed units, contradictory categories and empty fields in a catalogue before publishing it."
+- id: check-an-invoice-against-its-purchase-order
+  family: decide-validate
+  title:
+    fr: "Rapprocher une facture de son bon de commande"
+    en: "Check an invoice against its purchase order"
+  need:
+    fr: "Vérifier qu'une facture reçue correspond à ce qui avait été commandé puis livré, ligne par ligne."
+    en: "Check that an incoming invoice matches what was ordered and then delivered, line by line."
+- id: check-bank-details-before-a-transfer
+  family: decide-validate
+  title:
+    fr: "Contrôler des coordonnées bancaires avant un virement"
+    en: "Check bank details before a transfer"
+  need:
+    fr: "Détecter une erreur de saisie dans un identifiant de compte avant d'engager un paiement."
+    en: "Catch a typing error in an account identifier before committing a payment."
+- id: check-a-contract-contains-the-required-clauses
+  family: decide-validate
+  title:
+    fr: "Vérifier qu'un contrat contient les clauses attendues"
+    en: "Check that a contract contains the required clauses"
+  need:
+    fr: "Contrôler qu'un document contractuel comporte toutes les clauses obligatoires avant de l'envoyer à la signature."
+    en: "Check that a contract document carries every required clause before sending it for signature."
+- id: check-a-postal-address-is-deliverable
+  family: decide-validate
+  title:
+    fr: "Vérifier qu'une adresse postale est livrable"
+    en: "Check that a postal address is deliverable"
+  need:
+    fr: "S'assurer qu'une adresse saisie existe et peut recevoir un colis, avant de lancer une expédition."
+    en: "Make sure a typed address exists and can receive a parcel, before starting a shipment."
+- id: check-that-a-translation-file-is-complete
+  family: decide-validate
+  title:
+    fr: "Vérifier qu'un fichier de traduction est complet"
+    en: "Check that a translation file is complete"
+  need:
+    fr: "Repérer les clés manquantes, les variables oubliées et les textes non traduits avant de publier une nouvelle langue."
+    en: "Find missing keys, forgotten variables and untranslated strings before shipping a new language."
+- id: decide-when-to-retry-a-failed-operation
+  family: decide-validate
+  title:
+    fr: "Arbitrer entre réessayer et abandonner un traitement"
+    en: "Decide when to retry a failed operation"
+  need:
+    fr: "Choisir si une opération échouée doit être relancée, mise de côté ou signalée, selon la nature de l'erreur."
+    en: "Choose whether a failed operation should be retried, set aside or reported, depending on the error."
+- id: decide-whether-a-change-needs-human-review
+  family: decide-validate
+  title:
+    fr: "Décider si une modification doit être relue"
+    en: "Decide whether a change needs human review"
+  need:
+    fr: "Envoyer en relecture humaine les seules modifications qui le méritent, et laisser passer les autres automatiquement."
+    en: "Send for human review only the changes that deserve it, and let the rest through automatically."
+- id: detect-conflicts-in-a-schedule
+  family: decide-validate
+  title:
+    fr: "Repérer les conflits dans un planning"
+    en: "Detect conflicts in a schedule"
+  need:
+    fr: "Trouver les chevauchements, les ressources réservées deux fois et les créneaux impossibles dans un planning."
+    en: "Find overlaps, double-booked resources and impossible slots in a schedule."
+- id: reconcile-a-bank-statement-with-a-ledger
+  family: decide-validate
+  title:
+    fr: "Rapprocher un relevé bancaire d'un journal comptable"
+    en: "Reconcile a bank statement with a ledger"
+  need:
+    fr: "Faire correspondre des opérations bancaires et des écritures comptables, et isoler celles qui ne tombent pas juste."
+    en: "Match bank operations with accounting entries and isolate the ones that do not line up."
+- id: validate-a-form-server-side
+  family: decide-validate
+  title:
+    fr: "Valider un formulaire côté serveur"
+    en: "Validate a form server-side"
+  need:
+    fr: "Vérifier que les données reçues d'un formulaire sont complètes et cohérentes avant de les enregistrer."
+    en: "Check that the data received from a form is complete and coherent before storing it."
+- id: validate-a-phone-number-and-its-country-code
+  family: decide-validate
+  title:
+    fr: "Vérifier un numéro de téléphone et son indicatif"
+    en: "Validate a phone number and its country code"
+  need:
+    fr: "Contrôler qu'un numéro saisi est valide dans le pays annoncé et le ramener à une forme unique."
+    en: "Check that a typed number is valid in the stated country and bring it to a single form."
+- id: validate-an-api-payload-against-its-contract
+  family: decide-validate
+  title:
+    fr: "Valider une requête d'API contre son contrat"
+    en: "Validate an API payload against its contract"
+  need:
+    fr: "Rejeter proprement une requête entrante qui ne respecte pas le contrat publié, avec un message exploitable."
+    en: "Cleanly reject an incoming request that breaks the published contract, with a usable message."
+- id: validate-an-email-address-without-sending-a-message
+  family: decide-validate
+  title:
+    fr: "Vérifier une adresse email sans envoyer de message"
+    en: "Validate an email address without sending a message"
+  need:
+    fr: "Savoir si une adresse saisie a des chances d'exister avant de lui envoyer quoi que ce soit."
+    en: "Work out whether a typed address stands a chance of existing before sending anything to it."
+- id: validate-an-imported-file-against-a-schema
+  family: decide-validate
+  title:
+    fr: "Valider un fichier importé contre le format attendu"
+    en: "Validate an imported file against its expected schema"
+  need:
+    fr: "Contrôler colonne par colonne qu'un fichier déposé par un client correspond au format convenu, et dire ce qui cloche."
+    en: "Check column by column that a customer-supplied file matches the agreed format, and say what is wrong."
