@@ -98,6 +98,35 @@ docs/        le cahier des charges et les plans de lot
 | `docs/sprints/JOURNAL.md` | l'avancement réel, les décisions, les écarts |
 | `RAPPORT.md` | le bilan de fin de mission |
 
+## Déployer
+
+Le site est statique. N'importe quel hébergeur de fichiers convient ; la
+configuration fournie vise Cloudflare Pages, comme le prévoit le cahier des
+charges.
+
+| Réglage | Valeur |
+|---|---|
+| Commande de construction | `npm run build` |
+| Répertoire de sortie | `dist` |
+| Version de Node | 22 |
+| Variables d'environnement | aucune |
+
+Deux fichiers sont servis tels quels depuis `public/` :
+
+- `_redirects` — la racine négocie la langue sur l'en-tête `Accept-Language`,
+  avec l'anglais par défaut, qui est la version canonique.
+- `_headers` — politique de sécurité du contenu, en-têtes de cache immuables
+  sur les polices et les ressources versionnées.
+
+La politique de sécurité du contenu n'autorise que l'origine du site. Elle rend
+opposable ce que la page confidentialité affirme : aucune ressource tierce
+n'est chargée à l'exécution.
+
+**Avant la première mise en ligne**, voir la section « ce qu'il reste à faire »
+de [`RAPPORT.md`](RAPPORT.md) : le nom de domaine, le statut juridique de
+l'éditeur et les coordonnées de l'hébergeur ne sont pas encore arrêtés, et les
+pages concernées le disent au lieu de les inventer.
+
 ## Licences
 
 Le code est sous licence MIT. Le contenu des fiches est sous licence CC BY 4.0.

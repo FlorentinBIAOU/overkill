@@ -1,0 +1,11 @@
+# Déploiement Cloudflare Pages (CDC 10.1, 11.1).
+#
+# Le site est entièrement statique : aucune fonction, aucune base, aucun
+# secret. Ce fichier ne sert qu'à décrire la construction et la sortie.
+#
+# La négociation de langue à la racine et les en-têtes de sécurité sont dans
+# public/_redirects et public/_headers, servis tels quels par Cloudflare.
+
+name = "overkill"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-10"
