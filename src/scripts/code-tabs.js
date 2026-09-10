@@ -47,7 +47,11 @@ function setUpTabs(root) {
 }
 
 function setUpCopy(button) {
-  const source = button.closest('figure')?.querySelector('[data-source]');
+  // Le code est lu dans le bloc rendu, et non dans un champ caché en double.
+  // Un champ caché aurait été focalisable au clavier tout en étant masqué aux
+  // lecteurs d'écran, ce que l'audit d'accessibilité refuse à juste titre, et
+  // il aurait pesé une seconde copie du code dans le HTML.
+  const source = button.closest('figure')?.querySelector('pre');
   if (!source) return;
 
   const status = document.createElement('span');
@@ -62,7 +66,7 @@ function setUpCopy(button) {
     clearTimeout(restore);
     let label;
     try {
-      await navigator.clipboard.writeText(source.value);
+      await navigator.clipboard.writeText(source.textContent);
       label = button.dataset.labelCopied;
     } catch {
       label = button.dataset.labelFailed;

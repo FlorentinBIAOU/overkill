@@ -23,12 +23,40 @@ const { code, language, path, copyLabel, copiedLabel, failedLabel } = Astro.prop
 
 // Un seul rendu, deux thèmes portés par des variables CSS : le mode sombre ne
 // coûte pas un second bloc de HTML, ce qui compte pour le budget de la fiche.
-const html = await codeToHtml(code, {
+//
+// Les thèmes à contraste renforcé, et non les thèmes par défaut : l'audit
+// d'accessibilité a montré que la couleur des commentaires de « github-light »
+// et « github-dark » passe sous le seuil AA sur notre fond de bloc de code.
+// Le code est le contenu le plus important du site, il ne peut pas être le
+// moins lisible.
+const rendu = await codeToHtml(code, {
   lang: language === 'python' ? 'python' : 'javascript',
-  themes: { light: 'github-light', dark: 'github-dark' },
+  themes: { light: 'github-light-high-contrast', dark: 'github-dark-high-contrast' },
   defaultColor: false,
   cssVariablePrefix: '--sk-',
 });
+
+/*
+ * Substitutions de couleur, mesurées.
+ *
+ * Le fond des blocs de code est --paper-2 (#F4EFE2), et non le fond blanc que
+ * suppose le thème. Une seule couleur du thème clair passe alors sous le seuil
+ * AA sur ce fond : le gris des commentaires, à 4,39:1 pour un minimum de 4,5.
+ *
+ * Elle est remplacée par --muted (#6B6252), qui vient de notre propre palette
+ * et donne 5,23:1. Les six autres couleurs du thème sont entre 7,0 et 16,5:1
+ * et ne bougent pas.
+ *
+ * Vérifié par scripts/check-a11y.mjs, en clair et en sombre.
+ */
+const SUBSTITUTIONS: Record<string, string> = {
+  '#66707B': '#6B6252',
+};
+
+const html = Object.entries(SUBSTITUTIONS).reduce(
+  (sortie, [avant, apres]) => sortie.replaceAll(`--sk-light:${avant}`, `--sk-light:${apres}`),
+  rendu,
+);
 ---
 
 <figure class="code-block">
@@ -46,7 +74,6 @@ const html = await codeToHtml(code, {
     </button>
   </div>
   <div class="code-block__code scroll-x" set:html={html} />
-  <textarea class="visually-hidden" data-source aria-hidden="true" readonly>{code}</textarea>
 </figure>
 
 <style>

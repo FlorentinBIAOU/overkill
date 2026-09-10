@@ -26,6 +26,7 @@ export default {
     privacy: 'Confidentialité',
     credits: 'Crédits',
     main: 'Navigation principale',
+    footer: 'Navigation de pied de page',
     language: 'Langue',
     theme: 'Basculer le thème',
   },

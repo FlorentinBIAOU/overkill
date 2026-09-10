@@ -15,8 +15,37 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, dirname, resolve, extname } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 
 const DIST = 'dist';
+
+/**
+ * Les pages de contrôle interne ne partent pas en production : elles sont
+ * retirées par scripts/strip-dev-pages.mjs. Leurs liens vers des données
+ * factices ne doivent pas faire échouer le contrôle.
+ */
+const IGNOREES = /^dev\//;
+
+/**
+ * Les intitulés de la feuille de route qui n'ont pas encore de fiche.
+ *
+ * La page de famille et la feuille de route les affichent en grisé, avec un
+ * lien pour les proposer. Un lien vers une fiche « à écrire » est donc attendu,
+ * pas cassé, et ne doit pas bloquer le déploiement.
+ */
+async function intitulesSansFiche() {
+  const chemin = 'content/roadmap.yaml';
+  if (!existsSync(chemin)) return new Set();
+  const intitules = parseYaml(await readFile(chemin, 'utf8')) ?? [];
+  const ecrites = new Set(
+    existsSync('content/entries')
+      ? (await readdir('content/entries'))
+          .filter((f) => f.endsWith('.mdx') && !f.startsWith('_'))
+          .map((f) => f.replace(/\.mdx$/, ''))
+      : [],
+  );
+  return new Set(intitules.map((i) => i.id).filter((id) => !ecrites.has(id)));
+}
 const VERIFIER_EXTERNES = process.argv.includes('--external');
 
 async function* pages(dossier) {
@@ -32,13 +61,16 @@ if (!existsSync(DIST)) {
   process.exit(1);
 }
 
+const aEcrire = await intitulesSansFiche();
 const morts = [];
+const attendus = [];
 const externes = new Map();
 let internesVerifies = 0;
 
 for await (const page of pages(DIST)) {
-  const html = await readFile(page, 'utf8');
   const source = page.replace(`${DIST}/`, '');
+  if (IGNOREES.test(source)) continue;
+  const html = await readFile(page, 'utf8');
 
   // Les ancres déclarées dans cette page, pour vérifier les liens internes.
   const ancres = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
@@ -46,7 +78,12 @@ for await (const page of pages(DIST)) {
   for (const m of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)) {
     const href = m[1];
 
-    if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('data:')) continue;
+    // L'adresse de contact est encodée en références numériques pour limiter
+    // l'aspiration automatique : le navigateur la décode, ce contrôle doit
+    // faire de même avant de décider s'il s'agit d'un lien interne.
+    const decode = (t) => t.replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
+    const cible0 = decode(href);
+    if (/^(mailto:|tel:|data:|javascript:)/i.test(cible0)) continue;
 
     if (/^https?:\/\//.test(href)) {
       if (!externes.has(href)) externes.set(href, new Set());
@@ -76,7 +113,10 @@ for await (const page of pages(DIST)) {
     internesVerifies++;
     const cible = candidats.find((c) => existsSync(c));
     if (!cible) {
-      morts.push(`${source} → ${href}`);
+      // Une fiche encore à écrire est une cible attendue, pas un lien mort.
+      const identifiant = sansRequete.replace(/\/$/, '').split('/').pop();
+      if (aEcrire.has(identifiant)) attendus.push(`${source} → ${href}`);
+      else morts.push(`${source} → ${href}`);
       continue;
     }
 
@@ -90,7 +130,17 @@ for await (const page of pages(DIST)) {
   }
 }
 
-console.log(`\ncheck-links — ${internesVerifies} lien(s) interne(s), ${externes.size} lien(s) externe(s) distinct(s)\n`);
+console.log(
+  `\ncheck-links — ${internesVerifies} lien(s) interne(s), ` +
+    `${externes.size} lien(s) externe(s) distinct(s)\n`,
+);
+
+if (attendus.length) {
+  console.log(
+    `  ${attendus.length} lien(s) vers une fiche encore à écrire, attendus par la ` +
+      `feuille de route.\n`,
+  );
+}
 
 // --- Liens externes : avertissement, jamais échec ---------------------------
 if (VERIFIER_EXTERNES && externes.size > 0) {
