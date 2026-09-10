@@ -1,0 +1,136 @@
+---
+id: show-similar-articles
+family: recommend
+status: published
+verdict: N1
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Afficher des articles similaires"
+  en: "Show similar articles"
+
+need:
+  fr: "Proposer, sous un article, trois ou quatre autres articles du site qui traitent du même sujet."
+  en: "Offer three or four other articles from the site, under the one being read, that cover the same subject."
+
+scenario:
+  fr: "On voit un appel de modèle au moment d'afficher la page, pour lui demander quels articles ressemblent à celui qu'on lit. Le résultat ne dépend pourtant pas du lecteur, et il ne change que lorsqu'un article est publié ou que ses étiquettes changent : c'est une table à construire une fois, pas un calcul à refaire à chaque affichage. Les trois barreaux de cette fiche rendent la même table, un article vers ses voisins et leurs scores, et le code qui affiche le bloc ne change pas quand vous montez d'un barreau."
+  en: "The reflex is to call a model when the page is rendered, asking which articles look like the one being read. But the result does not depend on the reader, and it only changes when an article is published or retagged: it is a table to build once, not a computation to redo on every view. The three rungs here return the same table, an article to its neighbours and their scores, and the code that renders the block does not change when you move up a rung."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Chevauchement d'étiquettes, pondéré par la rareté de l'étiquette"
+      en: "Tag overlap, weighted by how rare each tag is"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le fonds ne quitte pas votre infrastructure"
+          - "Aucun profilage du lecteur : la table de voisins est la même pour tout le monde"
+        en:
+          - "No specific scope added: the corpus never leaves your infrastructure"
+          - "No profiling of the reader: the neighbour table is the same for everyone"
+    code:
+      python: snippets/show-similar-articles/n0.py
+      javascript: snippets/show-similar-articles/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Un fonds mal étiqueté ne produit aucune similarité, et l'échec est total plutôt que dégradé. Le test construit deux corpus : dans le premier, chaque article porte « blog » et « article », dont le poids vaut exactement zéro ; dans le second, chaque article porte une étiquette que lui seul porte. Les deux tables sortent entièrement vides, et le bloc n'apparaît sur aucune page."
+      en: "A badly tagged corpus produces no similarity at all, and the failure is total rather than degraded. The test builds two of them: in the first, every article carries “blog” and “article”, whose weight is exactly zero; in the second, every article carries a tag nobody else carries. Both tables come out empty, and the block appears on no page."
+    escalate_when:
+      fr: "La table que vous construisez contient des lignes vides, parce que vos étiquettes sont soit sur tous les articles, soit sur un seul."
+      en: "The table you build has empty rows, because your tags sit either on every article or on exactly one."
+
+  - level: N1
+    available: true
+    name:
+      fr: "TF-IDF sur le texte, similarité cosinus, calculée hors ligne"
+      en: "TF-IDF over the text, cosine similarity, computed offline"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le fonds ne quitte pas votre infrastructure"
+          - "Aucun apprentissage préalable : la pondération est recalculée sur votre seul corpus à chaque construction de la table"
+        en:
+          - "No specific scope added: the corpus never leaves your infrastructure"
+          - "No prior training: the weighting is recomputed from your own corpus alone, each time the table is built"
+    code:
+      python: snippets/show-similar-articles/n1.py
+      javascript: snippets/show-similar-articles/n1.js
+      verification: executed
+    breaking_point:
+      fr: "TF-IDF compare des chaînes de caractères, pas des sens. Le test met côte à côte l'article anglais sur le levain et son jumeau français : leur cosinus vaut exactement zéro, pas une valeur basse. Dans le même corpus, une annonce de déménagement de bureau, qui ne partage avec l'article anglais que de la grammaire, obtient un score strictement supérieur. Aucun seuil ne rattrape cela."
+      en: "TF-IDF compares strings, not meanings. The test puts the English sourdough article next to its French twin: their cosine is exactly zero, not merely low. In the same corpus an office-move announcement, which shares nothing with the English article but grammar, scores strictly higher. No threshold rescues that."
+    escalate_when:
+      fr: "Votre fonds dit la même chose avec deux vocabulaires : deux langues, ou le jargon d'un auteur face aux mots courants d'un autre."
+      en: "Your corpus says the same thing in two vocabularies: two languages, or one author's jargon against another's plain words."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Embeddings de documents auto-hébergés, comparés par cosinus"
+      en: "Self-hosted document embeddings, compared by cosine"
+    cost: faible
+    latency: "~100 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: high
+      regulatory:
+        fr:
+          - "Le fonds est encodé sur votre infrastructure : rien ne part chez un tiers"
+          - "Les poids du modèle viennent d'un tiers, avec la licence et la provenance que cela suppose de vérifier"
+        en:
+          - "The corpus is encoded on your own infrastructure: nothing goes to a third party"
+          - "The model weights come from a third party, with the licence and provenance that implies checking"
+    code:
+      python: snippets/show-similar-articles/n2.py
+      javascript: snippets/show-similar-articles/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Un article reçoit un vecteur, quelle que soit sa longueur : un texte qui aborde huit sujets les porte chacun au huitième. Le test ajoute un paragraphe digressif à l'article sur le pain de seigle — le four, la planche, le pot de confiture, la poêle — et cela suffit à lui coûter sa place de premier voisin : l'article sur le levain se retrouve apparié à celui sur la poêle en fonte, et l'article rallongé perd au passage son propre meilleur voisin. Le double local du test amplifie l'écart ; la dilution, elle, est celle des vrais encodeurs."
+      en: "An article gets one vector however long it is, so a piece covering eight subjects carries each of them at one eighth. The test adds a rambling paragraph to the rye loaf article — the oven, the board, the jar of jam, the pan — and that alone costs it its place as first neighbour: the sourdough piece is paired with the cast iron one instead, and the lengthened article loses its own best neighbour along the way. The local double sharpens the gap; the dilution itself is what real encoders do."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus dans cette fiche : au-delà, on ne change plus d'algorithme, on découpe les articles en passages et on indexe les passages."
+      en: "There is no rung above this one here: past it you do not change algorithm, you cut articles into passages and index the passages."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Recalculer une similarité par appel de modèle à chaque affichage de page, pour un résultat qui ne change pas entre deux publications, est un gaspillage. Le classement ne dépend ni du lecteur ni de l'instant : le seul gain envisageable serait sa qualité, et elle se paierait à chaque affichage au lieu d'une fois par publication."
+      en: "Recomputing similarity through a model call on every page view, for a result that does not change between two publications, is waste. The ranking depends neither on the reader nor on the moment: the only conceivable gain is its quality, and it would be paid for on every view instead of once per publication."
+
+verdict_rationale:
+  fr: "N1 est le barreau qui ne dépend de personne. N0 est gratuit et se teste unitairement, mais il ne voit que ce que quelqu'un a pensé à étiqueter, et le jour où l'étiquetage se relâche la table se vide au lieu de se dégrader ; N1 lit l'article et laisse le corpus décider quels mots comptent, pour la même table construite hors ligne. Son prix est une liste de mots vides par langue, sans laquelle le test apparie l'article sur l'affûtage avec l'annonce du site : montez à N2 quand votre fonds dit la même chose en deux langues, pas avant, sous peine d'échanger une bibliothèque contre un service à tenir chaud."
+  en: "N1 is the rung that depends on nobody. N0 is free and unit testable, but it only sees what somebody remembered to tag, and the day tagging slips the table empties rather than degrades; N1 reads the article and lets the corpus decide which words matter, for the same table built offline. Its price is a stop list per language, without which the test pairs the knife-sharpening article with the site announcement: move up to N2 when your corpus says the same thing in two languages, not before, or you trade a library for a service to keep warm."
+
+further_reading:
+  - label: "Introduction to Information Retrieval — pondération tf-idf, un terme pèse ce qu'il est rare"
+    url: "https://nlp.stanford.edu/IR-book/html/htmledition/tf-idf-weighting-1.html"
+  - label: "Introduction to Information Retrieval — produit scalaire et cosinus entre deux documents"
+    url: "https://nlp.stanford.edu/IR-book/html/htmledition/dot-products-1.html"
+  - label: "scikit-learn — TfidfVectorizer, et la formule d'idf lissée employée par l'extrait"
+    url: "https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"
+  - label: "Sentence-Transformers — documentation des encodeurs auto-hébergés"
+    url: "https://www.sbert.net/"
+
+sources: []
+---
