@@ -1,4 +1,4 @@
-/* Polices auto-hebergees, sous-ensemble latin, woff2.
+/* Polices auto-hébergées, sous-ensemble latin, woff2.
    Produites par scripts/build-fonts.sh. Aucune ressource tierce (CDC 12). */
 
 @font-face {
@@ -20,9 +20,9 @@
 @font-face {
   font-family: 'Inter';
   src: url('/fonts/inter-600.woff2') format('woff2');
-  /* Plage 600-700 declaree pour que le poids 650 de l'echelle typographique
-     (CDC 8.4, niveau h3) tombe sur cette fonte reelle plutot que sur un gras
-     synthetique. */
+  /* Plage 600-700 déclarée pour que le poids 650 de l'échelle typographique
+     (CDC 8.4, niveau h3) tombe sur cette fonte réelle plutôt que sur un gras
+     synthétique. */
   font-weight: 600 700;
   font-style: normal;
   font-display: swap;

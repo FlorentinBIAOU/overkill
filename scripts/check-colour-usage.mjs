@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Regles d'emploi de la couleur (CDC 8.3), verifiees sur les sources.
+ * Règles d'emploi de la couleur (CDC 8.3), vérifiées sur les sources.
  *
  *  1. Aucune couleur en dur : toute valeur de couleur passe par un token.
  *  2. --brand et --brand-deep ne sont jamais des couleurs de texte. Le jaune
- *     ne porte que du tres gros texte encre, pose en aplat.
- *  3. --go n'apparait que dans le composant du badge « recommande ».
+ *     ne porte que du très gros texte encre, pose en aplat.
+ *  3. --go n'apparaît que dans le composant du badge « recommande ».
  *  4. La rampe --rung-* ne sert jamais a exprimer un jugement : aucun token de
- *     rampe ne peut cohabiter avec un nom de classe evoquant bon ou mauvais.
+ *     rampe ne peut cohabiter avec un nom de classe évoquant bon ou mauvais.
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
@@ -15,7 +15,7 @@ import { join, extname, basename } from 'node:path';
 const ROOTS = ['src'];
 const EXT = new Set(['.astro', '.css', '.ts', '.js', '.mjs']);
 
-/** Fichiers ou une valeur hexadecimale est legitime. */
+/** Fichiers ou une valeur hexadécimale est légitime. */
 const HEX_ALLOWED = new Set([
   'tokens.css', // la source unique des tokens
 ]);
@@ -55,9 +55,9 @@ for (const root of ROOTS) {
         problems.push(`${at}  --brand n'est jamais une couleur de texte (CDC 8.3)`);
       }
 
-      // 3. le vert est reserve au badge « recommande »
+      // 3. le vert est réservé au badge « recommandé »
       if (/var\(--go\)/.test(code) && !GO_ALLOWED.has(name)) {
-        problems.push(`${at}  --go est reserve au badge « recommande » (CDC 8.3)`);
+        problems.push(`${at}  --go est réservé au badge « recommandé » (CDC 8.3)`);
       }
 
       // 4. la rampe ne code pas un jugement

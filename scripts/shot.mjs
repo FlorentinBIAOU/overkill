@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Capture d'une page du site construit, pour verification visuelle.
- * Usage : node scripts/shot.mjs <chemin> [largeur] [theme] [sortie]
+ * Capture d'une page du site construit, pour vérification visuelle.
+ * Usage : node scripts/shot.mjs <chemin> [largeur] [thème] [sortie]
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';

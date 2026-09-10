@@ -17,7 +17,9 @@
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:colour": "node scripts/check-colour-usage.mjs",
-    "check": "npm run check:fonts && npm run check:contrast && npm run check:colour && npm run build"
+    "check": "npm run check:fonts && npm run check:contrast && npm run check:colour && npm run check:french && npm run build",
+    "check:french": "bash scripts/check-french.sh",
+    "fix:accents": ".venv-tools/bin/python scripts/fix-accents.py"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.3.14",

@@ -1,8 +1,8 @@
 /* ============================================================================
    Overkill — source unique des tokens de design.
-   Toute valeur de couleur, de taille, d'espacement ou de rayon employee dans le
+   Toute valeur de couleur, de taille, d'espacement ou de rayon employée dans le
    site vient d'ici. Aucune valeur en dur ailleurs.
-   Reference : CDC sections 8.3, 8.4, 8.5.
+   Référence : CDC sections 8.3, 8.4, 8.5.
    ========================================================================== */
 
 :root {
@@ -13,34 +13,34 @@
   --ink: #16130E;         /* texte, aplats sombres. Brun-noir, jamais du noir pur */
   --paper: #FFFDF7;       /* fond principal, blanc chaud */
   --paper-2: #F4EFE2;     /* fonds secondaires, encadres */
-  --brand: #FFCE00;       /* couleur de marque, aplats, logo, en-tetes */
-  --brand-deep: #D9A600;  /* bordures et etats actifs sur fond jaune */
+  --brand: #FFCE00;       /* couleur de marque, aplats, logo, en-têtes */
+  --brand-deep: #D9A600;  /* bordures et états actifs sur fond jaune */
   --go: #1B7A4B;          /* badge « recommande », uniquement */
 
   /* Le jaune de marque est identique dans les deux modes et ne porte que de
-     l'encre sombre. Ce token n'est donc jamais redefini en mode sombre. */
+     l'encre sombre. Ce token n'est donc jamais redéfini en mode sombre. */
   --on-brand: #16130E;
-  --rung-0: #EDE7D7;      /* echelle de poids, du plus leger */
+  --rung-0: #EDE7D7;      /* échelle de poids, du plus léger */
   --rung-1: #C8BC9E;
   --rung-2: #8A7C5C;
   --rung-3: #4C4432;      /* au plus lourd */
 
   /* Texte pose sur chaque barreau de la rampe.
      La section 8.3 du CDC demande --paper sur --rung-2 et --rung-3, et exige au
-     meme endroit un contraste minimal de 4,5:1. Avec les valeurs contractuelles,
-     ces deux regles se contredisent sur --rung-2 :
-       --paper #FFFDF7 sur --rung-2 #8A7C5C = 4,03:1   (echec AA)
+     même endroit un contraste minimal de 4,5:1. Avec les valeurs contractuelles,
+     ces deux règles se contredisent sur --rung-2 :
+       --paper #FFFDF7 sur --rung-2 #8A7C5C = 4,03:1   (échec AA)
        --ink   #16130E sur --rung-2 #8A7C5C = 4,52:1   (conforme)
      Les valeurs de couleur et le seuil de 4,5:1 sont chiffres et non
-     negociables ; la consigne de couleur de texte ne l'est pas. On garde donc
+     négociables ; la consigne de couleur de texte ne l'est pas. On garde donc
      les tokens tels quels et on pose --ink sur --rung-2.
-     Ecart signale dans RAPPORT.md. Verifie par scripts/check-contrast.mjs. */
+     Écart signale dans RAPPORT.md. Vérifié par scripts/check-contrast.mjs. */
   --on-rung-0: var(--ink);
   --on-rung-1: var(--ink);
   --on-rung-2: var(--ink);
   --on-rung-3: var(--paper);
 
-  /* Roles derives. Ils ne creent pas de couleur, ils nomment un usage. */
+  /* Rôles dérivés. Ils ne créent pas de couleur, ils nomment un usage. */
   --surface: var(--ink);          /* aplat sombre pleine largeur */
   --on-surface: var(--paper);
   --rule: color-mix(in oklab, var(--ink) 16%, transparent);   /* filets */
@@ -77,7 +77,7 @@
   --weight-h3: 650;   /* Inter 600 charge, 650 arrondi par le moteur */
   --weight-body: 400;
 
-  /* --- Espacement, echelle de 4 px (CDC 8.5) ----------------------------- */
+  /* --- Espacement, échelle de 4 px (CDC 8.5) ----------------------------- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -96,22 +96,22 @@
   --columns: 12;
   --gutter: var(--space-6);
 
-  /* --- Rayons, hierarchises (CDC 8.5) ------------------------------------
-     Zero sur les aplats pleine largeur, 4 px sur code et tableaux,
+  /* --- Rayons, hiérarchisés (CDC 8.5) ------------------------------------
+     Zéro sur les aplats pleine largeur, 4 px sur code et tableaux,
      999 px sur les badges. Pas de rayon uniforme. */
   --radius-flat: 0;
   --radius-block: 4px;
   --radius-pill: 999px;
 
   /* --- Mouvement (CDC 8.2) ------------------------------------------------
-     Reserve a ce qui repond a une action de l'utilisateur. */
+     Réservé a ce qui répond a une action de l'utilisateur. */
   --motion-fast: 120ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* ============================================================================
-   Mode sombre. Valeurs alternatives declarees au meme endroit, pas une
-   inversion mecanique (CDC 8.3). Le brun-noir devient le fond, le blanc chaud
+   Mode sombre. Valeurs alternatives déclarées au même endroit, pas une
+   inversion mécanique (CDC 8.3). Le brun-noir devient le fond, le blanc chaud
    devient l'encre, la rampe est reconstruite pour rester lisible du clair au
    fonce dans une seule famille de neutres chauds.
    ========================================================================== */
@@ -125,7 +125,7 @@
     --brand-deep: #FFE066;
     --go: #4FBE85;
 
-    /* La rampe est reconstruite, pas inversee : elle continue d'aller du moins
+    /* La rampe est reconstruite, pas inversée : elle continue d'aller du moins
        marque au plus marque sur le fond sombre, donc du sombre vers le clair.
        Les quatre valeurs sont choisies pour atteindre 4,5:1 avec leur couleur
        de texte, ce que le mode clair ne permet pas sur --rung-2. */

@@ -1,11 +1,11 @@
 ---
-// Page de controle des tokens. Rendue au build, retiree de la sortie de
+// Page de contrôle des tokens. Rendue au build, retirée de la sortie de
 // production par scripts/strip-dev-pages.mjs sauf si OVERKILL_DEV_PAGES=1.
 import Base from '../../layouts/Base.astro';
 
 import { lightTokens } from '../../lib/tokens';
 
-// Les valeurs viennent de src/styles/tokens.css, jamais recopiees ici.
+// Les valeurs viennent de src/styles/tokens.css, jamais recopiées ici.
 const colourUse: Record<string, string> = {
   '--ink': 'texte, aplats sombres',
   '--paper': 'fond principal',
@@ -39,7 +39,7 @@ const spacing = [4, 8, 12, 16, 24, 32, 48, 64, 96, 128];
 <Base title="Tokens — controle" lang="fr" noindex>
   <div class="wrap stack-lg" style="padding-block: var(--space-12)">
     <header>
-      <p class="small">Page de controle interne. Absente de la sortie de production.</p>
+      <p class="small">Page de contrôle interne. Absente de la sortie de production.</p>
       <h1 class="display-l">Tokens de design</h1>
       <p>
         Chaque valeur vient de <code>src/styles/tokens.css</code>. Bascule le theme du

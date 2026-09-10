@@ -27,7 +27,7 @@
 }
 
 /* ============================================================================
-   Reinitialisation minimale
+   Réinitialisation minimale
    ========================================================================== */
 
 *,
@@ -94,7 +94,7 @@ h3 {
   line-height: var(--lh-heading);
 }
 
-/* Le display est un element actif de la composition : il peut deborder, se
+/* Le display est un élément actif de la composition : il peut déborder, se
    poser sur un aplat, occuper toute la largeur (CDC 8.4). */
 .display-xl {
   font-family: var(--font-display);
@@ -118,7 +118,7 @@ h3 {
 
 p,
 li {
-  max-width: var(--measure);   /* 68 caracteres (CDC 8.4) */
+  max-width: var(--measure);   /* 68 caractères (CDC 8.4) */
 }
 
 small,
@@ -136,7 +136,7 @@ pre {
 }
 
 /* ============================================================================
-   Liens. Pas de fleche collee au texte (CDC 8.2, interdit 6).
+   Liens. Pas de flèche collée au texte (CDC 8.2, interdit 6).
    ========================================================================== */
 
 a {
@@ -150,7 +150,7 @@ a:hover {
 }
 
 /* ============================================================================
-   Focus. Visible sur tout element interactif, jamais supprime (CDC 8.7).
+   Focus. Visible sur tout élément interactif, jamais supprime (CDC 8.7).
    ========================================================================== */
 
 :focus-visible {
@@ -192,7 +192,7 @@ a:hover {
 }
 
 /* ============================================================================
-   Ombres : aucune par defaut. La separation vient des fonds et des filets
+   Ombres : aucune par défaut. La séparation vient des fonds et des filets
    (CDC 8.5).
    ========================================================================== */
 

@@ -2,9 +2,9 @@
 /**
  * Budget de poids des polices (CDC section 12) : 90 Ko au total sur tout le site.
  *
- * Les polices sont deja compressees en woff2, la compression de transport
+ * Les polices sont déjà compressées en woff2, la compression de transport
  * n'apporte rien de plus. On mesure donc le poids sur disque, qui est ici le
- * poids transfere.
+ * poids transféré.
  */
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';

@@ -1,14 +1,14 @@
 /**
  * Lecture des tokens depuis src/styles/tokens.css, la source unique.
  *
- * Sert a la page de controle et aux scripts de verification : personne ne
- * recopie une valeur de couleur a la main, elle est lue la ou elle est definie.
+ * Sert a la page de contrôle et aux scripts de vérification : personne ne
+ * recopie une valeur de couleur a la main, elle est lue la ou elle est définie.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-// Chemin resolu depuis la racine du projet : stable au build comme en dev,
-// contrairement a import.meta.url qui suit le fichier apres empaquetage.
+// Chemin résolu depuis la racine du projet : stable au build comme en dev,
+// contrairement a import.meta.url qui suit le fichier après empaquetage.
 const CSS = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8');
 
 export function readTokenBlock(selectorFragment: string): Record<string, string> {

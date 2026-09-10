@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * Verification des rapports de contraste des couples texte-fond du systeme
+ * Vérification des rapports de contraste des couples texte-fond du système
  * de design (CDC 8.3 : minimum 4,5:1, et 3:1 pour les textes de plus de 24 px
  * en gras).
  *
- * Les valeurs sont lues dans src/styles/tokens.css, pas recopiees, pour que le
- * controle suive la source unique.
+ * Les valeurs sont lues dans src/styles/tokens.css, pas recopiées, pour que le
+ * contrôle suive la source unique.
  */
 import { readFile } from 'node:fs/promises';
 
 const css = await readFile('src/styles/tokens.css', 'utf8');
 
-/** Extrait les declarations d'un bloc de tokens donne. */
+/** Extrait les déclarations d'un bloc de tokens donne. */
 function tokensOf(selectorFragment) {
   const start = css.indexOf(selectorFragment);
   if (start === -1) throw new Error(`bloc introuvable : ${selectorFragment}`);
@@ -55,15 +55,15 @@ function ratio(a, b) {
 }
 
 /**
- * Couples texte-fond verifies. `large` marque les couples reserves au texte de
+ * Couples texte-fond vérifiés. `large` marque les couples réservés au texte de
  * plus de 24 px en gras, pour lesquels le seuil AA est 3:1.
  *
- * Deux couleurs du systeme ne sont jamais des couleurs de texte et n'ont donc
+ * Deux couleurs du système ne sont jamais des couleurs de texte et n'ont donc
  * pas de couple ici :
- *   --brand      n'apparait qu'en aplat, sous du tres gros texte encre (CDC 8.3)
- *   --brand-deep ne sert qu'aux bordures et aux etats actifs sur fond jaune
- * Leur bon usage est verifie par scripts/check-colour-usage.mjs, qui echoue si
- * l'une des deux apparait comme valeur de `color`.
+ *   --brand      n'apparaît qu'en aplat, sous du très gros texte encre (CDC 8.3)
+ *   --brand-deep ne sert qu'aux bordures et aux états actifs sur fond jaune
+ * Leur bon usage est vérifié par scripts/check-colour-usage.mjs, qui échoue si
+ * l'une des deux apparaît comme valeur de `color`.
  */
 const PAIRS = [
   ['--ink', '--paper', false, 'texte courant'],

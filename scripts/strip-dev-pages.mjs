@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Retire les pages de controle interne (/dev/*) de la sortie de production.
+ * Retire les pages de contrôle interne (/dev/*) de la sortie de production.
  *
- * Ces pages servent a verifier les tokens, les composants et les illustrations.
+ * Ces pages servent a vérifier les tokens, les composants et les illustrations.
  * Elles ne font pas partie du site. Poser OVERKILL_DEV_PAGES=1 pour les garder.
  */
 import { rm, readdir } from 'node:fs/promises';
@@ -20,4 +20,4 @@ if (!existsSync('dist/dev')) {
 
 const kept = await readdir('dist/dev');
 await rm('dist/dev', { recursive: true, force: true });
-console.log(`strip-dev-pages: ${kept.length} page(s) de controle retiree(s) de dist/`);
+console.log(`strip-dev-pages: ${kept.length} page(s) de contrôle retiree(s) de dist/`);

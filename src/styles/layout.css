@@ -15,7 +15,7 @@
   padding-inline: var(--space-6);
 }
 
-/* Aplat pleine largeur : rayon zero, il touche les bords. */
+/* Aplat pleine largeur : rayon zéro, il touche les bords. */
 .band {
   width: 100%;
   border-radius: var(--radius-flat);
@@ -42,7 +42,7 @@
   gap: var(--gutter);
 }
 
-/* Gabarit de fiche : sommaire lateral collant au-dela de 900 px. */
+/* Gabarit de fiche : sommaire latéral collant au-delà de 900 px. */
 .doc-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -71,7 +71,7 @@
   }
 }
 
-/* Tout contenu large defile dans son propre conteneur, jamais la page. */
+/* Tout contenu large défile dans son propre conteneur, jamais la page. */
 .scroll-x {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
