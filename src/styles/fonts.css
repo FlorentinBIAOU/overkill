@@ -1,0 +1,37 @@
+/* Polices auto-hebergees, sous-ensemble latin, woff2.
+   Produites par scripts/build-fonts.sh. Aucune ressource tierce (CDC 12). */
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('/fonts/bricolage-grotesque-display.woff2') format('woff2-variations');
+  font-weight: 700 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter-600.woff2') format('woff2');
+  /* Plage 600-700 declaree pour que le poids 650 de l'echelle typographique
+     (CDC 8.4, niveau h3) tombe sur cette fonte reelle plutot que sur un gras
+     synthetique. */
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

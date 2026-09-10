@@ -1,0 +1,33 @@
+{
+  "name": "overkill",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Le bon outil pour la bonne tache. Catalogue d'alternatives frugales a l'IA generative.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/strip-dev-pages.mjs",
+    "build:dev": "OVERKILL_DEV_PAGES=1 astro build",
+    "preview": "astro preview",
+    "fonts": "bash scripts/build-fonts.sh",
+    "check:fonts": "node scripts/check-fonts.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "check:colour": "node scripts/check-colour-usage.mjs",
+    "check": "npm run check:fonts && npm run check:contrast && npm run check:colour && npm run build"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.3.14",
+    "@astrojs/sitemap": "^3.6.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^5.18.2",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "playwright": "^1.63.0"
+  }
+}

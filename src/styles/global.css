@@ -1,0 +1,208 @@
+@import './tokens.css';
+@import './fonts.css';
+@import './layout.css';
+@import 'tailwindcss';
+
+/* Les tokens sont la source unique. Tailwind ne fait que les consommer. */
+@theme inline {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-rung-0: var(--rung-0);
+  --color-rung-1: var(--rung-1);
+  --color-rung-2: var(--rung-2);
+  --color-rung-3: var(--rung-3);
+  --color-rule: var(--rule);
+  --color-muted: var(--muted);
+
+  --font-display: var(--font-display);
+  --font-text: var(--font-text);
+  --font-code: var(--font-code);
+
+  --radius-flat: var(--radius-flat);
+  --radius-block: var(--radius-block);
+  --radius-pill: var(--radius-pill);
+}
+
+/* ============================================================================
+   Reinitialisation minimale
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: var(--size-body);
+  font-weight: var(--weight-body);
+  line-height: var(--lh-body);
+  text-align: left;          /* jamais justifie (CDC 8.4) */
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ============================================================================
+   Typographie (CDC 8.4)
+   ========================================================================== */
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  margin: 0;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--size-display-l);
+  font-weight: var(--weight-display-l);
+  line-height: var(--lh-display-l);
+  letter-spacing: var(--ls-display-l);
+}
+
+h2 {
+  font-size: var(--size-h2);
+  font-weight: var(--weight-h2);
+  line-height: var(--lh-heading);
+}
+
+h3 {
+  font-family: var(--font-text);
+  font-size: var(--size-h3);
+  font-weight: var(--weight-h3);
+  line-height: var(--lh-heading);
+}
+
+/* Le display est un element actif de la composition : il peut deborder, se
+   poser sur un aplat, occuper toute la largeur (CDC 8.4). */
+.display-xl {
+  font-family: var(--font-display);
+  font-size: var(--size-display-xl);
+  font-weight: var(--weight-display-xl);
+  line-height: var(--lh-display-xl);
+  letter-spacing: var(--ls-display-xl);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.display-l {
+  font-family: var(--font-display);
+  font-size: var(--size-display-l);
+  font-weight: var(--weight-display-l);
+  line-height: var(--lh-display-l);
+  letter-spacing: var(--ls-display-l);
+  overflow-wrap: break-word;
+}
+
+p,
+li {
+  max-width: var(--measure);   /* 68 caracteres (CDC 8.4) */
+}
+
+small,
+.small {
+  font-size: var(--size-small);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-code);
+  font-size: var(--size-code);
+  line-height: var(--lh-code);
+}
+
+/* ============================================================================
+   Liens. Pas de fleche collee au texte (CDC 8.2, interdit 6).
+   ========================================================================== */
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ============================================================================
+   Focus. Visible sur tout element interactif, jamais supprime (CDC 8.7).
+   ========================================================================== */
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* Pas de :focus { outline: none } dans ce projet. Aucune exception. */
+
+.skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: -100%;
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-block);
+}
+
+.skip-link:focus {
+  top: var(--space-2);
+}
+
+/* ============================================================================
+   Mouvement (CDC 8.2 et 8.7)
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   Ombres : aucune par defaut. La separation vient des fonds et des filets
+   (CDC 8.5).
+   ========================================================================== */
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: var(--space-8) 0;
+}
+
+::selection {
+  background: var(--brand);
+  color: var(--on-brand);
+}

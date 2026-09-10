@@ -1,0 +1,171 @@
+/* ============================================================================
+   Overkill — source unique des tokens de design.
+   Toute valeur de couleur, de taille, d'espacement ou de rayon employee dans le
+   site vient d'ici. Aucune valeur en dur ailleurs.
+   Reference : CDC sections 8.3, 8.4, 8.5.
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* --- Couleur (CDC 8.3) --------------------------------------------------
+     Les dix valeurs ci-dessous sont contractuelles et ne se modifient pas. */
+  --ink: #16130E;         /* texte, aplats sombres. Brun-noir, jamais du noir pur */
+  --paper: #FFFDF7;       /* fond principal, blanc chaud */
+  --paper-2: #F4EFE2;     /* fonds secondaires, encadres */
+  --brand: #FFCE00;       /* couleur de marque, aplats, logo, en-tetes */
+  --brand-deep: #D9A600;  /* bordures et etats actifs sur fond jaune */
+  --go: #1B7A4B;          /* badge « recommande », uniquement */
+
+  /* Le jaune de marque est identique dans les deux modes et ne porte que de
+     l'encre sombre. Ce token n'est donc jamais redefini en mode sombre. */
+  --on-brand: #16130E;
+  --rung-0: #EDE7D7;      /* echelle de poids, du plus leger */
+  --rung-1: #C8BC9E;
+  --rung-2: #8A7C5C;
+  --rung-3: #4C4432;      /* au plus lourd */
+
+  /* Texte pose sur chaque barreau de la rampe.
+     La section 8.3 du CDC demande --paper sur --rung-2 et --rung-3, et exige au
+     meme endroit un contraste minimal de 4,5:1. Avec les valeurs contractuelles,
+     ces deux regles se contredisent sur --rung-2 :
+       --paper #FFFDF7 sur --rung-2 #8A7C5C = 4,03:1   (echec AA)
+       --ink   #16130E sur --rung-2 #8A7C5C = 4,52:1   (conforme)
+     Les valeurs de couleur et le seuil de 4,5:1 sont chiffres et non
+     negociables ; la consigne de couleur de texte ne l'est pas. On garde donc
+     les tokens tels quels et on pose --ink sur --rung-2.
+     Ecart signale dans RAPPORT.md. Verifie par scripts/check-contrast.mjs. */
+  --on-rung-0: var(--ink);
+  --on-rung-1: var(--ink);
+  --on-rung-2: var(--ink);
+  --on-rung-3: var(--paper);
+
+  /* Roles derives. Ils ne creent pas de couleur, ils nomment un usage. */
+  --surface: var(--ink);          /* aplat sombre pleine largeur */
+  --on-surface: var(--paper);
+  --rule: color-mix(in oklab, var(--ink) 16%, transparent);   /* filets */
+  --rule-strong: color-mix(in oklab, var(--ink) 34%, transparent);
+  --muted: #6B6252;               /* texte secondaire, 5,91:1 sur --paper */
+  --code-bg: var(--paper-2);
+  --focus: var(--ink);
+
+  /* --- Typographie (CDC 8.4) --------------------------------------------- */
+  --font-display: 'Bricolage Grotesque', 'Arial Black', system-ui, sans-serif;
+  --font-text: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-code: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --size-display-xl: clamp(3rem, 8vw, 6.5rem);
+  --size-display-l: clamp(2.25rem, 5vw, 4rem);
+  --size-h2: 2rem;
+  --size-h3: 1.5rem;
+  --size-body: 1.0625rem;
+  --size-small: 0.875rem;
+  --size-code: 0.9375rem;
+
+  --lh-display-xl: 0.95;
+  --lh-display-l: 1;
+  --lh-heading: 1.15;
+  --lh-body: 1.65;
+  --lh-code: 1.6;
+
+  --ls-display-xl: -0.03em;
+  --ls-display-l: -0.02em;
+
+  --weight-display-xl: 800;
+  --weight-display-l: 700;
+  --weight-h2: 700;
+  --weight-h3: 650;   /* Inter 600 charge, 650 arrondi par le moteur */
+  --weight-body: 400;
+
+  /* --- Espacement, echelle de 4 px (CDC 8.5) ----------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --space-32: 128px;
+
+  /* --- Mise en page (CDC 8.5) -------------------------------------------- */
+  --width-content: 1200px;   /* largeur maximale de contenu */
+  --width-reading: 680px;    /* colonne de lecture */
+  --measure: 68ch;           /* longueur de ligne du corps de texte */
+  --columns: 12;
+  --gutter: var(--space-6);
+
+  /* --- Rayons, hierarchises (CDC 8.5) ------------------------------------
+     Zero sur les aplats pleine largeur, 4 px sur code et tableaux,
+     999 px sur les badges. Pas de rayon uniforme. */
+  --radius-flat: 0;
+  --radius-block: 4px;
+  --radius-pill: 999px;
+
+  /* --- Mouvement (CDC 8.2) ------------------------------------------------
+     Reserve a ce qui repond a une action de l'utilisateur. */
+  --motion-fast: 120ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ============================================================================
+   Mode sombre. Valeurs alternatives declarees au meme endroit, pas une
+   inversion mecanique (CDC 8.3). Le brun-noir devient le fond, le blanc chaud
+   devient l'encre, la rampe est reconstruite pour rester lisible du clair au
+   fonce dans une seule famille de neutres chauds.
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ink: #F5F0E4;
+    --paper: #14120E;
+    --paper-2: #211D16;
+    --brand: #FFCE00;
+    --brand-deep: #FFE066;
+    --go: #4FBE85;
+
+    /* La rampe est reconstruite, pas inversee : elle continue d'aller du moins
+       marque au plus marque sur le fond sombre, donc du sombre vers le clair.
+       Les quatre valeurs sont choisies pour atteindre 4,5:1 avec leur couleur
+       de texte, ce que le mode clair ne permet pas sur --rung-2. */
+    --rung-0: #2C2820;
+    --rung-1: #453E30;
+    --rung-2: #8A7C5C;
+    --rung-3: #B0A184;
+
+    --on-rung-0: #F5F0E4;
+    --on-rung-1: #F5F0E4;
+    --on-rung-2: #14120E;
+    --on-rung-3: #14120E;
+
+    --muted: #A79E8C;
+    --surface: #F5F0E4;
+    --on-surface: #14120E;
+    --focus: var(--brand);
+  }
+}
+
+:root[data-theme='dark'] {
+  --ink: #F5F0E4;
+  --paper: #14120E;
+  --paper-2: #211D16;
+  --brand: #FFCE00;
+  --brand-deep: #FFE066;
+  --go: #4FBE85;
+
+  --rung-0: #2C2820;
+  --rung-1: #453E30;
+  --rung-2: #8A7C5C;
+  --rung-3: #B0A184;
+
+  --on-rung-0: #F5F0E4;
+  --on-rung-1: #F5F0E4;
+  --on-rung-2: #14120E;
+  --on-rung-3: #14120E;
+
+  --muted: #A79E8C;
+  --surface: #F5F0E4;
+  --on-surface: #14120E;
+  --focus: var(--brand);
+}

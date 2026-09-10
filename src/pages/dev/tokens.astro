@@ -1,0 +1,287 @@
+---
+// Page de controle des tokens. Rendue au build, retiree de la sortie de
+// production par scripts/strip-dev-pages.mjs sauf si OVERKILL_DEV_PAGES=1.
+import Base from '../../layouts/Base.astro';
+
+import { lightTokens } from '../../lib/tokens';
+
+// Les valeurs viennent de src/styles/tokens.css, jamais recopiees ici.
+const colourUse: Record<string, string> = {
+  '--ink': 'texte, aplats sombres',
+  '--paper': 'fond principal',
+  '--paper-2': 'fonds secondaires',
+  '--brand': 'couleur de marque, aplats',
+  '--brand-deep': 'bordures et etats actifs sur fond jaune',
+  '--go': 'badge « recommande », uniquement',
+  '--rung-0': 'echelle de poids, du plus leger',
+  '--rung-1': '',
+  '--rung-2': '',
+  '--rung-3': 'au plus lourd',
+};
+
+const colours = Object.entries(colourUse).map(
+  ([name, use]) => [name, lightTokens[name], use] as const,
+);
+
+const scale = [
+  ['display-xl', 'display-xl', 'Bricolage 800 · clamp(3rem, 8vw, 6.5rem) · 0.95 · -0.03em'],
+  ['display-l', 'display-l', 'Bricolage 700 · clamp(2.25rem, 5vw, 4rem) · 1.0'],
+  ['h2', 'sample-h2', 'Bricolage 700 · 2rem'],
+  ['h3', 'sample-h3', 'Inter 650 · 1.5rem'],
+  ['body', 'sample-body', 'Inter 400 · 1.0625rem · 1.65'],
+  ['small', 'sample-small', 'Inter 400 · 0.875rem'],
+  ['code', 'sample-code', 'JetBrains Mono 400 · 0.9375rem · 1.6'],
+];
+
+const spacing = [4, 8, 12, 16, 24, 32, 48, 64, 96, 128];
+---
+
+<Base title="Tokens — controle" lang="fr" noindex>
+  <div class="wrap stack-lg" style="padding-block: var(--space-12)">
+    <header>
+      <p class="small">Page de controle interne. Absente de la sortie de production.</p>
+      <h1 class="display-l">Tokens de design</h1>
+      <p>
+        Chaque valeur vient de <code>src/styles/tokens.css</code>. Bascule le theme du
+        systeme, ou clique le bouton, pour verifier le mode sombre.
+      </p>
+      <button id="theme-toggle" type="button" class="tbtn">Basculer le theme</button>
+    </header>
+
+    <section>
+      <h2>Couleur</h2>
+      <p class="small muted">Valeurs du mode clair, lues dans <code>src/styles/tokens.css</code>.</p>
+      <ul class="swatches">
+        {
+          colours.map(([name, hex, use]) => (
+            <li>
+              <span class="swatch" style={`background: var(${name})`} aria-hidden="true" />
+              <code>{name}</code>
+              <span class="small hex">{hex}</span>
+              {use && <span class="small muted">{use}</span>}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section>
+      <h2>Rampe de barreaux</h2>
+      <p class="small">
+        Elle code le poids de la solution, jamais sa qualite. Du clair au fonce, dans une
+        seule famille de neutres chauds.
+      </p>
+      <div class="ramp">
+        <div style="background: var(--rung-0); color: var(--on-rung-0)">N0</div>
+        <div style="background: var(--rung-1); color: var(--on-rung-1)">N1</div>
+        <div style="background: var(--rung-2); color: var(--on-rung-2)">N2</div>
+        <div style="background: var(--rung-3); color: var(--on-rung-3)">N3</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Aplats</h2>
+      <div class="band band-brand" style="padding: var(--space-8)">
+        <p class="display-l" style="max-width: none">Le bon outil pour la bonne tache</p>
+      </div>
+      <div class="band band-ink" style="padding: var(--space-8)">
+        <p class="display-l" style="max-width: none">Aplat sombre</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Echelle typographique</h2>
+      <dl class="scale">
+        {
+          scale.map(([label, cls, spec]) => (
+            <>
+              <dt class="small">
+                <code>{label}</code> <span class="muted">{spec}</span>
+              </dt>
+              <dd class={cls}>Overkill — Avez-vous vraiment besoin d'IA ? 0123456789</dd>
+            </>
+          ))
+        }
+      </dl>
+    </section>
+
+    <section>
+      <h2>Espacement</h2>
+      <ul class="spacing">
+        {
+          spacing.map((n) => (
+            <li>
+              <span style={`width:${n}px`} aria-hidden="true" />
+              <code class="small">{n}px</code>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section>
+      <h2>Rayons</h2>
+      <div class="radii">
+        <div style="border-radius: var(--radius-flat)">0 — aplat</div>
+        <div style="border-radius: var(--radius-block)">4px — code, tableaux</div>
+        <div style="border-radius: var(--radius-pill)">999px — badges</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Focus</h2>
+      <p class="small">Chaque element ci-dessous doit montrer un anneau visible au clavier.</p>
+      <p>
+        <a href="#main">Un lien</a>
+        <button type="button" class="tbtn">Un bouton</button>
+        <input type="text" aria-label="Un champ" placeholder="Un champ" />
+      </p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  section {
+    padding-block-start: var(--space-8);
+    border-block-start: 1px solid var(--rule);
+  }
+
+  .swatches {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--space-3);
+    max-width: none;
+  }
+
+  .swatches li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: none;
+  }
+
+  .swatch {
+    display: block;
+    width: 64px;
+    height: 32px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-block);
+    flex: none;
+  }
+
+  .hex {
+    font-family: var(--font-code);
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .ramp {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .ramp div {
+    padding: var(--space-8) var(--space-4);
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+
+  .scale dt {
+    color: var(--muted);
+    margin-block-start: var(--space-6);
+  }
+
+  .scale dd {
+    margin: 0;
+  }
+
+  .sample-h2 {
+    font-family: var(--font-display);
+    font-size: var(--size-h2);
+    font-weight: var(--weight-h2);
+    line-height: var(--lh-heading);
+  }
+
+  .sample-h3 {
+    font-family: var(--font-text);
+    font-size: var(--size-h3);
+    font-weight: var(--weight-h3);
+  }
+
+  .sample-body {
+    font-size: var(--size-body);
+  }
+
+  .sample-small {
+    font-size: var(--size-small);
+  }
+
+  .sample-code {
+    font-family: var(--font-code);
+    font-size: var(--size-code);
+  }
+
+  .spacing {
+    list-style: none;
+    padding: 0;
+    max-width: none;
+  }
+
+  .spacing li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: none;
+  }
+
+  .spacing span {
+    display: block;
+    height: 16px;
+    background: var(--brand-deep);
+  }
+
+  .radii {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .radii div {
+    padding: var(--space-4);
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+  }
+
+  .tbtn {
+    font: inherit;
+    padding: var(--space-2) var(--space-4);
+    background: var(--paper-2);
+    color: var(--ink);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+  }
+
+  input {
+    font: inherit;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-block);
+    background: var(--paper);
+    color: var(--ink);
+  }
+</style>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn?.addEventListener('click', () => {
+    const root = document.documentElement;
+    const current =
+      root.dataset.theme ??
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    root.dataset.theme = current === 'dark' ? 'light' : 'dark';
+  });
+</script>

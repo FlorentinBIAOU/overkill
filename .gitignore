@@ -1,7 +1,17 @@
+# Dependances
 node_modules/
+.venv/
+.venv-tools/
+__pycache__/
+.pytest_cache/
+
+# Sorties de build
 dist/
 .astro/
-__pycache__/
-.venv/
+
+# Jeu de fiches de test genere (CDC 6.2 : jamais commite)
+content/entries-fixtures/
+
+# Environnement et systeme
 .env
 .DS_Store
