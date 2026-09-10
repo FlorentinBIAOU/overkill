@@ -209,3 +209,110 @@ Lot 02 — Schéma de contenu et validation.
 **Prochaine étape**
 
 Lot 03 — Système de composants, avec le lot 06 lancé en parallèle.
+
+---
+
+## Lot 03 — Système de composants
+
+**Terminé.** `npm run check` verte, plus sept contrôles de comportement au navigateur.
+
+**Fait**
+
+Quatorze composants : bloc de code colorisé au build, onglets de langage, badges de verdict
+et de barreau, mini-échelle, tableau récapitulatif, barreau détaillé, bloc risques, ligne de
+catalogue, sommaire collant, encadrés, bloc d'accompagnement, avertissement réglementaire,
+état vide, et les quatre pictogrammes de barreau. Plus les deux dictionnaires d'interface.
+
+**Preuve**
+
+| Contrôle | Résultat |
+|---|---|
+| Parcours au clavier, focus visible partout | 12 arrêts, tous avec `:focus-visible` et un contour d'au moins 3 px |
+| Flèches gauche, droite, Début, Fin entre onglets | conformes |
+| Confirmation de copie annoncée aux lecteurs d'écran | oui, par une région `status` |
+| Contenu réellement copié | le code de l'extrait, vérifié dans le presse-papiers |
+| Sans JavaScript, les deux langages restent lisibles | oui, les onglets disparaissent |
+| Débordement horizontal à 360, 600, 900, 1440 px | aucun |
+| Contrastes AA, clair et sombre | 18 couples, tous conformes |
+| Règles d'emploi de la couleur | conformes |
+
+**Décisions prises**
+
+- **Les niveaux de titre sont des paramètres de composant.** Un composant ne présume pas de
+  sa profondeur dans la page. Sans cela, le bloc risques imposait un `h4` sous un `h2` et
+  créait un saut de hiérarchie.
+- **Un seul rendu Shiki pour les deux thèmes**, porté par des variables CSS, plutôt que deux
+  blocs de HTML. Le mode sombre ne coûte donc rien au budget de poids de la fiche.
+- **L'adresse d'accompagnement est encodée en références numériques dans le `href`**, et son
+  texte visible est écrit à l'envers puis remis à l'endroit par le CSS. Le lien fonctionne
+  sans JavaScript, et l'adresse n'apparaît en clair nulle part dans le HTML livré. Vérifié
+  sur la réponse brute, et non sur le DOM analysé, qui aurait déjà décodé les entités.
+
+**Défauts trouvés en vérifiant, et corrigés**
+
+- **Débordement horizontal à 360 et 600 px.** Un élément de grille vaut `min-width: auto` et
+  refuse de rétrécir sous la largeur de son contenu : le bloc de code poussait la page
+  entière au lieu de défiler dans son conteneur. Corrigé, et le contrôle
+  `scripts/check-overflow.mjs` ignore désormais ce qui vit dans un conteneur défilant, pour
+  ne signaler que ce qui pousse réellement le document.
+- **Le vert `--go` était employé hors du badge**, sur le liseré de verdict de la mini-échelle.
+  C'est `check-colour-usage` qui l'a signalé. Remplacé par un trait à l'encre : la couleur
+  n'exprime aucun jugement sur ce site, y compris quand le jugement est juste.
+- **Le premier contrôle de débordement était faux** : il comptait comme fautif tout élément
+  large, y compris à l'intérieur d'un conteneur défilant. Réécrit.
+
+**Ajout hors plan**
+
+- `scripts/check-overflow.mjs`, qui n'était pas prévu au plan et qui a immédiatement trouvé
+  un vrai défaut.
+
+---
+
+## Lot 04 — Gabarits de pages
+
+**Terminé.** 23 contrôles de gabarit au navigateur, aucun échec.
+
+**Fait**
+
+Cinq gabarits : fiche, fiche en brouillon, catalogue, famille, éditorial. Plus l'en-tête, le
+pied de page, l'enveloppe commune, le module de construction d'URL et son jeu de tests.
+
+**Preuve**
+
+| Contrôle | Résultat |
+|---|---|
+| Rendu sans erreur de console, cinq gabarits | oui |
+| Un seul `h1`, hiérarchie sans saut | oui, sur les cinq |
+| Aucun identifiant en double | oui, après correction |
+| Lisible et navigable sans JavaScript | oui, sur les cinq |
+| Verdict affiché deux fois sur la fiche | badge d'en-tête et tableau |
+| Ancres des barreaux et du verdict | six ancres, toutes atteintes par le sommaire |
+| Sommaire collant au-delà de 900 px, statique en dessous | conforme |
+| `hreflang` dans les deux sens et `x-default` vers l'anglais | conforme |
+| Aucune ressource tierce chargée à l'exécution | aucune |
+| Débordement horizontal, cinq gabarits, quatre largeurs | aucun |
+
+**Décisions prises**
+
+- **Les segments d'URL sont identiques dans les deux langues**, seul le préfixe change :
+  `/fr/fiches/<id>` et `/en/fiches/<id>`. C'est la lecture littérale de la section 7.1, qui
+  donne l'arborescence, et de la section 9.3, qui dit que toutes ces URL existent sous les
+  deux préfixes. Conséquence : le sélecteur de langue conserve la page courante par simple
+  substitution du préfixe. L'alternative, traduire les segments, aurait imposé une table de
+  correspondance à maintenir et compliqué le contrôle des liens. Réversible : une seule
+  fonction à changer.
+- **Une illustration manquante s'affiche comme manquante**, dans un cadre pointillé qui
+  nomme le fichier attendu, avec un texte alternatif correct. L'interdit numéro 10 refuse le
+  faux contenu ; un trou silencieux serait pire.
+- **Le poids de page est masqué tant qu'il n'est pas mesuré.** L'interdit numéro 2 vaut aussi
+  pour le site lui-même.
+
+**Défaut trouvé en vérifiant, et corrigé**
+
+- **Identifiant en double sur chaque barreau** : la section et son bloc d'onglets portaient
+  tous deux `id="n0"`. Un contrôle d'unicité des identifiants a été ajouté aux cinq gabarits.
+
+**Prochaine étape**
+
+Lot 05 — Recherche et filtres, une fois la feuille de route disponible pour produire le jeu
+de 200 fiches de test.

@@ -26,19 +26,30 @@ def article_text(article: dict) -> str:
     return f"{article['title']} {article['title']} {article['body']}"
 
 
-def build_neighbour_table(articles: list[dict], k: int = 5, minimum: float = 0.05) -> dict:
+def build_neighbour_table(
+    articles: list[dict],
+    k: int = 5,
+    minimum: float = 0.05,
+    stop_words: list[str] | None = None,
+) -> dict:
     """
     Return `{article id: [(neighbour id, score), ...]}`, best neighbour first.
 
-    `minimum` is a floor, not a tuning knob to be tweaked until the block
-    looks full: below it, two articles share ordinary words and nothing else,
-    and showing no block beats showing a wrong one.
+    `stop_words` is a per-language list, so it belongs to the caller and not
+    to this function. Without one the ranking still works, because a word in
+    every article is downweighted anyway, but the floor has to do more of the
+    job on a small corpus.
+
+    `minimum` is that floor, not a knob to be tweaked until the block looks
+    full: below it, two articles share ordinary words and nothing else, and
+    showing no block beats showing a wrong one.
     """
     if len(articles) < 2:
         return {article["id"]: [] for article in articles}
 
     # Rows come out l2-normalised, so their dot product is already a cosine.
-    matrix = TfidfVectorizer().fit_transform(article_text(a) for a in articles)
+    vectoriser = TfidfVectorizer(stop_words=stop_words)
+    matrix = vectoriser.fit_transform(article_text(a) for a in articles)
     scores = linear_kernel(matrix)
 
     table = {}
