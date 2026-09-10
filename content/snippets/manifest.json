@@ -1,0 +1,836 @@
+{
+  "_comment": "Dérivé de docs/sprints/MATRICE-EXTRAITS.md par scripts/build-snippet-manifest.mjs. Ne pas modifier à la main.",
+  "entries": [
+    {
+      "id": "mask-personal-data-in-chat",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Normalisation Unicode puis expressions régulières sur les motifs à forte structure : adresse électronique, numéro de téléphone, IBAN",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Régression logistique sur des traits de jetons, pour rattraper les formes obfusquées que la règle rate",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Un modèle de reconnaissance d'entités auto-hébergé coûte un service permanent pour un gain nul sur des motifs aussi structurés que N1 traite déjà"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Extraction structurée par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "l'obfuscation volontaire, chiffres écrits en lettres, caractères sosies, emojis intercalés."
+      }
+    },
+    {
+      "id": "detect-spam-in-contact-form",
+      "expected_verdict": "N1",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Pot de miel, délai minimal de soumission, plafond de liens, motifs interdits",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Régression logistique sur n-grammes de caractères en TF-IDF",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Un encodeur distillé auto-hébergé n'apporte rien sur des textes courts et très typés, face au coût d'un service permanent"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Classement par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "un robot qui remplit lentement et évite les liens passe."
+      }
+    },
+    {
+      "id": "find-duplicate-records",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Normalisation, clé de blocage, puis distance d'édition sur les seuls candidats du même bloc",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "TF-IDF sur n-grammes de caractères et plus proches voisins par cosinus",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Embeddings de phrases auto-hébergés et recherche du plus proche voisin",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "Comparer les paires par appel à un modèle généraliste est quadratique : sur dix mille fiches, cela fait cinquante millions d'appels"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "deux graphies qui ne partagent pas la clé de blocage ne sont jamais comparées."
+      }
+    },
+    {
+      "id": "moderate-user-comments",
+      "expected_verdict": "N2",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Liste de termes après normalisation, avec fenêtre de contexte",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Classifieur linéaire entraîné sur un corpus étiqueté",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Modèle de classification de toxicité auto-hébergé",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Point de terminaison de modération d'un fournisseur",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "le contournement par graphie, et les faux positifs sur les citations et le second degré."
+      }
+    },
+    {
+      "id": "extract-dates-from-text",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Expressions régulières par format, puis validation calendaire réelle",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Génération de candidats par règle, puis classifieur pour lever l'ambiguïté jour-mois",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Un modèle de reconnaissance d'entités dédié aux dates n'apporte rien de plus que N1 sur du texte de gestion"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Extraction structurée par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "les dates relatives, « jeudi prochain », « dans quinze jours »."
+      }
+    },
+    {
+      "id": "extract-fields-from-invoice",
+      "expected_verdict": "N2",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Ancrage par mots-clés et expressions régulières sur le texte déjà extrait",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Traits de position et de mise en forme, puis classifieur de lignes",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Modèle de compréhension de document auto-hébergé, tenant compte de la mise en page",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Extraction structurée par modèle généraliste multimodal",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "chaque fournisseur a sa mise en page ; la règle écrite pour l'un échoue sur le suivant."
+      }
+    },
+    {
+      "id": "parse-address-into-fields",
+      "expected_verdict": "N1",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Expressions régulières, dictionnaire de types de voie, ancrage sur le code postal",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Étiquetage de jetons par régression logistique sur traits de contexte",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Analyseur d'adresses statistique auto-hébergé, entraîné sur données ouvertes mondiales",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Découpage structuré par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "les compléments d'adresse, les adresses étrangères, l'ordre inversé."
+      }
+    },
+    {
+      "id": "route-support-tickets",
+      "expected_verdict": "N1",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Règles par mots-clés, avec priorité explicite et équipe par défaut",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "TF-IDF et classifieur linéaire entraîné sur l'historique de tickets",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Encodeur de phrases auto-hébergé et plus proches voisins sur les tickets résolus",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Classement par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "un ticket qui contient les mots-clés de deux équipes, ou aucun."
+      }
+    },
+    {
+      "id": "tag-articles-by-topic",
+      "expected_verdict": "N1",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Vocabulaire contrôlé, correspondance de termes après lemmatisation simple",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "TF-IDF et classification multi-étiquette un contre tous",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Étiquetage sans exemple par similarité d'embeddings avec les libellés",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Étiquetage par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "un article qui traite d'un thème sans jamais employer son nom."
+      }
+    },
+    {
+      "id": "detect-language-of-text",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Profils de trigrammes de caractères par langue, distance de rang",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Classifieur bayésien naïf sur n-grammes de caractères",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Un modèle d'identification dédié ne se distingue de N1 qu'en dessous de quelques dizaines de caractères, cas que le contexte applicatif tranche mieux"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Détection par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "les textes très courts, et les textes mélangeant deux langues."
+      }
+    },
+    {
+      "id": "search-in-your-own-documents",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Index plein texte de la base de données, avec classement BM25 intégré",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Index inversé et classement BM25 écrit à la main, pour comprendre ce que fait N0",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Embeddings auto-hébergés et recherche vectorielle, en complément du plein texte",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Génération augmentée par récupération : le modèle rédige la réponse à partir des passages trouvés",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "une recherche par le sens, quand le document n'emploie aucun des mots de la requête."
+      }
+    },
+    {
+      "id": "add-autocomplete-to-a-search-bar",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Arbre de préfixes, tri par fréquence d'usage",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Réordonnancement appris sur les clics passés",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "La latence d'un modèle auto-hébergé est incompatible avec une suggestion à chaque frappe"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "Un appel réseau par caractère frappé : la latence et le coût rendent l'approche inutilisable"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "une faute de frappe dès le premier caractère ne remonte rien."
+      }
+    },
+    {
+      "id": "fuzzy-match-company-names",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Normalisation, retrait des formes juridiques, similarité de Jaro-Winkler",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "TF-IDF sur n-grammes de caractères et plus proches voisins par cosinus",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Embeddings auto-hébergés, pour rapprocher des raisons sociales sans caractères communs",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "L'appariement est quadratique et doit être déterministe et rejouable : un modèle généraliste ne l'est pas"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "deux noms de la même entreprise sans caractères communs, sigle contre raison sociale développée."
+      }
+    },
+    {
+      "id": "show-similar-articles",
+      "expected_verdict": "N1",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Chevauchement d'étiquettes, pondéré par la rareté de l'étiquette",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "TF-IDF sur le texte et similarité cosinus, calculée hors ligne",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Embeddings de documents auto-hébergés",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "Recalculer une similarité par appel de modèle à chaque affichage de page, pour un résultat qui ne change pas, est un gaspillage"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "un fonds d'articles mal étiqueté ne produit aucune similarité."
+      }
+    },
+    {
+      "id": "rank-products-by-relevance",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Score pondéré déterministe : correspondance textuelle, disponibilité, marge, popularité",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Apprentissage du classement sur les interactions passées",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Face au poids du signal métier, un modèle sémantique n'apporte rien qui justifie un service permanent"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "Un classement doit être déterministe, explicable et rejouable ; un modèle généraliste ne l'est pas"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "les pondérations sont réglées à la main et vieillissent sans que personne ne s'en aperçoive."
+      }
+    },
+    {
+      "id": "forecast-weekly-sales",
+      "expected_verdict": "N1",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Moyenne mobile et coefficient saisonnier calculé sur l'historique",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Régression linéaire sur variables calendaires, tendance et saisonnalité",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Les modèles profonds de séries temporelles exigent bien plus d'historique que n'en a une PME"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "Un modèle de langue ne prédit pas une série numérique de façon fiable, et une prévision non testable n'a pas d'usage"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "une rupture de tendance, un changement de gamme, une promotion exceptionnelle."
+      }
+    },
+    {
+      "id": "detect-anomalies-in-metrics",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Seuil robuste sur médiane et écart absolu médian, avec fenêtre glissante",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Forêt d'isolement sur plusieurs métriques conjointes",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Une alerte doit être explicable à trois heures du matin ; un service supplémentaire à surveiller est une charge, pas une aide"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "Une alerte non déterministe est une alerte à laquelle personne ne fera confiance"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "une dérive lente entre dans la fenêtre glissante et devient la nouvelle normale."
+      }
+    },
+    {
+      "id": "generate-test-data",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Générateur déterministe à graine, respectant les contraintes du schéma",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Échantillonnage des distributions marginales observées en production",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Un modèle génératif auto-hébergé pour remplir un tableau est disproportionné"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Rédaction de champs textuels réalistes par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "les données restent visiblement synthétiques et ne révèlent pas les bugs que provoquent les vraies."
+      }
+    },
+    {
+      "id": "write-product-descriptions",
+      "expected_verdict": "N3",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Gabarits à trous alimentés par les attributs du produit",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": false,
+          "unavailable_reason": "Aucun modèle classique léger ne produit de la prose commercialement acceptable ; ce n'est pas ce pour quoi ils sont faits"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Petit modèle génératif auto-hébergé, spécialisé par affinage",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Rédaction par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "mille descriptions issues du même gabarit se lisent comme mille descriptions issues du même gabarit."
+      }
+    },
+    {
+      "id": "generate-placeholder-images",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "SVG déterministe dérivé d'un hachage de l'identifiant",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": false,
+          "unavailable_reason": "Il n'y a rien à apprendre : la sortie voulue est décorative et arbitraire"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Un modèle de diffusion pour produire un aplat coloré est l'exemple même du sur-dimensionnement"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "Idem, avec en plus un coût par image et une latence de plusieurs secondes"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "une image de remplacement reste une image de remplacement ; si vous avez besoin d'une vraie photographie, aucune approche de cette fiche ne convient."
+      }
+    },
+    {
+      "id": "summarise-a-long-document",
+      "expected_verdict": "N3",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Résumé extractif : notation des phrases par position et fréquence des termes",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Notation supervisée des phrases sur des traits de surface",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Modèle de résumé abstractif auto-hébergé",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Résumé par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "le résumé extractif ne relie pas deux idées séparées de dix pages, et il ne reformule jamais."
+      }
+    },
+    {
+      "id": "translate-interface-strings",
+      "expected_verdict": "N2",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Mémoire de traduction : correspondance exacte, puis correspondance approchée signalée pour relecture",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": false,
+          "unavailable_reason": "La traduction statistique par segments exige un corpus aligné hors de portée d'une petite équipe, pour un résultat en deçà de N2"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Modèle de traduction neuronale auto-hébergé, par paire de langues",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Traduction par appel à un modèle généraliste, avec le contexte d'interface",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "toute chaîne nouvelle n'a aucune correspondance et reste à traduire."
+      }
+    },
+    {
+      "id": "convert-messy-csv-to-clean-data",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Détection du dialecte, normalisation d'encodage, coercition typée avec journal des rejets",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": true,
+          "approach": "Inférence du type de colonne par classifieur sur des traits d'échantillon",
+          "verification": "executed"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Un modèle auto-hébergé pour deviner qu'une colonne contient des dates est hors sujet"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Traitement des seules lignes rejetées par N0, par appel à un modèle généraliste",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "un fichier dont les colonnes changent de sens en cours de route, ou dont les séparateurs sont incohérents d'une ligne à l'autre."
+      }
+    },
+    {
+      "id": "read-text-from-a-scanned-page",
+      "expected_verdict": "N2",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Vérifier d'abord qu'une couche de texte existe déjà dans le document et l'extraire",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": false,
+          "unavailable_reason": "Un OCR par segmentation de caractères écrit à la main est un projet de plusieurs mois, pour un résultat très inférieur aux moteurs existants"
+        },
+        {
+          "level": "N2",
+          "available": true,
+          "approach": "Moteur de reconnaissance optique auto-hébergé",
+          "verification": "stubbed"
+        },
+        {
+          "level": "N3",
+          "available": true,
+          "approach": "Lecture par appel à un modèle généraliste multimodal",
+          "verification": "stubbed"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "une page réellement scannée n'a pas de couche de texte. C'est le premier réflexe à avoir, pas une solution générale."
+      }
+    },
+    {
+      "id": "validate-a-form-server-side",
+      "expected_verdict": "N0",
+      "rungs": [
+        {
+          "level": "N0",
+          "available": true,
+          "approach": "Schéma de validation déclaratif, avec messages d'erreur par champ",
+          "verification": "executed"
+        },
+        {
+          "level": "N1",
+          "available": false,
+          "unavailable_reason": "Une règle métier n'a rien à apprendre : elle est écrite, connue et opposable"
+        },
+        {
+          "level": "N2",
+          "available": false,
+          "unavailable_reason": "Idem"
+        },
+        {
+          "level": "N3",
+          "available": false,
+          "unavailable_reason": "Une validation doit refuser de façon déterministe et justifiable. Un modèle qui accepte parfois et refuse parfois la même saisie ne valide rien"
+        }
+      ],
+      "breaking_point_note": {
+        "level": "N0",
+        "text": "aucune règle ne dit si une adresse existe réellement ; cela demande une vérification externe, qui est un autre besoin."
+      }
+    }
+  ],
+  "totals": {
+    "entries": 25,
+    "available_rungs": 74,
+    "executed": 45,
+    "stubbed": 29,
+    "files": 296
+  }
+}

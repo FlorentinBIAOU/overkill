@@ -1,0 +1,11 @@
+# Dépendances Python des extraits de code.
+#
+# La bibliothèque standard d'abord. Toute dépendance ajoutée ici doit être
+# justifiée par le contenu d'une fiche, et épinglée.
+#
+# Aucune de ces dépendances ne télécharge de modèle : les barreaux N2 et N3
+# sont testés avec les doubles locaux de content/snippets/_harness/.
+
+pytest==8.4.2
+numpy==2.3.4
+scikit-learn==1.7.2
