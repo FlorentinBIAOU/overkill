@@ -130,14 +130,27 @@ def _prose_mdx(texte: str) -> str:
                 masque[i] = " "
     corps = "".join(masque)
 
-    # Le corps du document reste de la prose, hors code.
+    # Le corps du document reste de la prose, hors code et hors cibles de lien.
     for motif in (
         re.compile(r"```.*?```", re.S),
         re.compile(r"`[^`\n]*`"),
         re.compile(r"<[^>]+>"),
+        re.compile(r"\]\([^)]*\)"),
     ):
         corps = _masquer(corps, motif)
     return corps
+
+
+def est_anglais(chemin: Path) -> bool:
+    """
+    Les pages éditoriales existent en un fichier par langue : `about.fr.mdx` et
+    `about.en.mdx`. La version anglaise est écrite en anglais de bout en bout,
+    il n'y a rien à relire au dictionnaire français.
+
+    Les fiches, elles, sont bilingues dans un seul fichier : leur cas est
+    traité par _prose_mdx, qui ne relit que les valeurs françaises.
+    """
+    return chemin.name.endswith(".en.mdx") or chemin.name.endswith(".en.md")
 
 
 def prose_masque(chemin: Path) -> str:
@@ -157,6 +170,9 @@ def prose_masque(chemin: Path) -> str:
 
     if suffixe == ".md":
         for motif in (
+            # La cible d'un lien Markdown est un chemin ou une URL, pas de la
+            # prose : « [crédits](/fr/credits) » ne contient qu'un mot à relire.
+            re.compile(r"\]\([^)]*\)"),
             re.compile(r"```.*?```", re.S),
             re.compile(r"~~~.*?~~~", re.S),
             re.compile(r"`[^`\n]*`"),
@@ -214,6 +230,7 @@ def main() -> int:
         fichiers.extend([p] if p.is_file() else sorted(Path(".").glob(motif)))
 
     inconnus: dict[str, list[str]] = {}
+    fichiers = [f for f in fichiers if not est_anglais(f)]
     for f in fichiers:
         for ligne_no, _pos, mot in mots_du_fichier(f):
             if not accepte(mot, lexique):

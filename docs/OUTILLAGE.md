@@ -37,7 +37,15 @@ Le masquage conserve les positions des caractères, si bien que `fix-accents` co
 accentué n'est jamais touché. Les mots dont plusieurs accentuations existent, comme
 `regles` qui peut donner `règles` ou `réglés`, sont signalés et jamais corrigés d'office.
 
-Les termes techniques légitimes vivent dans `scripts/lexique-projet.txt`.
+Les termes légitimes vivent dans `scripts/lexique-projet.txt`, rangés par catégorie :
+vocabulaire contractuel du cahier des charges, outils, noms propres cités, et **mots
+étrangers cités littéralement**.
+
+Cette dernière catégorie mérite une explication. Une fiche cite les entrées exactes de ses
+tests, qui sont en anglais, parce que le lecteur doit pouvoir retrouver l'exemple dans le
+fichier de test. Traduire ces citations romprait le lien entre ce que la fiche affirme et ce
+que le test démontre. Les pages éditoriales anglaises, elles, sont ignorées entièrement :
+un fichier `*.en.mdx` n'a rien à relire au dictionnaire français.
 
 ### Installer les prérequis
 
