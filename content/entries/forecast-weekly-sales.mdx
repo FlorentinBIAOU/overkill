@@ -1,0 +1,111 @@
+---
+id: forecast-weekly-sales
+family: predict
+status: published
+verdict: N1
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Prévoir les ventes de la semaine prochaine"
+  en: "Forecast next week's sales"
+
+need:
+  fr: "Savoir combien je vendrai la semaine prochaine, à partir de mon propre historique de ventes."
+  en: "Know how much I will sell next week, from my own sales history."
+
+scenario:
+  fr: "On voit passer trois ans d'historique dans une invite, suivis de « combien vais-je vendre la semaine prochaine ? ». La réponse revient rédigée, plausible, et différente au prochain appel. L'arithmétique qui répond à cette question tient sur une page, se rejoue à l'identique, et livre au passage un chiffre qu'aucune invite ne rend : la croissance annuelle lue dans vos propres ventes."
+  en: "A common sight is three years of history pasted into a prompt, followed by “how much will I sell next week?”. The answer comes back written out, plausible, and different on the next call. The arithmetic that answers the question fits on one page, replays identically, and hands over on the way a number no prompt returns: the yearly growth read off your own sales."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Coefficients saisonniers lus dans l'historique, puis moyenne mobile"
+      en: "Seasonal coefficients read off the history, then a moving average"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : la série ne quitte pas votre processus"
+          - "Une série agrégée n'est pas une donnée personnelle ; ventilée par vendeur ou par client, elle en devient une, et entre dans votre registre des traitements si vous en tenez un"
+        en:
+          - "No specific scope added: the series never leaves your process"
+          - "An aggregated series is not personal data; broken down by salesperson or by customer it becomes personal data, and belongs in your record of processing activities, where you keep one"
+    code:
+      python: snippets/forecast-weekly-sales/n0.py
+      javascript: snippets/forecast-weekly-sales/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une rupture de tendance et une promotion exceptionnelle, pour la même raison : la moyenne mobile n'a pas de pente et pas de notion d'événement. Dans un test, un concurrent ouvre, les huit dernières semaines reculent l'une après l'autre, et la prévision reste loin au-dessus de ce que le magasin encaisse — elle y restera. Dans l'autre, une seule semaine de promotion entre dans la moyenne comme du commerce ordinaire et gonfle la prévision de la semaine suivante."
+      en: "A trend break and a one-off promotion, for the same reason: a moving average has no slope and no notion of an event. In one test a competitor opens, the last eight weeks fall one after another, and the forecast sits far above what the shop actually takes — and stays there. In the other, a single promotional week enters the average as ordinary trade and lifts the following week's forecast."
+    escalate_when:
+      fr: "Vos prévisions se trompent dans le même sens semaine après semaine : toujours sous le réalisé pendant que vous grandissez, toujours au-dessus pendant que vous reculez."
+      en: "Your forecasts miss in the same direction week after week: always under the actuals while you grow, always over them while you shrink."
+
+  - level: N1
+    available: true
+    name:
+      fr: "Moindres carrés sur variables calendaires : tendance et harmoniques"
+      en: "Least squares on calendar features: trend and harmonics"
+    cost: négligeable
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : l'ajustement se fait sur l'historique que vous détenez déjà, sans corpus supplémentaire à conserver"
+          - "Une série agrégée n'est pas une donnée personnelle ; ventilée par vendeur ou par client, elle en devient une, et entre dans votre registre des traitements si vous en tenez un"
+        en:
+          - "No specific scope added: the fit runs on the history you already hold, with no extra corpus to keep"
+          - "An aggregated series is not personal data; broken down by salesperson or by customer it becomes personal data, and belongs in your record of processing activities, where you keep one"
+    code:
+      python: snippets/forecast-weekly-sales/n1.py
+      javascript: snippets/forecast-weekly-sales/n1.js
+      verification: executed
+    breaking_point:
+      fr: "La rupture de régime. Les moindres carrés pèsent une semaine d'il y a trois ans exactement comme la semaine dernière. Dans le test, un concurrent ouvre et les vingt dernières semaines s'installent à un niveau nettement plus bas : l'ajustement coupe la poire en deux entre l'ancien monde et le nouveau, et prévoit un niveau que le magasin n'a plus atteint depuis cinq mois. Rien n'est faux dans le modèle ; c'est l'hypothèse qu'une seule droite décrit tout l'historique qui l'est."
+      en: "A regime change. Least squares weighs a week from three years ago exactly as much as last week. In the test a competitor opens and the last twenty weeks settle at a clearly lower level: the fit splits the difference between the old world and the new one, and forecasts a level the shop has not reached in five months. Nothing in the model is wrong; the assumption that one straight line describes the whole history is."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus dans cette fiche. Quand la droite décrit deux régimes au lieu d'un, ce n'est pas de famille de modèle qu'il faut changer mais d'historique : réajuster sur la période qui suit la rupture, et relire le coefficient de croissance."
+      en: "There is no rung above this one here. When the straight line is describing two regimes instead of one, what needs changing is the history, not the model family: refit on the period after the break, and read the growth coefficient again."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Un modèle profond de séries temporelles s'entraîne sur des milliers de séries, ou sur des décennies d'observations. Trois ans de ventes hebdomadaires font cent cinquante-six nombres, dont N1 tire déjà six coefficients lisibles un par un. Il n'y a rien de plus à apprendre dans ce volume, et le service permanent à exploiter, lui, serait bien réel."
+      en: "A deep time-series model trains on thousands of series, or on decades of observations. Three years of weekly sales is a hundred and fifty-six numbers, out of which N1 already draws six coefficients you can read one by one. There is nothing more to learn in that volume, and the permanent service to operate would be real enough."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Faire lire cent cinquante-six nombres à un modèle de langue pour en obtenir un cent cinquante-septième. La réponse change d'un appel à l'autre, aucun coefficient ne se relit, et rien ne dit d'où vient l'écart avec la semaine passée. Une prévision qu'on ne peut ni rejouer ni expliquer ne se défend pas devant la personne qui commande le stock."
+      en: "Having a language model read a hundred and fifty-six numbers to produce the hundred and fifty-seventh. The answer changes from one call to the next, no coefficient can be read back, and nothing says where the gap with last week comes from. A forecast you can neither replay nor explain does not hold up in front of the person placing the stock order."
+
+verdict_rationale:
+  fr: "N1 pour deux raisons, et la seconde pèse autant que la première. Il estime la pente que N0 ignore, ce qui est exactement ce qui rate quand l'activité bouge ; et il rend la croissance annuelle sous la forme d'un coefficient qu'on montre au commerçant avant de lui montrer la prévision, parce qu'un modèle qui a trouvé une tendance que personne dans la maison ne reconnaît est un modèle dont il faut se méfier. La montée coûte peu : quelques lignes d'algèbre linéaire, aucune donnée qui sort, et un test qui relit la pente dans la série. Restez à N0 si votre niveau ne bouge pas d'une année sur l'autre — leurs deux tests le montrent, sur une série plate les deux barreaux rendent le même nombre."
+  en: "N1, for two reasons, and the second weighs as much as the first. It estimates the slope N0 ignores, which is precisely what goes wrong when the business moves; and it returns yearly growth as a coefficient you show the shopkeeper before you show them the forecast, because a model that has found a trend nobody in the company recognises is a model to distrust. The climb costs little: a few lines of linear algebra, no data leaving, and a test that reads the slope back out of the series. Stay on N0 if your level does not move from one year to the next — both tests show it, on a flat series the two rungs return the same number."
+
+further_reading:
+  - label: "Forecasting: Principles and Practice, 3.4 — Classical decomposition, les coefficients saisonniers de N0"
+    url: "https://otexts.com/fpp3/classical-decomposition.html"
+  - label: "Forecasting: Principles and Practice, 7.4 — Some useful predictors : tendance, indicatrices saisonnières et termes de Fourier, les variables de N1"
+    url: "https://otexts.com/fpp3/useful-predictors.html"
+  - label: "NIST/SEMATECH e-Handbook of Statistical Methods, 6.4.4.3 — Seasonality"
+    url: "https://www.itl.nist.gov/div898/handbook/pmc/section4/pmc443.htm"
+  - label: "NumPy — numpy.linalg.lstsq, la résolution des moindres carrés employée côté Python"
+    url: "https://numpy.org/doc/stable/reference/generated/numpy.linalg.lstsq.html"
+
+sources: []
+---
