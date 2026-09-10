@@ -173,6 +173,22 @@ $ npm run fixtures && npm run build:fixtures && npm run test:search
 à la casse, tolérante à une faute d'une lettre, cloisonnée par langue. Les quatre filtres se
 combinent, leur état est dans l'URL et se restitue à l'ouverture d'une URL neuve.
 
+### Le dépôt vu par un tiers
+
+Le critère de réussite de la mission : un tiers clone, lance une commande, obtient le site.
+Vérifié pour de bon, en clonant le dépôt dans un répertoire vierge.
+
+```
+$ git clone --branch build/v1 <dépôt> && cd overkill
+$ npm install && npm run build
+93 pages produites, dont l'accueil, le catalogue, les 25 fiches et les 10 familles
+   dans les deux langues, le poids de chaque page affiché en pied de page.
+```
+
+Ce test a trouvé un défaut : sans les dépendances Python, `npm run test:snippets` échouait
+vingt-cinq fois sur « No module named pytest », ce qui donnait à croire que le dépôt était
+cassé. La commande vérifie désormais son environnement d'abord et dit quoi installer.
+
 ### Le français
 
 ```
@@ -565,7 +581,7 @@ suivre.
 
 ### 1. Relire le dépôt, puis pousser
 
-Rien n'a été poussé. Quarante-huit commits attendent sur `build/v1`. L'historique est fait
+Rien n'a été poussé. Cinquante commits attendent sur `build/v1`. L'historique est fait
 pour être relu dans l'ordre : un commit par étape vérifiée, message en français, corps
 expliquant le pourquoi quand il n'est pas évident.
 
