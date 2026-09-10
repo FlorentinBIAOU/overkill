@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Chercher</title>
+  <!-- L'idee : avant de chercher, tout se ressemble et rien ne ressort.
+       Chercher, c'est ce qui reste une fois le reste ecarte : deux choses
+       passees de l'autre cote, et devenues les seules qu'on regarde. -->
+  <g fill="#C8BC9E" stroke="none">
+    <circle cx="64" cy="128" r="24"/><circle cx="136" cy="128" r="24"/><circle cx="208" cy="128" r="24"/>
+    <circle cx="64" cy="200" r="24"/><circle cx="136" cy="200" r="24"/><circle cx="208" cy="200" r="24"/>
+    <circle cx="64" cy="272" r="24"/><circle cx="136" cy="272" r="24"/><circle cx="208" cy="272" r="24"/>
+  </g>
+  <path d="M256 96v208"/>
+  <g fill="#FFCE00" stroke="none">
+    <circle cx="320" cy="152" r="40"/><circle cx="320" cy="248" r="40"/>
+  </g>
+</svg>

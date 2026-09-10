@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Transformer</title>
+  <!-- L'idée : la même matière des deux côtés. Trois parts empilées en
+       hauteur, les trois mêmes parts couchées en longueur. La part jaune se
+       retrouve au même rang dans les deux : rien n'est ajouté, rien n'est
+       perdu, tout est rangé autrement. -->
+  <rect x="32" y="88" width="72" height="216" fill="#C8BC9E" stroke="none"/>
+  <rect x="152" y="232" width="216" height="72" fill="#C8BC9E" stroke="none"/>
+  <rect x="32" y="160" width="72" height="72" fill="#FFCE00" stroke="none"/>
+  <rect x="224" y="232" width="72" height="72" fill="#FFCE00" stroke="none"/>
+  <path stroke-width="8" d="M32 160h72M32 232h72M224 232v72M296 232v72"/>
+  <rect x="32" y="88" width="72" height="216"/>
+  <rect x="152" y="232" width="216" height="72"/>
+</svg>

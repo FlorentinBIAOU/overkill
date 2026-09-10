@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Classer et router</title>
+  <!-- L'idee : les cases existent avant la chose. Une chose arrive, le
+       chemin ne se divise pas : il tranche, et va dans une case et une
+       seule. Les deux autres restent vides. -->
+  <circle cx="200" cy="72" r="32" fill="currentColor" stroke="none"/>
+  <path d="M200 120v32h120v40"/>
+  <path stroke="#8A7C5C" d="M40 224v128h80V224M160 224v128h80V224"/>
+  <rect x="280" y="224" width="80" height="128" fill="#FFCE00" stroke="none"/>
+  <path d="M280 224v128h80V224"/>
+</svg>

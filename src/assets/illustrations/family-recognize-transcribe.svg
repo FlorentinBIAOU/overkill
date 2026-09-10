@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Reconnaître et transcrire</title>
+  <!-- L'idée : en haut un signal continu, qui remplit sa bande sans qu'on
+       sache où une chose finit et où la suivante commence. En bas la même
+       étendue devenue des unités égales, séparées, dénombrables : du texte,
+       c'est-à-dire des morceaux qu'on peut compter et désigner. -->
+  <rect x="64" y="96" width="272" height="80" fill="#8A7C5C" stroke="none"/>
+  <path d="M72 136a32 32 0 0 1 64 0a32 32 0 0 0 64 0a32 32 0 0 1 64 0a32 32 0 0 0 64 0"/>
+  <rect x="72" y="224" width="40" height="80" fill="#FFCE00" stroke="none"/>
+  <rect x="144" y="224" width="40" height="80" fill="#FFCE00" stroke="none"/>
+  <rect x="216" y="224" width="40" height="80" fill="#FFCE00" stroke="none"/>
+  <rect x="288" y="224" width="40" height="80" fill="#FFCE00" stroke="none"/>
+  <path d="M72 224h40M144 224h40M216 224h40M288 224h40M72 304h40M144 304h40M216 304h40M288 304h40"/>
+</svg>

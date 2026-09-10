@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Extraire</title>
+  <!-- L'idee : le texte ne designe rien, il coule pareil d'un bout a l'autre.
+       Une seule ligne portait la valeur ; le morceau la quitte et se tient a
+       part, large comme le trou qu'il laisse au milieu d'elle. -->
+  <path stroke="#8A7C5C" d="M64 72h272M64 184h272"/>
+  <path d="M64 128h48M288 128h48"/>
+  <path d="M160 208h80l-40 56Z" fill="currentColor" stroke="none"/>
+  <rect x="120" y="280" width="160" height="64" fill="#FFCE00" stroke="none"/>
+</svg>
