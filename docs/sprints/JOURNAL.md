@@ -133,3 +133,79 @@ Aucun.
 **Prochaine étape**
 
 Lot 02 — Schéma de contenu et validation.
+
+---
+
+## Lot 02 — Schéma de contenu et validation
+
+**Terminé.** Commande de vérification : `npm run check` — verte. 18 tests, 0 échec.
+
+**Fait**
+
+- Schémas Zod : énumérations contractuelles, aide bilingue, barreau en union discriminée
+  sur `available`, fiche, famille, page éditoriale, intitulé de feuille de route.
+- Collections Astro branchées sur `content/` à la racine par l'API Content Layer.
+- `scripts/check-content.mjs` pour ce que Zod ne voit pas : le disque et les autres fiches.
+- Neuf fixtures, une valide et huit invalides, une par règle critique.
+- Gabarit de fiche commenté, qui servira à la page contribuer.
+
+**Preuve**
+
+| Contrôle | Résultat |
+|---|---|
+| `tests/schema.test.mjs` | 11 tests, 0 échec |
+| `tests/check-content.test.mjs` | 7 tests, 0 échec |
+| Fiche conforme acceptée | oui |
+| Verdict sur barreau absent | rejeté |
+| Coût hors vocabulaire | rejeté |
+| Latence hors classes | rejetée |
+| Langue manquante | rejetée |
+| Barreau absent sans raison | rejeté |
+| Date de révision future | rejetée |
+| Barreaux dans le désordre | rejetés |
+| Fichier de code absent du disque | rejeté par `check-content` |
+| Fiche publiée sans test d'extrait | rejetée, message citant la section 4.6 |
+| La même fiche en brouillon | acceptée avec avertissement |
+
+**Décisions prises**
+
+- **Les schémas importent `zod` directement, pas `astro:content`.** Astro accepte un schéma
+  Zod ordinaire, et cela rend les schémas exécutables hors d'Astro. Sans cela, la suite de
+  tests aurait dû démarrer un build complet pour valider une fiche. `zod` est épinglé en
+  3.25.76, la version qu'emploie Astro 5, pour éviter deux Zod incompatibles.
+- **`check-content` accepte `--content=<dossier>`.** La suite de tests monte un dossier de
+  contenu jetable et y lance le contrôle réel, plutôt que de simuler son comportement. Un
+  contrôle non testé est une opinion.
+- **Une fiche en brouillon dont un extrait n'a pas de test passe avec un avertissement.**
+  L'interdit numéro 1 vise les fiches publiées. Un brouillon assumé est le comportement que
+  le CDC demande en cas de doute, il ne doit pas bloquer le travail en cours.
+- **Le corps du gabarit et les fixtures vivent hors des collections.** Une fiche
+  volontairement invalide dans `content/entries/` casserait le build du site entier.
+
+**Écart au cahier des charges**
+
+- **Champ `verification` ajouté à chaque bloc `code`.** Extension additive du schéma de la
+  section 5.1. Deux valeurs : `executed` quand l'extrait tourne tel quel avec ses vraies
+  dépendances, `stubbed` quand il tourne avec un double local remplaçant un service ou un
+  modèle externe. Motif : l'interdit numéro 1 exige que le code publié ait été exécuté, et
+  un extrait qui appelle une API de modèle généraliste ne peut pas l'être à l'identique en
+  intégration continue. Déclarer le niveau réel vaut mieux que laisser croire à une preuve
+  uniforme. Aucun champ du CDC n'est modifié.
+
+**Ajout hors plan**
+
+- **Contrôle orthographique du français.** Le CDC ne le demande pas, mais le site est
+  bilingue et la moitié de son contenu est en français. Le contrôle s'appuie sur
+  `hunspell-fr-classical` et `spylls`, ne relit que la prose, et corrige les accents
+  manquants à leur position exacte sans jamais toucher un identifiant de code. Il connaît
+  les fiches bilingues et ne relit que leurs valeurs françaises. Documenté dans
+  `docs/OUTILLAGE.md`.
+
+**Points bloqués contournés**
+
+- Le chargeur `file` d'Astro échouait sur `content/roadmap.yaml` absent. Le fichier est créé
+  vide, commenté, et sera rempli au lot 09.
+
+**Prochaine étape**
+
+Lot 03 — Système de composants, avec le lot 06 lancé en parallèle.
