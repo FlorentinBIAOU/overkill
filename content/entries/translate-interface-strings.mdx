@@ -1,0 +1,134 @@
+---
+id: translate-interface-strings
+family: transform
+status: published
+verdict: N2
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Traduire les libellés d'une interface"
+  en: "Translate interface strings"
+
+need:
+  fr: "Faire exister une application dans une autre langue, en gardant les variables et la place disponible à l'écran."
+  en: "Make an application exist in another language, keeping the placeholders and the room available on screen."
+
+scenario:
+  fr: "On voit passer le fichier de traductions entier dans un modèle généraliste à chaque publication, chaînes déjà traduites comprises. Deux choses s'y perdent. L'argent d'abord : l'essentiel d'un fichier d'interface ne bouge pas d'une version à l'autre, et la traduction la moins chère est celle qu'on ne commande pas deux fois. La variable ensuite : {count} n'est pas du texte, et un modèle qui la traduit ou l'oublie fabrique un défaut que personne dans l'équipe ne repère, puisque personne dans l'équipe ne lit la langue d'arrivée."
+  en: "The usual move is to hand the whole message catalogue to a general-purpose model on every release, strings translated last year included. Two things get lost on the way. Money first: most of an interface file does not move between versions, and the cheapest translation is the one you do not order twice. The placeholder second: {count} is not text, and a model that translates it or drops it ships a defect nobody on the team catches, because nobody on the team reads the target language."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Mémoire de traduction : correspondance exacte, puis approchée signalée"
+      en: "Translation memory: exact match, then a flagged approximate one"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr: ["Aucun périmètre spécifique ajouté : les chaînes et leur mémoire restent chez vous"]
+        en: ["No specific scope added: the strings and their memory stay with you"]
+    code:
+      python: snippets/translate-interface-strings/n0.py
+      javascript: snippets/translate-interface-strings/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une mémoire réemploie, elle ne traduit pas. Le test lui soumet « Two-factor authentication is required for administrators » : rien dans la mémoire ne s'en approche, et la fonction renvoie une absence de correspondance au lieu de la phrase française qu'elle a sous la main. Toute fonctionnalité nouvelle est une chaîne que personne n'a encore traduite."
+      en: "A memory reuses, it does not translate. The test hands it “Two-factor authentication is required for administrators”: nothing in the memory comes close, and the function returns no match rather than the French sentence it happens to be holding. Every new feature is a string nobody has translated yet."
+    escalate_when:
+      fr: "La file des chaînes sans correspondance grossit plus vite que vos traducteurs ne la vident."
+      en: "The queue of unmatched strings grows faster than your translators empty it."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "La traduction statistique par segments exige un corpus aligné dans votre paire de langues, hors de portée d'une petite équipe, pour un résultat en deçà de ce qu'un modèle neuronal déjà entraîné donne au barreau suivant."
+      en: "Phrase-based statistical translation needs an aligned corpus in your own language pair, out of reach for a small team, for a result below what an already-trained neural model gives on the rung above."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Modèle de traduction neuronale auto-hébergé, une paire de langues à la fois"
+      en: "Self-hosted neural translation model, one language pair at a time"
+    cost: faible
+    latency: "~100 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Traitement sur votre infrastructure : les chaînes ne sont transmises à personne"
+          - "Le modèle arrive avec la licence de son auteur et celle de ses données d'entraînement, qui vous suivent en production"
+        en:
+          - "Processing on your own infrastructure: the strings are handed to nobody"
+          - "The model comes with its author's licence and that of its training data, and both follow you into production"
+    code:
+      python: snippets/translate-interface-strings/n2.py
+      javascript: snippets/translate-interface-strings/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le modèle lit la variable comme du texte. L'extrait la cache derrière un marqueur neutre, et les deux tests montrent ce qui revient malgré tout : « ⟦0⟧ items selected » traduit en « Des éléments sélectionnés », marqueur disparu, donc une phrase française sans le nombre dedans ; puis « {compte} éléments sélectionnés », variable traduite, donc une accolade affichée à l'écran. L'extrait ne peut pas l'empêcher, seulement refuser d'appeler cela une traduction finie."
+      en: "The model reads the variable as text. The snippet hides it behind a neutral marker, and both tests show what comes back regardless: “⟦0⟧ items selected” translated as “Des éléments sélectionnés”, the marker gone, a French sentence with no number in it; then “{compte} éléments sélectionnés”, the variable itself translated, a brace printed on screen. The snippet cannot prevent either, only refuse to call the result a finished translation."
+    escalate_when:
+      fr: "Vos corrections ne portent plus sur la langue mais sur l'emploi : « Save » traduit comme le verbe alors que c'est le libellé d'un bouton, un registre d'administrateur là où l'interface s'adresse à un client, une phrase là où il y a la place d'un mot."
+      en: "Your corrections stop being about the language and start being about the use: Save translated as the verb when it is a button label, an administrator's register where the interface speaks to a customer, a sentence where there is room for one word."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Appel à un modèle généraliste, avec le contexte d'interface"
+      en: "A general-purpose model call, carrying the interface context"
+    cost: élevé
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: high
+      regulatory:
+        fr:
+          - "Transfert à un sous-traitant du texte de votre interface, libellés de fonctionnalités non encore publiées compris"
+          - "Localisation du traitement à vérifier auprès du fournisseur"
+          - "Réutilisation éventuelle des requêtes par le fournisseur, selon des conditions contractuelles qui sont les siennes"
+        en:
+          - "Transfer of your interface text to a processor, including labels of features you have not shipped yet"
+          - "Processing location to be confirmed with the provider"
+          - "Possible reuse of the requests by the provider, under contractual terms that are the provider's own"
+    code:
+      python: snippets/translate-interface-strings/n3.py
+      javascript: snippets/translate-interface-strings/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "Demander n'est pas obtenir, et deux tests le montrent. La consigne réclame du JSON : la réponse est “Sure! In French, Save is « Enregistrer ».”, une phrase de politesse qu'on ne pose pas sur un bouton, alors l'extrait lève une erreur plutôt que de la rendre. La consigne réclame ensuite de garder {count} tel quel : il revient traduit en {compte}, et seul le contrôle de la réponse l'attrape."
+      en: "Asking is not getting, and two tests show it. The instruction asks for JSON: the answer is “Sure! In French, Save is « Enregistrer ».”, a courtesy sentence you do not put on a button, so the snippet raises rather than return it. The instruction then asks for {count} to be kept exactly as written: it comes back as {compte}, and only the check on the answer catches it."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus."
+      en: "There is no rung above this one."
+
+verdict_rationale:
+  fr: "N2 est recommandé parce que c'est le premier barreau qui traduit. N0 garde sa place devant lui, et l'essentiel d'un fichier d'interface s'y arrête, mais il n'a rien à dire d'une chaîne nouvelle : son test le montre en renvoyant une absence de correspondance plutôt qu'une approximation présentable. Ce que N3 ajoute est le contexte d'interface, et il le fait payer le texte de votre application chez un tiers, une réponse non déterministe et une dépendance de fournisseur ; sur les variables, les deux barreaux échouent exactement de la même manière et réclament le même contrôle en sortie. Le modèle auto-hébergé garde les chaînes chez vous et tient dans un fichier que vous versionnez, ce qu'un point de terminaison qui évolue au calendrier de son fournisseur n'offre pas."
+  en: "N2 is the recommendation because it is the first rung that translates at all. N0 keeps its place in front of it, and most of an interface file stops there, but it has nothing to say about a new string: its test shows exactly that, returning no match rather than a presentable approximation. What N3 adds is the interface context, and it charges your application's text to a third party, a non-deterministic answer and a provider dependency for it; on the variables the two rungs fail in precisely the same way and call for precisely the same check on the answer. The self-hosted model keeps the strings on your side and fits in a file you version, which an endpoint that moves on its provider's schedule does not."
+
+further_reading:
+  - label: "Helsinki-NLP/opus-mt-en-fr — la fiche du modèle employé au barreau N2"
+    url: "https://huggingface.co/Helsinki-NLP/opus-mt-en-fr"
+  - label: "Python — difflib.SequenceMatcher, l'appariement approché du barreau N0"
+    url: "https://docs.python.org/3/library/difflib.html"
+  - label: "XLIFF 2.1 — le format d'échange qui porte une mémoire de traduction et son état de relecture"
+    url: "http://docs.oasis-open.org/xliff/xliff-core/v2.1/os/xliff-core-v2.1-os.html"
+  - label: "ICU — MessageFormat, la forme des variables d'interpolation dans un libellé"
+    url: "https://unicode-org.github.io/icu/userguide/format_parse/messages/"
+
+sources: []
+---
