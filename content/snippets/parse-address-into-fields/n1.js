@@ -77,10 +77,11 @@ export function train(examples, { epochs = 300, rate = 0.3 } = {}) {
   // One column per trait seen in training. A trait absent from this map is a
   // word the model never met, and it simply contributes nothing at prediction.
   const columns = new Map();
-  for (const row of rows) {
-    for (const name of Object.keys(row)) if (!columns.has(name)) columns.set(name, columns.size);
-  }
-  const vectors = rows.map((row) => vectorise(row, columns));
+  const vectors = rows.map((row) =>
+    Object.entries(row).map(([name, value]) => {
+      if (!columns.has(name)) columns.set(name, columns.size);
+      return [columns.get(name), value];
+    }));
 
   const weights = {};
   for (const label of new Set(targets)) {

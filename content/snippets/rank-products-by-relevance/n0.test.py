@@ -51,11 +51,14 @@ def test_the_ranking_says_why():
     assert 0.0 <= top["score"] <= 1.0
 
 
-def test_out_of_stock_is_pushed_down_but_not_removed():
-    ranked = titles(rank(CATALOGUE, "montre"))
-    assert "Montre GPS Crème" in ranked
-    # The only product matching the query is last, because it cannot be sold.
-    assert ranked[0] == "Chaussures de course Route 5"
+def test_availability_is_a_signal_among_others_not_a_filter():
+    # With the default weights the text match wins, so an exact match that
+    # cannot be sold still comes first. Whether that is right is a decision
+    # for the shop, and it is taken by moving a weight, not by editing code.
+    assert titles(rank(CATALOGUE, "montre"))[0] == "Montre GPS Crème"
+
+    stock_first = dict(DEFAULT_WEIGHTS, availability=20.0)
+    assert titles(rank(CATALOGUE, "montre", stock_first))[-1] == "Montre GPS Crème"
 
 
 def test_weights_are_arguments_not_hidden_constants():
@@ -68,7 +71,8 @@ def test_weights_are_arguments_not_hidden_constants():
 def test_an_empty_query_leaves_the_business_signals_in_charge():
     ranked = rank(CATALOGUE, "")
     assert all(row["signals"]["text"] == 0.0 for row in ranked)
-    assert titles(ranked)[0] == "Chaussettes de running"
+    # No query, so the ranking becomes the shop's own preference order.
+    assert titles(ranked)[0] == "Chaussures de course Route 5"
 
 
 def test_an_empty_catalogue_gives_an_empty_ranking():

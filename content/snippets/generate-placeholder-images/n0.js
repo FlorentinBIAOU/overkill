@@ -24,8 +24,6 @@ const FNV_PRIME = 16777619;
 const GRID = 5; // cells per side
 const COLUMNS = 3; // independent columns; the remaining two mirror them
 
-const ESCAPES = [['&', '&amp;'], ['<', '&lt;'], ['>', '&gt;'], ['"', '&quot;']];
-
 /**
  * FNV-1a on 32 bits.
  *
@@ -46,19 +44,20 @@ function hexColour(hue, saturation, lightness) {
   const chroma = Math.floor((255 * saturation * (100 - Math.abs(2 * lightness - 100))) / 10000);
   const edge = Math.floor((chroma * (60 - Math.abs((hue % 120) - 60))) / 60);
   const floor = Math.floor((255 * lightness) / 100) - Math.floor(chroma / 2);
-  const wheel = [
-    [chroma, edge, 0], [edge, chroma, 0], [0, chroma, edge],
-    [0, edge, chroma], [edge, 0, chroma], [chroma, 0, edge],
-  ];
+  const wheel = [[chroma, edge, 0], [edge, chroma, 0], [0, chroma, edge],
+    [0, edge, chroma], [edge, 0, chroma], [chroma, 0, edge]];
   const channels = wheel[Math.floor(hue / 60) % 6];
   return `#${channels.map((v) => (v + floor).toString(16).padStart(2, '0')).join('')}`;
 }
 
-/** The identifier ends up inside an attribute, so it is markup until escaped. */
+/**
+ * The identifier ends up inside an attribute, so it is markup until escaped.
+ *
+ * The ampersand goes first, or it would escape the escapes.
+ */
 function escape(text) {
-  let out = text;
-  for (const [character, entity] of ESCAPES) out = out.split(character).join(entity);
-  return out;
+  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
 /**

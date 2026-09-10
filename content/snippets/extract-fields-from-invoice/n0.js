@@ -18,7 +18,7 @@
 // from swallowing a quantity and a unit price as one number.
 export const AMOUNT = /\d{1,3}(?:[\s.]\d{3})*[,.]\d{2}/;
 const DATE = /\d{1,2}\/\d{1,2}\/\d{2,4}/;
-const REFERENCE = /[A-Za-z]{0,3}[-/ ]?\d[\dA-Za-z/-]{3,}/;
+const REFERENCE = /\b(?:[A-Za-z]{1,3}[-/])?\d[\dA-Za-z/-]{3,}/;
 
 /** Turn a written amount into a number the caller can compute with. */
 export function parseAmount(raw) {

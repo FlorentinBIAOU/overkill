@@ -5,8 +5,9 @@ Rung N1. The regular expressions of N0 see one spelling of a phone number.
 This sees the shape of one: a run of tokens that is mostly digits, mostly
 short, and sitting next to words like "call" or "reach".
 
-Training data is a few hundred labelled messages, not a few million. The model
-is a few kilobytes and runs on a CPU in well under a millisecond.
+Training data is a few hundred labelled messages, not a few million. The
+weights are small enough to keep in the repository next to this file, and
+there is no service to run: the model loads with the process.
 """
 
 import re

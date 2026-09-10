@@ -8,7 +8,7 @@ the drop-down opened. Clicks say the second, and they are already in the logs.
 The model is a count, not a gradient: for every prefix that was ever typed,
 how many times each suggestion was chosen. It trains in one pass over the log
 and is read back with a dictionary lookup, which is what a suggestion budget
-of a few milliseconds per keystroke allows.
+of a keystroke allows.
 
 The candidates come in as an argument: this rung reorders a list, it does not
 retrieve it.

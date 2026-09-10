@@ -32,15 +32,14 @@ export function vectorise(texts, stopWords = new Set()) {
     for (const term of new Set(terms)) appearances.set(term, (appearances.get(term) ?? 0) + 1);
   }
 
+  // Smoothed: as if one extra document held every term, so a term present
+  // everywhere still has a defined weight instead of a division by zero.
+  const idf = (term) => Math.log((1 + documents.length) / (1 + appearances.get(term))) + 1;
+
   return documents.map((terms) => {
     const vector = new Map();
     for (const term of terms) vector.set(term, (vector.get(term) ?? 0) + 1);
-    for (const [term, count] of vector) {
-      // Smoothed: as if one extra document held every term, so a term present
-      // everywhere still has a defined weight instead of a division by zero.
-      const idf = Math.log((1 + documents.length) / (1 + appearances.get(term))) + 1;
-      vector.set(term, count * idf);
-    }
+    for (const [term, count] of vector) vector.set(term, count * idf(term));
     const norm = Math.hypot(...vector.values());
     if (norm) for (const [term, weight] of vector) vector.set(term, weight / norm);
     return vector;
@@ -49,9 +48,8 @@ export function vectorise(texts, stopWords = new Set()) {
 
 /** Both vectors are unit length, so their dot product is the cosine. */
 function cosine(first, second) {
-  const [small, large] = first.size < second.size ? [first, second] : [second, first];
   let total = 0;
-  for (const [term, weight] of small) total += weight * (large.get(term) ?? 0);
+  for (const [term, weight] of first) total += weight * (second.get(term) ?? 0);
   return total;
 }
 

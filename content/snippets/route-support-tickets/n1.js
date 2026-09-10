@@ -30,17 +30,15 @@ function tokens(text) {
 
 /** Vocabulary and inverse document frequency, learnt from the archive alone. */
 function fitVocabulary(tickets) {
-  const documentFrequency = new Map();
+  const seen = new Map();
   for (const ticket of tickets) {
-    for (const term of new Set(tokens(ticket))) {
-      documentFrequency.set(term, (documentFrequency.get(term) ?? 0) + 1);
-    }
+    for (const term of new Set(tokens(ticket))) seen.set(term, (seen.get(term) ?? 0) + 1);
   }
   const terms = new Map();
   const idf = [];
-  for (const [term, seen] of documentFrequency) {
+  for (const [term, documents] of seen) {
     terms.set(term, idf.length);
-    idf.push(Math.log((1 + tickets.length) / (1 + seen)) + 1);
+    idf.push(Math.log((1 + tickets.length) / (1 + documents)) + 1);
   }
   return { terms, idf };
 }
@@ -53,14 +51,10 @@ function vector(vocabulary, ticket) {
     if (j !== undefined) counts.set(j, (counts.get(j) ?? 0) + 1);
   }
   const row = new Float64Array(vocabulary.idf.length);
-  let norm = 0;
-  for (const [j, count] of counts) {
-    // Sublinear term frequency: a word repeated ten times is not ten times the
-    // signal, and an angry customer repeats words.
-    row[j] = (1 + Math.log(count)) * vocabulary.idf[j];
-    norm += row[j] * row[j];
-  }
-  norm = Math.sqrt(norm);
+  // Sublinear term frequency: a word repeated ten times is not ten times the
+  // signal, and an angry customer repeats words.
+  for (const [j, count] of counts) row[j] = (1 + Math.log(count)) * vocabulary.idf[j];
+  const norm = Math.hypot(...row);
   if (norm) for (const [j] of counts) row[j] /= norm;
   return row;
 }

@@ -20,7 +20,7 @@ import re
 # from swallowing a quantity and a unit price as one number.
 AMOUNT = r"\d{1,3}(?:[\s.]\d{3})*[,.]\d{2}"
 DATE = r"\d{1,2}/\d{1,2}/\d{2,4}"
-REFERENCE = r"[A-Za-z]{0,3}[-/ ]?\d[\dA-Za-z/-]{3,}"
+REFERENCE = r"\b(?:[A-Za-z]{1,3}[-/])?\d[\dA-Za-z/-]{3,}"
 
 
 def parse_amount(raw: str) -> float:

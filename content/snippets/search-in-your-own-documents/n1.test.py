@@ -76,12 +76,16 @@ def test_a_rare_term_weighs_more_than_a_common_one():
 
 
 def test_length_normalisation_is_a_dial_not_a_law():
-    # b = 0 stops correcting for document length. Every score moves, and on a
-    # corpus with one very long page and three short ones, the order moves too.
-    # It is one number, and it is yours.
+    # b = 0 stops correcting for document length: the long page stops paying for
+    # its size, and its score rises.
+    assert search(INDEX, "paie du mois")[1]["score"] == 1.1024
     assert search(INDEX, "paie du mois", b=0)[1] == {
         "id": "conges", "score": 1.3863, "terms": {"paie": 0.6931, "mois": 0.6931}
     }
+    # Far enough to change the order: at b = 0 these two tie, and the tie-break
+    # on the identifier decides. Ranking must be reproducible before it is good.
+    assert ids(search(INDEX, "jours")) == ["teletravail", "conges"]
+    assert ids(search(INDEX, "jours", b=0)) == ["conges", "teletravail"]
 
 
 def test_a_word_typed_twice_is_not_twice_as_important():

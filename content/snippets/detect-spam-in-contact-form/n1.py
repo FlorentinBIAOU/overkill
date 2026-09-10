@@ -10,7 +10,7 @@ Character n-grams rather than words, for two reasons. They survive the
 spellings a sender uses to dodge a word list, `b a c k l i n k s`, `backl1nks`,
 and they need no tokeniser that would have to be tuned per language.
 
-The model is a few kilobytes and its decision is a weighted sum. You can print
+The decision is a weighted sum, so you can print
 the features that pushed a message over the line, which matters the first time
 someone asks why their enquiry was rejected.
 """

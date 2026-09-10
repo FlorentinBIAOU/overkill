@@ -25,8 +25,6 @@ MASK32 = 0xFFFFFFFF
 GRID = 5  # cells per side
 COLUMNS = 3  # independent columns; the remaining two mirror them
 
-ESCAPES = (("&", "&amp;"), ("<", "&lt;"), (">", "&gt;"), ('"', "&quot;"))
-
 
 def stable_hash(text: str) -> int:
     """
@@ -46,19 +44,20 @@ def _hex_colour(hue: int, saturation: int, lightness: int) -> str:
     chroma = (255 * saturation * (100 - abs(2 * lightness - 100))) // 10000
     edge = (chroma * (60 - abs((hue % 120) - 60))) // 60
     floor = (255 * lightness) // 100 - chroma // 2
-    wheel = (
-        (chroma, edge, 0), (edge, chroma, 0), (0, chroma, edge),
-        (0, edge, chroma), (edge, 0, chroma), (chroma, 0, edge),
-    )
+    wheel = ((chroma, edge, 0), (edge, chroma, 0), (0, chroma, edge),
+             (0, edge, chroma), (edge, 0, chroma), (chroma, 0, edge))
     red, green, blue = wheel[(hue // 60) % 6]
     return "#%02x%02x%02x" % (red + floor, green + floor, blue + floor)
 
 
 def _escape(text: str) -> str:
-    """The identifier ends up inside an attribute, so it is markup until escaped."""
-    for character, entity in ESCAPES:
-        text = text.replace(character, entity)
-    return text
+    """
+    The identifier ends up inside an attribute, so it is markup until escaped.
+
+    The ampersand goes first, or it would escape the escapes.
+    """
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return text.replace('"', "&quot;")
 
 
 def placeholder_svg(identifier: str, size: int = 240) -> str:

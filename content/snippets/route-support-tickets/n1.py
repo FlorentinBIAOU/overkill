@@ -11,9 +11,9 @@ returns something, and its most likely class on a ticket it has no opinion
 about is still a class. The confidence floor below is what turns that shrug
 back into the default queue, instead of a wrong queue.
 
-Training data is the exported archive: a few thousand resolved tickets and
-the team that resolved each one. The model is a few hundred kilobytes and is
-retrained in seconds.
+Training data is the exported archive: the resolved tickets and the team that
+resolved each one. The model is a table of weights small enough to keep in the
+repository, and retraining it is a step in the nightly export, not a project.
 """
 
 from sklearn.feature_extraction.text import TfidfVectorizer
