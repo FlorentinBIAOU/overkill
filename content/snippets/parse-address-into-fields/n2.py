@@ -16,8 +16,6 @@ below is where that becomes your problem.
 
 from __future__ import annotations
 
-MODEL_NAME = "libpostal"
-
 # A postal address is a short line. Anything longer is a paste, and feeding it
 # to the parser only produces confident nonsense more slowly.
 MAX_CHARACTERS = 300
@@ -46,7 +44,7 @@ class ParsingUnavailable(Exception):
 class LibpostalParser:
     """The real parser: a C library and its data files, loaded once."""
 
-    def __init__(self, name: str = MODEL_NAME) -> None:
+    def __init__(self) -> None:
         from postal.parser import parse_address  # a large local install
 
         self._parse_address = parse_address

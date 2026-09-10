@@ -11,12 +11,12 @@
  * so this ranks a corpus exactly as the Python version does.
  */
 
-// Runs of two or more letters, digits or underscores. One-letter tokens carry
-// no subject, and dropping them costs nothing.
+// Runs of two or more letters, digits or underscores. A one-letter token
+// carries no subject, and dropping it costs nothing.
 const TOKEN = /[\p{L}\p{N}_]{2,}/gu;
 
-export function tokenise(text) {
-  return text.toLowerCase().match(TOKEN) ?? [];
+export function tokenise(text, stopWords = new Set()) {
+  return (text.toLowerCase().match(TOKEN) ?? []).filter((term) => !stopWords.has(term));
 }
 
 /** The title counts twice: a word in a title is a stronger claim. */
@@ -25,8 +25,8 @@ export function articleText(article) {
 }
 
 /** One l2-normalised TF-IDF vector per document, as a Map of term to weight. */
-export function vectorise(texts) {
-  const documents = texts.map(tokenise);
+export function vectorise(texts, stopWords = new Set()) {
+  const documents = texts.map((text) => tokenise(text, stopWords));
   const appearances = new Map();
   for (const terms of documents) {
     for (const term of new Set(terms)) appearances.set(term, (appearances.get(term) ?? 0) + 1);
@@ -47,7 +47,7 @@ export function vectorise(texts) {
   });
 }
 
-/** Both vectors are unit length, so the dot product is the cosine. */
+/** Both vectors are unit length, so their dot product is the cosine. */
 function cosine(first, second) {
   const [small, large] = first.size < second.size ? [first, second] : [second, first];
   let total = 0;
@@ -58,14 +58,19 @@ function cosine(first, second) {
 /**
  * Return `{ [article id]: [[neighbour id, score], ...] }`, best first.
  *
- * `minimum` is a floor, not a tuning knob to be tweaked until the block looks
+ * `stopWords` is a per-language list, so it belongs to the caller and not to
+ * this function. Without one the ranking still works, because a word in every
+ * article is downweighted anyway, but the floor has to do more of the job on
+ * a small corpus.
+ *
+ * `minimum` is that floor, not a knob to be tweaked until the block looks
  * full: below it, two articles share ordinary words and nothing else, and
  * showing no block beats showing a wrong one.
  */
-export function buildNeighbourTable(articles, { k = 5, minimum = 0.05 } = {}) {
+export function buildNeighbourTable(articles, { k = 5, minimum = 0.05, stopWords = [] } = {}) {
   if (articles.length < 2) return Object.fromEntries(articles.map((a) => [a.id, []]));
 
-  const vectors = vectorise(articles.map(articleText));
+  const vectors = vectorise(articles.map(articleText), new Set(stopWords));
   const table = {};
   articles.forEach((article, index) => {
     const neighbours = [];

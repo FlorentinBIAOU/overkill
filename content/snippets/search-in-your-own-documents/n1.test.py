@@ -64,7 +64,8 @@ def test_a_title_match_outranks_two_body_matches():
 def test_the_score_is_the_sum_of_what_each_term_contributed():
     result = search(INDEX, "paie du mois")[0]
     assert result["id"] == "frais"
-    assert round(sum(result["terms"].values()), 4) == result["score"]
+    # Both sides are rounded for display, so they agree to the displayed digit.
+    assert abs(sum(result["terms"].values()) - result["score"]) < 0.001
 
 
 def test_a_rare_term_weighs_more_than_a_common_one():
@@ -75,8 +76,9 @@ def test_a_rare_term_weighs_more_than_a_common_one():
 
 
 def test_length_normalisation_is_a_dial_not_a_law():
-    # b = 0 stops correcting for document length. The scores change, and so can
-    # the order: on this corpus the long page loses the advantage b gave it.
+    # b = 0 stops correcting for document length. Every score moves, and on a
+    # corpus with one very long page and three short ones, the order moves too.
+    # It is one number, and it is yours.
     assert search(INDEX, "paie du mois", b=0)[1] == {
         "id": "conges", "score": 1.3863, "terms": {"paie": 0.6931, "mois": 0.6931}
     }
