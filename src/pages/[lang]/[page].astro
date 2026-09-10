@@ -1,0 +1,151 @@
+---
+/**
+ * Les pages éditoriales : méthodologie, à propos, contribuer, accompagnement,
+ * mentions légales, confidentialité, crédits (CDC 7.6 à 7.10).
+ *
+ * Leur contenu vit dans `content/pages/`, un fichier par page et par langue.
+ * Une page marquée brouillon le dit visiblement : l'interdit 10 refuse le faux
+ * contenu, il n'interdit pas un brouillon assumé.
+ */
+import { getCollection, render } from 'astro:content';
+import EditorialLayout from '../../layouts/EditorialLayout.astro';
+import LegalNotice from '../../components/LegalNotice.astro';
+import { LOCALES, t, type Locale } from '../../i18n';
+import { SEGMENTS, type PageKey } from '../../i18n/routes';
+
+/** Les pages qui portent du contenu réglementaire reçoivent l'encadré permanent. */
+const REGLEMENTAIRES = new Set(['methodology', 'legal', 'privacy']);
+
+/** Les pages qui emploient un aplat de marque en en-tête. */
+const APLAT: Record<string, 'brand' | 'ink' | 'paper-2' | 'none'> = {
+  methodology: 'brand',
+  about: 'ink',
+  contribute: 'brand',
+  help: 'brand',
+  legal: 'none',
+  privacy: 'paper-2',
+  credits: 'none',
+};
+
+export async function getStaticPaths() {
+  const pages = await getCollection('pages');
+  return pages
+    // L'accueil a sa propre route : son contenu ne passe pas par ce gabarit.
+    .filter((p) => p.data.page !== 'home')
+    .filter((p) => (LOCALES as readonly string[]).includes(p.data.lang))
+    .map((p) => ({
+      params: { lang: p.data.lang, page: SEGMENTS[p.data.page as PageKey] ?? p.data.page },
+      props: { page: p },
+    }));
+}
+
+const lang = Astro.params.lang as Locale;
+const { page } = Astro.props;
+const strings = t(lang);
+const { Content } = await render(page);
+const cle = page.data.page;
+---
+
+<EditorialLayout
+  title={page.data.title}
+  description={page.data.description}
+  lang={lang}
+  band={APLAT[cle] ?? 'paper-2'}
+  draft={page.data.draft}
+  draftReason={page.data.draft_reason}
+>
+  <div class="wrap-reading page">
+    <Content />
+
+    {REGLEMENTAIRES.has(cle) && <div class="page__notice"><LegalNotice strings={strings} /></div>}
+
+    <p class="page__updated small">
+      {strings.entry.updated}
+      <time datetime={page.data.updated.toISOString().slice(0, 10)}>
+        {new Intl.DateTimeFormat(lang, { dateStyle: 'long' }).format(page.data.updated)}
+      </time>
+    </p>
+  </div>
+</EditorialLayout>
+
+<style>
+  .page {
+    padding-block-end: var(--space-16);
+  }
+
+  .page :global(h2) {
+    margin-block: var(--space-16) var(--space-4);
+  }
+
+  .page :global(h3) {
+    margin-block: var(--space-8) var(--space-3);
+  }
+
+  .page :global(p),
+  .page :global(ul),
+  .page :global(ol) {
+    margin-block: var(--space-4);
+  }
+
+  .page :global(li) {
+    margin-block: var(--space-2);
+  }
+
+  .page :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--size-small);
+    margin-block: var(--space-6);
+  }
+
+  .page :global(th),
+  .page :global(td) {
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    border-block-start: 1px solid var(--rule);
+    vertical-align: top;
+  }
+
+  .page :global(thead th) {
+    border-block-start: 0;
+    border-block-end: 1px solid var(--rule-strong);
+    color: var(--muted);
+  }
+
+  .page :global(code) {
+    background: var(--paper-2);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-block);
+  }
+
+  .page :global(pre) {
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-block);
+    padding: var(--space-4);
+    overflow-x: auto;
+  }
+
+  .page :global(pre code) {
+    background: none;
+    padding: 0;
+  }
+
+  /* Ce qui reste à compléter le dit, plutôt que d'être inventé (interdit 10). */
+  .page :global(.a-completer) {
+    border: 2px dashed var(--rule-strong);
+    border-radius: var(--radius-block);
+    padding: var(--space-4) var(--space-6);
+    margin-block: var(--space-6);
+    background: var(--paper-2);
+  }
+
+  .page__notice {
+    margin-block-start: var(--space-16);
+  }
+
+  .page__updated {
+    margin-block-start: var(--space-8);
+    color: var(--muted);
+  }
+</style>

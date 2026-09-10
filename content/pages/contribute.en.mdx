@@ -1,0 +1,103 @@
+---
+page: contribute
+lang: en
+title: "Contribute"
+description: "What makes a good entry, the required structure, the process, and what gets turned down."
+updated: 2026-09-10
+---
+
+## The rule that comes before everything
+
+**No entry is published unless its code has been run and verified.**
+
+If you take one thing from this page, take that. A catalogue whose code does not run is
+worthless, and a single wrong entry casts doubt on all the others.
+
+In practice: each snippet lives in a real file in the repository, with a test beside it. The
+entry imports the file, it does not contain retyped code. If a test fails, the site build
+fails.
+
+Where you are unsure about a point, submit the entry as `status: draft`. An acknowledged draft
+is useful; a plausible but wrong entry is not.
+
+## What makes a good entry
+
+**A need, phrased the way a user would say it.** "Find duplicate records in a customer file",
+not "Deduplication via vector similarity".
+
+**Every rung, including the ones that do not fit.** A rung that does not apply is marked as
+such, with a short, real reason. A blank cell reads as an oversight.
+
+**A breaking point demonstrated, not asserted.** Each rung states what makes it fail. The test
+must contain a case that demonstrates that failure. It is the most important test on the
+entry: without it, what the page says about the limits of the approach is only an opinion.
+
+**A verdict you stand behind.** Two or three sentences saying why this rung and not the next.
+The "recommended" badge can sit on any rung, N3 included.
+
+**Orders of magnitude, never figures.** The cost vocabulary and the latency classes are fixed,
+and documented on the [methodology](/en/methodologie) page.
+
+**Both languages.** French and English, each written in its own language, not translated word
+for word from the other. An entry with one language incomplete does not publish.
+
+## The required structure
+
+An entry is a file at `content/entries/<id>.mdx`. Its content lives entirely in the file's
+frontmatter, validated by a schema that rejects anything that does not conform.
+
+The commented template is in the repository: `content/entries/_TEMPLATE.mdx`. Copy it, fill in
+every field, and run the checks.
+
+Code goes in `content/snippets/<id>/`, one file per rung and per language:
+
+```
+content/snippets/my-need/
+    n0.py   n0.test.py   n0.js   n0.test.js
+    n1.py   n1.test.py   n1.js   n1.test.js
+```
+
+Both languages are systematic: Python and JavaScript, never one without the other. The full
+charter is in `docs/sprints/CHARTE-EXTRAITS.md`.
+
+## The process
+
+1. **Open an issue** before writing, if the entry is not already on the
+   [roadmap](/en/feuille-de-route). It saves you writing something that will be turned down
+   for a reason someone could have told you earlier.
+2. **Fork the repository** and work on a branch.
+3. **Run the checks locally**: `npm run check` reproduces exactly what continuous integration
+   does.
+4. **Open a pull request.** The template will ask you to confirm that the code was run, with
+   which command, that both languages are filled in, and where the figures come from.
+5. **Review.** It looks at technical accuracy first, tone second. Expect questions about the
+   breaking points: that is where hollow content hides.
+6. **Merge.** The entry publishes on the next build.
+
+## Proposing an entry without writing code
+
+You do not need to be a developer to make the catalogue better. If you have seen someone reach
+for a general-purpose model where a rule would have done, say so.
+
+The form asks four things: the need in one sentence, the family that seems right to you, what
+you saw being done, and what you think would be enough. Nothing else.
+
+## What gets turned down
+
+**Unverified content.** A snippet that has not been run, a breaking point asserted without a
+test, a claim you are not sure of.
+
+**Promoting a tool.** If your entry exists to make a product known, it will be turned down,
+even if the product is good. The site has no partnerships and will not have any.
+
+**Figures without a source.** No absolute prices, no grams of CO₂, no performance percentage
+that does not come from a benchmark you actually ran.
+
+**Legal advice.** The regulatory block is factual and dated. No entry tells anyone they are
+compliant or not.
+
+**A value judgement about AI.** Not in the text, not in the colour. The site compares tools on
+tasks; it does not campaign.
+
+**Filler text.** A hollow paragraph standing in for content is worse than a field marked as a
+draft.

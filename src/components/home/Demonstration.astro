@@ -1,0 +1,279 @@
+---
+/**
+ * La démonstration de l'accueil (CDC 7.2).
+ *
+ * « C'est l'élément le plus important de la page : quelqu'un doit comprendre
+ * le produit sans lire une phrase d'explication. »
+ *
+ * Le code des deux colonnes est **lu sur le disque**, depuis les extraits réels
+ * d'une fiche réelle. Il n'est pas recopié, et il est exécuté par la même suite
+ * de tests que le reste du catalogue.
+ */
+import CodeBlock from '../CodeBlock.astro';
+import { readSnippet } from '../../lib/snippets';
+import { type Locale, type Strings } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export interface Props {
+  lang: Locale;
+  strings: Strings;
+}
+
+const { lang, strings } = Astro.props;
+
+/** La fiche dont vient la démonstration. Le lien y renvoie. */
+const ENTRY = 'mask-personal-data-in-chat';
+
+const lourd = readSnippet(`snippets/${ENTRY}/n3.py`, 'python');
+const leger = readSnippet(`snippets/${ENTRY}/n0.py`, 'python');
+
+/** On ne montre que le cœur : le code, pas la longue docstring d'en-tête. */
+const extraire = (code: string, depuis: string) => {
+  const i = code.indexOf(depuis);
+  return i === -1 ? code : code.slice(i).trim();
+};
+
+const codeLourd = extraire(lourd.code, 'PROMPT =');
+const codeLeger = extraire(leger.code, 'UNUSUAL_SPACES');
+
+/**
+ * Le nombre de lignes est dit, pas seulement montré.
+ *
+ * L'écart de longueur est l'argument de cette démonstration. Le faire vivre
+ * uniquement par le défilement obligerait le lecteur à parcourir cent lignes
+ * pour s'en apercevoir. Les deux blocs défilent donc dans leur propre cadre, et
+ * le compte est écrit à côté du titre.
+ */
+const lignes = (code: string) => code.split('\n').filter((l) => l.trim()).length;
+
+const textes = {
+  fr: {
+    kicker: 'La même tâche, deux fois',
+    heading: 'Masquer un numéro de téléphone dans un message',
+    proposed: 'Ce qu’on vous propose',
+    proposedNote: 'Un appel de modèle généraliste sur chaque message entrant.',
+    enough: 'Ce qui suffit',
+    enoughNote: 'Une normalisation, puis trois expressions régulières.',
+    read: 'Lire la fiche complète',
+    lines: 'lignes',
+    caveat:
+      'Le barreau le plus lourd n’est pas toujours le mauvais choix. Sur cette tâche-ci, il l’est.',
+    rows: [
+      ['Coût', 'élevé', 'nul'],
+      ['Latence', '~1 s', '<1 ms'],
+      ['Données', 'partent chez un tiers', 'rien ne sort'],
+      ['Déterministe', 'non', 'oui'],
+      ['Testable', 'difficilement', 'unitairement'],
+    ],
+  },
+  en: {
+    kicker: 'The same task, twice',
+    heading: 'Masking a phone number in a message',
+    proposed: 'What you get offered',
+    proposedNote: 'A general-purpose model call on every inbound message.',
+    enough: 'What is enough',
+    enoughNote: 'One normalisation, then three regular expressions.',
+    read: 'Read the full entry',
+    lines: 'lines',
+    caveat:
+      'The heaviest rung is not always the wrong choice. On this particular task, it is.',
+    rows: [
+      ['Cost', 'high', 'none'],
+      ['Latency', '~1 s', '<1 ms'],
+      ['Data', 'goes to a third party', 'nothing leaves'],
+      ['Deterministic', 'no', 'yes'],
+      ['Testable', 'hardly', 'unit'],
+    ],
+  },
+}[lang];
+---
+
+<section class="demo" aria-labelledby="demo-title">
+  <div class="wrap">
+    <p class="demo__kicker">{textes.kicker}</p>
+    <h2 id="demo-title" class="demo__heading display-l">{textes.heading}</h2>
+
+    <div class="demo__grid">
+      <div class="demo__side">
+        <h3 class="demo__side-title">
+          <span class="demo__rung">N3</span>
+          {textes.proposed}
+          <span class="demo__lines">{lignes(codeLourd)} {textes.lines}</span>
+        </h3>
+        <p class="demo__side-note">{textes.proposedNote}</p>
+        <CodeBlock
+          code={codeLourd}
+          language="python"
+          copyLabel={strings.code.copy}
+          copiedLabel={strings.code.copied}
+          failedLabel={strings.code.copyFailed}
+        />
+      </div>
+
+      <div class="demo__side">
+        <h3 class="demo__side-title">
+          <span class="demo__rung demo__rung--light">N0</span>
+          {textes.enough}
+          <span class="demo__lines">{lignes(codeLeger)} {textes.lines}</span>
+        </h3>
+        <p class="demo__side-note">{textes.enoughNote}</p>
+        <CodeBlock
+          code={codeLeger}
+          language="python"
+          copyLabel={strings.code.copy}
+          copiedLabel={strings.code.copied}
+          failedLabel={strings.code.copyFailed}
+        />
+      </div>
+    </div>
+
+    <table class="demo__table">
+      <caption class="visually-hidden">{textes.heading}</caption>
+      <thead>
+        <tr>
+          <th scope="col"><span class="visually-hidden">{strings.table.rung}</span></th>
+          <th scope="col">N3</th>
+          <th scope="col">N0</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          textes.rows.map(([libelle, lourdVal, legerVal]) => (
+            <tr>
+              <th scope="row">{libelle}</th>
+              <td>{lourdVal}</td>
+              <td class="demo__win">{legerVal}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+
+    <p class="demo__caveat">{textes.caveat}</p>
+    <p class="demo__link">
+      <a href={route(lang, 'entries', ENTRY)}>{textes.read}</a>
+    </p>
+  </div>
+</section>
+
+<style>
+  .demo {
+    padding-block: var(--space-16);
+    border-block-end: 1px solid var(--rule);
+  }
+
+  .demo__kicker {
+    font-size: var(--size-small);
+    color: var(--muted);
+    margin: 0 0 var(--space-2);
+  }
+
+  .demo__heading {
+    margin: 0 0 var(--space-12);
+    max-width: 18ch;
+  }
+
+  .demo__grid {
+    display: grid;
+    gap: var(--space-8);
+  }
+
+  @media (min-width: 900px) {
+    .demo__grid {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+    }
+  }
+
+  .demo__grid > :global(*) {
+    min-width: 0;
+  }
+
+  .demo__side-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-text);
+    font-size: var(--size-h3);
+    font-weight: var(--weight-h3);
+  }
+
+  .demo__rung {
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--rung-3);
+    color: var(--on-rung-3);
+  }
+
+  .demo__rung--light {
+    background: var(--rung-0);
+    color: var(--on-rung-0);
+  }
+
+  .demo__lines {
+    margin-inline-start: auto;
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  /* Les deux blocs défilent dans leur cadre : l'écart de longueur se lit dans
+     le compte de lignes, il ne s'impose pas au lecteur en défilement de page. */
+  .demo__side :global(.code-block__code) {
+    max-height: 26rem;
+    overflow-y: auto;
+  }
+
+  .demo__side-note {
+    color: var(--muted);
+    font-size: var(--size-small);
+    margin: 0 0 var(--space-4);
+  }
+
+  .demo__table {
+    width: 100%;
+    margin-block-start: var(--space-12);
+    border-collapse: collapse;
+    font-size: var(--size-small);
+  }
+
+  .demo__table th,
+  .demo__table td {
+    text-align: left;
+    padding: var(--space-3);
+    border-block-start: 1px solid var(--rule);
+    width: 33%;
+  }
+
+  .demo__table thead th {
+    font-family: var(--font-code);
+    color: var(--muted);
+    border-block-start: 0;
+    border-block-end: 1px solid var(--rule-strong);
+  }
+
+  .demo__table tbody th {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .demo__win {
+    font-weight: 600;
+  }
+
+  .demo__caveat {
+    margin-block-start: var(--space-8);
+    color: var(--muted);
+    font-size: var(--size-small);
+  }
+
+  .demo__link {
+    margin-block-start: var(--space-4);
+    font-weight: 600;
+  }
+</style>

@@ -1,0 +1,183 @@
+---
+/**
+ * L'accueil (CDC 7.2). Registre éditorial, direction artistique assumée.
+ * C'est la seule page où l'on vend l'idée.
+ */
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import Demonstration from '../../components/home/Demonstration.astro';
+import FamilyGrid from '../../components/home/FamilyGrid.astro';
+import RungExplainer from '../../components/home/RungExplainer.astro';
+import Featured from '../../components/home/Featured.astro';
+import HelpBlock from '../../components/HelpBlock.astro';
+import { allFamilies, publishedEntries, familyTitles } from '../../lib/content';
+import { LOCALES, t, type Locale } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export function getStaticPaths() {
+  return LOCALES.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Locale;
+const strings = t(lang);
+const families = (await allFamilies()).map((f) => f.data);
+const entries = (await publishedEntries()).map((e) => e.data);
+const titres = await familyTitles(lang);
+
+const textes = {
+  fr: {
+    mission: "Avez-vous vraiment besoin d'IA pour ça ?",
+    lead: "Pour chaque tâche courante, toutes les options connues, de la règle au modèle généraliste. Avec le code qui tourne, les ordres de grandeur, et la condition précise qui justifie de monter d'un cran.",
+    stance: "Overkill n'est pas anti-IA. Certaines fiches recommandent franchement un modèle généraliste, et ce sont elles qui rendent crédibles celles qui recommandent l'inverse.",
+    catalogue: 'Voir le catalogue',
+    familiesTitle: 'Dix familles, rangées par verbe',
+    featuredTitle: 'Trois fiches pour commencer',
+    featuredLead: "Choisies pour la diversité de leurs verdicts, y compris celui qui recommande d'appeler un modèle.",
+    contributeTitle: 'Ce catalogue vous appartient',
+    contributeLead: "Deux cents besoins sont sur la feuille de route, vingt-cinq sont écrits. Si vous avez vu quelqu'un employer un modèle généraliste là où une règle aurait suffi, il manque une fiche.",
+    contribute: 'Comment contribuer',
+    roadmap: 'Voir la feuille de route',
+  },
+  en: {
+    mission: 'Do you really need AI for that?',
+    lead: 'For every common task, all the known options, from a rule to a general-purpose model. With code that runs, orders of magnitude, and the precise condition that justifies moving up a rung.',
+    stance: 'Overkill is not anti-AI. Some entries recommend a general-purpose model without hedging, and those are what make the entries recommending the opposite worth believing.',
+    catalogue: 'Browse the catalogue',
+    familiesTitle: 'Ten families, sorted by verb',
+    featuredTitle: 'Three entries to start with',
+    featuredLead: 'Chosen for the spread of their verdicts, including the one that recommends calling a model.',
+    contributeTitle: 'This catalogue is yours',
+    contributeLead: 'Two hundred needs are on the roadmap, twenty-five are written. If you have seen someone reach for a general-purpose model where a rule would have done, an entry is missing.',
+    contribute: 'How to contribute',
+    roadmap: 'See the roadmap',
+  },
+}[lang];
+---
+
+<SiteLayout
+  title={strings.site.name}
+  description={textes.lead}
+  lang={lang}
+  register="editorial"
+>
+  {/* Hero : un aplat de marque pleine largeur, la phrase de mission en très
+      grosse typographie. Pas d'illustration décorative : la typographie est
+      l'objet visuel (CDC 7.2). */}
+  <div class="band band-brand hero">
+    <div class="wrap">
+      <h1 class="display-xl hero__mission">{textes.mission}</h1>
+      <p class="hero__lead">{textes.lead}</p>
+      <p class="hero__action">
+        <a class="hero__cta" href={route(lang, 'catalogue')}>{textes.catalogue}</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="wrap stance">
+    <p class="stance__text">{textes.stance}</p>
+  </div>
+
+  <Demonstration lang={lang} strings={strings} />
+
+  <FamilyGrid lang={lang} families={families} title={textes.familiesTitle} />
+
+  <RungExplainer lang={lang} strings={strings} />
+
+  <Featured
+    lang={lang}
+    strings={strings}
+    entries={entries}
+    familyTitles={titres}
+    title={textes.featuredTitle}
+    lead={textes.featuredLead}
+  />
+
+  <section class="closing" aria-labelledby="closing-title">
+    <div class="wrap closing__grid">
+      <div>
+        <h2 id="closing-title" class="display-l closing__title">{textes.contributeTitle}</h2>
+        <p>{textes.contributeLead}</p>
+        <p class="closing__links">
+          <a href={route(lang, 'contribute')}>{textes.contribute}</a>
+          <a href={route(lang, 'roadmap')}>{textes.roadmap}</a>
+        </p>
+      </div>
+      <HelpBlock strings={strings} compact />
+    </div>
+  </section>
+</SiteLayout>
+
+<style>
+  .hero {
+    padding-block: var(--space-24) var(--space-16);
+  }
+
+  /* Le display est un élément actif de la composition : il occupe toute la
+     largeur de l'aplat et déborde volontiers de la colonne de lecture. */
+  .hero__mission {
+    margin: 0;
+    max-width: 14ch;
+  }
+
+  .hero__lead {
+    margin-block-start: var(--space-8);
+    font-size: var(--size-h3);
+    max-width: 46ch;
+  }
+
+  .hero__action {
+    margin-block-start: var(--space-8);
+    margin-block-end: 0;
+  }
+
+  .hero__cta {
+    display: inline-block;
+    padding: var(--space-3) var(--space-6);
+    background: var(--on-brand);
+    color: var(--brand);
+    border-radius: var(--radius-pill);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .stance {
+    padding-block: var(--space-12);
+  }
+
+  .stance__text {
+    font-size: var(--size-h3);
+    max-width: 52ch;
+    border-inline-start: 3px solid var(--brand-deep);
+    padding-inline-start: var(--space-6);
+    margin: 0;
+  }
+
+  .closing {
+    padding-block: var(--space-16);
+  }
+
+  .closing__grid {
+    display: grid;
+    gap: var(--space-12);
+  }
+
+  @media (min-width: 900px) {
+    .closing__grid {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-16);
+      align-items: start;
+    }
+  }
+
+  .closing__title {
+    margin: 0 0 var(--space-4);
+    max-width: 14ch;
+  }
+
+  .closing__links {
+    margin-block-start: var(--space-6);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    font-weight: 600;
+  }
+</style>

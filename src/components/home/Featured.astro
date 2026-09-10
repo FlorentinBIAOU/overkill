@@ -1,0 +1,96 @@
+---
+/**
+ * Les trois fiches mises en avant (CDC 7.2), choisies pour la diversité de
+ * leurs verdicts, dont une qui recommande N3.
+ *
+ * La sélection est explicite, jamais aléatoire : c'est une décision
+ * éditoriale, et elle doit rester la même d'une construction à l'autre.
+ * Si l'une des fiches choisies n'existe pas encore, on complète en cherchant
+ * un verdict qui manque, plutôt que d'afficher un trou.
+ */
+import EntryCard from '../EntryCard.astro';
+import { type Locale, type Strings } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export interface Props {
+  lang: Locale;
+  strings: Strings;
+  entries: any[];
+  familyTitles: Record<string, string>;
+  title: string;
+  lead: string;
+}
+
+const { lang, strings, entries, familyTitles, title, lead } = Astro.props;
+
+/** Choix éditorial : un verdict N0, un N1, un N3. */
+const CHOIX = ['mask-personal-data-in-chat', 'route-support-tickets', 'write-product-descriptions'];
+
+const parId = new Map(entries.map((e) => [e.id, e]));
+const retenues = CHOIX.map((id) => parId.get(id)).filter(Boolean);
+
+// Complément déterministe si une fiche choisie manque : on cherche un verdict
+// absent de la sélection, pour garder la diversité qui est tout le propos.
+for (const verdict of ['N0', 'N1', 'N3', 'N2']) {
+  if (retenues.length >= 3) break;
+  if (retenues.some((e: any) => e.verdict === verdict)) continue;
+  const candidate = entries.find(
+    (e) => e.verdict === verdict && !retenues.some((r: any) => r.id === e.id),
+  );
+  if (candidate) retenues.push(candidate);
+}
+---
+
+{
+  retenues.length > 0 && (
+    <section class="featured" aria-labelledby="featured-title">
+      <div class="wrap">
+        <h2 id="featured-title" class="featured__title display-l">{title}</h2>
+        <p class="featured__lead">{lead}</p>
+        <ul class="featured__list">
+          {retenues.slice(0, 3).map((e: any) => (
+            <EntryCard
+              id={e.id}
+              href={route(lang, 'entries', e.id)}
+              title={e.title[lang]}
+              familyLabel={familyTitles[e.family] ?? e.family}
+              family={e.family}
+              verdict={e.verdict}
+              available={e.rungs.filter((r: any) => r.available).map((r: any) => r.level)}
+              egress={e.rungs.find((r: any) => r.level === e.verdict)?.risks.data_egress ?? 'none'}
+              deterministic={
+                e.rungs.find((r: any) => r.level === e.verdict)?.risks.deterministic ?? true
+              }
+              strings={strings}
+              draft={e.status === 'draft'}
+            />
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .featured {
+    padding-block: var(--space-16);
+    border-block-end: 1px solid var(--rule);
+  }
+
+  .featured__title {
+    margin: 0 0 var(--space-4);
+    max-width: 16ch;
+  }
+
+  .featured__lead {
+    color: var(--muted);
+    margin: 0 0 var(--space-8);
+  }
+
+  .featured__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-block-end: 1px solid var(--rule);
+  }
+</style>

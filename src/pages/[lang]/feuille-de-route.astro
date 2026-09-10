@@ -1,0 +1,229 @@
+---
+/**
+ * La feuille de route (CDC 7.11) : les 200 intitulés, groupés par famille, avec
+ * pour chacun son état, un compteur global, et un lien pour s'en saisir.
+ */
+import EditorialLayout from '../../layouts/EditorialLayout.astro';
+import { allRoadmap, allFamilies, publishedEntries, ISSUE_URL } from '../../lib/content';
+import { LOCALES, type Locale } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export function getStaticPaths() {
+  return LOCALES.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Locale;
+
+const intitules = (await allRoadmap()).map((r) => r.data);
+const familles = (await allFamilies()).map((f) => f.data);
+const fiches = (await publishedEntries()).map((e) => e.data);
+
+const etatParId = new Map(fiches.map((e) => [e.id, e.status]));
+
+const compte = {
+  total: intitules.length,
+  published: intitules.filter((i) => etatParId.get(i.id) === 'published').length,
+  draft: intitules.filter((i) => etatParId.get(i.id) === 'draft').length,
+};
+const aEcrire = compte.total - compte.published - compte.draft;
+
+const textes = {
+  fr: {
+    title: 'Feuille de route',
+    lead: "Deux cents besoins, vingt par famille. Ce ne sont pas des fiches : aucun contenu n'est produit pour eux tant que personne ne les écrit. Ils disent où va le catalogue, et dans quoi se servir pour contribuer.",
+    published: 'publiées',
+    draft: 'brouillons',
+    todo: 'à écrire',
+    take: 'S’en saisir',
+    read: 'Lire',
+    statusPublished: 'Publiée',
+    statusDraft: 'Brouillon',
+    statusTodo: 'À écrire',
+    how: 'Comment contribuer',
+  },
+  en: {
+    title: 'Roadmap',
+    lead: 'Two hundred needs, twenty per family. These are not entries: no content is produced for them until somebody writes them. They say where the catalogue is going, and what there is to pick up.',
+    published: 'published',
+    draft: 'drafts',
+    todo: 'to write',
+    take: 'Take it on',
+    read: 'Read',
+    statusPublished: 'Published',
+    statusDraft: 'Draft',
+    statusTodo: 'To write',
+    how: 'How to contribute',
+  },
+}[lang];
+
+const etatDe = (id: string) => etatParId.get(id) ?? 'todo';
+---
+
+<EditorialLayout title={textes.title} description={textes.lead} lang={lang} band="paper-2">
+  <div class="wrap roadmap">
+    <p class="roadmap__lead">{textes.lead}</p>
+
+    <p class="roadmap__counts">
+      <span class="roadmap__count">
+        <b>{compte.published}</b> {textes.published}
+      </span>
+      <span class="roadmap__count">
+        <b>{compte.draft}</b> {textes.draft}
+      </span>
+      <span class="roadmap__count">
+        <b>{aEcrire}</b> {textes.todo}
+      </span>
+      <span class="roadmap__count roadmap__count--total">
+        <b>{compte.total}</b> au total
+      </span>
+    </p>
+
+    <p class="roadmap__how">
+      <a href={route(lang, 'contribute')}>{textes.how}</a>
+    </p>
+
+    {
+      familles.map((famille) => {
+        const items = intitules.filter((i) => i.family === famille.id);
+        return (
+          <section class="roadmap__family" aria-labelledby={`rm-${famille.id}`}>
+            <h2 id={`rm-${famille.id}`} class="roadmap__family-title">
+              <a href={route(lang, 'families', famille.id)}>{famille.title[lang]}</a>
+              <span class="roadmap__family-count">{items.length}</span>
+            </h2>
+            <ul class="roadmap__list">
+              {items.map((item) => {
+                const etat = etatDe(item.id);
+                return (
+                  <li class={`roadmap__item roadmap__item--${etat}`}>
+                    <span class="roadmap__name">
+                      {etat === 'todo' ? (
+                        item.title[lang]
+                      ) : (
+                        <a href={route(lang, 'entries', item.id)}>{item.title[lang]}</a>
+                      )}
+                    </span>
+                    <span class="roadmap__need">{item.need[lang]}</span>
+                    <span class="roadmap__state">
+                      {etat === 'published' && textes.statusPublished}
+                      {etat === 'draft' && textes.statusDraft}
+                      {etat === 'todo' && (
+                        <a href={`${ISSUE_URL}&title=${encodeURIComponent(item.title.en)}`} rel="noopener">
+                          {textes.take}
+                        </a>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })
+    }
+  </div>
+</EditorialLayout>
+
+<style>
+  .roadmap {
+    padding-block-end: var(--space-16);
+  }
+
+  .roadmap__lead {
+    font-size: var(--size-h3);
+    max-width: 56ch;
+  }
+
+  .roadmap__counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    margin-block: var(--space-8) var(--space-4);
+    max-width: none;
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .roadmap__count b {
+    font-family: var(--font-display);
+    font-size: var(--size-h2);
+    font-weight: 700;
+    color: var(--ink);
+    display: block;
+  }
+
+  .roadmap__count--total b {
+    color: var(--muted);
+  }
+
+  .roadmap__how {
+    font-weight: 600;
+    margin-block-end: var(--space-16);
+  }
+
+  .roadmap__family {
+    margin-block-start: var(--space-12);
+  }
+
+  .roadmap__family-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-2);
+    padding-block-end: var(--space-2);
+    border-block-end: 2px solid var(--ink);
+  }
+
+  .roadmap__family-title a {
+    text-decoration: none;
+  }
+
+  .roadmap__family-count {
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    color: var(--muted);
+    margin-inline-start: auto;
+  }
+
+  .roadmap__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .roadmap__item {
+    display: grid;
+    gap: var(--space-1) var(--space-4);
+    grid-template-columns: 1fr;
+    padding-block: var(--space-3);
+    border-block-start: 1px solid var(--rule);
+    max-width: none;
+  }
+
+  @media (min-width: 900px) {
+    .roadmap__item {
+      grid-template-columns: 22rem 1fr 7rem;
+      align-items: baseline;
+    }
+  }
+
+  .roadmap__name {
+    font-weight: 600;
+  }
+
+  .roadmap__need {
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .roadmap__state {
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  /* Un intitulé qui n'a pas encore de fiche est en retrait, pas caché. */
+  .roadmap__item--todo .roadmap__name {
+    font-weight: 400;
+    color: var(--muted);
+  }
+</style>

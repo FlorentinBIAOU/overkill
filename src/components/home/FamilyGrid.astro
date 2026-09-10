@@ -1,0 +1,94 @@
+---
+/**
+ * La grille des dix familles sur l'accueil (CDC 7.2), chacune avec son
+ * illustration et sa question type, cliquable.
+ */
+import FamilyIllustration from '../FamilyIllustration.astro';
+import { type Locale } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export interface Props {
+  lang: Locale;
+  families: any[];
+  title: string;
+}
+
+const { lang, families, title } = Astro.props;
+---
+
+<section class="families" aria-labelledby="families-title">
+  <div class="wrap">
+    <h2 id="families-title" class="families__title display-l">{title}</h2>
+    <ul class="families__grid">
+      {
+        families.map((f) => (
+          <li class="families__item">
+            <a class="families__link" href={route(lang, 'families', f.id)}>
+              <span class="families__illustration">
+                <FamilyIllustration id={f.illustration} lang={lang} title={f.title[lang]} />
+              </span>
+              <span class="families__name">{f.title[lang]}</span>
+              <span class="families__question">{f.question[lang]}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .families {
+    padding-block: var(--space-16);
+    border-block-end: 1px solid var(--rule);
+  }
+
+  .families__title {
+    margin: 0 0 var(--space-12);
+    max-width: 14ch;
+  }
+
+  .families__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-8) var(--space-6);
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .families__item {
+    max-width: none;
+  }
+
+  .families__link {
+    display: grid;
+    gap: var(--space-3);
+    text-decoration: none;
+  }
+
+  .families__illustration {
+    display: block;
+    width: 96px;
+    color: var(--ink);
+  }
+
+  .families__name {
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: 700;
+    line-height: var(--lh-heading);
+  }
+
+  .families__link:hover .families__name,
+  .families__link:focus-visible .families__name {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+    text-decoration-thickness: 2px;
+  }
+
+  .families__question {
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+</style>

@@ -24,7 +24,14 @@ const EXTENSIONS = new Set(['.mdx', '.md', '.py', '.js', '.mjs', '.yaml']);
 const MOTIFS = [
   {
     nom: 'prix absolu',
-    motif: /(?<![\w.])(?:[€$£]\s?\d|\d+[\d\s.,]*\s?(?:€|\$|£|euros?|dollars?|centimes?|cents?)\b)/gi,
+    /*
+     * Le dollar ne se cherche qu'avant le nombre, comme il s'écrit vraiment.
+     * Le chercher après attraperait « %1$s » et « ${variable} », qui sont des
+     * chaînes de format et des littéraux gabarits, pas des prix.
+     * L'euro et la livre se cherchent des deux côtés, comme ils s'écrivent.
+     */
+    motif:
+      /(?<![\w.%])(?:[€£]\s?\d|\$\s?\d|\d[\d\s.,]*\s?(?:[€£]|(?:euros?|dollars?|centimes?|cents?)\b))/gi,
     raison: 'les tarifs changent tous les trimestres ; employer le vocabulaire de la section 4.5',
   },
   {
@@ -39,9 +46,17 @@ const MOTIFS = [
     raison: 'un chiffre de performance exige un banc d\'essai réellement exécuté',
   },
   {
-    nom: 'taille de modèle affirmée',
-    motif: /\b(?:a\s+few|quelques|environ|about|roughly)\s+(?:\d+\s+)?(?:kilo|mega|giga|méga|kilooctets?|mégaoctets?|gigaoctets?|kilobytes?|megabytes?|gigabytes?|Ko|Mo|Go|KB|MB|GB)\b/gi,
-    raison: 'une taille annoncée sans mesure est un chiffre inventé',
+    /*
+     * Une taille annoncée avec un nombre est une mesure, et une mesure exige
+     * d'avoir été faite. « Quelques mégaoctets », sans nombre, est un ordre de
+     * grandeur exprimé en mots : c'est exactement ce que la section 4.5 du CDC
+     * demande d'employer à la place d'un chiffre, et le CDC s'en sert lui-même
+     * en section 1.1. Le contrôle ne cherche donc que les formes chiffrées.
+     */
+    nom: 'taille annoncée sans mesure',
+    motif:
+      /\b(?:environ|about|roughly|autour de|près de)?\s*\d+(?:[.,]\d+)?\s?(?:kilooctets?|mégaoctets?|gigaoctets?|téraoctets?|kilobytes?|megabytes?|gigabytes?|terabytes?|Ko|Mo|Go|To|KB|MB|GB|TB)\b/g,
+    raison: 'une taille annoncée avec un nombre exige une mesure réelle',
   },
   {
     nom: 'latence affirmée hors classes',

@@ -1,0 +1,95 @@
+---
+/**
+ * Page 404 (CDC 7.1). Utile, pas décorative : elle propose une suite.
+ */
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { LOCALES, t, type Locale } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export function getStaticPaths() {
+  return LOCALES.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Locale;
+const strings = t(lang);
+
+const chemin = resolve(process.cwd(), 'src/assets/illustrations/not-found.svg');
+const illustration = existsSync(chemin) ? readFileSync(chemin, 'utf8') : null;
+
+const textes = {
+  fr: { contribute: 'Proposer une fiche', roadmap: 'Voir la feuille de route' },
+  en: { contribute: 'Propose an entry', roadmap: 'See the roadmap' },
+}[lang];
+---
+
+<SiteLayout title={strings.error.notFoundTitle} lang={lang} register="editorial" noindex>
+  <div class="wrap notfound">
+    {
+      illustration && (
+        <div class="notfound__illustration" role="img" aria-label={strings.error.notFoundTitle} set:html={illustration} />
+      )
+    }
+    <div>
+      <h1 class="display-l">{strings.error.notFoundTitle}</h1>
+      <p class="notfound__lead">{strings.error.notFoundBody}</p>
+      <p class="notfound__links">
+        <a class="notfound__cta" href={route(lang, 'catalogue')}>{strings.error.notFoundAction}</a>
+        <a href={route(lang, 'roadmap')}>{textes.roadmap}</a>
+        <a href={route(lang, 'contribute')}>{textes.contribute}</a>
+      </p>
+    </div>
+  </div>
+</SiteLayout>
+
+<style>
+  .notfound {
+    display: grid;
+    gap: var(--space-12);
+    padding-block: var(--space-24);
+    align-items: center;
+  }
+
+  @media (min-width: 900px) {
+    .notfound {
+      grid-template-columns: 240px 1fr;
+      gap: var(--space-16);
+    }
+  }
+
+  .notfound__illustration {
+    width: min(100%, 240px);
+    color: var(--ink);
+  }
+
+  .notfound__illustration :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .notfound__lead {
+    font-size: var(--size-h3);
+    margin-block-start: var(--space-4);
+  }
+
+  .notfound__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-6);
+    margin-block-start: var(--space-8);
+    max-width: none;
+    font-weight: 600;
+  }
+
+  .notfound__cta {
+    display: inline-block;
+    padding: var(--space-3) var(--space-6);
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: var(--radius-pill);
+    text-decoration: none;
+  }
+</style>

@@ -1,0 +1,160 @@
+---
+/**
+ * La bande « comment lire une fiche » (CDC 7.2) : les quatre barreaux
+ * expliqués en une bande visuelle.
+ *
+ * L'illustration large de la section 8.6 est employée ici, et non dans le
+ * hero, parce que la section 7.2 interdit toute illustration décorative dans
+ * le hero, où la typographie est l'objet visuel. Ici elle n'est pas
+ * décorative : elle dit exactement ce que la bande explique.
+ */
+import RungIcon from '../icons/RungIcon.astro';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { LEVELS } from '../../content/schema/enums';
+import { type Locale, type Strings } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export interface Props {
+  lang: Locale;
+  strings: Strings;
+}
+
+const { lang, strings } = Astro.props;
+
+const chemin = resolve(process.cwd(), 'src/assets/illustrations/hero.svg');
+const hero = existsSync(chemin) ? readFileSync(chemin, 'utf8') : null;
+
+const textes = {
+  fr: {
+    title: 'Comment lire une fiche',
+    lead: "Quatre barreaux, toujours dans le même ordre. L'échelle ne mesure pas la qualité d'une solution, elle mesure son poids : ce qu'il faut mettre en marche pour obtenir le résultat.",
+    alt: 'La même tâche, quatre fois, avec de plus en plus de machinerie en marche',
+    more: 'Comment on évalue',
+    rungs: [
+      'Une expression régulière, une requête, un automate. Le code fait exactement ce qu’il dit, et vous pouvez le lire en entier.',
+      'Un modèle entraîné sur vos données, assez petit pour être versionné à côté du code qui s’en sert, et qui tourne sur un processeur ordinaire.',
+      'Un modèle spécialisé qui tourne chez vous. Il pèse lourd, il fait une chose, et rien ne sort de votre infrastructure.',
+      'Un appel à un fournisseur externe. Le modèle sait tout faire à peu près, rien exactement, et il ne vous appartient pas.',
+    ],
+  },
+  en: {
+    title: 'How to read an entry',
+    lead: 'Four rungs, always in the same order. The ladder does not measure how good a solution is, it measures its weight: what you have to start up to get the result.',
+    alt: 'The same task, four times, with more and more machinery running',
+    more: 'How we judge',
+    rungs: [
+      'A regular expression, a query, a state machine. The code does exactly what it says, and you can read all of it.',
+      'A model trained on your data, small enough to be versioned next to the code that uses it, running on an ordinary processor.',
+      'A specialised model running on your machines. It weighs a lot, it does one thing, and nothing leaves your infrastructure.',
+      'A call to an outside provider. The model does everything roughly and nothing exactly, and it is not yours.',
+    ],
+  },
+}[lang];
+---
+
+<section class="rungs band band-paper-2" aria-labelledby="rungs-title">
+  <div class="wrap">
+    <h2 id="rungs-title" class="rungs__title display-l">{textes.title}</h2>
+    <p class="rungs__lead">{textes.lead}</p>
+
+    {
+      hero && (
+        <div class="rungs__figure" role="img" aria-label={textes.alt} set:html={hero} />
+      )
+    }
+
+    <ol class="rungs__list">
+      {
+        LEVELS.map((level, i) => (
+          <li class="rungs__item">
+            <p class="rungs__head">
+              <RungIcon level={level} title={strings.rung[level]} size={28} />
+              <span class="rungs__level">{level}</span>
+            </p>
+            <h3 class="rungs__name">{strings.rung[level]}</h3>
+            <p class="rungs__text">{textes.rungs[i]}</p>
+          </li>
+        ))
+      }
+    </ol>
+
+    <p class="rungs__more">
+      <a href={route(lang, 'methodology')}>{textes.more}</a>
+    </p>
+  </div>
+</section>
+
+<style>
+  .rungs {
+    padding-block: var(--space-16);
+  }
+
+  .rungs__title {
+    margin: 0 0 var(--space-4);
+    max-width: 14ch;
+  }
+
+  .rungs__lead {
+    font-size: var(--size-h3);
+    margin: 0 0 var(--space-12);
+  }
+
+  .rungs__figure {
+    margin-block-end: var(--space-12);
+    color: var(--ink);
+  }
+
+  .rungs__figure :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 720px;
+  }
+
+  .rungs__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-8) var(--space-6);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .rungs__item {
+    max-width: none;
+    border-block-start: 2px solid var(--ink);
+    padding-block-start: var(--space-3);
+  }
+
+  .rungs__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-2);
+    max-width: none;
+  }
+
+  .rungs__level {
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .rungs__name {
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    font-weight: 600;
+    margin: 0 0 var(--space-2);
+  }
+
+  .rungs__text {
+    font-size: var(--size-small);
+    margin: 0;
+  }
+
+  .rungs__more {
+    margin-block-start: var(--space-12);
+    font-weight: 600;
+  }
+</style>
