@@ -1,0 +1,138 @@
+---
+id: convert-messy-csv-to-clean-data
+family: transform
+status: published
+verdict: N0
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Convertir un CSV mal formé en données exploitables"
+  en: "Turn a messy CSV into usable data"
+
+need:
+  fr: "Charger un fichier CSV reçu de l'extérieur, sans savoir son encodage, son séparateur ni le type de ses colonnes."
+  en: "Load a CSV file received from outside, without knowing its encoding, its delimiter or the type of its columns."
+
+scenario:
+  fr: "On voit passer le fichier entier dans un modèle généraliste, avec une demande de JSON propre en sortie. Le fichier a pourtant un séparateur, un encodage et des colonnes typées, toutes choses qui se lisent dans ses octets. Et ce qu'on paie n'est pas le nettoyage : c'est la perte de l'inventaire de ce qui n'a pas pu être nettoyé, puisqu'un modèle rend un tableau complet sans dire ce qu'il a deviné."
+  en: "The whole file gets handed to a general-purpose model with a request for clean JSON. Yet the file has a delimiter, an encoding and typed columns, all of which can be read from its bytes. And what you pay for is not the cleaning: it is the loss of any inventory of what could not be cleaned, because a model returns a complete table without saying what it guessed."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Détection du dialecte, normalisation d'encodage, coercition typée avec journal des rejets"
+      en: "Dialect detection, encoding normalisation, typed coercion with a rejection journal"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le fichier est lu là où il se trouve"
+          - "Le journal des rejets recopie les champs tels qu'ils ont été lus, et hérite donc de ce que contient le fichier d'origine"
+        en:
+          - "No specific scope added: the file is read where it already sits"
+          - "The rejection journal copies the fields exactly as they were read, and so inherits whatever the source file holds"
+    code:
+      python: snippets/convert-messy-csv-to-clean-data/n0.py
+      javascript: snippets/convert-messy-csv-to-clean-data/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une colonne qui change de sens en cours de fichier, sans changer de forme. Un export qui passe du jour d'abord au mois d'abord rend « 07/04/2023 » deux fois, lu deux fois comme le 7 avril, sans un mot dans le journal : seul « 12/25/2023 » est rejeté, et par chance, parce qu'aucun mois n'a vingt-cinq jours. Un second export recollé sous le premier avec un autre séparateur est mieux traité : le dialecte est décidé une fois, en tête, et chacune de ses lignes est refusée avec « expected 3 fields, found 1 »."
+      en: "A column that changes meaning partway through the file without changing shape. An export that switches from day-first to month-first returns « 07/04/2023 » twice, read twice as the seventh of April, with nothing in the journal: only « 12/25/2023 » is rejected, and that is luck, because no month has twenty-five days. A second export appended below the first with a different delimiter fares better: the dialect is decided once, from the top, and every one of its lines is refused with « expected 3 fields, found 1 »."
+    escalate_when:
+      fr: "Vous ouvrez un export dont personne n'a documenté les colonnes, et écrire son schéma à la main n'arrive jamais."
+      en: "You open an export whose columns nobody documented, and writing its schema by hand never happens."
+
+  - level: N1
+    available: true
+    name:
+      fr: "Inférence du type de colonne par régression logistique sur des traits d'échantillon"
+      en: "Column type inference by logistic regression on sample traits"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Le jeu d'entraînement est fait de colonnes extraites de fichiers réels : il entre dans votre registre des traitements, si vous en tenez un, dès qu'il en contient des données personnelles"
+          - "Rien ne sort de votre infrastructure : le modèle est entraîné et interrogé sur place"
+        en:
+          - "The training set is made of columns taken from real files: it belongs in your record of processing activities, where you keep one, as soon as it holds personal data"
+          - "Nothing leaves your infrastructure: the model is trained and queried in place"
+    code:
+      python: snippets/convert-messy-csv-to-clean-data/n1.py
+      javascript: snippets/convert-messy-csv-to-clean-data/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Un identifiant fait de chiffres. Une colonne de codes postaux — 01000, 06400, 75014 — a tous les traits d'une colonne d'entiers, le classifieur répond « integer », et la coercition de N0 rend 1000 et 6400. Le zéro de tête est perdu, et rien n'est rejeté, puisque rien n'a échoué : le classifieur a raison sur la forme, il n'a aucun moyen d'avoir raison sur le sens."
+      en: "An identifier made of digits. A column of postcodes — 01000, 06400, 75014 — carries every trait of an integer column, the classifier answers « integer », and the coercion of N0 returns 1000 and 6400. The leading zero is gone, and nothing is rejected, because nothing failed: the classifier is right about the shape and has no way to be right about the meaning."
+    escalate_when:
+      fr: "Le journal des rejets grossit à chaque import, personne ne reprend ces lignes à la main, et le fichier ne peut plus être redemandé à qui l'a produit."
+      en: "The rejection journal grows with every import, nobody repairs those rows by hand, and the file can no longer be asked back from whoever produced it."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Hors sujet ici : le type d'une colonne se lit dans la forme de ses valeurs, que huit proportions et une régression logistique décrivent déjà. Un modèle auto-hébergé pour deviner qu'une colonne contient des dates coûterait un service permanent à exploiter, sans rien voir de plus."
+      en: "Beside the point here: a column's type is readable from the shape of its values, which eight proportions and a logistic regression already describe. A self-hosted model to guess that a column holds dates would cost a permanent service to operate, and would see nothing more."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Réparation des seules lignes rejetées par N0, par appel à un modèle généraliste"
+      en: "Repairing only the rows N0 rejected, through a general-purpose model"
+    cost: élevé
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: high
+      regulatory:
+        fr:
+          - "Transfert à un sous-traitant du contenu des lignes rejetées, avec l'encadrement contractuel que cela suppose"
+          - "Localisation du traitement à vérifier auprès du fournisseur"
+          - "Ne vous dispense pas de garder trace de l'origine d'une valeur réparée : elle est produite par le modèle, pas lue dans le fichier"
+        en:
+          - "Transfer of the content of the rejected rows to a processor, with the contractual framing that implies"
+          - "Processing location to be confirmed with the provider"
+          - "Does not excuse you from keeping track of where a repaired value came from: it is produced by the model, not read from the file"
+    code:
+      python: snippets/convert-messy-csv-to-clean-data/n3.py
+      javascript: snippets/convert-messy-csv-to-clean-data/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "L'invention bien formée. Une ligne refusée qui portait « in the spring » là où une date était attendue revient en « 2024-03-01 » : la valeur passe la coercition, rejoint les lignes propres, et plus rien ne la distingue d'une valeur qui était dans le fichier. Une réponse malformée, elle, est attrapée et consignée ; celle-ci ne l'est pas, parce qu'une date est une date."
+      en: "The well-formed invention. A refused row that carried « in the spring » where a date was expected comes back as « 2024-03-01 »: the value passes coercion, joins the clean rows, and nothing tells it apart from a value that was in the file. A malformed answer is caught and recorded; this one is not, because a date is a date."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus."
+      en: "There is no rung above this one."
+
+verdict_rationale:
+  fr: "N0 lit le fichier tel qu'il est, et surtout il nomme ce qu'il refuse : la ligne, la colonne, la raison, et les champs d'origine. C'est ce journal qui rend les deux barreaux du dessus utilisables — N1 devine le schéma que N0 réclame, N3 ne travaille que sur les lignes que N0 a rejetées — et aucun des deux ne remplace le nettoyage. Un fichier de cent mille lignes dont trois coincent ne justifie pas cent mille appels."
+  en: "N0 reads the file as it is, and above all it names what it refuses: the line, the column, the reason, and the fields as they were read. That journal is what makes the two rungs above it usable — N1 guesses the schema N0 asks for, N3 works only on the rows N0 rejected — and neither replaces the cleaning. A file of a hundred thousand rows with three bad ones does not justify a hundred thousand calls."
+
+further_reading:
+  - label: "RFC 4180 — Common Format and MIME Type for CSV Files"
+    url: "https://www.rfc-editor.org/rfc/rfc4180"
+  - label: "Python — module csv, lecture et dialectes"
+    url: "https://docs.python.org/3/library/csv.html"
+  - label: "Unicode — FAQ sur les marques d'ordre des octets"
+    url: "https://www.unicode.org/faq/utf_bom.html"
+  - label: "W3C — Model for Tabular Data and Metadata on the Web"
+    url: "https://www.w3.org/TR/tabular-data-model/"
+
+sources: []
+---
