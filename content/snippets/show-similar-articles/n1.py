@@ -1,0 +1,57 @@
+"""
+Related articles from the text itself: TF-IDF, then cosine similarity.
+
+Rung N1. N0 only sees what someone remembered to tag. This reads the article,
+and lets the corpus decide which words matter: a word appearing in every
+article weighs almost nothing, which is the idea of N0 applied to vocabulary
+instead of labels. Nobody has to maintain anything.
+
+Still computed offline, once per corpus change, and it returns the same
+neighbour table as N0. The page-rendering code does not change when you move
+from one rung to the next, which is what makes the move cheap.
+"""
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+
+
+def article_text(article: dict) -> str:
+    """
+    The title counts twice.
+
+    A word in a title is a stronger claim about the subject than the same word
+    buried in the fourth paragraph, and repeating the title is the cheapest
+    way to say so to a bag-of-words model.
+    """
+    return f"{article['title']} {article['title']} {article['body']}"
+
+
+def build_neighbour_table(articles: list[dict], k: int = 5, minimum: float = 0.05) -> dict:
+    """
+    Return `{article id: [(neighbour id, score), ...]}`, best neighbour first.
+
+    `minimum` is a floor, not a tuning knob to be tweaked until the block
+    looks full: below it, two articles share ordinary words and nothing else,
+    and showing no block beats showing a wrong one.
+    """
+    if len(articles) < 2:
+        return {article["id"]: [] for article in articles}
+
+    # Rows come out l2-normalised, so their dot product is already a cosine.
+    matrix = TfidfVectorizer().fit_transform(article_text(a) for a in articles)
+    scores = linear_kernel(matrix)
+
+    table = {}
+    for index, article in enumerate(articles):
+        neighbours = [
+            (other["id"], round(float(scores[index][position]), 3))
+            for position, other in enumerate(articles)
+            if position != index
+        ]
+        # Ties broken by identifier, so that two builds give the same page.
+        neighbours = sorted(
+            (n for n in neighbours if n[1] > minimum),
+            key=lambda neighbour: (-neighbour[1], neighbour[0]),
+        )
+        table[article["id"]] = neighbours[:k]
+    return table

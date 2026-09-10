@@ -1,0 +1,183 @@
+---
+/**
+ * Gabarit de page de famille (CDC 7.4).
+ *
+ * Bandeau avec l'illustration et la description, la question type en gros,
+ * les fiches de la famille avec le composant du catalogue, puis les intitulés
+ * de la feuille de route appartenant à cette famille, en grisé, avec un lien
+ * pour les proposer.
+ */
+import SiteLayout from './SiteLayout.astro';
+import EntryCard from '../components/EntryCard.astro';
+import FamilyIllustration from '../components/FamilyIllustration.astro';
+import { t, type Locale } from '../i18n';
+import { route } from '../i18n/routes';
+
+export interface Props {
+  lang: Locale;
+  family: any;
+  entries: any[];
+  familyTitles: Record<string, string>;
+  /** Intitulés de la feuille de route qui appartiennent à cette famille. */
+  planned: { id: string; title: { fr: string; en: string } }[];
+  issueUrl: string;
+}
+
+const { lang, family, entries, familyTitles, planned, issueUrl } = Astro.props;
+const strings = t(lang);
+---
+
+<SiteLayout
+  title={family.title[lang]}
+  description={family.description[lang]}
+  lang={lang}
+  register="editorial"
+>
+  <div class="band band-paper-2 family__band">
+    <div class="wrap family__band-inner">
+      <div class="family__intro">
+        <p class="family__eyebrow">{strings.nav.families}</p>
+        <h1 class="display-l">{family.title[lang]}</h1>
+        <p class="family__description">{family.description[lang]}</p>
+      </div>
+      <div class="family__illustration">
+        <FamilyIllustration id={family.illustration} lang={lang} title={family.title[lang]} />
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap family__body">
+    <p class="family__question display-l">{family.question[lang]}</p>
+
+    <section class="family__entries" aria-labelledby="family-entries">
+      <h2 id="family-entries" class="family__section-title">
+        {entries.length} {entries.length === 1 ? strings.catalogue.resultsOne : strings.catalogue.results}
+      </h2>
+      <ul class="family__list">
+        {
+          entries.map((e) => (
+            <EntryCard
+              href={route(lang, 'entries', e.id)}
+              title={e.title[lang]}
+              familyLabel={familyTitles[e.family] ?? e.family}
+              family={e.family}
+              verdict={e.verdict}
+              available={e.rungs.filter((r: any) => r.available).map((r: any) => r.level)}
+              egress={e.rungs.find((r: any) => r.level === e.verdict)?.risks.data_egress ?? 'none'}
+              deterministic={
+                e.rungs.find((r: any) => r.level === e.verdict)?.risks.deterministic ?? true
+              }
+              strings={strings}
+              draft={e.status === 'draft'}
+            />
+          ))
+        }
+      </ul>
+    </section>
+
+    {
+      planned.length > 0 && (
+        <section class="family__planned" aria-labelledby="family-planned">
+          <h2 id="family-planned" class="family__section-title">{strings.nav.roadmap}</h2>
+          <p class="family__planned-help">{strings.catalogue.emptyHelp}</p>
+          <ul class="family__planned-list">
+            {planned.map((p) => (
+              <li>
+                <span>{p.title[lang]}</span>
+                <a href={`${issueUrl}&title=${encodeURIComponent(p.title.en)}`} rel="noopener">
+                  {strings.catalogue.emptyAction}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+  </div>
+</SiteLayout>
+
+<style>
+  .family__band {
+    padding-block: var(--space-12);
+  }
+
+  .family__band-inner {
+    display: grid;
+    gap: var(--space-8);
+    align-items: center;
+  }
+
+  @media (min-width: 900px) {
+    .family__band-inner {
+      grid-template-columns: 1fr 260px;
+    }
+  }
+
+  .family__eyebrow {
+    font-size: var(--size-small);
+    color: var(--muted);
+    margin: 0 0 var(--space-2);
+  }
+
+  .family__description {
+    margin-block-start: var(--space-4);
+    font-size: var(--size-h3);
+  }
+
+  .family__illustration {
+    justify-self: center;
+    width: min(100%, 260px);
+  }
+
+  .family__body {
+    padding-block: var(--space-12) var(--space-16);
+  }
+
+  .family__question {
+    margin: 0 0 var(--space-16);
+    max-width: 22ch;
+  }
+
+  .family__section-title {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 var(--space-2);
+  }
+
+  .family__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-block-end: 1px solid var(--rule);
+  }
+
+  .family__planned {
+    margin-block-start: var(--space-16);
+  }
+
+  .family__planned-help {
+    color: var(--muted);
+    margin-block: 0 var(--space-4);
+  }
+
+  .family__planned-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: var(--size-small);
+  }
+
+  .family__planned-list li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    justify-content: space-between;
+    align-items: baseline;
+    padding-block: var(--space-2);
+    border-block-start: 1px solid var(--rule);
+    color: var(--muted);
+    max-width: none;
+  }
+</style>

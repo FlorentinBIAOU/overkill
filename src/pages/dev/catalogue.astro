@@ -1,0 +1,16 @@
+---
+import CatalogLayout from '../../layouts/CatalogLayout.astro';
+import { DEMO_ENTRIES, DEMO_FAMILY_TITLES, ISSUE_URL } from '../../../tests/fixtures/pages/entries';
+import { t } from '../../i18n';
+
+const strings = t('fr');
+---
+
+<CatalogLayout
+  lang="fr"
+  title={strings.catalogue.title}
+  lead="Toutes les fiches, cherchables et filtrables."
+  entries={DEMO_ENTRIES}
+  familyTitles={DEMO_FAMILY_TITLES}
+  issueUrl={ISSUE_URL}
+/>

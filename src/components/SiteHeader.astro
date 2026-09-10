@@ -1,0 +1,171 @@
+---
+/**
+ * En-tête commun. Logo, navigation principale, sélecteur de langue, bascule de
+ * thème.
+ *
+ * Le sélecteur de langue est un lien vers la même page dans l'autre langue,
+ * pas un menu : il fonctionne sans JavaScript et conserve la page courante
+ * (CDC 9.3).
+ */
+import { otherLocale, LOCALE_NAMES, type Locale, type Strings } from '../i18n';
+import { route, switchLocale } from '../i18n/routes';
+
+export interface Props {
+  lang: Locale;
+  strings: Strings;
+  /** Chemin courant, pour le lien vers l'autre langue et l'état actif. */
+  path: string;
+}
+
+const { lang, strings, path } = Astro.props;
+const autre = otherLocale(lang);
+
+const liens = [
+  ['catalogue', strings.nav.catalogue],
+  ['methodology', strings.nav.methodology],
+  ['roadmap', strings.nav.roadmap],
+  ['contribute', strings.nav.contribute],
+  ['about', strings.nav.about],
+] as const;
+---
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="site-header__brand" href={route(lang, 'home')}>
+      <span class="site-header__mark" aria-hidden="true">◧</span>
+      <span class="site-header__name">{strings.site.name}</span>
+    </a>
+
+    <nav class="site-header__nav" aria-label={strings.nav.main}>
+      <ul>
+        {
+          liens.map(([cle, libelle]) => {
+            const href = route(lang, cle);
+            const actif = path === href || path.startsWith(`${href}/`);
+            return (
+              <li>
+                <a href={href} aria-current={actif ? 'page' : undefined}>
+                  {libelle}
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </nav>
+
+    <div class="site-header__tools">
+      <a
+        class="site-header__lang"
+        href={switchLocale(path, autre)}
+        hreflang={autre}
+        lang={autre}
+        rel="alternate"
+        data-lang-choice={autre}
+      >
+        <span class="visually-hidden">{strings.nav.language} : </span>
+        {LOCALE_NAMES[autre]}
+      </a>
+
+      <button type="button" class="site-header__theme" data-theme-toggle>
+        <span class="visually-hidden">{strings.nav.theme}</span>
+        <span aria-hidden="true">◐</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    border-block-end: 1px solid var(--rule);
+    background: var(--paper);
+  }
+
+  .site-header__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4) var(--space-6);
+    padding-block: var(--space-3);
+  }
+
+  .site-header__brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    letter-spacing: -0.02em;
+  }
+
+  .site-header__mark {
+    color: var(--brand-deep);
+  }
+
+  .site-header__nav {
+    flex: 1 1 auto;
+  }
+
+  .site-header__nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: var(--size-small);
+  }
+
+  .site-header__nav li {
+    max-width: none;
+  }
+
+  .site-header__nav a {
+    text-decoration: none;
+    color: var(--muted);
+  }
+
+  .site-header__nav a:hover,
+  .site-header__nav a[aria-current='page'] {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 0.35em;
+    text-decoration-thickness: 2px;
+  }
+
+  .site-header__tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-inline-start: auto;
+  }
+
+  .site-header__lang {
+    font-size: var(--size-small);
+    text-decoration: none;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    padding: var(--space-1) var(--space-3);
+  }
+
+  .site-header__lang:hover {
+    border-color: var(--ink);
+  }
+
+  .site-header__theme {
+    font: inherit;
+    line-height: 1;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .site-header__theme:hover {
+    border-color: var(--ink);
+  }
+</style>

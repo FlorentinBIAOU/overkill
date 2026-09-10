@@ -1,0 +1,18 @@
+---
+import EntryLayout from '../../layouts/EntryLayout.astro';
+import { DEMO_ENTRIES, DEMO_FAMILY_TITLES } from '../../../tests/fixtures/pages/entries';
+import { route } from '../../i18n/routes';
+
+const entry = DEMO_ENTRIES[0];
+const neighbours = DEMO_ENTRIES.slice(1).map((e) => ({
+  href: route('fr', 'entries', e.id),
+  title: e.title.fr,
+}));
+---
+
+<EntryLayout
+  entry={entry}
+  lang="fr"
+  familyTitle={DEMO_FAMILY_TITLES[entry.family]}
+  neighbours={neighbours}
+/>

@@ -1,0 +1,139 @@
+---
+/**
+ * Pied de page commun.
+ *
+ * Il porte le poids de la page courante, calculé à la construction du site
+ * (CDC 12). L'emplacement est marqué ici ; la valeur est injectée après le
+ * build par `scripts/compute-page-weight.mjs`, qui mesure le HTML compressé et
+ * les ressources réellement référencées.
+ *
+ * Ce n'est pas un gadget : c'est la seule affirmation du site que personne ne
+ * peut copier sans refaire son propre site. S'il ne peut pas être calculé de
+ * façon fiable, mieux vaut ne rien afficher qu'afficher un chiffre faux.
+ */
+import { type Locale, type Strings } from '../i18n';
+import { route } from '../i18n/routes';
+
+export interface Props {
+  lang: Locale;
+  strings: Strings;
+}
+
+const { lang, strings } = Astro.props;
+
+const colonnes = [
+  [strings.nav.catalogue, [
+    ['catalogue', strings.nav.catalogue],
+    ['families', strings.nav.families],
+    ['roadmap', strings.nav.roadmap],
+  ]],
+  [strings.nav.about, [
+    ['about', strings.nav.about],
+    ['methodology', strings.nav.methodology],
+    ['contribute', strings.nav.contribute],
+    ['help', strings.nav.help],
+  ]],
+  [strings.nav.legal, [
+    ['legal', strings.nav.legal],
+    ['privacy', strings.nav.privacy],
+    ['credits', strings.nav.credits],
+  ]],
+] as const;
+---
+
+<footer class="site-footer">
+  <div class="wrap site-footer__inner">
+    <nav class="site-footer__nav" aria-label={strings.nav.main}>
+      {
+        colonnes.map(([titre, liens]) => (
+          <div>
+            <h2 class="site-footer__title">{titre}</h2>
+            <ul>
+              {liens.map(([cle, libelle]) => (
+                <li>
+                  <a href={route(lang, cle)}>{libelle}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </nav>
+
+    <div class="site-footer__meta">
+      {/* Rempli après le build par scripts/compute-page-weight.mjs. Tant que
+          la valeur n'est pas injectée, la ligne entière reste masquée : mieux
+          vaut ne rien afficher qu'un chiffre faux. */}
+      <p class="site-footer__weight" data-page-weight-line hidden>
+        {strings.footer.weight} : <span data-page-weight></span>
+      </p>
+      <p class="site-footer__tracking">{strings.footer.noTracking}</p>
+      <p class="site-footer__licences">
+        {strings.footer.contentLicence} · {strings.footer.codeLicence}
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-block-start: var(--space-24);
+    border-block-start: 1px solid var(--rule-strong);
+    background: var(--paper-2);
+    padding-block: var(--space-12);
+  }
+
+  .site-footer__inner {
+    display: grid;
+    gap: var(--space-8);
+  }
+
+  @media (min-width: 900px) {
+    .site-footer__inner {
+      grid-template-columns: 2fr 1fr;
+      gap: var(--space-16);
+    }
+  }
+
+  .site-footer__nav {
+    display: grid;
+    gap: var(--space-6);
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .site-footer__title {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 var(--space-2);
+  }
+
+  .site-footer__nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: var(--size-small);
+  }
+
+  .site-footer__nav li {
+    max-width: none;
+    padding-block: var(--space-1);
+  }
+
+  .site-footer__meta {
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .site-footer__meta p {
+    margin: 0 0 var(--space-2);
+  }
+
+  .site-footer__weight {
+    font-family: var(--font-code);
+    color: var(--ink);
+  }
+
+
+</style>

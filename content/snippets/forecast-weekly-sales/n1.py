@@ -1,0 +1,59 @@
+"""
+Forecast weekly sales with a linear model on calendar features.
+
+Rung N1. The moving average of N0 has no notion of a trend: it can only
+repeat the recent past, which is exactly what it gets wrong when the business
+is growing or shrinking. Here the level, the slope and the seasonal shape are
+estimated together, by least squares, over the whole history.
+
+The features are calendar arithmetic and nothing else: a constant, the number
+of cycles elapsed, and a few sine and cosine pairs whose period is the season.
+Two pairs are enough to draw a Christmas peak and a summer dip; more pairs
+start drawing the noise as well.
+
+Counting the trend in cycles rather than in weeks is not cosmetic. It keeps
+the columns of the design matrix on comparable scales, and it makes the
+coefficient readable on its own: it is the growth per year.
+"""
+
+import math
+
+import numpy as np
+
+
+def calendar_features(week: int, season_length: int, harmonics: int) -> list[float]:
+    """The row of the design matrix for one week. This is the whole model."""
+    row = [1.0, week / season_length]
+    for k in range(1, harmonics + 1):
+        angle = 2 * math.pi * k * week / season_length
+        row += [math.sin(angle), math.cos(angle)]
+    return row
+
+
+def fit(history: list[float], season_length: int = 52, harmonics: int = 2) -> dict:
+    """
+    Least squares over the whole history. Returns a model you can inspect.
+
+    `coefficients[1]` is the growth per cycle, in the unit of the series. That
+    number is worth reading before any forecast is: a model that has found a
+    trend nobody in the company recognises is a model to distrust.
+    """
+    design = [calendar_features(week, season_length, harmonics) for week in range(len(history))]
+    if len(history) < len(design[0]):
+        raise ValueError("fewer weeks of history than features to estimate")
+    coefficients, *_ = np.linalg.lstsq(np.array(design), np.array(history, dtype=float), rcond=None)
+    return {
+        "coefficients": [float(c) for c in coefficients],
+        "season_length": season_length,
+        "harmonics": harmonics,
+        "start": len(history),
+    }
+
+
+def forecast(model: dict, horizon: int = 1) -> list[float]:
+    """Predict the `horizon` weeks that follow the history the model was fitted on."""
+    weeks = []
+    for step in range(horizon):
+        row = calendar_features(model["start"] + step, model["season_length"], model["harmonics"])
+        weeks.append(sum(c * x for c, x in zip(model["coefficients"], row)))
+    return weeks

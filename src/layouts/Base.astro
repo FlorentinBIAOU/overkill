@@ -28,6 +28,8 @@ const {
     {description && <meta name="description" content={description} />}
     {noindex && <meta name="robots" content="noindex" />}
 
+    <slot name="head" />
+
     <!-- Polices auto-hébergées. Aucune ressource tierce (CDC 12). -->
     <link
       rel="preload"

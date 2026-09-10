@@ -1,0 +1,57 @@
+---
+/**
+ * Enveloppe commune à toutes les pages du site : en-tête, contenu, pied de
+ * page, et les métadonnées de référencement bilingue.
+ *
+ * L'anglais est la version canonique (CDC 9.3) : `x-default` pointe vers lui,
+ * et chaque page déclare `hreflang` dans les deux sens plus une balise
+ * canonique vers elle-même.
+ */
+import Base from './Base.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { t, type Locale } from '../i18n';
+import { switchLocale } from '../i18n/routes';
+
+export interface Props {
+  title: string;
+  description?: string;
+  lang: Locale;
+  register?: 'editorial' | 'documentary';
+  noindex?: boolean;
+}
+
+const { title, description, lang, register = 'editorial', noindex = false } = Astro.props;
+const strings = t(lang);
+
+// Chemin courant, sans barre oblique finale, pour comparer et pour construire
+// les liens entre versions linguistiques.
+const path = Astro.url.pathname.replace(/\/$/, '') || `/${lang}`;
+const site = Astro.site ?? new URL('https://overkill.example');
+
+const alternates = [
+  { hreflang: 'en', href: new URL(switchLocale(path, 'en'), site).href },
+  { hreflang: 'fr', href: new URL(switchLocale(path, 'fr'), site).href },
+  { hreflang: 'x-default', href: new URL(switchLocale(path, 'en'), site).href },
+];
+const canonical = new URL(path, site).href;
+
+const pageTitle = title === strings.site.name ? title : `${title} — ${strings.site.name}`;
+---
+
+<Base title={pageTitle} description={description} lang={lang} register={register} noindex={noindex}>
+  <Fragment slot="head">
+    <link rel="canonical" href={canonical} />
+    {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
+  </Fragment>
+
+  <SiteHeader slot="header" lang={lang} strings={strings} path={path} />
+
+  <slot />
+
+  <SiteFooter slot="footer" lang={lang} strings={strings} />
+</Base>
+
+<script>
+  import '../scripts/preferences.js';
+</script>

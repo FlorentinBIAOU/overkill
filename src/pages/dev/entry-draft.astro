@@ -1,0 +1,8 @@
+---
+import EntryLayout from '../../layouts/EntryLayout.astro';
+import { DEMO_ENTRIES, DEMO_FAMILY_TITLES } from '../../../tests/fixtures/pages/entries';
+
+const entry = DEMO_ENTRIES[2];
+---
+
+<EntryLayout entry={entry} lang="fr" familyTitle={DEMO_FAMILY_TITLES[entry.family]} neighbours={[]} />

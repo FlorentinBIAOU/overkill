@@ -1,0 +1,266 @@
+---
+/**
+ * Gabarit du catalogue (CDC 7.3).
+ *
+ * La liste complète est rendue au build. La recherche et les filtres
+ * l'enrichissent, ils ne la produisent pas : sans JavaScript, la page reste
+ * une liste utilisable, et le formulaire de filtres fonctionne par
+ * rechargement.
+ */
+import SiteLayout from './SiteLayout.astro';
+import EntryCard from '../components/EntryCard.astro';
+import EmptyState from '../components/EmptyState.astro';
+import { t, type Locale } from '../i18n';
+import { route } from '../i18n/routes';
+import { FAMILIES, LEVELS, DATA_EGRESS } from '../content/schema/enums';
+
+export interface Props {
+  lang: Locale;
+  title: string;
+  lead?: string;
+  entries: any[];
+  familyTitles: Record<string, string>;
+  issueUrl: string;
+  /** État initial des filtres, lu dans les paramètres d'URL au build. */
+  activeFilters?: Record<string, string>;
+}
+
+const {
+  lang, title, lead, entries, familyTitles, issueUrl, activeFilters = {},
+} = Astro.props;
+const strings = t(lang);
+
+const filtres = [
+  {
+    nom: 'family',
+    libelle: strings.catalogue.filterFamily,
+    aucun: strings.catalogue.anyFamily,
+    options: FAMILIES.map((f) => [f, familyTitles[f] ?? f] as const),
+  },
+  {
+    nom: 'verdict',
+    libelle: strings.catalogue.filterVerdict,
+    aucun: strings.catalogue.anyVerdict,
+    options: LEVELS.map((l) => [l, `${l} — ${strings.rung.short[l]}`] as const),
+  },
+  {
+    nom: 'egress',
+    libelle: strings.catalogue.filterEgress,
+    aucun: strings.catalogue.anyEgress,
+    options: DATA_EGRESS.map((e) => [e, strings.riskValue.data_egress[e]] as const),
+  },
+  {
+    nom: 'deterministic',
+    libelle: strings.catalogue.filterDeterministic,
+    aucun: strings.catalogue.anyDeterministic,
+    options: [
+      ['true', strings.riskValue.deterministic.true],
+      ['false', strings.riskValue.deterministic.false],
+    ] as const,
+  },
+];
+---
+
+<SiteLayout title={title} description={lead} lang={lang} register="documentary">
+  <div class="wrap catalogue">
+    <header class="catalogue__head">
+      <h1 class="display-l">{title}</h1>
+      {lead && <p class="catalogue__lead">{lead}</p>}
+    </header>
+
+    {/* La recherche a besoin de JavaScript ; les filtres, non. Les deux vivent
+        dans un formulaire qui se soumet en GET, ce qui garde la page utilisable
+        et l'état partageable par l'URL (CDC 9.2). */}
+    <form class="catalogue__controls" method="get" data-catalogue-form>
+      <div class="catalogue__search">
+        <label for="q">{strings.catalogue.search}</label>
+        <input
+          type="search"
+          id="q"
+          name="q"
+          autocomplete="off"
+          placeholder={strings.catalogue.searchPlaceholder}
+          value={activeFilters.q ?? ''}
+          data-search-input
+        />
+        <p class="catalogue__nojs small">{strings.catalogue.noJs}</p>
+      </div>
+
+      <fieldset class="catalogue__filters">
+        <legend class="visually-hidden">{strings.catalogue.filters}</legend>
+        {
+          filtres.map((f) => (
+            <p class="catalogue__filter">
+              <label for={f.nom}>{f.libelle}</label>
+              <select id={f.nom} name={f.nom} data-filter={f.nom}>
+                <option value="">{f.aucun}</option>
+                {f.options.map(([valeur, libelle]) => (
+                  <option value={valeur} selected={activeFilters[f.nom] === valeur}>
+                    {libelle}
+                  </option>
+                ))}
+              </select>
+            </p>
+          ))
+        }
+        <p class="catalogue__submit">
+          <button type="submit">{strings.catalogue.apply}</button>
+          <a href={route(lang, 'catalogue')}>{strings.catalogue.reset}</a>
+        </p>
+      </fieldset>
+    </form>
+
+    <p class="catalogue__count" data-result-count aria-live="polite">
+      <span data-count>{entries.length}</span>
+      {entries.length === 1 ? strings.catalogue.resultsOne : strings.catalogue.results}
+    </p>
+
+    <ul class="catalogue__list" data-entry-list>
+      {
+        entries.map((e) => (
+          <EntryCard
+            href={route(lang, 'entries', e.id)}
+            title={e.title[lang]}
+            familyLabel={familyTitles[e.family] ?? e.family}
+            family={e.family}
+            verdict={e.verdict}
+            available={e.rungs.filter((r: any) => r.available).map((r: any) => r.level)}
+            egress={e.rungs.find((r: any) => r.level === e.verdict)?.risks.data_egress ?? 'none'}
+            deterministic={
+              e.rungs.find((r: any) => r.level === e.verdict)?.risks.deterministic ?? true
+            }
+            strings={strings}
+            draft={e.status === 'draft'}
+          />
+        ))
+      }
+    </ul>
+
+    <EmptyState strings={strings} issueUrl={issueUrl} />
+  </div>
+</SiteLayout>
+
+<style>
+  .catalogue {
+    padding-block: var(--space-12) var(--space-16);
+  }
+
+  .catalogue__head {
+    margin-block-end: var(--space-8);
+  }
+
+  .catalogue__lead {
+    margin-block-start: var(--space-3);
+    color: var(--muted);
+  }
+
+  .catalogue__controls {
+    display: grid;
+    gap: var(--space-6);
+    padding-block-end: var(--space-6);
+    border-block-end: 1px solid var(--rule-strong);
+  }
+
+  .catalogue__search label {
+    display: block;
+    font-size: var(--size-small);
+    color: var(--muted);
+    margin-block-end: var(--space-2);
+  }
+
+  .catalogue__search input {
+    font: inherit;
+    font-size: var(--size-h3);
+    width: 100%;
+    max-width: 32rem;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-block);
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  /* Le message n'apparaît que quand le JavaScript n'a pas pris la main. */
+  .catalogue__nojs {
+    color: var(--muted);
+    margin-block: var(--space-2) 0;
+  }
+
+  [data-catalogue-form][data-enhanced='true'] .catalogue__nojs {
+    display: none;
+  }
+
+  .catalogue__filters {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    align-items: flex-end;
+  }
+
+  .catalogue__filter {
+    margin: 0;
+    max-width: none;
+  }
+
+  .catalogue__filter label {
+    display: block;
+    font-size: var(--size-small);
+    color: var(--muted);
+    margin-block-end: var(--space-1);
+  }
+
+  .catalogue__filter select {
+    font: inherit;
+    font-size: var(--size-small);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-block);
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .catalogue__submit {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    font-size: var(--size-small);
+  }
+
+  .catalogue__submit button {
+    font: inherit;
+    font-size: var(--size-small);
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--ink);
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+  }
+
+  /* Le bouton ne sert qu'en dégradé : avec JavaScript, le filtrage est
+     instantané et le rechargement serait une régression. */
+  [data-catalogue-form][data-enhanced='true'] .catalogue__submit button {
+    display: none;
+  }
+
+  .catalogue__count {
+    margin-block: var(--space-6) 0;
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .catalogue__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-block-end: 1px solid var(--rule);
+  }
+
+  .catalogue__list:has(> li:not([hidden])) + [data-empty-state] {
+    display: none;
+  }
+</style>

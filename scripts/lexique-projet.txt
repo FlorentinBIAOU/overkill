@@ -5,6 +5,7 @@ ancrable
 ancrables
 api
 apis
+array
 ascii
 assert
 assets
@@ -17,6 +18,7 @@ bert
 biaou
 bin
 bm
+boolean
 boosting
 brand
 breaking
@@ -165,12 +167,15 @@ node
 # --- Nom du projet et personnes
 none
 npm
+null
+number
 numpy
 obfuscation
 obfusqué
 obfusquée
 obfusquées
 obfusqués
+object
 ocr
 opus
 order
@@ -242,6 +247,7 @@ src
 statistical
 status
 stemming
+string
 strip
 stub
 stubbed
@@ -269,6 +275,7 @@ trigrammes
 true
 # --- Typographie et design
 unavailable
+undefined
 # Une entrée par ligne, insensible à la casse. Le # ouvre un commentaire.
 unit
 updated
@@ -287,6 +294,7 @@ vite
 # --- Vocabulaire contractuel du CDC (sections 3, 4, 5)
 # --- Vocabulaire technique français admis
 webp
+weight
 when
 width
 winkler

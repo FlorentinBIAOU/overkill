@@ -1,0 +1,92 @@
+---
+/**
+ * Registre éditorial (CDC 8.1) : aplats pleine largeur, titres démesurés,
+ * respiration généreuse, colonne de lecture à 680 px.
+ *
+ * Employé par l'accueil, les pages de famille, la méthodologie, à propos et
+ * contribuer. Il partage tokens, polices, rayons et espacements avec le
+ * registre documentaire : la différence tient à la densité, pas au système.
+ */
+import SiteLayout from './SiteLayout.astro';
+import Callout from '../components/Callout.astro';
+import { t, type Locale } from '../i18n';
+
+export interface Props {
+  title: string;
+  description?: string;
+  lang: Locale;
+  /** Sous-titre affiché sous le grand titre, dans l'aplat. */
+  lead?: string;
+  /** Aplat de l'en-tête. */
+  band?: 'brand' | 'ink' | 'paper-2' | 'none';
+  /** Un texte encore en attente de relecture le déclare, visiblement. */
+  draft?: boolean;
+  draftReason?: string;
+}
+
+const {
+  title, description, lang, lead, band = 'brand', draft = false, draftReason,
+} = Astro.props;
+const strings = t(lang);
+---
+
+<SiteLayout title={title} description={description} lang={lang} register="editorial">
+  {
+    band === 'none' ? (
+      <div class="wrap-reading editorial__plain-head">
+        <h1 class="display-l">{title}</h1>
+        {lead && <p class="editorial__lead">{lead}</p>}
+      </div>
+    ) : (
+      <div class={`band band-${band} editorial__band`}>
+        <div class="wrap">
+          <h1 class="display-xl editorial__title">{title}</h1>
+          {lead && <p class="editorial__lead editorial__lead--band">{lead}</p>}
+        </div>
+      </div>
+    )
+  }
+
+  {
+    draft && (
+      <div class="wrap-reading editorial__draft">
+        <Callout tone="marked" title={strings.entry.draft}>
+          <p>{draftReason ?? strings.entry.draftNote}</p>
+        </Callout>
+      </div>
+    )
+  }
+
+  <slot />
+</SiteLayout>
+
+<style>
+  .editorial__band {
+    padding-block: var(--space-16) var(--space-12);
+    margin-block-end: var(--space-12);
+  }
+
+  .editorial__plain-head {
+    padding-block: var(--space-16) var(--space-8);
+  }
+
+  /* Le display est un élément actif de la composition : il occupe toute la
+     largeur de l'aplat et peut déborder de la colonne de lecture (CDC 8.4). */
+  .editorial__title {
+    max-width: 16ch;
+  }
+
+  .editorial__lead {
+    margin-block-start: var(--space-6);
+    font-size: var(--size-h3);
+    max-width: 48ch;
+  }
+
+  .editorial__lead--band {
+    max-width: 40ch;
+  }
+
+  .editorial__draft {
+    margin-block-end: var(--space-8);
+  }
+</style>

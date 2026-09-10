@@ -1,0 +1,64 @@
+---
+/**
+ * Affiche une illustration de famille.
+ *
+ * Les SVG vivent dans `src/assets/illustrations/`. Ils portent un `<title>`
+ * neutre ; le texte alternatif localisé est fourni ici, par la page, à partir
+ * des chaînes d'interface. Un SVG ne peut pas porter deux `<title>`, et
+ * dupliquer le fichier par langue coûterait le double du budget d'image pour
+ * un mot de différence.
+ *
+ * Tant qu'une illustration n'existe pas, un cadre neutre tient sa place et le
+ * dit. On ne met pas de fausse image.
+ */
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+export interface Props {
+  id: string;
+  lang: 'en' | 'fr';
+  /** Texte alternatif : le nom de la famille suffit. */
+  title: string;
+}
+
+const { id, title } = Astro.props;
+
+const chemin = resolve(process.cwd(), 'src/assets/illustrations', `${id}.svg`);
+const svg = existsSync(chemin) ? readFileSync(chemin, 'utf8') : null;
+
+/** On remplace le titre neutre du fichier par le titre localisé. */
+const rendu = svg
+  ? svg.replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`)
+  : null;
+---
+
+{
+  rendu ? (
+    <div class="family-illustration" set:html={rendu} />
+  ) : (
+    <div class="family-illustration family-illustration--missing" role="img" aria-label={title}>
+      <span aria-hidden="true">{id}</span>
+    </div>
+  )
+}
+
+<style>
+  .family-illustration :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .family-illustration--missing {
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border: 2px dashed var(--rule-strong);
+    border-radius: var(--radius-block);
+    color: var(--muted);
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    text-align: center;
+    padding: var(--space-4);
+  }
+</style>

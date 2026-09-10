@@ -26,7 +26,9 @@
     "manifest": "node scripts/build-snippet-manifest.mjs",
     "test:components": "node --test tests/components.spec.mjs",
     "test:harness": "node --test tests/harness.test.mjs",
-    "check:overflow": "node scripts/check-overflow.mjs /dev/components /dev/tokens"
+    "check:overflow": "node scripts/check-overflow.mjs /dev/entry /dev/entry-draft /dev/catalogue /dev/famille /dev/editorial /dev/components /dev/tokens",
+    "test:pages": "node --test tests/pages.spec.mjs",
+    "test:routes": "node --import tsx --test tests/routes.test.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.3.14",
