@@ -1,0 +1,165 @@
+---
+id: search-in-your-own-documents
+family: search
+status: published
+verdict: N0
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Chercher dans vos propres documents"
+  en: "Search in your own documents"
+
+need:
+  fr: "Retrouver la bonne page d'un fonds interne — manuel, base de connaissances, documentation — à partir de ce qu'un lecteur tape dans une barre de recherche."
+  en: "Find the right page in an internal corpus — a handbook, a knowledge base, documentation — from what a reader types into a search box."
+
+scenario:
+  fr: "On voit monter une base vectorielle et une chaîne d'embeddings pour un fonds de quelques centaines de pages, avant même d'avoir allumé l'index plein texte de la base de données qui porte déjà ces pages. SQLite a FTS5, PostgreSQL a tsvector, MySQL a FULLTEXT : l'index inversé et le classement BM25 sont là, mis à jour dans la même transaction que le document et sauvegardés avec lui. La question n'est pas de savoir si la recherche par le sens existe, c'est de savoir combien de vos requêtes en ont besoin — et vos journaux de recherche le disent."
+  en: "A vector database and an embedding pipeline get stood up for a corpus of a few hundred pages, before anyone has switched on the full-text index of the database already holding those pages. SQLite ships FTS5, PostgreSQL has tsvector, MySQL has FULLTEXT: the inverted index and the BM25 ranking are right there, updated in the same transaction as the document and backed up with it. The question is not whether search by meaning exists, it is how many of your queries need it — and your search logs answer that."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Index plein texte de la base de données, classé par BM25"
+      en: "The database's own full-text index, ranked by BM25"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : l'index est une table de la base que vous exploitez déjà, et suit ses sauvegardes et ses suppressions"
+          - "Ne vous dispense pas d'appliquer aux résultats les droits d'accès des documents : un index de recherche les ignore par défaut"
+        en:
+          - "No specific scope added: the index is a table in the database you already run, and follows its backups and its deletions"
+          - "Does not stand in for applying each document's access rights to the results: a search index ignores them by default"
+    code:
+      python: snippets/search-in-your-own-documents/n0.py
+      javascript: snippets/search-in-your-own-documents/n0.js
+      verification: executed
+    breaking_point:
+      fr: "La recherche par le sens : le lecteur demande la chose, le document la nomme autrement, et l'index n'a rien à faire correspondre. Dans le test, « combien de vacances puis-je poser » ne renvoie rien alors que la page s'intitule « Congés payés », et le ET implicite de FTS5 aggrave le silence — « congés responsable » ne renvoie rien non plus, parce qu'aucune page ne porte les deux mots."
+      en: "Search by meaning: the reader asks for the thing, the document names it otherwise, and the index has nothing to match. In the test, asking for “vacances” returns nothing although the page is titled “Congés payés”, and the implicit AND of FTS5 deepens the silence — “congés responsable” returns nothing either, because no single page carries both words."
+    escalate_when:
+      fr: "Vos journaux de recherche montrent des requêtes sans aucun résultat alors que le document existe : vos lecteurs ne l'appellent pas comme il s'appelle."
+      en: "Your search logs show queries returning nothing at all for documents you know exist: your readers do not call them what they are called."
+
+  - level: N1
+    available: true
+    name:
+      fr: "Index inversé et BM25 écrits à la main"
+      en: "Inverted index and BM25 written by hand"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: low
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le fonds ne quitte pas votre infrastructure"
+          - "L'index vit hors de la base et ne suit plus ses suppressions : un document retiré y reste jusqu'à la reconstruction suivante"
+        en:
+          - "No specific scope added: the corpus never leaves your infrastructure"
+          - "The index lives outside the database and no longer follows its deletions: a removed document stays in it until the next rebuild"
+    code:
+      python: snippets/search-in-your-own-documents/n1.py
+      javascript: snippets/search-in-your-own-documents/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Écrire l'index soi-même ne comble pas le trou que N0 a montré, il vous le remet. « vacances » ne trouve toujours rien, et désormais « congé » au singulier ne trouve rien non plus, là où le manuel écrit « congés » : rien dans ces quarante lignes ne connaît la morphologie du français. Désuffixation, élision, synonymes, mots vides — chacun devient une règle que vous écrivez, testez et maintenez, pour la langue de chaque document que vous détenez."
+      en: "Writing the index yourself does not close the gap N0 showed; it hands it to you. “vacances” still finds nothing, and now the singular “congé” finds nothing either where the handbook writes the plural, because nothing in these forty lines knows French morphology. Stemming, elision, synonyms, stop words — each becomes a rule you write, test and maintain, for the language of every document you hold."
+    escalate_when:
+      fr: "Vous vous mettez à écrire des règles de désuffixation et des listes de synonymes, langue par langue, pour rattraper des requêtes qui ne trouvent rien."
+      en: "You find yourself writing stemming rules and synonym lists, language by language, to catch queries that come back empty."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Encodeur auto-hébergé, fusionné avec le plein texte"
+      en: "Self-hosted encoder, fused with the full-text ranking"
+    cost: faible
+    latency: "~100 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: high
+      regulatory:
+        fr:
+          - "Traitement sur votre infrastructure : le fonds ne part pas chez un tiers"
+          - "Les poids du modèle viennent d'un tiers, avec la licence et la provenance que cela suppose de vérifier"
+          - "Les vecteurs sont dérivés du contenu des documents et en portent la sensibilité : ils entrent dans le même périmètre que le fonds"
+        en:
+          - "Processing on your own infrastructure: the corpus goes to no third party"
+          - "The model weights come from a third party, with the licence and provenance that implies checking"
+          - "The vectors are derived from the documents and carry their sensitivity: they fall in the same scope as the corpus"
+    code:
+      python: snippets/search-in-your-own-documents/n2.py
+      javascript: snippets/search-in-your-own-documents/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le cosinus est défini pour toute paire de textes : la jambe vectorielle a toujours une réponse, et « aucun résultat » n'existe plus. Dans le test, le manuel ne dit rien de la couleur des murs du bureau ; le plein texte répond honnêtement rien, la jambe vectorielle classe quand même les quatre pages, et la fusion présente en tête celle des notes de frais. Ce qui est en aval — une réponse N3, un « vouliez-vous dire » — la prendra pour le meilleur document existant, sauf si vous posez un seuil et le tenez."
+      en: "Cosine similarity is defined for every pair of texts, so the vector leg always has an answer and “no match” stops existing. In the test the handbook says nothing about the colour of the office walls: the full-text leg honestly returns nothing, the vector leg ranks all four pages anyway, and the fusion puts the expenses page first. Whatever sits downstream — an N3 answer, a “did you mean” — will treat it as the best document there is, unless you set a floor and enforce it."
+    escalate_when:
+      fr: "Vos lecteurs veulent une phrase de réponse, pas une liste de documents à ouvrir."
+      en: "Your readers want a sentence for an answer, not a list of documents to open."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Génération augmentée par récupération, réponse citée"
+      en: "Retrieval-augmented generation, with cited answers"
+    cost: élevé
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: high
+      regulatory:
+        fr:
+          - "Transfert à un sous-traitant de la question posée et du contenu des passages retrouvés, avec l'encadrement contractuel que cela suppose"
+          - "Localisation du traitement et durée de conservation des requêtes à vérifier auprès du fournisseur"
+          - "Ne vous dispense pas de vos propres obligations sur ce que la réponse affirme à vos lecteurs"
+        en:
+          - "Transfer to a processor of the question asked and the content of the retrieved passages, with the contractual framing that implies"
+          - "Processing location and request retention to be confirmed with the provider"
+          - "Does not excuse you from your own duties regarding what the answer tells your readers"
+    code:
+      python: snippets/search-in-your-own-documents/n3.py
+      javascript: snippets/search-in-your-own-documents/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le contrôle d'ancrage lit les citations, pas la réponse. Dans le test, le modèle cite le passage qu'on lui a bel et bien donné, et écrit une phrase que ce passage contredit : le manuel dit deux jours et demi par mois, la réponse annonce trente jours ouvrés dès l'embauche. Tous les contrôles de l'extrait passent, et la source affichée à côté est précisément ce qui rend la phrase crédible ; il faut ouvrir le passage pour le savoir, ce que la recherche devait justement éviter."
+      en: "The grounding check reads the citations, not the answer. In the test the model cites the passage it was actually given and writes a sentence that passage flatly contradicts: the handbook says two and a half days a month, the answer announces thirty working days on arrival. Every check in the snippet passes, and the source shown beside the sentence is exactly what makes it convincing; you have to open the passage to find out, which is the work retrieval was supposed to save."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus."
+      en: "There is no rung above this one."
+
+verdict_rationale:
+  fr: "N0 gagne parce que l'index est déjà là : il se met à jour dans la même transaction que le document, se sauvegarde avec lui, et ne coûte aucun service à exploiter. Il a surtout la propriété qu'on attend d'une barre de recherche et que N2 abandonne : quand il n'a rien, il le dit. N1 n'est ni plus lent ni plus cher, c'est le même algorithme avec les molettes sorties — prenez-le le jour où vous devez changer le tokenizer ou la règle d'appariement, pas pour obtenir un meilleur défaut."
+  en: "N0 wins because the index is already there: it updates in the same transaction as the document, is backed up with it, and costs no service to operate. More to the point, it has the property a search box needs and N2 gives up: when it has nothing, it says so. N1 is neither slower nor dearer, it is the same algorithm with the dials exposed — reach for it the day you have to change the tokenizer or the matching rule, not to get a better default."
+
+further_reading:
+  - label: "SQLite — FTS5, table virtuelle plein texte et fonction bm25()"
+    url: "https://www.sqlite.org/fts5.html"
+  - label: "PostgreSQL — Full Text Search, tsvector et ts_rank"
+    url: "https://www.postgresql.org/docs/current/textsearch.html"
+  - label: "Robertson et Zaragoza — The Probabilistic Relevance Framework: BM25 and Beyond"
+    url: "https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf"
+  - label: "Cormack, Clarke et Buettcher — Reciprocal Rank Fusion, la fusion employée en N2"
+    url: "https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf"
+
+sources: []
+---
