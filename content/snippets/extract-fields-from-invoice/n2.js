@@ -18,7 +18,6 @@
 // checkpoint was fine-tuned on invoices, yours or someone else's.
 export const MODEL_NAME = 'Xenova/layoutlmv3-base';
 
-const FIELDS = ['invoice_number', 'date', 'total'];
 export const DEFAULT_THRESHOLD = 0.75;
 
 // One pass reads one page. Beyond that the model would truncate in silence.
@@ -80,7 +79,7 @@ export async function extractFields(text, model, { threshold = DEFAULT_THRESHOLD
   if (tagged.length !== lines.length) {
     throw new ExtractionUnavailable('the model owed one row per line, and did not');
   }
-  return Object.fromEntries(FIELDS.map((field) => [field, read(field, lines, tagged, threshold)]));
+  return Object.fromEntries(Object.keys(READERS).map((f) => [f, read(f, lines, tagged, threshold)]));
 }
 
 /** The whole page in one pass, and a failed pass is retried, not swallowed. */

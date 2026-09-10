@@ -20,7 +20,6 @@ import re
 # checkpoint was fine-tuned on invoices, yours or someone else's.
 MODEL_NAME = "microsoft/layoutlmv3-base"
 
-FIELDS = ("invoice_number", "date", "total")
 DEFAULT_THRESHOLD = 0.75
 
 # One pass reads one page. Beyond that the model would truncate in silence.
@@ -79,7 +78,7 @@ def extract_fields(text: str, model=None, *, threshold: float = DEFAULT_THRESHOL
     tagged = _tag(model, lines, attempts) if lines else []
     if len(tagged) != len(lines):
         raise ExtractionUnavailable("the model owed one row per line, and did not")
-    return {field: _read(field, lines, tagged, threshold) for field in FIELDS}
+    return {field: _read(field, lines, tagged, threshold) for field in READERS}
 
 
 def _tag(model, lines: list[str], attempts: int) -> list[dict]:

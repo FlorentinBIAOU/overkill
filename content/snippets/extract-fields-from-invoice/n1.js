@@ -86,24 +86,20 @@ function score(model, row) {
   return 1 / (1 + Math.exp(-z));
 }
 
-function reference(line) {
-  return line.match(REFERENCE)?.[0] ?? null;
-}
-
-function date(line) {
-  return line.match(DATE)?.[0] ?? null;
-}
+/** Reads the first value of that shape out of a line, or nothing. */
+const matching = (pattern) => (line) => line.match(pattern)?.[0] ?? null;
 
 /** The rightmost amount: an item line carries a quantity and a unit price. */
-function total(line) {
+function amount(line) {
   const amounts = line.match(AMOUNT);
   if (!amounts) return null;
   let cleaned = amounts.at(-1).replace(/[^\d,.]/g, '');
+  // A comma means French spelling: the dots left are thousands separators.
   if (cleaned.includes(',')) cleaned = cleaned.replaceAll('.', '').replace(',', '.');
   return Number(cleaned);
 }
 
-const READERS = { invoice_number: reference, date, total };
+const READERS = { invoice_number: matching(REFERENCE), date: matching(DATE), total: amount };
 
 /**
  * For each field, walk the lines from the most likely down.
@@ -121,14 +117,7 @@ export function extractFields(model, text) {
     const ranked = rows
       .map((row, i) => [score(model.models[column], row), i])
       .sort((a, b) => b[0] - a[0]);
-    fields[name] = null;
-    for (const [, i] of ranked) {
-      const value = read(lines[i]);
-      if (value !== null) {
-        fields[name] = value;
-        break;
-      }
-    }
+    fields[name] = ranked.map(([, i]) => read(lines[i])).find((value) => value !== null) ?? null;
   }
   return fields;
 }

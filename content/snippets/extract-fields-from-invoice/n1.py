@@ -71,7 +71,10 @@ def _amount(line):
     amounts = re.findall(AMOUNT, line)
     if not amounts:
         return None
-    cleaned = re.sub(r"[^\d,.]", "", amounts[-1]).replace(".", "").replace(",", ".")
+    cleaned = re.sub(r"[^\d,.]", "", amounts[-1])
+    # A comma means French spelling: the dots left are thousands separators.
+    if "," in cleaned:
+        cleaned = cleaned.replace(".", "").replace(",", ".")
     return float(cleaned)
 
 
