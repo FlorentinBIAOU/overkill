@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Mettre ça en place chez vous
+    url: https://github.com/florentin-biaou/overkill/blob/main/content/pages/help.fr.mdx
+    about: Audit d'un cas d'usage, mise en place de l'alternative, formation d'équipe.

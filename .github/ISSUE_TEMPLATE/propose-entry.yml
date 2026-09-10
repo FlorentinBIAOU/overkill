@@ -1,0 +1,81 @@
+name: Proposer une fiche
+description: Vous avez vu employer un modèle généraliste là où plus simple aurait suffi.
+title: "Fiche : "
+labels: ["fiche proposée"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vous n'avez pas besoin d'être développeur pour rendre ce catalogue
+        meilleur. Quatre questions, rien d'autre.
+
+        Si vous voulez écrire la fiche vous-même, dites-le à la fin : c'est
+        possible et c'est bienvenu.
+
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Le besoin, en une phrase
+      description: >
+        Formulé comme vous le diriez, pas comme un ingénieur le classerait.
+        « Repérer les doublons dans une base clients », pas « déduplication par
+        similarité vectorielle ».
+      placeholder: Je veux…
+    validations:
+      required: true
+
+  - type: dropdown
+    id: famille
+    attributes:
+      label: La famille qui vous semble la bonne
+      description: >
+        Les familles rangent par verbe, jamais par secteur. Si vous hésitez
+        entre deux, prenez celle du verbe principal, on ajustera.
+      options:
+        - Détecter et filtrer
+        - Extraire
+        - Classer et router
+        - Chercher
+        - Recommander
+        - Prédire
+        - Générer
+        - Transformer
+        - Reconnaître et transcrire
+        - Décider et valider
+        - Je ne sais pas
+    validations:
+      required: true
+
+  - type: textarea
+    id: vu
+    attributes:
+      label: Ce que vous avez vu faire
+      description: >
+        L'approche employée, telle que vous l'avez observée. Ce qui vous a
+        surpris ou gêné. Pas besoin de nommer qui que ce soit.
+      placeholder: J'ai vu…
+    validations:
+      required: true
+
+  - type: textarea
+    id: suffirait
+    attributes:
+      label: Ce qui vous semble suffire
+      description: >
+        Même une intuition vague est utile. « Une expression régulière »,
+        « une requête SQL », « je ne sais pas mais ça paraît disproportionné ».
+      placeholder: Il me semble que…
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: suite
+    attributes:
+      label: La suite
+      options:
+        - label: Je veux écrire cette fiche moi-même
+          required: false
+        - label: >
+            J'ai lu que le site ne fait ni publicité ni partenariat, et que ma
+            proposition ne vise pas à faire connaître un produit.
+          required: true

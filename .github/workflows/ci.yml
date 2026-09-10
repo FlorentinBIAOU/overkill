@@ -1,0 +1,138 @@
+# Intégration continue (CDC 11.2).
+#
+# Les six contrôles, dans l'ordre imposé. Un échec bloque le déploiement.
+#
+#   1. check-content   validation du schéma de toutes les fiches
+#   2. test-snippets   exécution de tous les extraits Python et JavaScript
+#   3. build           construction du site
+#   4. check-links     aucun lien interne mort, externes en avertissement
+#   5. check-weight    budgets de poids de la section 12
+#   6. check-a11y      audit sur l'accueil, une famille et une fiche
+#
+# Chaque contrôle est une étape distincte, pour que l'échec soit lisible sans
+# lire le journal en entier.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.13'
+
+jobs:
+  verifier:
+    name: Contrôles
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: content/snippets/requirements-snippets.txt
+
+      - name: Installer les dépendances Node
+        run: npm ci
+
+      - name: Installer les dépendances Python des extraits
+        run: |
+          python -m venv .venv-tools
+          .venv-tools/bin/pip install --upgrade pip
+          .venv-tools/bin/pip install -r content/snippets/requirements-snippets.txt
+
+      - name: Installer le dictionnaire français
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq hunspell-fr-classical
+          .venv-tools/bin/pip install spylls
+
+      - name: Installer le navigateur des contrôles
+        run: npx playwright install --with-deps chromium
+
+      # --- Les six contrôles de la section 11.2, dans l'ordre ---------------
+
+      - name: 1 · check-content — schéma des fiches
+        run: npm run check:content
+
+      - name: 2 · test-snippets — exécution de tous les extraits
+        run: npm run test:snippets
+
+      - name: 3 · build — construction du site
+        run: npm run build
+
+      - name: 4 · check-links — liens internes
+        run: npm run check:links
+
+      - name: 5 · check-weight — budgets de poids
+        run: npm run check:weight
+
+      - name: 6 · check-a11y — accessibilité
+        run: npm run check:a11y
+
+      # --- Contrôles complémentaires, non exigés par le CDC -----------------
+      #
+      # Ils tournent après les six, pour que l'échec d'un contrôle contractuel
+      # reste identifiable au premier coup d'œil.
+
+      - name: Contrôles du système de design et du contenu
+        run: |
+          npm run check:fonts
+          npm run check:contrast
+          npm run check:colour
+          npm run check:illustrations
+          npm run check:figures
+          npm run check:french
+
+      - name: Suites de tests unitaires
+        run: |
+          npm run test:schema
+          npm run test:harness
+          npm run test:routes
+
+      # Les contrôles de composants et de gabarits visitent les pages de
+      # contrôle interne, que la construction de production retire. On
+      # reconstruit donc en les gardant, on teste, et on remet la sortie en
+      # état de production.
+      - name: Contrôles de rendu, composants et gabarits
+        run: |
+          npm run build:dev
+          npm run test:components
+          npm run test:pages
+          npm run check:overflow
+
+      # La section 6.2 du CDC demande de vérifier que la navigation, la
+      # recherche et les filtres tiennent à deux cents fiches. Le jeu de test
+      # est dérivé de la feuille de route et n'est jamais commité.
+      - name: Recherche et filtres, sur deux cents fiches
+        run: |
+          npm run fixtures
+          npm run build:fixtures
+          npm run test:search
+
+      - name: Remettre la sortie en état de production
+        run: npm run build
+
+      - name: Liens externes, en avertissement
+        continue-on-error: true
+        run: npm run check:links:external

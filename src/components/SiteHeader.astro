@@ -32,7 +32,7 @@ const liens = [
 <header class="site-header">
   <div class="wrap site-header__inner">
     <a class="site-header__brand" href={route(lang, 'home')}>
-      <span class="site-header__mark" aria-hidden="true">◧</span>
+      <span class="site-header__mark" aria-hidden="true"></span>
       <span class="site-header__name">{strings.site.name}</span>
     </a>
 
@@ -100,8 +100,14 @@ const liens = [
     letter-spacing: -0.02em;
   }
 
+  /* Le jaune sert en aplat, jamais en couleur de glyphe : son contraste sur
+     le blanc est insuffisant (CDC 8.3). Ce repère est donc un carré plein. */
   .site-header__mark {
-    color: var(--brand-deep);
+    display: inline-block;
+    width: 0.62em;
+    height: 0.62em;
+    background: var(--brand);
+    border: 1px solid var(--brand-deep);
   }
 
   .site-header__nav {

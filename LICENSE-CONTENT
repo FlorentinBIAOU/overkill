@@ -1,0 +1,65 @@
+# Licence du contenu
+
+Le **contenu éditorial** de ce dépôt est publié sous licence
+**Creative Commons Attribution 4.0 International (CC BY 4.0)**.
+
+Cela couvre :
+
+- les fiches, dans `content/entries/`
+- les descriptions de familles, dans `content/families/`
+- les pages éditoriales, dans `content/pages/`
+- la feuille de route, dans `content/roadmap.yaml`
+- les illustrations, dans `src/assets/illustrations/`
+- la documentation, dans `docs/`
+
+**Le code n'est pas couvert par cette licence.** Les extraits de code des
+fiches, dans `content/snippets/`, le code du site et les scripts de contrôle
+sont sous licence MIT, dont le texte figure dans `LICENSE`.
+
+Ce choix est délibéré : un catalogue d'alternatives dont on ne pourrait pas
+copier le code n'aurait pas beaucoup d'intérêt.
+
+---
+
+## Ce que la licence vous permet
+
+**Partager** : copier et redistribuer le contenu, sur tout support et sous tout
+format.
+
+**Adapter** : le remixer, le transformer et créer à partir de lui, y compris
+pour un usage commercial.
+
+Ces libertés ne peuvent pas être révoquées tant que vous respectez les termes
+de la licence.
+
+## À une condition
+
+**Attribution.** Vous devez créditer l'œuvre, fournir un lien vers la licence
+et indiquer si des modifications ont été faites. Vous pouvez le faire par tout
+moyen raisonnable, sans laisser entendre que l'auteur vous soutient ou soutient
+votre usage.
+
+Une attribution suffisante ressemble à ceci :
+
+> Adapté de « Overkill », par Florentin Biaou, sous licence CC BY 4.0.
+
+## Aucune restriction supplémentaire
+
+Vous ne pouvez pas appliquer de conditions légales ou de mesures techniques
+qui restreindraient légalement autrui à faire ce que la licence permet.
+
+---
+
+## Texte intégral
+
+https://creativecommons.org/licenses/by/4.0/legalcode.fr
+
+Résumé lisible : https://creativecommons.org/licenses/by/4.0/deed.fr
+
+---
+
+## Garantie
+
+Le contenu est fourni tel quel, sans garantie d'aucune sorte. Les fiches
+décrivent des approches techniques et leurs limites connues ; elles ne
+constituent ni une garantie de résultat, ni un conseil juridique.

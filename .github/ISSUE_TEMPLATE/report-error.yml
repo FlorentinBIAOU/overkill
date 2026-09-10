@@ -1,0 +1,40 @@
+name: Signaler une erreur
+description: Une fiche affirme quelque chose de faux.
+title: "Erreur : "
+labels: ["erreur de contenu"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **C'est le signalement le plus utile qu'on puisse faire à ce
+        catalogue.** Une fiche fausse est plus nuisible qu'une fiche absente,
+        et une correction de fond passe avant tout ajout de contenu.
+
+  - type: input
+    id: fiche
+    attributes:
+      label: La fiche
+      description: Son adresse, ou son titre.
+      placeholder: /fr/fiches/…
+    validations:
+      required: true
+
+  - type: textarea
+    id: conteste
+    attributes:
+      label: Le point contesté
+      description: >
+        Citez le passage, et dites ce qui est faux. Si c'est une question de
+        code, dites sur quelle entrée il se comporte autrement qu'annoncé.
+    validations:
+      required: true
+
+  - type: textarea
+    id: source
+    attributes:
+      label: Sur quoi vous vous appuyez
+      description: >
+        Une mesure que vous avez faite, une documentation, un article. Si vous
+        n'avez qu'une intuition, dites-le : c'est déjà un signalement utile.
+    validations:
+      required: false

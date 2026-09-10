@@ -18,6 +18,11 @@ const EXT = new Set(['.astro', '.css', '.ts', '.js', '.mjs']);
 /** Fichiers ou une valeur hexadécimale est légitime. */
 const HEX_ALLOWED = new Set([
   'tokens.css', // la source unique des tokens
+  // Ce composant substitue une couleur du thème de coloration syntaxique, qui
+  // n'appartient pas au système de design : il doit donc nommer la valeur
+  // sortante et la valeur entrante. La mesure qui justifie la substitution est
+  // écrite dans le fichier, au-dessus de la table.
+  'CodeBlock.astro',
 ]);
 
 /** Le badge « recommande » est le seul endroit ou --go est autorise. */
