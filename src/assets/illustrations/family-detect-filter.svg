@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Détecter et filtrer</title>
+  <!-- L'idée : trois choses arrivent, une seule passe. La barrière ne
+       rétrécit rien, elle décide. Le passage est une ouverture, pas un
+       entonnoir. -->
+  <circle cx="88" cy="88" r="32" fill="#C8BC9E" stroke="none"/>
+  <circle cx="200" cy="88" r="32" fill="#C8BC9E" stroke="none"/>
+  <circle cx="312" cy="88" r="32" fill="#C8BC9E" stroke="none"/>
+  <rect x="32" y="184" width="136" height="48" fill="#FFCE00" stroke="none"/>
+  <rect x="232" y="184" width="136" height="48" fill="#FFCE00" stroke="none"/>
+  <path d="M32 184h136M232 184h136"/>
+  <path d="M32 232h136M232 232h136"/>
+  <circle cx="200" cy="320" r="32" fill="currentColor" stroke="none"/>
+</svg>

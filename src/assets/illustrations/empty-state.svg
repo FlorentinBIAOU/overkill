@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Aucune fiche ne correspond</title>
+  <!-- L'idée : la place est là, elle est vide, et elle attend d'être remplie.
+       Ce n'est pas un échec, c'est une fiche qui reste à écrire. -->
+  <rect x="56" y="72" width="288" height="48" fill="#EDE7D7" stroke="none"/>
+  <rect x="56" y="152" width="288" height="48" fill="#EDE7D7" stroke="none"/>
+  <rect x="56" y="232" width="288" height="72" stroke-dasharray="24 20"/>
+  <rect x="152" y="256" width="96" height="24" fill="#FFCE00" stroke="none"/>
+</svg>

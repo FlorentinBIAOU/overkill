@@ -316,3 +316,71 @@ pied de page, l'enveloppe commune, le module de construction d'URL et son jeu de
 
 Lot 05 — Recherche et filtres, une fois la feuille de route disponible pour produire le jeu
 de 200 fiches de test.
+
+---
+
+## Lot 05 — Recherche et filtres
+
+**Terminé.** Douze contrôles au navigateur sur le jeu de 200 fiches de test, aucun échec.
+
+**Preuve**
+
+| Contrôle | Résultat |
+|---|---|
+| Catalogue rendu avec 200 fiches | 429 pages construites, 200 fiches, compteur juste |
+| Recherche dès deux caractères | oui, résultats immédiats |
+| Insensible aux accents et à la casse | « modérer », « MODERER » : mêmes fiches |
+| Tolérance à une faute légère | « doublonz » trouve encore « doublons » |
+| Cloisonnement par langue | un index par langue, vérifié terme à terme |
+| Quatre filtres combinés | vérifié ligne par ligne sur les attributs |
+| État reflété dans l'URL et restitué | oui, à l'ouverture d'une URL neuve |
+| Focus au chargement | oui |
+| Sans JavaScript | 200 fiches dans le HTML, formulaire soumissible |
+| Index chargé au premier caractère seulement | une seule requête, jamais rechargée |
+| JavaScript du catalogue | **1,4 Ko** pour un budget de 25 Ko |
+| Index de recherche, français | 15,4 Ko transférés, exclu du budget |
+
+**Écart au cahier des charges, mesuré**
+
+- **Pagefind est écarté au profit de l'équivalent qu'autorise la section 9.1.** La section
+  10.1 le nomme, mais son moteur pèse 97,0 Ko transférés :
+
+  | Fichier | Rôle | Transféré |
+  |---|---|---|
+  | `wasm.fr.pagefind` | moteur, WebAssembly | 72,3 Ko |
+  | `pagefind.js` | interface de programmation | 12,8 Ko |
+  | `pagefind-worker.js` | fil d'exécution | 11,9 Ko |
+
+  Le budget de la section 12 est de 25 Ko de JavaScript sur le catalogue, index exclu. Même
+  en écartant le WebAssembly de la mesure, ce qui serait généreux puisqu'il s'agit de code,
+  les deux fichiers JavaScript totalisent 24,7 Ko : le budget entier, avant le premier
+  filtre. Les budgets ne se négocient pas, la bibliothèque est assortie d'un « ou
+  équivalent » : c'est donc la bibliothèque qui cède. Mesure et raisonnement dans
+  `docs/DECISION-RECHERCHE.md`.
+
+  Un site qui soutient qu'on doit choisir l'option la plus frugale et qui embarque cent
+  kilooctets de moteur de recherche pour deux cents fiches se contredit à sa page d'accueil.
+
+**Décisions prises**
+
+- **L'index n'est chargé qu'au premier caractère tapé.** Quelqu'un qui vient consulter la
+  liste ne paie pas pour une recherche qu'il ne fait pas.
+- **Le jeu de 200 fiches de test dérive des 200 intitulés réels** : mêmes identifiants,
+  mêmes titres, mêmes besoins. Le test est donc représentatif du contenu final. Seuls les
+  barreaux sont fabriqués, puisque ces intitulés n'auront jamais de contenu (interdit 7).
+  Le générateur refuse d'écrire si son dossier de sortie venait à être suivi par Git.
+- **La feuille de route et les dix familles ont été produites au lot 05 plutôt qu'au lot 09**,
+  parce que le jeu de 200 fiches de test en dépend. Écart à l'ordre du plan, pas au CDC :
+  les dépendances de la section 13 sont respectées.
+
+**Défauts trouvés en vérifiant, et corrigés**
+
+- **`check-weight` mesurait zéro octet de JavaScript** sur des pages qui en exécutent :
+  Astro met les petits modules en ligne dans le HTML plutôt que d'émettre un fichier, et le
+  contrôle ne regardait que les fichiers. Corrigé.
+- **Un test de recherche cherchait un mot absent du contenu.** La recherche était juste,
+  le test était faux. Corrigé côté test, ce qui est la bonne moitié à corriger.
+
+**Prochaine étape**
+
+Lots 06 et 08 en cours par sous-agents. Lot 09 pendant ce temps.

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Les quatre barreaux, du plus léger au plus lourd</title>
+  <!-- L'idée : la même tâche, quatre fois, avec de plus en plus de machinerie
+       en marche. Ce n'est pas une échelle de qualité : la barre du haut est
+       la même partout, seule la quantité de matériel change. -->
+  <path d="M40 56h720"/>
+  <rect x="64" y="152" width="96" height="24" fill="#FFCE00" stroke="none"/>
+  <path d="M112 56v96"/>
+  <rect x="264" y="128" width="96" height="48" fill="#EDE7D7" stroke="none"/>
+  <rect x="264" y="192" width="96" height="24" fill="#FFCE00" stroke="none"/>
+  <path d="M312 56v72"/>
+  <rect x="464" y="112" width="96" height="104" fill="#C8BC9E" stroke="none"/>
+  <rect x="464" y="232" width="96" height="24" fill="#FFCE00" stroke="none"/>
+  <path d="M512 56v56"/>
+  <rect x="664" y="96" width="96" height="120" fill="#8A7C5C" stroke="none"/>
+  <rect x="664" y="232" width="96" height="24" fill="#FFCE00" stroke="none"/>
+  <path d="M712 56v40" stroke-dasharray="16 16"/>
+</svg>

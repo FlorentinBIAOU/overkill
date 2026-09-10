@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="square" stroke-linejoin="round">
+  <title>Cette page n'existe pas</title>
+  <!-- L'idée : le chemin est bien là, il s'arrête. Trois marches pleines, une
+       quatrième qui n'a jamais été construite. -->
+  <rect x="56" y="288" width="80" height="56" fill="#8A7C5C" stroke="none"/>
+  <rect x="136" y="232" width="80" height="112" fill="#C8BC9E" stroke="none"/>
+  <rect x="216" y="176" width="80" height="168" fill="#EDE7D7" stroke="none"/>
+  <rect x="296" y="120" width="80" height="224" stroke-dasharray="24 20"/>
+  <rect x="216" y="72" width="80" height="24" fill="#FFCE00" stroke="none"/>
+</svg>
