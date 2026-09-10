@@ -1,0 +1,138 @@
+---
+id: fuzzy-match-company-names
+family: search
+status: published
+verdict: N0
+updated: 2026-09-10
+contributors: [florentin-biaou]
+
+title:
+  fr: "Rapprocher des noms d'entreprises mal orthographiés"
+  en: "Match misspelled company names"
+
+need:
+  fr: "Reconnaître qu'une même société apparaît sous plusieurs graphies dans deux fichiers d'origines différentes."
+  en: "Recognise that the same company appears under several spellings across two files of different origins."
+
+scenario:
+  fr: "Deux fichiers arrivent d'origines différentes, et la même société y figure sous deux graphies. Le réflexe est de soumettre chaque paire à un modèle généraliste pour lui demander s'il s'agit de la même entreprise. Ce qui varie d'une graphie à l'autre, pourtant, c'est une forme juridique en fin de chaîne, un accent, un pluriel, une esperluette écrite en toutes lettres : une comparaison de chaînes, et une comparaison bon marché. S'y ajoute une contrainte que l'appel de modèle ne tient pas : un rapprochement doit être rejouable, les mêmes fichiers rapprochés le mois prochain devant produire les mêmes paires."
+  en: "Two files arrive from different origins and the same company sits in both under two spellings. The reflex is to hand each pair to a general-purpose model and ask whether it is the same company. What varies from one spelling to the other, though, is a legal form at the end, an accent, a plural, an ampersand written out: a string comparison, and a cheap one. There is also a constraint a model call does not hold to — a matching run has to be replayable, and the same two files matched again next month have to produce the same pairs."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Normalisation, retrait de la forme juridique, puis Jaro-Winkler"
+      en: "Normalisation, legal form dropped, then Jaro-Winkler"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : les noms ne quittent pas votre infrastructure"
+          - "Une raison sociale d'entreprise individuelle porte le nom d'une personne physique"
+        en:
+          - "No specific scope added: the names never leave your infrastructure"
+          - "A sole trader's business name carries a natural person's name"
+    code:
+      python: snippets/fuzzy-match-company-names/n0.py
+      javascript: snippets/fuzzy-match-company-names/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Un sigle contre la raison sociale qu'il abrège. Le test compare « SNCF » à « Société Nationale des Chemins de fer Français » : la vraie paire passe sous le seuil, et — plus embarrassant — sous le score de « SNCF » contre « Sanofi », qui n'a en commun qu'une première lettre. Aucun seuil ne retient la première en écartant la seconde."
+      en: "An acronym against the name it stands for. The test scores SNCF against its spelled-out name below the cut a deduplication run would use, and — worse — below SNCF against Sanofi, which shares nothing but a first letter. No threshold keeps the true pair and rejects that one."
+    escalate_when:
+      fr: "Vous ne comparez plus deux noms mais un nom contre un registre entier, ou vos deux sources n'écrivent pas les mots dans le même ordre : « Menuiserie Dubois » ici, « Dubois Menuiserie » là."
+      en: "You are no longer comparing two names but one name against a whole register, or your two sources do not write the words in the same order: Menuiserie Dubois here, Dubois Menuiserie there."
+
+  - level: N1
+    available: true
+    name:
+      fr: "TF-IDF sur n-grammes de caractères, voisins par cosinus"
+      en: "Character n-gram TF-IDF, neighbours by cosine"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Traitement sur votre infrastructure : le registre ne part pas chez un tiers"
+          - "Aucun corpus extérieur : le vocabulaire est ajusté sur votre seul registre, et rien n'en est conservé au-delà de l'index"
+        en:
+          - "Processing on your own infrastructure: the register goes to no third party"
+          - "No outside corpus: the vocabulary is fitted on your register alone, and nothing of it is kept beyond the index"
+    code:
+      python: snippets/fuzzy-match-company-names/n1.py
+      javascript: snippets/fuzzy-match-company-names/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Le même sigle, toujours manqué. Pondérer les fragments rares répare l'ordre des mots et classe la bonne boulangerie devant l'autre, mais ne fait toujours voir que des fragments : dans le test, la raison sociale développée de la SNCF n'atteint même pas les trois premiers résultats de sa propre abréviation, doublée par deux entreprises sans rapport."
+      en: "The same acronym, still missed. Weighting rare fragments repairs word order and ranks the right bakery above the other, but it still sees fragments and nothing else: in the test, the spelled-out name of the SNCF does not even reach the top three results for its own abbreviation, beaten by two unrelated companies."
+    escalate_when:
+      fr: "Vos graphies à rapprocher sont deux désignations distinctes d'une même société — un sigle et sa forme développée, un nom commercial et une raison sociale — et non deux orthographes d'un même nom."
+      en: "The spellings you need to bring together are two distinct designations of one company — an acronym and its expansion, a trading name and a legal name — rather than two spellings of one name."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Encodeur de phrases auto-hébergé, comparaison par cosinus"
+      en: "Self-hosted sentence encoder, compared by cosine"
+    cost: faible
+    latency: "~100 ms"
+    risks:
+      data_egress: own-infra
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: high
+      regulatory:
+        fr:
+          - "Traitement sur votre infrastructure : le registre ne part pas chez un tiers"
+          - "Les poids du modèle viennent d'un tiers, avec la licence et la provenance que cela suppose de vérifier"
+          - "Un rapprochement fondé sur un score d'encodeur ne s'explique pas fragment par fragment, contrairement aux deux barreaux du dessous"
+        en:
+          - "Processing on your own infrastructure: the register goes to no third party"
+          - "The model weights come from a third party, with the licence and provenance that implies checking"
+          - "A match founded on an encoder score cannot be explained fragment by fragment, unlike the two rungs below"
+    code:
+      python: snippets/fuzzy-match-company-names/n2.py
+      javascript: snippets/fuzzy-match-company-names/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Des mots ordinaires partagés l'emportent sur l'identité. Dans le test, « Boulangerie du Vieux Port », qui est une autre société, passe devant « Le Vieux Moulin », qui est la même société sous son nom court, et aucun seuil ne démêle les deux. L'extrait est vérifié contre un double local, qui score à zéro la paire de sigles pour laquelle ce barreau existe : ce que l'encodeur réel y gagne, rien ici ne le mesure."
+      en: "Shared ordinary words beat identity. In the test, « Boulangerie du Vieux Port », which is a different company, outranks « Le Vieux Moulin », which is the same company under its short name, and no threshold separates them. The snippet is verified against a local double that scores the acronym pair — the very pair this rung exists for — at zero: what a real encoder gains there, nothing here measures."
+    escalate_when:
+      fr: "Il n'y a pas de barreau au-dessus dans cette fiche. Ce qui vient ensuite n'est pas un autre algorithme, c'est quelqu'un qui tranche les paires que le score laisse en suspens."
+      en: "There is no rung above this one in this entry. What comes next is not another algorithm, it is somebody deciding on the pairs the score leaves undecided."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Le rapprochement est quadratique : sur dix mille noms, cela fait cinquante millions de paires, et un appel par paire n'existe pas. Un barreau du dessous doit de toute façon présélectionner les paires, et il ne reste alors au modèle que la question facile. S'y ajoute qu'un rapprochement doit pouvoir être rejoué : les extraits de cette fiche qui parcourent un registre fixent leur tri pour que deux exécutions rendent les mêmes paires, et un modèle généraliste ne se fixe pas ainsi."
+      en: "Matching is quadratic: ten thousand names make fifty million pairs, and one call per pair does not exist. A lower rung has to shortlist the pairs anyway, leaving the model only the easy question. Replayability settles it: the snippets in this entry that walk a register pin their sort so that two runs return the same pairs, and a general-purpose model pins nothing."
+
+verdict_rationale:
+  fr: "N0 ne coûte rien à exécuter, ne dépend de rien, et chacune de ses affirmations est un test unitaire — ce qui compte quand un faux rapprochement fusionne les dossiers de deux sociétés. N1 achète l'ordre des mots, la pondération des fragments rares et la recherche dans un registre entier ; son propre test dit ce qu'il n'achète pas, à savoir la paire sigle contre raison sociale, toujours manquée et toujours doublée par deux entreprises sans rapport. Montez à N1 quand vous cherchez un nom dans un registre au lieu de juger une paire, pas en espérant avoir plus souvent raison."
+  en: "N0 costs nothing to run, depends on nothing, and every claim it makes is a unit test — which matters when a wrong match merges two companies' files. N1 buys word order, rare-fragment weighting and search across a whole register; its own test says what it does not buy, namely the acronym against the spelled-out name, still missed and still beaten by two unrelated companies. Move up to N1 when you are looking a name up in a register instead of judging a pair, not in the hope of being right more often."
+
+further_reading:
+  - label: "Wikipedia — Jaro-Winkler distance, la définition et le poids du préfixe commun"
+    url: "https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance"
+  - label: "Insee — catégories juridiques, pour bâtir la liste des formes à retirer"
+    url: "https://www.insee.fr/fr/information/2028129"
+  - label: "scikit-learn — TfidfVectorizer, analyseur char_wb et n-grammes de caractères"
+    url: "https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"
+  - label: "Sentence-Transformers — les encodeurs de phrases auto-hébergés"
+    url: "https://www.sbert.net/"
+
+sources: []
+---
