@@ -58,10 +58,17 @@ export class FakeLLM {
   }
 }
 
+/**
+ * FNV-1a, 32 bits. Must agree exactly with its Python counterpart, so that a
+ * snippet's two language versions score the same inputs identically.
+ *
+ * Math.imul is what makes that true: a plain `*` on numbers this large loses
+ * precision past 2^53 and silently drifts from Python's exact integers.
+ */
 export function hashWord(word) {
   let h = 2166136261;
   for (const char of word) {
-    h = ((h ^ char.codePointAt(0)) * 16777619) >>> 0;
+    h = Math.imul(h ^ char.codePointAt(0), 16777619) >>> 0;
   }
   return h;
 }

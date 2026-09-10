@@ -17,19 +17,23 @@
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:colour": "node scripts/check-colour-usage.mjs",
-    "check": "npm run check:fonts && npm run check:contrast && npm run check:colour && npm run check:french && npm run test:schema && npm run test:snippets && npm run check:content && npm run build",
+    "check": "npm run check:fonts && npm run check:contrast && npm run check:colour && npm run check:french && npm run test:schema && npm run test:harness && npm run test:snippets && npm run check:content && npm run build",
     "check:french": "bash scripts/check-french.sh",
     "fix:accents": ".venv-tools/bin/python scripts/fix-accents.py",
     "check:content": "node --import tsx scripts/check-content.mjs",
     "test:schema": "node --import tsx --test tests/schema.test.mjs tests/check-content.test.mjs",
     "test:snippets": "node scripts/test-snippets.mjs",
-    "manifest": "node scripts/build-snippet-manifest.mjs"
+    "manifest": "node scripts/build-snippet-manifest.mjs",
+    "test:components": "node --test tests/components.spec.mjs",
+    "test:harness": "node --test tests/harness.test.mjs",
+    "check:overflow": "node scripts/check-overflow.mjs /dev/components /dev/tokens"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.3.14",
     "@astrojs/sitemap": "^3.6.0",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^5.18.2",
+    "shiki": "3.13.0",
     "tailwindcss": "^4.3.3",
     "zod": "3.25.76"
   },

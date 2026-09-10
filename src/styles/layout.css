@@ -74,7 +74,17 @@
 /* Tout contenu large défile dans son propre conteneur, jamais la page. */
 .scroll-x {
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
+  /* Un conteneur défilant placé dans une grille ou un flex doit pouvoir
+     rétrécir : sans cela il vaut min-width: auto et pousse la page. */
+  min-width: 0;
+}
+
+/* Même raison, pour les enveloppes de grille du site. */
+.grid-12 > *,
+.doc-layout > * {
+  min-width: 0;
 }
 
 .stack > * + * {

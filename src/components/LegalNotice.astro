@@ -1,0 +1,33 @@
+---
+/**
+ * L'encadré permanent de pied de page réglementaire (CDC 4.5).
+ *
+ * « Information générale, pas un avis juridique, faites valider par un
+ * professionnel. » Présent sur toute page portant du contenu réglementaire.
+ * Aucune fiche ne dit à quiconque qu'il est conforme ou non.
+ */
+import type { Strings } from '../i18n';
+
+export interface Props {
+  strings: Strings;
+}
+
+const { strings } = Astro.props;
+---
+
+<aside class="legal-notice">
+  <p>{strings.legal.notice}</p>
+</aside>
+
+<style>
+  .legal-notice {
+    border-block-start: 1px solid var(--rule-strong);
+    padding-block-start: var(--space-3);
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .legal-notice p {
+    margin: 0;
+  }
+</style>

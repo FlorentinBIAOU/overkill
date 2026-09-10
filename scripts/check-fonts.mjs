@@ -38,8 +38,8 @@ console.log(`  ${totalKb.toFixed(1).padStart(6)} Ko  total (budget ${BUDGET_KB} 
 
 if (totalKb > BUDGET_KB) {
   console.error(
-    `\ncheck-fonts: budget depasse de ${(totalKb - BUDGET_KB).toFixed(1)} Ko.\n` +
-      `Le budget ne se negocie pas : resserrer le sous-ensemble ou retirer une graisse.`,
+    `\ncheck-fonts: budget dépassé de ${(totalKb - BUDGET_KB).toFixed(1)} Ko.\n` +
+      `Le budget ne se négocie pas : resserrer le sous-ensemble ou retirer une graisse.`,
   );
   process.exit(1);
 }

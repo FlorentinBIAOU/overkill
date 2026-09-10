@@ -1,0 +1,52 @@
+---
+/**
+ * La pastille d'un barreau, posée sur la rampe `--rung-*`.
+ *
+ * La rampe code **le poids de la solution**, jamais sa qualité (CDC 8.3,
+ * interdit 4). Elle va du clair au foncé dans une seule famille de neutres
+ * chauds. Ce n'est pas un dégradé du vert au rouge, et aucune de ses valeurs
+ * ne veut dire « bien » ou « mal ».
+ */
+import type { Level } from '../content/schema/enums';
+
+export interface Props {
+  level: Level;
+  /** Nom du barreau, pour les lecteurs d'écran. */
+  name: string;
+  unavailable?: boolean;
+}
+
+const { level, name, unavailable = false } = Astro.props;
+const index = Number(level.slice(1));
+---
+
+<span
+  class:list={['rung-badge', unavailable && 'rung-badge--unavailable']}
+  style={`--rung: var(--rung-${index}); --on-rung: var(--on-rung-${index});`}
+>
+  <span aria-hidden="true">{level}</span>
+  <span class="visually-hidden">{level} — {name}</span>
+</span>
+
+<style>
+  .rung-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5em;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--rung);
+    color: var(--on-rung);
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    line-height: 1.4;
+  }
+
+  /* Un barreau absent est marqué absent, jamais laissé vide (CDC 4.1). */
+  .rung-badge--unavailable {
+    background: transparent;
+    color: var(--muted);
+    border: 1px dashed var(--rule-strong);
+  }
+</style>

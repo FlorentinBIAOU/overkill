@@ -1,0 +1,169 @@
+---
+/**
+ * Un barreau détaillé et ancrable (CDC 4.2).
+ *
+ * Les sept éléments, dans l'ordre imposé : nom de l'approche, code, coût,
+ * latence, bloc risques, point de rupture, déclencheur de montée.
+ */
+import CodeTabs from './CodeTabs.astro';
+import RiskBlock from './RiskBlock.astro';
+import RungBadge from './RungBadge.astro';
+import VerdictBadge from './VerdictBadge.astro';
+import type { Strings } from '../i18n';
+import type { Level } from '../content/schema/enums';
+
+export interface Props {
+  rung: any;
+  isVerdict: boolean;
+  lang: 'en' | 'fr';
+  strings: Strings;
+}
+
+const { rung, isVerdict, lang, strings } = Astro.props;
+const anchor = rung.level.toLowerCase();
+const levelName = strings.rung[rung.level as Level];
+---
+
+<section id={anchor} class="rung-section" aria-labelledby={`${anchor}-title`}>
+  <header class="rung-section__head">
+    <p class="rung-section__level">
+      <RungBadge level={rung.level} name={levelName} unavailable={!rung.available} />
+      <span class="rung-section__level-name">{levelName}</span>
+      {isVerdict && <VerdictBadge label={strings.verdict.badge} />}
+    </p>
+
+    <h3 id={`${anchor}-title`} class="rung-section__title">
+      {rung.available ? rung.name[lang] : strings.rung.unavailable}
+    </h3>
+  </header>
+
+  {
+    rung.available ? (
+      <div class="rung-section__body">
+        <dl class="rung-section__figures">
+          <div>
+            <dt>{strings.table.cost}</dt>
+            <dd>{strings.cost[rung.cost as keyof typeof strings.cost]}</dd>
+          </div>
+          <div>
+            <dt>{strings.table.latency}</dt>
+            <dd><code>{rung.latency}</code></dd>
+          </div>
+        </dl>
+
+        <CodeTabs
+          paths={{ python: rung.code.python, javascript: rung.code.javascript }}
+          verification={rung.code.verification}
+          strings={strings}
+          id={anchor}
+        />
+
+        <RiskBlock risks={rung.risks} lang={lang} strings={strings} />
+
+        <div class="rung-section__limits">
+          <div>
+            <h4>{strings.entry.breakingPoint}</h4>
+            <p>{rung.breaking_point[lang]}</p>
+          </div>
+          <div>
+            <h4>{strings.entry.escalateWhen}</h4>
+            <p>{rung.escalate_when[lang]}</p>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <p class="rung-section__absent">{rung.unavailable_reason[lang]}</p>
+    )
+  }
+</section>
+
+<style>
+  .rung-section {
+    padding-block: var(--space-8);
+    border-block-start: 1px solid var(--rule);
+    scroll-margin-block-start: var(--space-6);
+  }
+
+  .rung-section__level {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-2);
+    max-width: none;
+  }
+
+  .rung-section__level-name {
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .rung-section__title {
+    margin: 0 0 var(--space-6);
+  }
+
+  .rung-section__body {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  /* Un élément de grille vaut min-width: auto par défaut, donc il refuse de
+     rétrécir sous la largeur de son contenu. Sans cette ligne, un bloc de code
+     large pousse la page entière au lieu de défiler dans son conteneur. */
+  .rung-section__body > :global(*) {
+    min-width: 0;
+  }
+
+  .rung-section__figures {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-8);
+    margin: 0;
+  }
+
+  .rung-section__figures dt {
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .rung-section__figures dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: 700;
+  }
+
+  .rung-section__figures dd :global(code) {
+    font-family: var(--font-code);
+    font-size: var(--size-h3);
+    font-weight: 400;
+  }
+
+  .rung-section__limits {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 900px) {
+    .rung-section__limits {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .rung-section__limits h4 {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .rung-section__limits p {
+    margin: 0;
+  }
+
+  .rung-section__absent {
+    color: var(--muted);
+    margin: 0;
+  }
+</style>

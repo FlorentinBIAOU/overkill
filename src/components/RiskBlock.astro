@@ -1,0 +1,140 @@
+---
+/**
+ * Le bloc risques : six champs, toujours renseignés (CDC 4.2).
+ *
+ * Rendu en liste de définitions plutôt qu'en tableau : ce sont six paires
+ * champ-valeur, pas une grille à deux dimensions.
+ *
+ * Le périmètre réglementaire est factuel et daté, sans conseil (CDC 4.5,
+ * interdit 3). L'encadré permanent qui rappelle que ce n'est pas un avis
+ * juridique est posé une fois par page, pas à chaque barreau.
+ */
+import type { Strings } from '../i18n';
+
+export interface Props {
+  risks: {
+    data_egress: 'none' | 'own-infra' | 'third-party';
+    deterministic: boolean;
+    testability: 'unit' | 'statistical' | 'hard';
+    vendor_lock: 'none' | 'library' | 'provider';
+    footprint: 'negligible' | 'low' | 'moderate' | 'high';
+    regulatory: { fr: string[]; en: string[] };
+  };
+  lang: 'en' | 'fr';
+  strings: Strings;
+  /**
+   * Profondeur du titre dans la page. Un composant ne présume pas de l'endroit
+   * où on l'emploie : c'est la page qui sait si elle en est au h3 ou au h4.
+   */
+  headingLevel?: 3 | 4 | 5;
+}
+
+const { risks, lang, strings, headingLevel = 4 } = Astro.props;
+const Heading = `h${headingLevel}` as 'h3' | 'h4' | 'h5';
+const label = strings.risk;
+const value = strings.riskValue;
+
+const rows = [
+  [label.data_egress, value.data_egress[risks.data_egress], risks.data_egress !== 'none'],
+  [label.deterministic, value.deterministic[String(risks.deterministic) as 'true' | 'false'], !risks.deterministic],
+  [label.testability, value.testability[risks.testability], risks.testability === 'hard'],
+  [label.vendor_lock, value.vendor_lock[risks.vendor_lock], risks.vendor_lock === 'provider'],
+  [label.footprint, value.footprint[risks.footprint], risks.footprint === 'high'],
+] as const;
+---
+
+<div class="risks">
+  <Heading class="risks__heading">{label.heading}</Heading>
+  <dl class="risks__list">
+    {
+      rows.map(([name, text, notable]) => (
+        <div class="risks__row">
+          <dt>{name}</dt>
+          <dd class:list={[notable && 'risks__value--notable']}>{text}</dd>
+        </div>
+      ))
+    }
+    <div class="risks__row risks__row--wide">
+      <dt>{label.regulatory}</dt>
+      <dd>
+        <ul class="risks__regulatory">
+          {risks.regulatory[lang].map((item) => <li>{item}</li>)}
+        </ul>
+      </dd>
+    </div>
+  </dl>
+</div>
+
+<style>
+  .risks {
+    background: var(--paper-2);
+    border-radius: var(--radius-block);
+    padding: var(--space-4);
+  }
+
+  .risks__heading {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: 600;
+    text-transform: none;
+    color: var(--muted);
+  }
+
+  .risks__list {
+    margin: 0;
+    display: grid;
+    gap: var(--space-2) var(--space-6);
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 600px) {
+    .risks__list {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .risks__row--wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .risks__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: baseline;
+    border-block-start: 1px solid var(--rule);
+    padding-block-start: var(--space-2);
+  }
+
+  .risks__row dt {
+    font-size: var(--size-small);
+    color: var(--muted);
+    flex: 1 1 45%;
+  }
+
+  .risks__row dd {
+    margin: 0;
+    flex: 1 1 50%;
+    font-size: var(--size-small);
+  }
+
+  /* Une valeur qui mérite l'attention est soulignée, pas colorée : la couleur
+     n'exprime pas de jugement sur ce site (CDC 8.3). */
+  .risks__value--notable {
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 0.25em;
+  }
+
+  .risks__regulatory {
+    margin: 0;
+    padding-inline-start: var(--space-4);
+    font-size: var(--size-small);
+  }
+
+  .risks__regulatory li {
+    max-width: none;
+  }
+</style>

@@ -1,0 +1,58 @@
+---
+/**
+ * Le badge « recommandé ».
+ *
+ * Le vert `--go` n'apparaît nulle part ailleurs sur le site (CDC 8.3). Ce
+ * badge peut se poser sur n'importe quel barreau, N3 compris : c'est le seul
+ * jugement que le système de couleur exprime, et il porte sur l'adéquation au
+ * besoin, jamais sur la nature de la solution.
+ */
+export interface Props {
+  label: string;
+  level?: string;
+  size?: 'normal' | 'large';
+}
+
+const { label, level, size = 'normal' } = Astro.props;
+---
+
+<span class:list={['verdict-badge', size === 'large' && 'verdict-badge--large']}>
+  <span class="verdict-badge__mark" aria-hidden="true"></span>
+  {label}{level && <span class="verdict-badge__level">{level}</span>}
+</span>
+
+<style>
+  .verdict-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--go);
+    color: var(--go);
+    font-size: var(--size-small);
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .verdict-badge--large {
+    font-size: var(--size-body);
+    padding: var(--space-2) var(--space-4);
+    background: var(--go);
+    color: var(--paper);
+  }
+
+  .verdict-badge__mark {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-pill);
+    background: currentColor;
+    flex: none;
+  }
+
+  .verdict-badge__level {
+    font-family: var(--font-code);
+    font-weight: 400;
+  }
+</style>

@@ -103,4 +103,4 @@ if (failures) {
   console.error(`\ncheck-contrast: ${failures} couple(s) sous le seuil AA.`);
   process.exit(1);
 }
-console.log('\n  Tous les couples testes atteignent le seuil AA.');
+console.log('\n  Tous les couples testés atteignent le seuil AA.');

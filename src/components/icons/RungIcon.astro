@@ -1,0 +1,77 @@
+---
+/**
+ * Les quatre pictogrammes de barreau, pour le tableau récapitulatif.
+ *
+ * Une seule idée, déclinée quatre fois : la quantité de machinerie qu'il faut
+ * mettre en marche. Un trait pour la règle, deux formes pour le modèle léger,
+ * un bloc pour le modèle auto-hébergé, un bloc distant relié pour l'API.
+ *
+ * Formes géométriques simples, traits épais, aucun détail fin, lisibles à
+ * 24 px comme à 80 px (CDC 8.6).
+ */
+import type { Level } from '../../content/schema/enums';
+
+export interface Props {
+  level: Level;
+  title: string;
+  size?: number;
+}
+
+const { level, title, size = 24 } = Astro.props;
+---
+
+<svg
+  class="rung-icon"
+  width={size}
+  height={size}
+  viewBox="0 0 32 32"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="3"
+  stroke-linecap="square"
+  role="img"
+>
+  <title>{title}</title>
+
+  {/* N0 — une règle : un seul trait, droit, qui traverse. */}
+  {level === 'N0' && <path d="M4 16h24" />}
+
+  {/* N1 — un modèle léger : quelques points et une frontière qui les sépare. */}
+  {
+    level === 'N1' && (
+      <>
+        <path d="M5 27 27 5" />
+        <circle cx="10" cy="10" r="2.5" fill="currentColor" stroke="none" />
+        <circle cx="22" cy="22" r="2.5" fill="currentColor" stroke="none" />
+      </>
+    )
+  }
+
+  {/* N2 — un modèle auto-hébergé : un bloc chez vous, posé sur son socle. */}
+  {
+    level === 'N2' && (
+      <>
+        <rect x="6" y="6" width="20" height="14" />
+        <path d="M4 26h24" />
+      </>
+    )
+  }
+
+  {/* N3 — une API : votre côté, un fossé, et le bloc de quelqu'un d'autre. */}
+  {
+    level === 'N3' && (
+      <>
+        <path d="M4 8v16" />
+        <path d="M9 16h6" />
+        <rect x="18" y="8" width="10" height="16" stroke-dasharray="4 3" />
+      </>
+    )
+  }
+</svg>
+
+<style>
+  .rung-icon {
+    display: block;
+    flex: none;
+  }
+</style>

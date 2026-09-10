@@ -1,0 +1,121 @@
+---
+/**
+ * Un bloc de code, colorisé à la construction du site.
+ *
+ * Shiki tourne au build : le lecteur reçoit du HTML déjà coloré, jamais un
+ * flash de code brut suivi d'une colorisation (CDC 10.1). Aucun numéro de
+ * ligne (CDC 7.5). Rayon de 4 px, celui des blocs de code et des tableaux.
+ */
+import { codeToHtml } from 'shiki';
+import type { Language } from '../lib/snippets';
+
+export interface Props {
+  code: string;
+  language: Language;
+  /** Chemin du fichier réel, affiché sous le bloc. */
+  path?: string;
+  copyLabel: string;
+  copiedLabel: string;
+  failedLabel: string;
+}
+
+const { code, language, path, copyLabel, copiedLabel, failedLabel } = Astro.props;
+
+// Un seul rendu, deux thèmes portés par des variables CSS : le mode sombre ne
+// coûte pas un second bloc de HTML, ce qui compte pour le budget de la fiche.
+const html = await codeToHtml(code, {
+  lang: language === 'python' ? 'python' : 'javascript',
+  themes: { light: 'github-light', dark: 'github-dark' },
+  defaultColor: false,
+  cssVariablePrefix: '--sk-',
+});
+---
+
+<figure class="code-block">
+  <div class="code-block__bar">
+    {path && <code class="code-block__path">{path}</code>}
+    <button
+      type="button"
+      class="code-block__copy"
+      data-copy
+      data-label-copy={copyLabel}
+      data-label-copied={copiedLabel}
+      data-label-failed={failedLabel}
+    >
+      {copyLabel}
+    </button>
+  </div>
+  <div class="code-block__code scroll-x" set:html={html} />
+  <textarea class="visually-hidden" data-source aria-hidden="true" readonly>{code}</textarea>
+</figure>
+
+<style>
+  .code-block {
+    margin: 0;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-block);
+    background: var(--code-bg);
+    overflow: hidden;
+  }
+
+  .code-block__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-block-end: 1px solid var(--rule);
+    min-height: 36px;
+  }
+
+  .code-block__path {
+    font-size: var(--size-small);
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .code-block__copy {
+    font: inherit;
+    font-size: var(--size-small);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    flex: none;
+  }
+
+  .code-block__copy:hover {
+    border-color: var(--ink);
+  }
+
+  .code-block__code {
+    padding: var(--space-4);
+  }
+
+  /* Shiki rend deux jeux de couleurs ; on choisit selon le thème. */
+  .code-block__code :global(pre) {
+    margin: 0;
+    background: transparent !important;
+    color: var(--sk-light, inherit);
+  }
+
+  .code-block__code :global(span) {
+    color: var(--sk-light, inherit);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .code-block__code :global(pre),
+    :global(:root:not([data-theme='light'])) .code-block__code :global(span) {
+      color: var(--sk-dark, inherit);
+    }
+  }
+
+  :global(:root[data-theme='dark']) .code-block__code :global(pre),
+  :global(:root[data-theme='dark']) .code-block__code :global(span) {
+    color: var(--sk-dark, inherit);
+  }
+</style>

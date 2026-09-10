@@ -1,0 +1,144 @@
+---
+/**
+ * Le tableau récapitulatif d'une fiche (CDC 7.5).
+ *
+ * Sept colonnes, lisibles en un coup d'œil : barreau, approche, coût, latence,
+ * données, déterminisme, verdict. Le verdict y apparaît une seconde fois, pour
+ * que quelqu'un qui ne lit rien reparte quand même avec la réponse (CDC 4.3).
+ *
+ * Rayon de 4 px, séparation par filets, aucune ombre (CDC 8.5). Sous 900 px le
+ * tableau défile dans son propre conteneur : la page, elle, ne déborde jamais.
+ */
+import RungBadge from './RungBadge.astro';
+import VerdictBadge from './VerdictBadge.astro';
+import RungIcon from './icons/RungIcon.astro';
+import type { Strings } from '../i18n';
+import type { Level } from '../content/schema/enums';
+
+export interface Props {
+  rungs: any[];
+  verdict: Level;
+  lang: 'en' | 'fr';
+  strings: Strings;
+}
+
+const { rungs, verdict, lang, strings } = Astro.props;
+const th = strings.table;
+---
+
+<div class="rung-table scroll-x">
+  <table>
+    <caption class="visually-hidden">{th.caption}</caption>
+    <thead>
+      <tr>
+        <th scope="col">{th.rung}</th>
+        <th scope="col">{th.approach}</th>
+        <th scope="col">{th.cost}</th>
+        <th scope="col">{th.latency}</th>
+        <th scope="col">{th.data}</th>
+        <th scope="col">{th.deterministic}</th>
+        <th scope="col">{th.verdict}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rungs.map((rung) => (
+          <tr class:list={[!rung.available && 'is-unavailable']}>
+            <th scope="row">
+              <span class="rung-table__level">
+                <RungIcon level={rung.level} title={strings.rung[rung.level as Level]} />
+                <RungBadge
+                  level={rung.level}
+                  name={strings.rung[rung.level as Level]}
+                  unavailable={!rung.available}
+                />
+              </span>
+            </th>
+
+            {rung.available ? (
+              <>
+                <td>
+                  <a href={`#${rung.level.toLowerCase()}`}>{rung.name[lang]}</a>
+                </td>
+                <td>{strings.cost[rung.cost as keyof typeof strings.cost]}</td>
+                <td><code>{rung.latency}</code></td>
+                <td>{strings.riskValue.data_egress[rung.risks.data_egress]}</td>
+                <td>
+                  {strings.riskValue.deterministic[String(rung.risks.deterministic) as 'true' | 'false']}
+                </td>
+                <td>
+                  {rung.level === verdict && <VerdictBadge label={strings.verdict.badge} />}
+                </td>
+              </>
+            ) : (
+              <td colspan="6" class="rung-table__absent">
+                <span class="rung-table__absent-label">{strings.rung.unavailable}</span>
+                {rung.unavailable_reason[lang]}
+              </td>
+            )}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .rung-table {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-block);
+  }
+
+  table {
+    width: 100%;
+    min-width: 700px;
+    border-collapse: collapse;
+    font-size: var(--size-small);
+  }
+
+  caption {
+    text-align: left;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: var(--space-3);
+    vertical-align: top;
+    border-block-start: 1px solid var(--rule);
+  }
+
+  thead th {
+    border-block-start: 0;
+    border-block-end: 1px solid var(--rule-strong);
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  tbody th {
+    white-space: nowrap;
+  }
+
+  .rung-table__level {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .is-unavailable td,
+  .is-unavailable th {
+    color: var(--muted);
+  }
+
+  .rung-table__absent-label {
+    display: inline-block;
+    margin-inline-end: var(--space-2);
+    font-weight: 600;
+  }
+
+  td :global(p) {
+    margin: 0;
+    max-width: none;
+  }
+</style>

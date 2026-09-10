@@ -1,0 +1,276 @@
+---
+/**
+ * Page de contrôle des composants. Chaque composant, dans ses états, en clair
+ * et en sombre. Retirée de la sortie de production.
+ */
+import Base from '../../layouts/Base.astro';
+import Callout from '../../components/Callout.astro';
+import CodeTabs from '../../components/CodeTabs.astro';
+import EntryCard from '../../components/EntryCard.astro';
+import HelpBlock from '../../components/HelpBlock.astro';
+import LegalNotice from '../../components/LegalNotice.astro';
+import RiskBlock from '../../components/RiskBlock.astro';
+import RungBadge from '../../components/RungBadge.astro';
+import RungScale from '../../components/RungScale.astro';
+import RungSection from '../../components/RungSection.astro';
+import RungTable from '../../components/RungTable.astro';
+import TocSticky from '../../components/TocSticky.astro';
+import VerdictBadge from '../../components/VerdictBadge.astro';
+import RungIcon from '../../components/icons/RungIcon.astro';
+import { LEVELS } from '../../content/schema/enums';
+import { t } from '../../i18n';
+import { DEMO_RUNGS } from '../../../tests/fixtures/pages/rungs';
+
+const lang = 'fr' as const;
+const strings = t(lang);
+const rungs = DEMO_RUNGS;
+---
+
+<Base title="Composants — contrôle" lang={lang} register="documentary" noindex>
+  <div class="wrap stack-lg" style="padding-block: var(--space-12)">
+    <header>
+      <p class="small">Page de contrôle interne. Absente de la sortie de production.</p>
+      <h1 class="display-l">Composants</h1>
+      <p>
+        Chaque composant dans ses états. Bascule le thème du système, réduis la fenêtre à
+        360 px, et parcours la page au clavier : le focus doit rester visible partout.
+      </p>
+    </header>
+
+    <section>
+      <h2>Badges</h2>
+      <div class="row">
+        <VerdictBadge label={strings.verdict.badge} />
+        <VerdictBadge label={strings.verdict.badge} level="N3" />
+        <VerdictBadge label={strings.verdict.badge} size="large" />
+      </div>
+      <p class="small muted">
+        Le vert n’apparaît nulle part ailleurs. Ce badge peut se poser sur n’importe quel
+        barreau, N3 compris.
+      </p>
+
+      <div class="row">
+        {LEVELS.map((l) => <RungBadge level={l} name={strings.rung[l]} />)}
+        <RungBadge level="N2" name={strings.rung.N2} unavailable />
+      </div>
+    </section>
+
+    <section>
+      <h2>Pictogrammes de barreau</h2>
+      <div class="row row--icons">
+        {
+          LEVELS.map((l) => (
+            <span class="icon-demo">
+              <RungIcon level={l} title={strings.rung[l]} size={48} />
+              <code class="small">{l}</code>
+            </span>
+          ))
+        }
+      </div>
+    </section>
+
+    <section>
+      <h2>Mini-échelle</h2>
+      <div class="row">
+        <RungScale
+          available={['N0', 'N1', 'N3']}
+          verdict="N0"
+          label={strings.rung.scaleLabel}
+          verdictLabel={strings.verdict.label}
+        />
+        <RungScale
+          available={['N0', 'N2', 'N3']}
+          verdict="N3"
+          label={strings.rung.scaleLabel}
+          verdictLabel={strings.verdict.label}
+        />
+        <RungScale
+          available={['N0']}
+          verdict="N0"
+          label={strings.rung.scaleLabel}
+          verdictLabel={strings.verdict.label}
+        />
+      </div>
+    </section>
+
+    <section>
+      <h2>Tableau récapitulatif</h2>
+      <RungTable rungs={rungs} verdict="N0" lang={lang} strings={strings} />
+    </section>
+
+    <section>
+      <h2>Lignes de catalogue</h2>
+      <ul class="entry-list">
+        <EntryCard
+          href="#"
+          title="Masquer les coordonnées dans un message"
+          familyLabel="Détecter et filtrer"
+          family="detect-filter"
+          verdict="N0"
+          available={['N0', 'N1', 'N3']}
+          egress="none"
+          deterministic={true}
+          strings={strings}
+        />
+        <EntryCard
+          href="#"
+          title="Rédiger des descriptions produit"
+          familyLabel="Générer"
+          family="generate"
+          verdict="N3"
+          available={['N0', 'N2', 'N3']}
+          egress="third-party"
+          deterministic={false}
+          strings={strings}
+        />
+        <EntryCard
+          href="#"
+          title="Un titre volontairement très long, pour vérifier que la ligne tient sans casser la mise en page du catalogue"
+          familyLabel="Chercher"
+          family="search"
+          verdict="N1"
+          available={['N0', 'N1']}
+          egress="own-infra"
+          deterministic={false}
+          strings={strings}
+          draft
+        />
+      </ul>
+    </section>
+
+    <section>
+      <h2>Bloc risques</h2>
+      <div class="two-up">
+        <RiskBlock risks={rungs[0].risks} lang={lang} strings={strings} headingLevel={3} />
+        <RiskBlock risks={rungs[3].risks} lang={lang} strings={strings} headingLevel={3} />
+      </div>
+    </section>
+
+    <section>
+      <h2>Code à onglets</h2>
+      <p class="small muted">
+        Preuve d’exécution « code exécuté tel quel ». Les flèches gauche et droite
+        changent d’onglet. Le bouton copier annonce son résultat.
+      </p>
+      <CodeTabs
+        paths={rungs[0].code}
+        verification="executed"
+        strings={strings}
+        id="demo-executed"
+        headingLevel={3}
+      />
+
+      <p class="small muted" style="margin-block-start: var(--space-8)">
+        Preuve d’exécution « service externe simulé ».
+      </p>
+      <CodeTabs
+        paths={rungs[3].code}
+        verification="stubbed"
+        strings={strings}
+        id="demo-stubbed"
+        headingLevel={3}
+      />
+    </section>
+
+    <section>
+      <h2>Barreau détaillé</h2>
+      <RungSection rung={rungs[0]} isVerdict={true} lang={lang} strings={strings} />
+      <RungSection rung={rungs[2]} isVerdict={false} lang={lang} strings={strings} />
+    </section>
+
+    <section>
+      <h2>Encadrés</h2>
+      <div class="stack">
+        <Callout title="Le scénario">
+          <p>
+            On voit régulièrement un appel de modèle sur chaque message entrant pour
+            repérer les coordonnées. Le besoin est pourtant déterministe.
+          </p>
+        </Callout>
+        <Callout tone="quiet">
+          <p>Un encadré discret, pour une précision qui n’est pas le propos principal.</p>
+        </Callout>
+        <Callout tone="marked" title="Brouillon">
+          <p>{strings.entry.draftNote}</p>
+        </Callout>
+      </div>
+    </section>
+
+    <section>
+      <h2>Sommaire</h2>
+      <div style="max-width: 240px">
+        <TocSticky
+          title={strings.entry.contents}
+          items={[
+            { href: '#n0', label: 'N0 — Normalisation puis expressions régulières' },
+            { href: '#n1', label: 'N1 — Classifieur léger' },
+            { href: '#n2', label: 'N2 — Barreau absent', muted: true },
+            { href: '#n3', label: 'N3 — Appel de modèle généraliste' },
+          ]}
+        />
+      </div>
+    </section>
+
+    <section>
+      <h2>Accompagnement</h2>
+      <HelpBlock strings={strings} source="Masquer les coordonnées dans un message" />
+    </section>
+
+    <section>
+      <h2>Avertissement réglementaire</h2>
+      <LegalNotice strings={strings} />
+    </section>
+  </div>
+</Base>
+
+<script>
+  import '../../scripts/code-tabs.js';
+</script>
+
+<style>
+  section {
+    padding-block-start: var(--space-8);
+    border-block-start: 1px solid var(--rule);
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+    margin-block: var(--space-4);
+  }
+
+  .row--icons {
+    gap: var(--space-8);
+  }
+
+  .icon-demo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .entry-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-block-end: 1px solid var(--rule);
+  }
+
+  .two-up {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 900px) {
+    .two-up {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+</style>

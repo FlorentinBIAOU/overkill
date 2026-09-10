@@ -9,7 +9,7 @@ import { rm, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
 if (process.env.OVERKILL_DEV_PAGES === '1') {
-  console.log('strip-dev-pages: conservees (OVERKILL_DEV_PAGES=1)');
+  console.log('strip-dev-pages: conservées (OVERKILL_DEV_PAGES=1)');
   process.exit(0);
 }
 
@@ -20,4 +20,4 @@ if (!existsSync('dist/dev')) {
 
 const kept = await readdir('dist/dev');
 await rm('dist/dev', { recursive: true, force: true });
-console.log(`strip-dev-pages: ${kept.length} page(s) de contrôle retiree(s) de dist/`);
+console.log(`strip-dev-pages: ${kept.length} page(s) de contrôle retirée(s) de dist/`);

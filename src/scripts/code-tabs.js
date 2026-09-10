@@ -1,0 +1,80 @@
+/**
+ * Onglets de code et bouton copier.
+ *
+ * Écrit en JavaScript natif, sans cadre d'interface (CDC 10.1). Chargé
+ * uniquement sur les pages qui en ont besoin.
+ *
+ * Le HTML est complet avant que ce module ne s'exécute : les deux panneaux
+ * sont rendus, et les deux blocs de code sont lisibles. Ce module ne fait
+ * qu'ajouter le confort des onglets, et se déclare par `data-enhanced` pour
+ * que le CSS sache qu'il peut masquer le panneau inactif.
+ */
+
+function setUpTabs(root) {
+  const tabs = [...root.querySelectorAll('[role="tab"]')];
+  const panels = [...root.querySelectorAll('[role="tabpanel"]')];
+  if (tabs.length < 2) return;
+
+  root.dataset.enhanced = 'true';
+
+  const select = (index, { focus = false } = {}) => {
+    tabs.forEach((tab, i) => {
+      const selected = i === index;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      panels[i].hidden = !selected;
+    });
+    if (focus) tabs[index].focus();
+  };
+
+  select(tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true') || 0);
+
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => select(i));
+    tab.addEventListener('keydown', (event) => {
+      const moves = {
+        ArrowLeft: i - 1,
+        ArrowRight: i + 1,
+        Home: 0,
+        End: tabs.length - 1,
+      };
+      const next = moves[event.key];
+      if (next === undefined) return;
+      event.preventDefault();
+      select((next + tabs.length) % tabs.length, { focus: true });
+    });
+  });
+}
+
+function setUpCopy(button) {
+  const source = button.closest('figure')?.querySelector('[data-source]');
+  if (!source) return;
+
+  const status = document.createElement('span');
+  status.className = 'visually-hidden';
+  // Le changement d'état est annoncé aux lecteurs d'écran, pas seulement
+  // montré sur le bouton.
+  status.setAttribute('role', 'status');
+  button.after(status);
+
+  let restore;
+  button.addEventListener('click', async () => {
+    clearTimeout(restore);
+    let label;
+    try {
+      await navigator.clipboard.writeText(source.value);
+      label = button.dataset.labelCopied;
+    } catch {
+      label = button.dataset.labelFailed;
+    }
+    button.textContent = label;
+    status.textContent = label;
+    restore = setTimeout(() => {
+      button.textContent = button.dataset.labelCopy;
+      status.textContent = '';
+    }, 2000);
+  });
+}
+
+document.querySelectorAll('[data-code-tabs]').forEach(setUpTabs);
+document.querySelectorAll('[data-copy]').forEach(setUpCopy);

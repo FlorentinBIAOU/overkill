@@ -1,0 +1,71 @@
+---
+/**
+ * La mini-échelle des barreaux documentés d'une fiche, pour le catalogue.
+ *
+ * Quatre segments, du plus léger au plus lourd. Un segment plein signale un
+ * barreau documenté, un segment creux un barreau déclaré absent.
+ *
+ * Le verdict est marqué par un trait sous son segment, jamais par une couleur.
+ * Le vert reste réservé au badge « recommandé » (CDC 8.3), qui accompagne de
+ * toute façon cette échelle partout où elle est employée.
+ */
+import { LEVELS, type Level } from '../content/schema/enums';
+
+export interface Props {
+  available: Level[];
+  verdict: Level;
+  label: string;
+  verdictLabel: string;
+}
+
+const { available, verdict, label, verdictLabel } = Astro.props;
+---
+
+<span class="rung-scale" role="img" aria-label={`${label} : ${available.join(', ')}. ${verdictLabel} ${verdict}.`}>
+  {
+    LEVELS.map((level, i) => (
+      <span
+        class:list={[
+          'rung-scale__step',
+          available.includes(level) && 'rung-scale__step--on',
+          level === verdict && 'rung-scale__step--verdict',
+        ]}
+        style={`--rung: var(--rung-${i});`}
+      />
+    ))
+  }
+</span>
+
+<style>
+  .rung-scale {
+    display: inline-flex;
+    gap: 2px;
+    flex: none;
+    padding-block-end: 4px;
+  }
+
+  .rung-scale__step {
+    width: 12px;
+    height: 16px;
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+  }
+
+  .rung-scale__step--on {
+    background: var(--rung);
+    border-color: transparent;
+  }
+
+  .rung-scale__step--verdict {
+    position: relative;
+  }
+
+  .rung-scale__step--verdict::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: -4px;
+    height: 2px;
+    background: var(--ink);
+  }
+</style>

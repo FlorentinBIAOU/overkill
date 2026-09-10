@@ -1,0 +1,159 @@
+---
+/**
+ * Les deux langages d'un barreau, en onglets.
+ *
+ * Les deux panneaux sont rendus intégralement dans le HTML. Le JavaScript ne
+ * fait que basculer leur visibilité : sans lui, les deux blocs restent
+ * lisibles l'un sous l'autre (CDC 8.7, « le site reste lisible sans
+ * JavaScript »).
+ */
+import CodeBlock from './CodeBlock.astro';
+import { readSnippet, type Language } from '../lib/snippets';
+import type { Strings } from '../i18n';
+
+export interface Props {
+  /** Chemins relatifs à `content/`, tels qu'ils figurent dans le frontmatter. */
+  paths: Partial<Record<Language, string>>;
+  /** Niveau de preuve d'exécution réellement atteint. */
+  verification: 'executed' | 'stubbed';
+  strings: Strings;
+  /** Identifiant unique dans la page, pour lier onglets et panneaux. */
+  id: string;
+  /** Profondeur du titre masqué de chaque panneau. */
+  headingLevel?: 3 | 4 | 5;
+}
+
+const { paths, verification, strings, id, headingLevel = 4 } = Astro.props;
+const PanelHeading = `h${headingLevel}` as 'h3' | 'h4' | 'h5';
+
+const languages = (['python', 'javascript'] as const).filter((l) => paths[l]);
+const snippets = languages.map((l) => readSnippet(paths[l]!, l));
+const proof = strings.code.verification;
+---
+
+<div class="code-tabs" id={id} data-code-tabs>
+  <div class="code-tabs__head">
+    <div class="code-tabs__tabs" role="tablist" aria-label={strings.code.tabsLabel}>
+      {
+        snippets.map((s, i) => (
+          <button
+            type="button"
+            role="tab"
+            id={`${id}-tab-${s.language}`}
+            aria-controls={`${id}-panel-${s.language}`}
+            aria-selected={i === 0 ? 'true' : 'false'}
+            tabindex={i === 0 ? 0 : -1}
+            class="code-tabs__tab"
+          >
+            {strings.code[s.language]}
+          </button>
+        ))
+      }
+    </div>
+
+    <p class={`code-tabs__proof code-tabs__proof--${verification}`}>
+      <span class="visually-hidden">{proof.label} : </span>
+      <span class="code-tabs__proof-mark" aria-hidden="true"></span>
+      {proof[verification]}
+    </p>
+  </div>
+
+  <p class="code-tabs__note">{proof[`${verification}Note`]}</p>
+
+  {
+    snippets.map((s, i) => (
+      <div
+        role="tabpanel"
+        id={`${id}-panel-${s.language}`}
+        aria-labelledby={`${id}-tab-${s.language}`}
+        class="code-tabs__panel"
+        data-first={i === 0 ? 'true' : 'false'}
+      >
+        <PanelHeading class="visually-hidden">{strings.code[s.language]}</PanelHeading>
+        <CodeBlock
+          code={s.code}
+          language={s.language}
+          path={s.path}
+          copyLabel={strings.code.copy}
+          copiedLabel={strings.code.copied}
+          failedLabel={strings.code.copyFailed}
+        />
+      </div>
+    ))
+  }
+</div>
+
+<style>
+  .code-tabs__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-block-end: var(--space-2);
+  }
+
+  .code-tabs__tabs {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  .code-tabs__tab {
+    font: inherit;
+    font-size: var(--size-small);
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .code-tabs__tab[aria-selected='true'] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+
+  .code-tabs__proof {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    max-width: none;
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .code-tabs__proof-mark {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    flex: none;
+    border: 1px solid var(--ink);
+  }
+
+  .code-tabs__proof--executed .code-tabs__proof-mark {
+    background: var(--ink);
+  }
+
+  .code-tabs__note {
+    margin: 0 0 var(--space-3);
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .code-tabs__panel + .code-tabs__panel {
+    margin-block-start: var(--space-3);
+  }
+
+  /* Sans JavaScript, les deux panneaux restent visibles l'un sous l'autre.
+     Le module d'onglets pose l'attribut qui masque le panneau inactif. */
+  [data-code-tabs][data-enhanced='true'] .code-tabs__panel[hidden] {
+    display: none;
+  }
+
+  [data-code-tabs]:not([data-enhanced='true']) .code-tabs__tabs {
+    display: none;
+  }
+</style>

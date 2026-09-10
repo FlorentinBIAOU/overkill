@@ -1,0 +1,64 @@
+---
+/**
+ * Sommaire latéral, collant au-delà de 900 px, liste simple en dessous
+ * (CDC 7.5, point de rupture unique à 900 px).
+ */
+export interface Props {
+  title: string;
+  items: { href: string; label: string; muted?: boolean }[];
+}
+
+const { title, items } = Astro.props;
+---
+
+<nav class="toc" aria-labelledby="toc-title">
+  <h2 id="toc-title" class="toc__title">{title}</h2>
+  <ol class="toc__list">
+    {
+      items.map((item) => (
+        <li>
+          <a href={item.href} class:list={['toc__link', item.muted && 'toc__link--muted']}>
+            {item.label}
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</nav>
+
+<style>
+  .toc__title {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 var(--space-2);
+  }
+
+  .toc__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: var(--size-small);
+  }
+
+  .toc__list li {
+    max-width: none;
+    border-block-start: 1px solid var(--rule);
+  }
+
+  .toc__link {
+    display: block;
+    padding-block: var(--space-2);
+    text-decoration: none;
+  }
+
+  .toc__link:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .toc__link--muted {
+    color: var(--muted);
+  }
+</style>

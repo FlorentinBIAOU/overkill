@@ -1,0 +1,59 @@
+---
+/**
+ * Encadré éditorial. Employé pour le scénario d'une fiche, l'avertissement
+ * réglementaire permanent, et les mentions de brouillon.
+ *
+ * Trois tons, distingués par le fond et un filet, jamais par une ombre
+ * (CDC 8.5) ni par une couleur porteuse de jugement (CDC 8.3).
+ */
+export interface Props {
+  tone?: 'neutral' | 'quiet' | 'marked';
+  title?: string;
+  as?: 'aside' | 'div';
+}
+
+const { tone = 'neutral', title, as: Tag = 'aside' } = Astro.props;
+---
+
+<Tag class:list={['callout', `callout--${tone}`]}>
+  {title && <p class="callout__title">{title}</p>}
+  <div class="callout__body"><slot /></div>
+</Tag>
+
+<style>
+  .callout {
+    padding: var(--space-4) var(--space-6);
+    border-inline-start: 3px solid var(--ink);
+    border-radius: 0 var(--radius-block) var(--radius-block) 0;
+  }
+
+  .callout--neutral {
+    background: var(--paper-2);
+  }
+
+  .callout--quiet {
+    background: transparent;
+    border-inline-start-color: var(--rule-strong);
+    color: var(--muted);
+  }
+
+  .callout--marked {
+    background: var(--brand);
+    color: var(--on-brand);
+    border-inline-start-color: var(--brand-deep);
+  }
+
+  .callout__title {
+    margin: 0 0 var(--space-2);
+    font-weight: 600;
+    max-width: none;
+  }
+
+  .callout__body :global(p:first-child) {
+    margin-block-start: 0;
+  }
+
+  .callout__body :global(p:last-child) {
+    margin-block-end: 0;
+  }
+</style>
