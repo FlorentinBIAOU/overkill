@@ -4,9 +4,7 @@ import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
-// Le domaine n'est pas encore arrete (annexe B du CDC). Valeur provisoire,
-// a remplacer avant la mise en ligne : elle ne sert qu'au sitemap et aux canoniques.
-export const SITE = 'https://overkill.example';
+export const SITE = 'https://isitoverkill.dev';
 
 export default defineConfig({
   site: SITE,
@@ -27,6 +25,7 @@ export default defineConfig({
   integrations: [
     mdx(),
     sitemap({
+      filter: (page) => !page.includes('/dev/'),
       i18n: {
         defaultLocale: 'en',
         locales: { en: 'en', fr: 'fr' },
