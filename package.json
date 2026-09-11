@@ -41,11 +41,11 @@
     "check:third-party": "node scripts/check-third-party.mjs /fr /en /fr/catalogue /fr/fiches/mask-personal-data-in-chat /fr/familles/detect-filter /fr/methodologie /fr/feuille-de-route"
   },
   "dependencies": {
-    "@astrojs/mdx": "^4.3.14",
+    "@astrojs/mdx": "^8.0.1",
     "@astrojs/rss": "4.0.12",
     "@astrojs/sitemap": "^3.6.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^5.18.2",
+    "astro": "^7.3.2",
     "shiki": "3.13.0",
     "tailwindcss": "^4.3.3",
     "zod": "3.25.76"
