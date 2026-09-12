@@ -162,6 +162,35 @@ export default {
     },
   },
 
+  costShort: {
+    nul: 'gratuit',
+    negligeable: 'coût négligeable',
+    faible: 'coût faible',
+    modere: 'coût modéré',
+    eleve: 'coût élevé',
+  },
+
+  /* Le survol d'une carte : trois faits en langage courant. */
+  plainCost: {
+    nul: 'Gratuit',
+    negligeable: 'Presque gratuit',
+    faible: 'Peu coûteux',
+    modere: 'Coûteux',
+    eleve: 'Cher',
+  },
+  plainLatency: {
+    '<1 ms': 'Instantané',
+    '~10 ms': 'Instantané',
+    '~100 ms': 'Rapide',
+    '~1 s': 'Une seconde',
+    '>1 s': 'Plus d’une seconde',
+  },
+  plainEgress: {
+    none: 'Vos données ne sortent pas',
+    'own-infra': 'Vos données restent chez vous',
+    'third-party': 'Vos données partent chez un tiers',
+  },
+
   catalogue: {
     title: 'Catalogue',
     search: 'Rechercher une fiche',

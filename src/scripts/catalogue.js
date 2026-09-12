@@ -127,6 +127,10 @@ function initialiser(form, liste) {
       groupe.hidden = !lignes.some((l) => !l.hidden && l.dataset.family === famille);
     }
 
+    form.dataset.filtered = String(
+      Object.keys(actifs).length > 0 || (champ?.value ?? '') !== '',
+    );
+
     if (compteur) compteur.textContent = String(visibles);
     if (etatVide) etatVide.hidden = visibles > 0;
     if (lienVide && champ?.value) {

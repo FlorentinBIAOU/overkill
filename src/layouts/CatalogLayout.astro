@@ -128,14 +128,12 @@ const filtres = [
     <ul class="catalogue__list" data-entry-list>
       {
         groupes.map(([famille, fiches]) => [
-          <li class="catalogue__group" data-group={famille}>
-            <h2>{familyTitles[famille] ?? famille}</h2>
-          </li>,
           ...fiches.map((e: any) => (
           <EntryCard
             id={e.id}
             href={route(lang, 'entries', e.id)}
             title={e.title[lang]}
+            need={e.need[lang]}
             familyLabel={familyTitles[e.family] ?? e.family}
             family={e.family}
             verdict={e.verdict}
@@ -144,6 +142,8 @@ const filtres = [
             deterministic={
               e.rungs.find((r: any) => r.level === e.verdict)?.risks.deterministic ?? true
             }
+            cost={e.rungs.find((r: any) => r.level === e.verdict)?.cost}
+            latency={e.rungs.find((r: any) => r.level === e.verdict)?.latency}
             strings={strings}
             draft={e.status === 'draft'}
           />
@@ -185,6 +185,112 @@ const filtres = [
     letter-spacing: 0.02em;
     color: var(--muted);
     margin: 0;
+  }
+
+
+
+  .catalogue__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-3);
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .catalogue__filter {
+    margin: 0;
+    flex: 0 1 13rem;
+    min-width: 0;
+  }
+
+  .catalogue__filter label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--muted);
+    margin-block-end: 6px;
+  }
+
+  /* La flèche est dessinée en CSS : deux triangles qui se rejoignent. */
+  .catalogue__filter select {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    font-size: 0.92rem;
+    line-height: 1.2;
+    padding: 11px 34px 11px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    background-color: var(--paper-2);
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2316130E' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-position: right 14px center;
+    background-size: 12px 8px;
+    background-repeat: no-repeat;
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color 140ms ease, background-color 140ms ease;
+  }
+
+  .catalogue__filter select:hover {
+    border-color: var(--ink);
+  }
+
+  .catalogue__filter select:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* Discret, et absent tant qu'aucun filtre n'est actif. */
+  .catalogue__submit {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0;
+  }
+
+  .catalogue__submit a {
+    font: inherit;
+    font-size: 0.92rem;
+    line-height: 1.2;
+    padding: 11px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    background-color: var(--paper-2);
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 140ms ease;
+  }
+
+  .catalogue__submit a:hover {
+    border-color: var(--ink);
+    background-color: var(--paper-2);
+  }
+
+  .catalogue__submit a:hover {
+    background: var(--paper-2);
+    color: var(--ink);
+  }
+
+  .catalogue__controls[data-enhanced='true'] .catalogue__submit button {
+    display: none;
+  }
+
+  .catalogue__controls[data-enhanced='true']:not([data-filtered='true']) .catalogue__submit {
+    display: none;
+  }
+
+  :global([data-theme='dark']) .catalogue__filter select {
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23F5F0E4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html:not([data-theme='light'])) .catalogue__filter select {
+      background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23F5F0E4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    }
   }
 
   .catalogue__lead {
@@ -250,15 +356,6 @@ const filtres = [
     margin-block-end: var(--space-1);
   }
 
-  .catalogue__filter select {
-    font: inherit;
-    font-size: var(--size-small);
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--rule-strong);
-    border-radius: var(--radius-block);
-    background: var(--paper);
-    color: var(--ink);
-  }
 
   .catalogue__submit {
     margin: 0;
@@ -292,6 +389,10 @@ const filtres = [
   }
 
   .catalogue__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    gap: var(--space-4);
+    align-items: stretch;
     list-style: none;
     margin: 0;
     padding: 0;

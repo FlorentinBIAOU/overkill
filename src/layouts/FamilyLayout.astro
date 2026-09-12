@@ -60,6 +60,7 @@ const strings = t(lang);
               id={e.id}
               href={route(lang, 'entries', e.id)}
               title={e.title[lang]}
+            need={e.need[lang]}
               familyLabel={familyTitles[e.family] ?? e.family}
               family={e.family}
               verdict={e.verdict}
@@ -68,6 +69,8 @@ const strings = t(lang);
               deterministic={
                 e.rungs.find((r: any) => r.level === e.verdict)?.risks.deterministic ?? true
               }
+              cost={e.rungs.find((r: any) => r.level === e.verdict)?.cost}
+              latency={e.rungs.find((r: any) => r.level === e.verdict)?.latency}
               strings={strings}
               draft={e.status === 'draft'}
             />
@@ -179,6 +182,10 @@ const strings = t(lang);
   }
 
   .family__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    gap: var(--space-4);
+    align-items: stretch;
     list-style: none;
     margin: 0;
     padding: 0;

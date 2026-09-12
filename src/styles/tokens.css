@@ -22,6 +22,13 @@
   --on-brand: #16130E;
   /* Texte pose sur --on-brand. Fixe : un aplat de marque ne suit pas le thème. */
   --on-brand-text: #FFFDF7;
+
+  /* La réponse, une teinte par niveau. Aucune ne dit bien ou mal :
+     elles marquent le cran, du plus léger au plus lourd. */
+  --ans-0: #1B7A4B;
+  --ans-1: #17706B;
+  --ans-2: #8A5510;
+  --ans-3: #9A3E1E;
   --rung-0: #EDE7D7;      /* échelle de poids, du plus léger */
   --rung-1: #C8BC9E;
   --rung-2: #8A7C5C;
@@ -125,6 +132,10 @@
     --paper-2: #211D16;
     --brand: #FFCE00;
     --brand-deep: #FFE066;
+  --ans-0: #4FBE87;
+  --ans-1: #46B3AC;
+  --ans-2: #E0A33F;
+  --ans-3: #E0784F;
     --go: #4FBE85;
 
     /* La rampe est reconstruite, pas inversée : elle continue d'aller du moins
@@ -154,6 +165,10 @@
   --paper-2: #211D16;
   --brand: #FFCE00;
   --brand-deep: #FFE066;
+  --ans-0: #4FBE87;
+  --ans-1: #46B3AC;
+  --ans-2: #E0A33F;
+  --ans-3: #E0784F;
   --go: #4FBE85;
 
   --rung-0: #2C2820;

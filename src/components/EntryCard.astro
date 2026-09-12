@@ -8,6 +8,7 @@
  * agissent sur le DOM déjà rendu sans refaire de requête.
  */
 import VerdictBadge from './VerdictBadge.astro';
+import RungIcon from './icons/RungIcon.astro';
 import type { Strings } from '../i18n';
 import type { Level } from '../content/schema/enums';
 
@@ -16,6 +17,10 @@ export interface Props {
   id: string;
   href: string;
   title: string;
+  /** Le besoin en une phrase. */
+  need?: string;
+  cost: string;
+  latency: string;
   familyLabel: string;
   family: string;
   verdict: Level;
@@ -28,13 +33,13 @@ export interface Props {
 }
 
 const {
-  id, href, title, familyLabel, family, verdict, available, egress, deterministic, strings,
+  id, href, title, need, cost, latency, familyLabel, family, verdict, available, egress, deterministic, strings,
   draft = false,
 } = Astro.props;
 ---
 
 <li
-  class="entry-card"
+  class={`card card--${verdict.toLowerCase()}`}
   data-entry
   data-entry-id={id}
   data-family={family}
@@ -42,64 +47,108 @@ const {
   data-egress={egress}
   data-deterministic={String(deterministic)}
 >
-  <a class="entry-card__link" href={href}>
-    <span class="entry-card__title">{title}</span>
+  <a class="card__link" href={href}>
+    <span class="card__title">{title}</span>
+    {need && <span class="card__need">{need}</span>}
+    {draft && <span class="card__draft">{strings.entry.draft}</span>}
+
+    <span class="card__answer">{strings.rung.answer[verdict]}</span>
+
+    {/* Au survol : ce qu'il fallait ouvrir la fiche pour savoir. */}
+    <span class="card__facts">
+      <span>{strings.plainCost[cost] ?? cost}</span>
+      <span>{strings.plainLatency[latency] ?? latency}</span>
+      <span>{strings.plainEgress[egress] ?? egress}</span>
+    </span>
   </a>
-
-  <span class="entry-card__meta">
-    {draft && <span class="entry-card__draft">{strings.entry.draft}</span>}
-  </span>
-
-  <span class="entry-card__verdict">
-    <VerdictBadge label={strings.rung.answer[verdict]} level={verdict} />
-  </span>
 </li>
 
 <style>
-  .entry-card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2) var(--space-4);
-    padding-block: var(--space-3);
-    border-block-start: 1px solid var(--rule);
-    max-width: none;
+  .card {
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: var(--paper);
+    transition: border-color 160ms ease, transform 160ms ease;
   }
 
-  .entry-card__link {
-    flex: 1 1 18rem;
+  .card__link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: var(--space-6);
     text-decoration: none;
+    color: inherit;
   }
 
-  .entry-card__link:hover .entry-card__title,
-  .entry-card__link:focus-visible .entry-card__title {
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-  }
-
-  .entry-card__title {
+  .card__title {
+    font-size: 1.12rem;
     font-weight: 600;
+    line-height: 1.32;
   }
 
-  .entry-card__meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
+  .card__need {
+    margin-block-start: var(--space-3);
+    font-size: var(--size-small);
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  .card__draft {
+    margin-block-start: var(--space-2);
     font-size: var(--size-small);
     color: var(--muted);
-    flex: 0 1 12rem;
   }
 
-  .entry-card__draft {
-    border: 1px dashed var(--rule-strong);
-    border-radius: var(--radius-pill);
-    padding: 0 var(--space-2);
+  /* La réponse porte la couleur du niveau : elle marque le cran,
+     elle ne juge pas la solution (CDC 8.3). */
+  .card__answer {
+    margin-block-start: auto;
+    padding-block-start: var(--space-5);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ans-0);
   }
 
-  .entry-card__verdict {
+  .card--n1 .card__answer { color: var(--ans-1); }
+  .card--n2 .card__answer { color: var(--ans-2); }
+  .card--n3 .card__answer { color: var(--ans-3); }
+
+  .card__facts {
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    margin-inline-start: auto;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    font-size: 0.76rem;
+    color: var(--muted);
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 180ms ease, opacity 180ms ease,
+                margin-block-start 180ms ease;
+  }
+
+  .card:hover,
+  .card:focus-within {
+    border-color: var(--rule-strong);
+    transform: translateY(-2px);
+  }
+
+  .card:hover .card__facts,
+  .card:focus-within .card__facts {
+    max-height: 4rem;
+    opacity: 1;
+    margin-block-start: var(--space-3);
+  }
+
+  .card:hover .card__title,
+  .card:focus-within .card__title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .card__facts { transition: none; }
+    .card:hover, .card:focus-within { transform: none; }
   }
 </style>
+
+
