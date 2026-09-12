@@ -15,7 +15,8 @@ export default {
   nav: {
     catalogue: 'Catalogue',
     families: 'Families',
-    methodology: 'Methodology',
+    methodology: 'How it works',
+    guide: 'Where to start',
     roadmap: 'Roadmap',
     about: 'About',
     contribute: 'Contribute',
