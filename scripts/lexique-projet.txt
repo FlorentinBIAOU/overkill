@@ -30,6 +30,7 @@ authentication
 available
 axe
 backl
+Barranca
 bayésien
 bert
 biaou
@@ -77,6 +78,7 @@ core
 cormack
 cost
 count
+Covina
 cpu
 creative
 css
@@ -106,6 +108,7 @@ embedding
 embeddings
 emoji
 emojis
+engineer
 ensemblage
 ensemblé
 ensemblées
@@ -171,6 +174,7 @@ hui
 hunspell
 idf
 illustration
+Inc
 infra
 ink
 inline
@@ -356,6 +360,7 @@ snippet
 snippets
 software
 soumissible
+Soundcharts
 sources
 sous-ensembler
 spacy
@@ -423,6 +428,8 @@ validate
 velvet
 vendor
 venv
+vercel
+Vercel
 verdict
 verification
 viewbox
