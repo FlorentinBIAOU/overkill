@@ -1,0 +1,132 @@
+---
+/**
+ * L'index des familles : les dix verbes du catalogue, avec leur question et
+ * le nombre de fiches écrites. C'est la vue d'ensemble que le catalogue,
+ * devenu une grille continue, ne donne plus.
+ */
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import FamilyIllustration from '../../../components/FamilyIllustration.astro';
+import { allFamilies, publishedEntries } from '../../../lib/content';
+import { LOCALES, t, type Locale } from '../../../i18n';
+import { route } from '../../../i18n/routes';
+
+export function getStaticPaths() {
+  return LOCALES.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Locale;
+const strings = t(lang);
+
+const familles = (await allFamilies()).map((f) => f.data);
+const fiches = (await publishedEntries()).map((e) => e.data);
+const compte = (id: string) => fiches.filter((e) => e.family === id).length;
+---
+
+<SiteLayout
+  title={strings.families.title}
+  description={strings.families.lead}
+  lang={lang}
+  register="editorial"
+>
+  <div class="wrap families">
+    <header class="families__head">
+      <h1 class="display-l">{strings.families.title}</h1>
+      <p class="families__lead">{strings.families.lead}</p>
+    </header>
+
+    <ul class="families__grid">
+      {
+        familles.map((f) => (
+          <li class="fam">
+            <a class="fam__link" href={route(lang, 'families', f.id)}>
+              <span class="fam__art">
+                <FamilyIllustration id={f.illustration} lang={lang} title={f.title[lang]} />
+              </span>
+              <span class="fam__name">{f.title[lang]}</span>
+              <span class="fam__q">{f.question[lang]}</span>
+              <span class="fam__count">
+                {compte(f.id)} {compte(f.id) === 1 ? strings.catalogue.resultsOne : strings.catalogue.results}
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</SiteLayout>
+
+<style>
+  .families {
+    padding-block: var(--space-12) var(--space-16);
+  }
+
+  .families__lead {
+    margin-block-start: var(--space-4);
+    max-width: 52ch;
+    color: var(--muted);
+  }
+
+  .families__grid {
+    list-style: none;
+    margin: var(--space-16) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: var(--space-4);
+  }
+
+  .fam {
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    transition: border-color 160ms ease, transform 160ms ease;
+  }
+
+  .fam:hover {
+    border-color: var(--rule-strong);
+    transform: translateY(-2px);
+  }
+
+  .fam__link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: var(--space-6);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .fam__art {
+    display: block;
+    width: 56px;
+    margin-block-end: var(--space-4);
+  }
+
+  .fam__name {
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .fam__q {
+    margin-block-start: var(--space-2);
+    font-size: var(--size-small);
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .fam__count {
+    margin-block-start: auto;
+    padding-block-start: var(--space-5);
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .fam:hover .fam__name {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fam { transition: none; }
+    .fam:hover { transform: none; }
+  }
+</style>

@@ -76,6 +76,6 @@ body:
         - label: Je veux écrire cette fiche moi-même
           required: false
         - label: >
-            J'ai lu que le site ne fait ni publicité ni partenariat, et que ma
-            proposition ne vise pas à faire connaître un produit.
+            Ma proposition part d'un besoin réel, pas d'un outil que je veux
+            faire connaître.
           required: true

@@ -154,6 +154,19 @@ const filtres = [
 
     <EmptyState strings={strings} issueUrl={issueUrl} />
   </div>
+
+  <div class="band band-brand catalogue__cta">
+    <div class="wrap">
+      <h2 class="display-l">{strings.families.ctaHeading}</h2>
+      <p class="catalogue__cta-lead">{strings.families.ctaBody}</p>
+      <p class="catalogue__cta-actions">
+        <a class="catalogue__cta-button" href={route(lang, 'families')}>
+          {strings.families.browse}
+        </a>
+        <a href={issueUrl} rel="noopener">{strings.family.missingAction}</a>
+      </p>
+    </div>
+  </div>
 </SiteLayout>
 
 <script>
@@ -291,6 +304,34 @@ const filtres = [
     :global(html:not([data-theme='light'])) .catalogue__filter select {
       background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23F5F0E4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     }
+  }
+
+  .catalogue__cta {
+    margin-block-start: var(--space-16);
+    padding-block: var(--space-16);
+  }
+
+  .catalogue__cta-lead {
+    max-width: 46ch;
+    margin-block-start: var(--space-5);
+  }
+
+  .catalogue__cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-6);
+    margin-block-start: var(--space-8);
+  }
+
+  .catalogue__cta-button {
+    display: inline-block;
+    padding: var(--space-3) var(--space-6);
+    background: var(--on-brand);
+    color: var(--on-brand-text);
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+    text-decoration: none;
   }
 
   .catalogue__lead {

@@ -185,6 +185,14 @@ export default {
     'third-party': 'Your data goes to a third party',
   },
 
+  families: {
+    ctaHeading: 'Not finding it?',
+    ctaBody: 'The catalogue is sorted into ten families, one per verb. If you do not know what to type, start from what you want to do.',
+    browse: 'Browse by family',
+    title: 'Ten families, sorted by verb',
+    lead: 'Every task in the catalogue belongs to a family. Pick the one that describes what you want to do.',
+  },
+
   catalogue: {
     title: 'Catalogue',
     search: 'Search the catalogue',

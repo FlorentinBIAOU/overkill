@@ -191,6 +191,14 @@ export default {
     'third-party': 'Vos données partent chez un tiers',
   },
 
+  families: {
+    ctaHeading: 'Vous ne trouvez pas ?',
+    ctaBody: 'Le catalogue est rangé en dix familles, une par verbe. Si vous ne savez pas quoi taper, partez de ce que vous voulez faire.',
+    browse: 'Parcourir par famille',
+    title: 'Dix familles, rangées par verbe',
+    lead: 'Chaque tâche du catalogue appartient à une famille. Choisissez celle qui décrit ce que vous voulez faire.',
+  },
+
   catalogue: {
     title: 'Catalogue',
     search: 'Rechercher une fiche',
