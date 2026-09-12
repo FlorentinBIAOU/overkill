@@ -21,7 +21,7 @@ export default {
     roadmap: 'Feuille de route',
     about: 'À propos',
     contribute: 'Contribuer',
-    help: 'Accompagnement',
+    help: 'Contact',
     legal: 'Mentions légales',
     privacy: 'Confidentialité',
     credits: 'Crédits',
@@ -171,8 +171,8 @@ export default {
   },
 
   help: {
-    heading: 'Vous voulez mettre ça en place chez vous ?',
-    body: 'Audit d’un cas d’usage, mise en place de l’alternative, formation d’équipe.',
+    heading: 'Un cas que le catalogue ne couvre pas ?',
+    body: 'Dites-moi ce que fait la tâche et ce qui vous fait douter. Un cas réel fait souvent une bonne fiche.',
     action: 'Écrire un message',
     subjectPrefix: 'Overkill',
   },

@@ -19,7 +19,7 @@ export default {
     roadmap: 'Roadmap',
     about: 'About',
     contribute: 'Contribute',
-    help: 'Get help',
+    help: 'Contact',
     legal: 'Legal notice',
     privacy: 'Privacy',
     credits: 'Credits',
@@ -165,8 +165,8 @@ export default {
   },
 
   help: {
-    heading: 'Want to put this in place where you work?',
-    body: 'Audit of one use case, building the alternative, team training.',
+    heading: 'A case the catalogue does not cover?',
+    body: 'Tell me what the task does and what makes you doubt it. A real case often makes a good entry.',
     action: 'Send a message',
     subjectPrefix: 'Overkill',
   },
