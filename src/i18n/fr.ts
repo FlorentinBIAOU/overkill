@@ -31,7 +31,7 @@ export default {
     theme: 'Basculer le thème',
   },
 
-  /** Les quatre barreaux (CDC 4.1). */
+  /** Les quatre niveaux (CDC 4.1). */
   rung: {
     N0: 'Règle et algorithme classique',
     N1: 'Modèle classique léger',
@@ -43,8 +43,8 @@ export default {
       N2: 'Petit modèle',
       N3: 'API de LLM',
     },
-    unavailable: 'Barreau absent',
-    scaleLabel: 'Barreaux documentés',
+    unavailable: 'Niveau sans objet ici',
+    scaleLabel: 'Niveaux documentés',
   },
 
   verdict: {
@@ -56,8 +56,8 @@ export default {
 
   /** Le tableau récapitulatif (CDC 7.5). */
   table: {
-    caption: 'Récapitulatif des barreaux',
-    rung: 'Barreau',
+    caption: 'Les options, du plus léger au plus lourd',
+    rung: 'Niveau',
     approach: 'Approche',
     cost: 'Coût',
     latency: 'Latence',
@@ -118,7 +118,7 @@ export default {
     updated: 'Révisée le',
     contributors: 'Contributeurs',
     breakingPoint: 'Point de rupture',
-    escalateWhen: 'Quand monter d’un barreau',
+    escalateWhen: 'Quand passer au niveau suivant',
     furtherReading: 'Pour aller plus loin',
     sources: 'Source des chiffres',
     metadata: 'Métadonnées',

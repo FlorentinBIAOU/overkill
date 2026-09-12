@@ -10,7 +10,7 @@ Contrat pour toute personne, ou tout agent, qui écrit une fiche Overkill.
 
 Les extraits existent déjà, ils sont testés, et leurs tests démontrent leurs points de
 rupture. Avant d'écrire une ligne de fiche, lisez `content/snippets/<id>/` en entier :
-l'extrait de chaque barreau, et surtout son test.
+l'extrait de chaque niveau, et surtout son test.
 
 Le test nommé « breaking point » ou « point de rupture » vous dit exactement ce qui fait
 échouer l'approche, avec un exemple qui a réellement été exécuté. C'est ce que vous écrivez
@@ -43,14 +43,14 @@ relatifs. Rien d'autre n'est permis, et `scripts/check-figures.mjs` le vérifie.
 `latency` : exactement `<1 ms`, `~10 ms`, `~100 ms`, `~1 s` ou `>1 s`.
 
 `footprint` : `negligible`, `low`, `moderate`, `high`. C'est un ordre de grandeur **relatif
-aux autres barreaux de la même fiche**, pas une mesure.
+aux autres niveaux de la même fiche**, pas une mesure.
 
 ### 2. N'écrivez aucun conseil juridique
 
 Le champ `regulatory` est une liste courte de faits. Formulation attendue : ce que l'approche
 **vous fait entrer dans le périmètre de**, et ce qu'elle **ne vous dispense pas de**.
 
-Jamais « vous êtes conforme », jamais « vous devez », jamais « il suffit de ». Si un barreau
+Jamais « vous êtes conforme », jamais « vous devez », jamais « il suffit de ». Si un niveau
 n'ajoute aucun périmètre, écrivez-le : `["Aucun périmètre spécifique ajouté"]`.
 
 Exemples acceptables :
@@ -85,7 +85,7 @@ pas changé depuis vingt ans. »
 Mauvais : « Le masquage de données personnelles est un enjeu important pour de nombreuses
 organisations. »
 
-### `name` d'un barreau — court et concret
+### `name` d'un niveau — court et concret
 
 « Normalisation puis expressions régulières », pas « Approche par règles ». On doit
 comprendre ce que fait le code sans l'ouvrir.
@@ -107,7 +107,7 @@ dire « ça y est, ça m'arrive ».
 Bon : « Vos utilisateurs contournent activement le filtre. »
 Mauvais : « Quand la précision devient insuffisante. »
 
-### `unavailable_reason` — pourquoi ce barreau n'est pas là
+### `unavailable_reason` — pourquoi ce niveau n'est pas là
 
 Une raison réelle, tirée de la matrice. Elle dit **pourquoi c'est un mauvais choix ici**,
 pas « non applicable ».
@@ -117,7 +117,7 @@ fiches, cela fait cinquante millions d'appels. »
 
 ### `verdict_rationale` — deux à trois phrases, assumées
 
-Pourquoi ce barreau et pas le suivant. Dites le compromis à voix haute. Si le verdict est N3,
+Pourquoi ce niveau et pas le suivant. Dites le compromis à voix haute. Si le verdict est N3,
 assumez-le sans vous excuser : le site n'est pas anti-IA.
 
 ### `further_reading` et `sources`
@@ -162,3 +162,9 @@ node scripts/test-snippets.mjs <id>           # le code de votre fiche
 ```
 
 Les trois doivent être verts. Si l'un ne l'est pas, la fiche n'est pas finie.
+
+## Vocabulaire imposé
+
+Dans l'interface comme dans le corps des fiches, on écrit **niveau**, pas « barreau ».
+Le mot « barreau » n'est conservé que dans la page méthodologie, où la métaphore de
+l'échelle est expliquée. Voir `docs/DECISIONS-CLARTE.md`.

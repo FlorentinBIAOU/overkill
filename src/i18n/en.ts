@@ -40,8 +40,8 @@ export default {
       N2: 'Small model',
       N3: 'LLM API',
     },
-    unavailable: 'Rung not applicable',
-    scaleLabel: 'Documented rungs',
+    unavailable: 'Not worth it here',
+    scaleLabel: 'Documented levels',
   },
 
   verdict: {
@@ -52,8 +52,8 @@ export default {
   },
 
   table: {
-    caption: 'Rungs at a glance',
-    rung: 'Rung',
+    caption: 'The options, from lightest to heaviest',
+    rung: 'Level',
     approach: 'Approach',
     cost: 'Cost',
     latency: 'Latency',
@@ -112,7 +112,7 @@ export default {
     updated: 'Reviewed on',
     contributors: 'Contributors',
     breakingPoint: 'Breaking point',
-    escalateWhen: 'When to move up a rung',
+    escalateWhen: 'When to move up a level',
     furtherReading: 'Further reading',
     sources: 'Where the figures come from',
     metadata: 'Metadata',
