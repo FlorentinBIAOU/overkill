@@ -40,8 +40,22 @@ export default {
       N2: 'Small model',
       N3: 'LLM API',
     },
+    /** The answer in plain words, shown before the level code. */
+    answer: {
+      N0: 'No AI needed',
+      N1: 'No generative AI needed',
+      N2: 'AI, but a small model on your own machines',
+      N3: 'Yes, a general-purpose model earns its place',
+    },
     unavailable: 'Not worth it here',
     scaleLabel: 'Documented levels',
+  },
+
+  family: {
+    missingHeading: 'Is an entry missing here?',
+    missingBody: 'The catalogue grows on what people put into it. If you have seen someone reach for a general-purpose model where a rule would have done, say so.',
+    missingAction: 'Suggest a need',
+    missingHow: 'How to write an entry',
   },
 
   verdict: {

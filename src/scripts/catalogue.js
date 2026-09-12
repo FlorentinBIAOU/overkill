@@ -20,6 +20,7 @@ function initialiser(form, liste) {
   form.dataset.enhanced = 'true';
 
   const lignes = [...liste.querySelectorAll('[data-entry]')];
+  const groupes = [...liste.querySelectorAll('[data-group]')];
   const champ = form.querySelector('[data-search-input]');
   const selects = [...form.querySelectorAll('[data-filter]')];
   const compteur = document.querySelector('[data-count]');
@@ -117,6 +118,13 @@ function initialiser(form, liste) {
       const visible = passeFiltres && passeRecherche;
       ligne.hidden = !visible;
       if (visible) visibles += 1;
+    }
+
+    // Un intertitre de famille disparaît quand plus aucune de ses fiches
+    // n'est visible : sinon les filtres laissent des titres orphelins.
+    for (const groupe of groupes) {
+      const famille = groupe.dataset.group;
+      groupe.hidden = !lignes.some((l) => !l.hidden && l.dataset.family === famille);
     }
 
     if (compteur) compteur.textContent = String(visibles);

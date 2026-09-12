@@ -32,6 +32,7 @@ axe
 backl
 Barranca
 bayésien
+before
 bert
 biaou
 bin
@@ -352,6 +353,7 @@ seo
 serif
 shiki
 should
+shown
 sigle
 sigles
 sitemap
@@ -446,6 +448,7 @@ width
 winkler
 with
 woff
+words
 workflow
 workflows
 wrangler

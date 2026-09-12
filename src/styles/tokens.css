@@ -20,6 +20,8 @@
   /* Le jaune de marque est identique dans les deux modes et ne porte que de
      l'encre sombre. Ce token n'est donc jamais redéfini en mode sombre. */
   --on-brand: #16130E;
+  /* Texte pose sur --on-brand. Fixe : un aplat de marque ne suit pas le thème. */
+  --on-brand-text: #FFFDF7;
   --rung-0: #EDE7D7;      /* échelle de poids, du plus léger */
   --rung-1: #C8BC9E;
   --rung-2: #8A7C5C;

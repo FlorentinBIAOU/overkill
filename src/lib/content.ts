@@ -74,4 +74,4 @@ export function neighboursOf(entry: CollectionEntry<'entries'>, toutes: Collecti
 export const FAMILY_ORDER = FAMILIES;
 
 export const ISSUE_URL =
-  'https://github.com/florentin-biaou/overkill/issues/new?template=propose-entry.yml';
+  'https://github.com/FlorentinBIAOU/overkill/issues/new?template=propose-entry.yml';

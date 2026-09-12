@@ -69,7 +69,7 @@ const hasRegulatory = entry.rungs.some(
         <p class="entry__need">{entry.need[lang]}</p>
 
         <p class="entry__badges">
-          <VerdictBadge label={strings.verdict.badge} level={entry.verdict} size="large" />
+          <VerdictBadge label={strings.rung.answer[entry.verdict]} level={entry.verdict} size="large" />
           {
             entry.status === 'draft' && (
               <span class="entry__draft">{strings.entry.draft}</span>
@@ -122,7 +122,7 @@ const hasRegulatory = entry.rungs.some(
             <h2>{strings.verdict.heading}</h2>
             <p class="entry__verdict-badge">
               <VerdictBadge
-                label={strings.verdict.badge}
+                label={strings.rung.answer[entry.verdict]}
                 level={entry.verdict}
                 size="large"
               />

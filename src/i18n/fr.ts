@@ -43,8 +43,22 @@ export default {
       N2: 'Petit modèle',
       N3: 'API de LLM',
     },
+    /** La réponse en toutes lettres, affichée avant le code du niveau. */
+    answer: {
+      N0: 'Pas besoin d’IA',
+      N1: 'Pas besoin d’IA générative',
+      N2: 'De l’IA, mais un petit modèle chez vous',
+      N3: 'Oui, un modèle généraliste se justifie',
+    },
     unavailable: 'Niveau sans objet ici',
     scaleLabel: 'Niveaux documentés',
+  },
+
+  family: {
+    missingHeading: 'Il manque une fiche ici ?',
+    missingBody: 'Le catalogue grandit parce que des gens y versent ce qu’ils ont vu. Si vous avez vu quelqu’un employer un modèle généraliste là où une règle aurait suffi, dites-le.',
+    missingAction: 'Proposer un besoin',
+    missingHow: 'Comment écrire une fiche',
   },
 
   verdict: {

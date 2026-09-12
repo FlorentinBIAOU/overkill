@@ -7,7 +7,6 @@
  * Les attributs de données portent l'état filtrable, pour que les filtres
  * agissent sur le DOM déjà rendu sans refaire de requête.
  */
-import RungScale from './RungScale.astro';
 import VerdictBadge from './VerdictBadge.astro';
 import type { Strings } from '../i18n';
 import type { Level } from '../content/schema/enums';
@@ -48,18 +47,11 @@ const {
   </a>
 
   <span class="entry-card__meta">
-    <span class="entry-card__family">{familyLabel}</span>
     {draft && <span class="entry-card__draft">{strings.entry.draft}</span>}
   </span>
 
   <span class="entry-card__verdict">
-    <RungScale
-      available={available}
-      verdict={verdict}
-      label={strings.rung.scaleLabel}
-      verdictLabel={strings.verdict.label}
-    />
-    <VerdictBadge label={strings.verdict.badge} level={verdict} />
+    <VerdictBadge label={strings.rung.answer[verdict]} level={verdict} />
   </span>
 </li>
 

@@ -30,6 +30,11 @@ const {
 } = Astro.props;
 const strings = t(lang);
 
+/** Les fiches groupées par famille, dans l'ordre des familles. */
+const groupes = FAMILIES
+  .map((f) => [f, entries.filter((e: any) => e.family === f)] as const)
+  .filter(([, fiches]) => fiches.length > 0);
+
 const filtres = [
   {
     nom: 'family',
@@ -122,7 +127,11 @@ const filtres = [
 
     <ul class="catalogue__list" data-entry-list>
       {
-        entries.map((e) => (
+        groupes.map(([famille, fiches]) => [
+          <li class="catalogue__group" data-group={famille}>
+            <h2>{familyTitles[famille] ?? famille}</h2>
+          </li>,
+          ...fiches.map((e: any) => (
           <EntryCard
             id={e.id}
             href={route(lang, 'entries', e.id)}
@@ -138,7 +147,8 @@ const filtres = [
             strings={strings}
             draft={e.status === 'draft'}
           />
-        ))
+          )),
+        ])
       }
     </ul>
 
@@ -157,6 +167,24 @@ const filtres = [
 
   .catalogue__head {
     margin-block-end: var(--space-8);
+  }
+
+  .catalogue__group {
+    margin-block: var(--space-8) var(--space-2);
+    padding-block-end: var(--space-2);
+    border-block-end: 1px solid var(--rule-strong);
+  }
+
+  .catalogue__group:first-child {
+    margin-block-start: var(--space-4);
+  }
+
+  .catalogue__group h2 {
+    font-size: var(--size-small);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    margin: 0;
   }
 
   .catalogue__lead {

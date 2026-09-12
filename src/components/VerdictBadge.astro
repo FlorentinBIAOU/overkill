@@ -14,9 +14,14 @@ export interface Props {
 }
 
 const { label, level, size = 'normal' } = Astro.props;
+
+/* N0 et N1 se passent d'IA générative : vert plein. N2 et N3 en emploient :
+   contour neutre. La distinction porte sur la nature de la réponse, jamais
+   sur sa qualité (CDC 8.3). */
+const sansIA = level === 'N0' || level === 'N1';
 ---
 
-<span class:list={['verdict-badge', size === 'large' && 'verdict-badge--large']}>
+<span class:list={['verdict-badge', sansIA ? 'verdict-badge--go' : 'verdict-badge--ai', size === 'large' && 'verdict-badge--large']}>
   <span class="verdict-badge__mark" aria-hidden="true"></span>
   {label}{level && <span class="verdict-badge__level">{level}</span>}
 </span>
@@ -28,19 +33,38 @@ const { label, level, size = 'normal' } = Astro.props;
     gap: var(--space-2);
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pill);
-    border: 1px solid var(--go);
-    color: var(--go);
+    border: 1px solid currentColor;
     font-size: var(--size-small);
     font-weight: 600;
     line-height: 1.4;
     white-space: nowrap;
   }
 
+  .verdict-badge--go {
+    color: var(--go);
+  }
+
+  .verdict-badge--ai {
+    color: var(--ink);
+    background: var(--paper-2);
+    border-color: var(--rule-strong);
+  }
+
   .verdict-badge--large {
     font-size: var(--size-body);
     padding: var(--space-2) var(--space-4);
+  }
+
+  .verdict-badge--go.verdict-badge--large {
     background: var(--go);
     color: var(--paper);
+    border-color: var(--go);
+  }
+
+  .verdict-badge--ai.verdict-badge--large {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
   }
 
   .verdict-badge__mark {

@@ -76,24 +76,19 @@ const strings = t(lang);
       </ul>
     </section>
 
-    {
-      planned.length > 0 && (
-        <section class="family__planned" aria-labelledby="family-planned">
-          <h2 id="family-planned" class="family__section-title">{strings.nav.roadmap}</h2>
-          <p class="family__planned-help">{strings.catalogue.emptyHelp}</p>
-          <ul class="family__planned-list">
-            {planned.map((p) => (
-              <li>
-                <span>{p.title[lang]}</span>
-                <a href={`${issueUrl}&title=${encodeURIComponent(p.title.en)}`} rel="noopener">
-                  {strings.catalogue.emptyAction}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )
-    }
+  </div>
+
+  <div class="band band-brand family__suggest">
+    <div class="wrap">
+      <h2 class="display-l">{strings.family.missingHeading}</h2>
+      <p class="family__suggest-lead">{strings.family.missingBody}</p>
+      <p class="family__suggest-actions">
+        <a class="family__suggest-cta" href={issueUrl} rel="noopener">
+          {strings.family.missingAction}
+        </a>
+        <a href={route(lang, 'contribute')}>{strings.family.missingHow}</a>
+      </p>
+    </div>
   </div>
 </SiteLayout>
 
@@ -137,6 +132,42 @@ const strings = t(lang);
   .family__question {
     margin: 0 0 var(--space-16);
     max-width: 22ch;
+  }
+
+
+  .family__suggest-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    margin-block-start: var(--space-4);
+  }
+
+  .family__suggest {
+    margin-block-start: var(--space-16);
+    padding-block: var(--space-16);
+  }
+
+  .family__suggest-lead {
+    max-width: 46ch;
+    margin-block-start: var(--space-5);
+  }
+
+  .family__suggest-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-6);
+    margin-block-start: var(--space-8);
+  }
+
+  .family__suggest-cta {
+    display: inline-block;
+    padding: var(--space-3) var(--space-6);
+    background: var(--on-brand);
+    color: var(--on-brand-text);
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+    text-decoration: none;
   }
 
   .family__section-title {
