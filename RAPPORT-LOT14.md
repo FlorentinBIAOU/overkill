@@ -9,13 +9,115 @@ terminée, vérifiée et commitée.
 
 ## Les verdicts corrigés
 
-*Partie 7.1 — relecture et exécution des 25 fiches. Section à compléter.*
+**Aucun des vingt-cinq verdicts n'a été renversé.** Les vingt-cinq ont été
+contestés un par un : chaque niveau réexécuté hors de ses tests, chaque point de
+rupture reproduit, chaque « le niveau du dessous ne suffirait-il pas ? » posé et
+tranché. Les vingt-cinq tiennent sur ce qu'ils affirment.
+
+Deux ont demandé un examen plus long, et sont laissés en place avec le doute
+écrit :
+
+- **`fuzzy-match-company-names` (N0)** — le besoin annoncé, rapprocher deux
+  fichiers, ressemble à l'emploi de N1. Mais N0 juge une paire, ne dépend de
+  rien, et son point de rupture est exactement celui de N1 : le sigle, que N1
+  manque aussi, et manque en se faisant doubler par deux sociétés sans rapport.
+  Mesuré : « Menuiserie Dubois » contre « Dubois Menuiserie » donne 0,7395, sous
+  le seuil de 0,85 — la faiblesse réelle est l'ordre des mots, et le champ
+  `escalate_when` la nomme déjà.
+- **`show-similar-articles` (N1)** — c'est la seule fiche où N0 n'est pas retenu
+  alors qu'il est gratuit et déterministe. L'argument est que l'échec de N0 est
+  total et non dégradé, ce que son test démontre sur deux corpus : le jumeau
+  anglais de l'article ressort à **0 exactement**, pas à un score faible. Le
+  doute est laissé écrit : le choix repose sur une hypothèse d'étiquetage
+  relâché, et un lecteur dont les étiquettes sont tenues aura raison de rester à
+  N0.
+
+### Ce qui a été corrigé, en revanche : quinze affirmations fausses
+
+Aucune n'était attrapable par un contrôle automatique. Toutes l'ont été en
+exécutant le code et en confrontant le résultat à la phrase de la fiche.
+
+**Des classes de latence qui surévaluaient le coût d'une décision.** Sept fiches
+déclaraient `~10 ms` là où une décision se prend en moins d'une milliseconde.
+Mesuré sur la régression logistique de `detect-spam-in-contact-form`, côté
+Python, bibliothèque comprise : **0,227 ms par décision** sur trente-deux
+exemples d'entraînement. Passées à `<1 ms`. La classe `~10 ms` reste là où elle
+est vraie — `detect-anomalies-in-metrics` en N1, mesuré à 1,345 ms côté Python,
+où `<1 ms` serait une promesse que le code ne tient pas.
+
+**Une sortie de données mal déclarée.** `parse-address-into-fields` annonçait
+`own-infra` sur un niveau N1 qui ne sort de nulle part : passé à `none`.
+
+**Un niveau qui ne faisait pas ce que son nom disait.**
+`moderate-user-comments` appelait son N3 « point de terminaison de modération
+d'un fournisseur » alors que le code note le commentaire avec un modèle
+généraliste. Renommé.
+
+**Un chiffre inventé dans un scénario.** `mask-personal-data-in-chat` affirmait
+qu'une expression régulière fait le travail « en un dixième de milliseconde ».
+Personne ne l'avait mesuré : devenu « en une fraction de milliseconde ».
+
+**« Sanofi n'a en commun qu'une première lettre avec SNCF ».** Faux : après
+normalisation, les deux partagent trois caractères sur quatre dans la fenêtre de
+Jaro, et c'est précisément ce qui produit le score qui les rapproche. Le point de
+fond — aucun seuil ne retient la vraie paire en écartant celle-là — est intact et
+reproduit. L'erreur était aussi dans un commentaire de test, qui la répétait.
+
+**« Une gamme qui n'a encore rien vendu ».** La donnée du test lui donne une
+popularité de 0,05, pas de zéro. Devenue « presque rien ».
+
+**Un plafond toléré annoncé à 2100 là où le code en calcule 1511.** Dans la
+docstring de `detect-anomalies-in-metrics`, dont les deux premiers nombres
+venaient bien du test, mais pas le troisième.
+
+**Une minute impossible mal décrite.** La même fiche parlait d'un trafic de
+milieu de journée portant des erreurs de plafond ; la donnée du test est un
+trafic **de nuit**. La version JavaScript de la docstring, elle, était juste :
+seule la version Python mentait.
+
+**Un point de rupture qui attribuait à un modèle réel ce que produit le double.**
+`search-in-your-own-documents` affirmait qu'« la fusion présente en tête celle
+des notes de frais » : c'est vrai, mais c'est l'encodeur factice des tests qui
+désigne cette page. Reformulé pour dire d'où vient le classement.
+
+**Une justification contredite par sa propre fiche.** La même disait de N1 qu'il
+n'est « ni plus lent ni plus cher », quand la fiche déclare N0 à `nul` et N1 à
+`négligeable`. Devenue : pas plus lent, et ce qu'il coûte de plus est un index à
+reconstruire hors de la base.
+
+**Cinq points de rupture vrais mais invérifiables tels qu'ils étaient écrits.**
+Ils affirmaient un échec sans donner de quoi le reproduire. Réécrits avec ce que
+l'exécution montre : le 0,96 des deux fiches jamais comparées de
+`find-duplicate-records` et le double échec d'un nom saisi à l'envers ; la
+distinction, sur `extract-fields-from-invoice`, entre deux champs qui reviennent
+vides — ce qui se voit — et un total bien formé et faux — ce qui ne se voit pas ;
+le complément d'adresse écrit devant qui vide le numéro et avale l'adresse
+entière ; le faux positif d'IBAN sur une référence de commande, qui manquait au
+point de rupture de `mask-personal-data-in-chat` ; et le corpus aux conventions
+mêlées qui remplace, sur `extract-dates-from-text`, un point de rupture N1 qui
+répétait celui de N0.
+
+**Quatre commentaires de test qui niaient leur propre fiche.** Les tests de
+rupture de N1 et N2 de `show-similar-articles` s'ouvraient sur « ce n'est pas le
+point de rupture de la fiche, qui est celui de N0 » — alors que la fiche déclare
+bien un point de rupture pour ces deux niveaux, et que ce sont exactement ces
+tests qu'elle cite.
+
+### Une arbitrage rendu : ce que la latence annoncée mesure
+
+Le cahier des charges fixe cinq classes de latence sans dire ce qu'elles
+mesurent. La question s'est posée sur les niveaux N1, où l'entraînement coûte
+mille fois la décision. Tranché, et écrit sur la page « Comment ça marche » :
+**la latence annoncée est celle d'une décision sur une entrée**, pas celle de
+l'entraînement, qui n'a lieu qu'une fois, ni celle du premier chargement d'un
+modèle. Quand l'entraînement pèse dans le choix d'un niveau, la fiche le dit
+dans son texte, pas dans sa classe de latence.
 
 ---
 
 ## Les codes réparés
 
-*Partie 7.1. Section à compléter.*
+*À compléter : les extraits repris pendant la relecture.*
 
 ---
 
