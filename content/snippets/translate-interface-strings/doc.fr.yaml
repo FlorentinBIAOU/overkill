@@ -1,0 +1,67 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Réemployer les traductions que vous avez déjà payées : une mémoire de
+  traduction.
+
+  Niveau N0. Aucun modèle, aucun service, aucune clé. Un libellé d'interface
+  change rarement en profondeur : un mot s'ajoute, une majuscule se corrige,
+  une variable se déplace. Quand cela arrive, la traduction de l'an dernier est
+  encore presque juste, et la traduction la moins chère est celle qu'on ne
+  commande pas deux fois.
+
+  Trois réponses, et la différence entre elles compte plus que le code. Une
+  correspondance exacte part en production. Une correspondance approchée est un
+  brouillon : elle revient avec son score et un drapeau de relecture, jamais
+  comme une traduction finie. Tout le reste est du texte nouveau, dont ce
+  niveau n'a rien à dire — voyez le point de rupture dans le test. Rendre une
+  approximation comme une certitude est le seul comportement qui rendrait toute
+  cette approche malhonnête.
+
+  Les variables d'interpolation sont vérifiées à part du score. Une traduction
+  dont les variables ne correspondent pas à la source est une interface cassée,
+  quel que soit son score : elle est donc signalée même sur une correspondance
+  exacte.
+
+n2: |
+  Traduire avec un modèle neuronal auto-hébergé, une paire de langues à la
+  fois.
+
+  Niveau N2. C'est le niveau qui traduit vraiment : contrairement à la mémoire
+  de N0, il a une réponse pour une chaîne que personne n'a jamais écrite. Le
+  prix, c'est un fichier de modèle par paire de langues à livrer, à garder à
+  jour et à tenir dans un processus chaud, et une sortie que personne ne sait
+  expliquer.
+
+  L'essentiel du code ci-dessous ne concerne pas la traduction. Il concerne les
+  variables d'interpolation, et c'est l'image honnête de ce niveau. Un modèle
+  de traduction voit `{count} items selected` comme du texte : il traduit donc
+  volontiers le mot entre accolades, l'oublie, ou le répète. L'interface
+  affiche alors une accolade là où un nombre devait être, et le défaut atteint
+  la production parce que la chaîne semblait correcte à tous ceux qui ne lisent
+  pas cette langue.
+
+  Les variables sont donc cachées derrière des marqueurs neutres avant que le
+  modèle ne voie la chaîne, remises ensuite, et comptées. Déplacer un marqueur
+  est permis : l'ordre des mots est l'affaire du modèle. En perdre un ou en
+  inventer un est signalé, et l'appelant reçoit un brouillon marqué plutôt
+  qu'une interface cassée.
+
+n3: |
+  Traduire en interrogeant un modèle généraliste, avec le contexte d'interface.
+
+  Niveau N3. Ce que ce niveau apporte face à un modèle de traduction, c'est le
+  contexte : un modèle traducteur reçoit une chaîne et rien d'autre, tandis qu'à
+  un modèle généraliste on peut dire que `Save` est le libellé d'un bouton et
+  non le verbe d'une phrase, que l'interface s'adresse à un client plutôt qu'à
+  un administrateur, et qu'il n'y a pas la place d'une phrase entière. C'est
+  exactement l'information qu'une équipe de traduction demande et obtient
+  rarement.
+
+  Ce qu'il coûte, c'est tout ce qui entoure l'appel : une clé, un fournisseur
+  qui répond de la prose quand on a demandé du JSON, des reprises, un plafond
+  sur l'entrée, et le même contrôle des variables qu'au niveau du dessous,
+  parce que se faire demander de garder `{count}` tel quel n'est pas la même
+  chose que le faire.
