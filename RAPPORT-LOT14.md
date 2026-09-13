@@ -124,6 +124,22 @@ terminée, vérifiée et commitée.
 | Accessibilité et débordement | `check-a11y` et `check-overflow` sur les deux langues, au vert |
 
 
+### Partie 5 — La page « Comment ça marche »
+
+| Fait | Preuve |
+|---|---|
+| Une seule page, deux temps : l'explication simple puis la méthode | captures regardées en clair et en sombre, à 360 et 1280 px |
+| Pourquoi une échelle, en trois paragraphes | la même tâche, deux solutions, et ce que le réflexe coûte |
+| Les quatre niveaux, un bloc chacun : ce que c'est, ce que ça coûte, ce que ça garantit, ce qui le fait céder | capture du composant regardée |
+| Un exemple tiré d'une vraie fiche pour chaque niveau | dérivé des verdicts publiés, donc impossible à périmer : `Levels.astro` prend la première fiche dont le verdict est ce niveau |
+| La condition de montée entre chaque niveau | trois blocs, entre les quatre cartes ; c'est la valeur propre du site et elle n'était écrite nulle part |
+| La phrase de clôture | « Le niveau le plus lourd n'est pas le mauvais choix. Il est le mauvais choix par défaut. » |
+| La méthode conservée : verdict, vérification du code, prix, empreinte, couleur, réglementaire | contenu existant, repris et renuméroté en sous-sections |
+| Version courte sur l'accueil : quatre blocs de deux lignes et un lien | capture de la bande regardée |
+| « Barreau » retiré de la page, relu phrase par phrase | `grep -i barreau` sur les deux langues : plus aucune occurrence |
+| Contrôles | `npm run check` au vert ; `check-a11y` et `check-overflow` sur les deux langues |
+
+
 ### Défauts trouvés en regardant l'écran, et corrigés — parties 1 et 2
 
 1. **L'adresse de contact s'affichait à l'envers** (`moc.liamg@olfuoaib`) sur
@@ -301,6 +317,29 @@ l'écrire dans le texte, où il serait faux au premier ajout.
 suffisent à montrer l'écart ; le reste est derrière un dépli plutôt que
 supprimé, pour que personne n'ait à nous croire sur le fait qu'on ne l'a pas
 arrangé.
+
+
+### Partie 5
+
+**L'exemple de chaque niveau est dérivé, pas écrit.** « Une fiche qui le
+recommande » prend la première fiche publiée dont le verdict est ce niveau. Un
+exemple écrit à la main aurait vieilli à la première fiche ajoutée, et cette
+page est justement celle qui doit rester vraie. *Écarté :* citer une fiche
+nommément dans le texte.
+
+**Le texte éditorial des quatre niveaux vit dans le composant**, à côté de ce
+qu'il commente, et non dans le dictionnaire d'interface : il n'est employé
+qu'ici, et il se relit mieux d'un bloc. C'est la convention que suivent déjà
+les composants de l'accueil.
+
+**La seconde moitié passe en sous-sections d'un titre « La méthode, pour qui
+creuse ».** Le lot demande une page en deux temps ; la hiérarchie des titres
+devait le dire, pas seulement la mise en page.
+
+**« Barreau » disparaît aussi de cette page**, ce qui révise la section 2 des
+décisions de clarté — laquelle le conservait ici pour la métaphore de
+l'échelle. La métaphore reste : elle se dit « échelle » et « niveau ». Le
+document est mis à jour.
 
 ---
 
