@@ -107,6 +107,11 @@ Costs are therefore given as orders of magnitude, with a fixed vocabulary:
 Latency follows the same principle, in five classes: `<1 ms`, `~10 ms`, `~100 ms`, `~1 s`,
 `>1 s`.
 
+**What the stated latency measures**, said once and for all: the time of one decision on one
+input, on an ordinary machine. Not training, which happens once. Not the first load of a
+model into memory. When training or loading weighs on the decision to adopt a level — and on
+N1 and N2 it often does — the entry says so in its text, not in its latency class.
+
 This vocabulary is deliberately coarse. It is enough to decide with, and it does not go stale.
 
 ### How footprint is estimated

@@ -111,6 +111,13 @@ Les coûts sont donc exprimés en ordres de grandeur, avec un vocabulaire fixe :
 Les latences suivent le même principe, avec cinq classes : `<1 ms`, `~10 ms`, `~100 ms`,
 `~1 s`, `>1 s`.
 
+**Ce que la latence annoncée mesure**, et il fallait le dire une fois pour toutes : le temps
+d'une décision sur une entrée, sur une machine ordinaire. Pas celui de l'entraînement, qui
+n'a lieu qu'une fois. Pas celui du premier chargement d'un modèle en mémoire. Quand
+l'entraînement ou le chargement pèsent dans la décision d'adopter un niveau — et sur les
+niveaux N1 et N2, c'est souvent le cas — la fiche le dit dans son texte, pas dans sa classe
+de latence.
+
 Ce vocabulaire est volontairement grossier. Il suffit pour décider, et il ne périme pas.
 
 ### Comment l'empreinte est estimée
