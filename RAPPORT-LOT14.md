@@ -117,7 +117,40 @@ dans son texte, pas dans sa classe de latence.
 
 ## Les codes réparés
 
-*À compléter : les extraits repris pendant la relecture.*
+**`read-text-from-a-scanned-page`, niveau N0 — le défaut le plus grave du
+catalogue.** L'extrait répond à la question « cette page porte-t-elle déjà du
+texte, ou faut-il un moteur de reconnaissance ? ». Il comptait les caractères
+trouvés dans **tous** les flux du document, y compris les images et les
+programmes de police. Sur une vraie page scannée — c'est-à-dire une photo — il
+trouvait donc plusieurs milliers de caractères d'octets compressés et répondait
+« cette page a déjà un texte », soit exactement l'inverse de la vérité, sur le
+cas d'usage central de la fiche.
+
+Réparé : les flux qui ne sont pas des instructions de page sont écartés sur leur
+déclaration, la lecture ne se fait plus qu'à l'intérieur d'un objet texte, et
+une chaîne n'est comptée que si un opérateur l'affiche réellement. La fonction
+distingue désormais **deux façons de dire non**, qui n'appellent pas la même
+suite : rien n'a été montré du tout, la page est une image et un moteur de
+reconnaissance est ce qui vient après ; ou beaucoup a été montré et rien ne se
+lit, le texte est là derrière une table de glyphes que ce fichier ne porte pas,
+et un moteur de reconnaissance serait la mauvaise réponse.
+
+Deux tests nouveaux le démontrent : un scan dont l'image est un JPEG, et une
+couche de texte que la fonction ne sait pas décoder. Les six extraits de la
+fiche passent.
+
+**`detect-spam-in-contact-form`, niveau N0 — un plafond de liens qui comptait
+double.** L'expression qui repère un lien avait deux branches qui se recouvrent :
+`http://exemple.com` correspondait à la fois à `https?://` et à `\.com`, donc
+comptait pour deux liens. Conséquence visible : une demande de client légitime
+contenant deux liens dépassait un plafond fixé à trois. Réparé en consommant le
+lien entier.
+
+**`summarise-a-long-document`, niveau N0 — un commentaire de test qui expliquait
+mal son propre résultat.** Le test démontre qu'une phrase courte et tardive est
+la première écartée du résumé extractif ; son commentaire attribuait cela à son
+seul vocabulaire, alors que la digression sur l'entrepôt occupe tout le
+vocabulaire du document. Le fait tient, l'explication était incomplète.
 
 ---
 
