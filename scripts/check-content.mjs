@@ -80,6 +80,8 @@ async function lireDossier(dossier) {
 
 const fiches = await lireDossier(join(CONTENT, 'entries'));
 const vus = new Map();
+/** Le verdict de chaque fiche valide, dont les essais ont besoin plus bas. */
+const verdicts = new Map();
 let publiees = 0;
 let brouillons = 0;
 
@@ -100,6 +102,7 @@ for (const f of fiches) {
     echec(f.chemin, `identifiant déjà employé par ${vus.get(e.id)}`);
   }
   vus.set(e.id, f.chemin);
+  if (e.status === 'published') verdicts.set(e.id, e.verdict);
 
   if (e.status === 'published') publiees++;
   else brouillons++;
@@ -184,6 +187,102 @@ if (existsSync(cheminRoadmap)) {
   }
 }
 
+// ------------------------------------------------------------------ les essais
+
+/**
+ * Les essais (`content/tryouts/`) sont du contenu, et ils affirment quelque
+ * chose : que tel extrait de telle fiche fait telle chose. Ce contrôle vérifie
+ * ce que le contrat exige et que rien d'autre ne peut attraper.
+ *
+ * Le module est importé et ses cas sont exécutés : un essai qui jette ne passe
+ * pas la construction du site. C'est la même règle que pour les extraits
+ * (CDC 4.6) — rien d'affiché qui n'ait tourné.
+ */
+let essais = 0;
+for (const mode of ['live', 'frozen']) {
+  const dossier = join(CONTENT, 'tryouts', mode);
+  if (!existsSync(dossier)) continue;
+  for (const nom of (await readdir(dossier)).filter((f) => f.endsWith('.js'))) {
+    const chemin = join(dossier, nom);
+    const id = nom.slice(0, -3);
+    essais += 1;
+    const source = await readFile(chemin, 'utf8');
+
+    if (!verdicts.has(id)) {
+      echec(chemin, `aucune fiche publiée ne porte l'identifiant ${id}`);
+      continue;
+    }
+    const verdict = verdicts.get(id);
+
+    // L'essai porte sur l'extrait du niveau recommandé, et il l'importe.
+    const attendu = `snippets/${id}/${verdict.toLowerCase()}.js`;
+    if (!source.includes(attendu)) {
+      echec(chemin, `l'essai doit importer ${attendu}, l'extrait du niveau recommandé`);
+    }
+
+    // Un essai interactif est chargé par un navigateur : ni module de Node,
+    // ni dépendance installée.
+    if (mode === 'live') {
+      for (const m of source.matchAll(/from\s+'([^']+)'/g)) {
+        if (!m[1].startsWith('.')) {
+          echec(chemin, `un essai interactif ne peut pas dépendre de « ${m[1]} »`);
+        }
+      }
+    }
+
+    let spec;
+    try {
+      spec = (await import(`${process.cwd()}/${chemin}`)).default;
+    } catch (erreur) {
+      echec(chemin, `le module ne se charge pas : ${erreur.message}`);
+      continue;
+    }
+
+    if (spec?.level !== verdict) {
+      echec(chemin, `l'essai déclare ${spec?.level} alors que le verdict de la fiche est ${verdict}`);
+    }
+
+    const cas = spec?.cases ?? [];
+    const bornes = mode === 'live' ? [3, 4] : [5, 6];
+    if (cas.length < bornes[0] || cas.length > bornes[1]) {
+      echec(chemin, `${bornes[0]} à ${bornes[1]} cas attendus en mode ${mode}, ${cas.length} trouvé(s)`);
+    }
+    if (!cas.some((c) => c.fails)) {
+      echec(chemin, "un essai doit porter au moins un cas qui échoue : c'est le plus utile");
+    }
+
+    for (const [i, c] of cas.entries()) {
+      const ou = `${chemin} → cas ${i + 1}`;
+      for (const champ of ['label']) {
+        if (!c[champ]?.fr || !c[champ]?.en) echec(ou, `${champ} doit être renseigné dans les deux langues`);
+      }
+      if (c.fails && (!c.why?.fr || !c.why?.en)) {
+        echec(ou, 'un cas qui échoue doit dire pourquoi, dans les deux langues');
+      }
+      for (const lang of ['fr', 'en']) {
+        const entree = typeof c.input === 'string' ? c.input : c.input?.[lang];
+        if (entree === undefined) {
+          echec(ou, `saisie manquante en ${lang}`);
+          continue;
+        }
+        try {
+          const resultat = await spec.run(entree, lang, c);
+          const rendu =
+            resultat &&
+            (typeof resultat.output === 'string' ||
+              resultat.rows ||
+              resultat.verdict ||
+              resultat.image ||
+              resultat.error);
+          if (!rendu) echec(ou, `l'essai ne rend rien d'affichable en ${lang}`);
+        } catch (erreur) {
+          echec(ou, `l'essai jette en ${lang} : ${erreur.message}`);
+        }
+      }
+    }
+  }
+}
+
 // ------------------------------------------------------------------- rapport
 
 if (avertissements.length) {
@@ -201,5 +300,6 @@ if (problemes.length) {
 console.log(
   `\ncheck-content : OK — ${fiches.length} fiche(s) ` +
     `(${publiees} publiée(s), ${brouillons} brouillon(s)), ` +
-    `${familles.length} famille(s), ${roadmap.length} intitulé(s) de feuille de route\n`,
+    `${familles.length} famille(s), ${roadmap.length} intitulé(s) de feuille de route, ` +
+    `${essais} essai(s)\n`,
 );
