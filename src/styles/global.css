@@ -194,7 +194,11 @@ a:hover {
   color: var(--ink);
 }
 
+/* Sur l'aplat de marque, l'action secondaire reste en contour : sans cette
+   règle, la règle de l'aplat lui redonnait un fond sombre et le bouton
+   devenait un rectangle noir illisible. */
 .band-brand .button--ghost {
+  background: transparent;
   border-color: var(--on-brand);
   color: var(--on-brand);
 }

@@ -37,6 +37,36 @@ const codeLourd = extraire(lourd.code, 'PROMPT =');
 const codeLeger = extraire(leger.code, 'UNUSUAL_SPACES');
 
 /**
+ * Douze lignes contre huit, le reste derrière un dépli.
+ *
+ * La démonstration est l'argument de la page, pas un exercice de lecture : ce
+ * qui doit sauter aux yeux est l'écart, et l'écart se voit sur douze lignes
+ * comme sur quarante. Le reste du code est là, replié, pour qui veut vérifier
+ * qu'on ne l'a pas arrangé.
+ */
+function couper(code: string, garder: number) {
+  const lignes = code.split('\n');
+  let vues = 0;
+  let coupe = lignes.length;
+  for (const [i, ligne] of lignes.entries()) {
+    if (ligne.trim()) vues += 1;
+    if (vues === garder) {
+      coupe = i + 1;
+      break;
+    }
+  }
+  const reste = lignes.slice(coupe).join('\n').replace(/^\n+/, '');
+  return {
+    tete: lignes.slice(0, coupe).join('\n'),
+    reste,
+    restant: reste.split('\n').filter((l) => l.trim()).length,
+  };
+}
+
+const lourdCoupe = couper(codeLourd, 12);
+const legerCoupe = couper(codeLeger, 8);
+
+/**
  * Le nombre de lignes est dit, pas seulement montré.
  *
  * L'écart de longueur est l'argument de cette démonstration. Le faire vivre
@@ -56,6 +86,10 @@ const textes = {
     enoughNote: 'Une normalisation, puis trois expressions régulières.',
     read: 'Lire la fiche complète',
     lines: 'lignes',
+    more: 'Voir les {n} lignes restantes',
+    tryTitle: 'Et ce code tourne',
+    try: 'Sur la fiche, ce code s’exécute dans votre navigateur : vous tapez votre texte, et vous voyez ce qu’il attrape et ce qu’il laisse.',
+    tryLink: 'Essayer sur la fiche',
     caveat:
       'L’option la plus lourde n’est pas toujours le mauvais choix. Sur cette tâche-ci, elle l’est.',
     rows: [
@@ -75,6 +109,10 @@ const textes = {
     enoughNote: 'One normalisation, then three regular expressions.',
     read: 'Read the full entry',
     lines: 'lines',
+    more: 'See the remaining {n} lines',
+    tryTitle: 'And this code runs',
+    try: 'On the entry, this code runs in your browser: you type your own text, and you see what it catches and what it leaves.',
+    tryLink: 'Try it on the entry',
     caveat:
       'The heaviest option is not always the wrong choice. On this particular task, it is.',
     rows: [
@@ -102,12 +140,26 @@ const textes = {
         </h3>
         <p class="demo__side-note">{textes.proposedNote}</p>
         <CodeBlock
-          code={codeLourd}
+          code={lourdCoupe.tete}
           language="python"
           copyLabel={strings.code.copy}
           copiedLabel={strings.code.copied}
           failedLabel={strings.code.copyFailed}
         />
+        {
+          lourdCoupe.restant > 0 && (
+            <details class="demo__more">
+              <summary>{textes.more.replace('{n}', String(lourdCoupe.restant))}</summary>
+              <CodeBlock
+                code={lourdCoupe.reste}
+                language="python"
+                copyLabel={strings.code.copy}
+                copiedLabel={strings.code.copied}
+                failedLabel={strings.code.copyFailed}
+              />
+            </details>
+          )
+        }
       </div>
 
       <div class="demo__side">
@@ -118,12 +170,26 @@ const textes = {
         </h3>
         <p class="demo__side-note">{textes.enoughNote}</p>
         <CodeBlock
-          code={codeLeger}
+          code={legerCoupe.tete}
           language="python"
           copyLabel={strings.code.copy}
           copiedLabel={strings.code.copied}
           failedLabel={strings.code.copyFailed}
         />
+        {
+          legerCoupe.restant > 0 && (
+            <details class="demo__more">
+              <summary>{textes.more.replace('{n}', String(legerCoupe.restant))}</summary>
+              <CodeBlock
+                code={legerCoupe.reste}
+                language="python"
+                copyLabel={strings.code.copy}
+                copiedLabel={strings.code.copied}
+                failedLabel={strings.code.copyFailed}
+              />
+            </details>
+          )
+        }
       </div>
     </div>
 
@@ -150,9 +216,19 @@ const textes = {
     </table>
 
     <p class="demo__caveat">{textes.caveat}</p>
-    <p class="demo__link">
-      <a href={route(lang, 'entries', ENTRY)}>{textes.read}</a>
-    </p>
+
+    {/* L'essai est la nouveauté qui change la nature de la démonstration :
+        le code n'est plus une capture, il répond. */}
+    <div class="demo__try">
+      <p class="demo__try-title">{textes.tryTitle}</p>
+      <p class="demo__try-text">{textes.try}</p>
+      <p class="demo__try-links">
+        <a class="link-action" href={`${route(lang, 'entries', ENTRY)}#essai`}>
+          {textes.tryLink}
+        </a>
+        <a class="link-action" href={route(lang, 'entries', ENTRY)}>{textes.read}</a>
+      </p>
+    </div>
   </div>
 </section>
 
@@ -222,11 +298,68 @@ const textes = {
     color: var(--muted);
   }
 
-  /* Les deux blocs défilent dans leur cadre : l'écart de longueur se lit dans
-     le compte de lignes, il ne s'impose pas au lecteur en défilement de page. */
-  .demo__side :global(.code-block__code) {
-    max-height: 26rem;
-    overflow-y: auto;
+  /* Le dépli prolonge le bloc du dessus : ses coins hauts s'effacent, et le
+     résumé se lit comme une barre de bas de bloc. */
+  .demo__more summary {
+    padding: var(--space-3) var(--space-4);
+    background: var(--code-surface-2);
+    color: var(--code-on-surface-muted);
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    cursor: pointer;
+    border-end-start-radius: var(--radius-block);
+    border-end-end-radius: var(--radius-block);
+  }
+
+  .demo__more summary:hover {
+    color: var(--code-on-surface);
+  }
+
+  .demo__more summary:focus-visible {
+    outline-color: var(--code-on-surface);
+    outline-offset: -3px;
+  }
+
+  .demo__more[open] summary {
+    border-radius: 0;
+  }
+
+  .demo__more :global(.code-block) {
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+  }
+
+  .demo__side :global(.code-block) {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  .demo__try {
+    margin-block-start: var(--space-12);
+    padding: var(--space-6) var(--space-8);
+    border: 1px solid var(--rule-strong);
+    border-radius: 14px;
+  }
+
+  .demo__try-title {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.01em;
+  }
+
+  .demo__try-text {
+    margin: 0;
+    max-width: 60ch;
+  }
+
+  .demo__try-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-8);
+    margin: var(--space-2) 0 0;
+    max-width: none;
   }
 
   .demo__side-note {
@@ -272,8 +405,5 @@ const textes = {
     font-size: var(--size-small);
   }
 
-  .demo__link {
-    margin-block-start: var(--space-4);
-    font-weight: 600;
-  }
+
 </style>

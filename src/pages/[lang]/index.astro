@@ -7,6 +7,7 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 import Demonstration from '../../components/home/Demonstration.astro';
 import FamilyGrid from '../../components/home/FamilyGrid.astro';
 import RungExplainer from '../../components/home/RungExplainer.astro';
+import Doors from '../../components/home/Doors.astro';
 import Featured from '../../components/home/Featured.astro';
 import HelpBlock from '../../components/HelpBlock.astro';
 import { allFamilies, publishedEntries, familyTitles } from '../../lib/content';
@@ -29,6 +30,7 @@ const textes = {
     lead: "Pour chaque tâche courante, toutes les options connues, de la règle au modèle généraliste. Avec le code qui tourne, les ordres de grandeur, et la condition précise qui justifie de monter d'un cran.",
     stance: "Overkill n'est pas anti-IA. Certaines fiches recommandent franchement un modèle généraliste, et ce sont elles qui rendent crédibles celles qui recommandent l'inverse.",
     catalogue: 'Voir le catalogue',
+    guide: 'Par où commencer',
     familiesTitle: 'Dix familles, rangées par verbe',
     featuredTitle: 'Trois fiches pour commencer',
     featuredLead: "Choisies pour la diversité de leurs verdicts, y compris celui qui recommande d'appeler un modèle.",
@@ -41,6 +43,7 @@ const textes = {
     lead: 'For every common task, all the known options, from a rule to a general-purpose model. With code that runs, orders of magnitude, and the precise condition that justifies moving up a rung.',
     stance: 'Overkill is not anti-AI. Some entries recommend a general-purpose model without hedging, and those are what make the entries recommending the opposite worth believing.',
     catalogue: 'Browse the catalogue',
+    guide: 'Where to start',
     familiesTitle: 'Ten families, sorted by verb',
     featuredTitle: 'Three entries to start with',
     featuredLead: 'Chosen for the spread of their verdicts, including the one that recommends calling a model.',
@@ -64,8 +67,12 @@ const textes = {
     <div class="wrap">
       <h1 class="display-xl hero__mission">{textes.mission}</h1>
       <p class="hero__lead">{textes.lead}</p>
+      {/* Deux portes dans le hero, et pas une : celui qui sait ce qu'il
+          cherche va au catalogue, celui qui ne sait pas répond aux
+          questions. Les trois portes détaillées viennent juste après. */}
       <p class="hero__action">
-        <a class="button" href={route(lang, 'catalogue')}>{textes.catalogue}</a>
+        <a class="button" href={route(lang, 'guide')}>{textes.guide}</a>
+        <a class="button button--ghost" href={route(lang, 'catalogue')}>{textes.catalogue}</a>
       </p>
     </div>
   </div>
@@ -73,6 +80,8 @@ const textes = {
   <div class="wrap stance">
     <p class="stance__text">{textes.stance}</p>
   </div>
+
+  <Doors lang={lang} strings={strings} entries={entries} />
 
   <Demonstration lang={lang} strings={strings} />
 
@@ -123,8 +132,12 @@ const textes = {
   }
 
   .hero__action {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
     margin-block-start: var(--space-8);
     margin-block-end: 0;
+    max-width: none;
   }
 
   .stance {
