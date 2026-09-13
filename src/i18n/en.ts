@@ -147,14 +147,17 @@ export default {
     copyFailed: 'Could not copy',
     tabsLabel: 'Example language',
     source: 'Source',
-    verification: {
-      label: 'Proof of execution',
-      executed: 'Code runs as shown',
-      executedNote:
-        'This snippet runs with its real dependencies, and its test runs on every build of the site.',
-      stubbed: 'Code runs, external service simulated',
-      stubbedNote:
-        'This snippet runs on every build of the site, but its test replaces the external service with a local double. What is verified: the request sent, the response decoded, and the error paths. What is not: how good the model’s answer is.',
+    /* Proof of execution, shown in the bar of the code block and nowhere else:
+       next to the snippet it is about, quiet, with no explanatory panel. */
+    proof: {
+      executed: {
+        short: 'Tested as shown',
+        full: 'This snippet runs with its real dependencies, and its test runs on every build of the site.',
+      },
+      stubbed: {
+        short: 'Tested, service simulated',
+        full: 'This snippet runs on every build of the site, but its test replaces the external service with a local double: the request sent, the response decoded and the error paths are verified, the real provider’s answer is not.',
+      },
     },
   },
 

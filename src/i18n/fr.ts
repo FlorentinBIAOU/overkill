@@ -153,14 +153,19 @@ export default {
     copyFailed: 'Copie impossible',
     tabsLabel: 'Langage de l’exemple',
     source: 'Source',
-    verification: {
-      label: 'Preuve d’exécution',
-      executed: 'Code exécuté tel quel',
-      executedNote:
-        'Cet extrait s’exécute avec ses vraies dépendances, et son test tourne à chaque construction du site.',
-      stubbed: 'Code exécuté, service externe simulé',
-      stubbedNote:
-        'Cet extrait s’exécute à chaque construction du site, mais son test remplace le service externe par un double local. Ce qui est vérifié : la requête envoyée, la réponse décodée et les cas d’erreur. Ce qui ne l’est pas : la qualité de la réponse du modèle.',
+    /* La preuve d’exécution, posée dans la barre du bloc de code et nulle part
+       ailleurs : au plus près de l’extrait concerné, discrète, sans bloc
+       explicatif. La forme courte est visible, la longue est lue par les
+       lecteurs d’écran et affichée au survol. */
+    proof: {
+      executed: {
+        short: 'Testé tel quel',
+        full: 'Cet extrait s’exécute avec ses vraies dépendances, et son test tourne à chaque construction du site.',
+      },
+      stubbed: {
+        short: 'Testé, service simulé',
+        full: 'Cet extrait s’exécute à chaque construction du site, mais son test remplace le service externe par un double local : la requête envoyée, la réponse décodée et les cas d’erreur sont vérifiés, la réponse du vrai fournisseur ne l’est pas.',
+      },
     },
   },
 

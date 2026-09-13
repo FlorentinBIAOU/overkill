@@ -1,11 +1,14 @@
 ---
 /**
- * Les deux langages d'un barreau, en onglets.
+ * Les deux langages d'un barreau, en onglets, dans un bloc d'éditeur.
  *
  * Les deux panneaux sont rendus intégralement dans le HTML. Le JavaScript ne
  * fait que basculer leur visibilité : sans lui, les deux blocs restent
  * lisibles l'un sous l'autre (CDC 8.7, « le site reste lisible sans
  * JavaScript »).
+ *
+ * La bande d'onglets est sombre et se lit comme celle d'un éditeur : l'onglet
+ * actif prend la couleur du fond du code, sous lequel il est posé.
  */
 import CodeBlock from './CodeBlock.astro';
 import { readSnippet, type Language } from '../lib/snippets';
@@ -28,37 +31,33 @@ const PanelHeading = `h${headingLevel}` as 'h3' | 'h4' | 'h5';
 
 const languages = (['python', 'javascript'] as const).filter((l) => paths[l]);
 const snippets = languages.map((l) => readSnippet(paths[l]!, l));
-const proof = strings.code.verification;
+
+/* La preuve d'exécution descend dans la barre du bloc, au plus près du code
+   qu'elle qualifie (partie 1.4 du lot). */
+const proof = {
+  short: strings.code.proof[verification].short,
+  title: strings.code.proof[verification].full,
+};
 ---
 
 <div class="code-tabs" id={id} data-code-tabs>
-  <div class="code-tabs__head">
-    <div class="code-tabs__tabs" role="tablist" aria-label={strings.code.tabsLabel}>
-      {
-        snippets.map((s, i) => (
-          <button
-            type="button"
-            role="tab"
-            id={`${id}-tab-${s.language}`}
-            aria-controls={`${id}-panel-${s.language}`}
-            aria-selected={i === 0 ? 'true' : 'false'}
-            tabindex={i === 0 ? 0 : -1}
-            class="code-tabs__tab"
-          >
-            {strings.code[s.language]}
-          </button>
-        ))
-      }
-    </div>
-
-    <p class={`code-tabs__proof code-tabs__proof--${verification}`}>
-      <span class="visually-hidden">{proof.label} : </span>
-      <span class="code-tabs__proof-mark" aria-hidden="true"></span>
-      {proof[verification]}
-    </p>
+  <div class="code-tabs__strip" role="tablist" aria-label={strings.code.tabsLabel}>
+    {
+      snippets.map((s, i) => (
+        <button
+          type="button"
+          role="tab"
+          id={`${id}-tab-${s.language}`}
+          aria-controls={`${id}-panel-${s.language}`}
+          aria-selected={i === 0 ? 'true' : 'false'}
+          tabindex={i === 0 ? 0 : -1}
+          class="code-tabs__tab"
+        >
+          {strings.code[s.language]}
+        </button>
+      ))
+    }
   </div>
-
-  <p class="code-tabs__note">{proof[`${verification}Note`]}</p>
 
   {
     snippets.map((s, i) => (
@@ -74,6 +73,7 @@ const proof = strings.code.verification;
           code={s.code}
           language={s.language}
           path={s.path}
+          proof={proof}
           copyLabel={strings.code.copy}
           copiedLabel={strings.code.copied}
           failedLabel={strings.code.copyFailed}
@@ -84,63 +84,46 @@ const proof = strings.code.verification;
 </div>
 
 <style>
-  .code-tabs__head {
+  .code-tabs__strip {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    margin-block-end: var(--space-2);
-  }
-
-  .code-tabs__tabs {
-    display: flex;
-    gap: var(--space-1);
+    gap: 2px;
+    background: var(--code-surface-2);
+    border-start-start-radius: var(--radius-block);
+    border-start-end-radius: var(--radius-block);
+    padding: 4px 4px 0;
   }
 
   .code-tabs__tab {
     font: inherit;
-    font-size: var(--size-small);
-    padding: var(--space-2) var(--space-4);
-    border: 1px solid var(--rule-strong);
-    border-radius: var(--radius-pill);
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    padding: 9px 16px;
+    min-height: 36px;
+    border: 0;
+    border-start-start-radius: var(--radius-block);
+    border-start-end-radius: var(--radius-block);
     background: transparent;
-    color: var(--muted);
+    color: var(--code-on-surface-muted);
     cursor: pointer;
   }
 
+  /* L'onglet actif prend la couleur du fond du code : il désigne le bloc
+     qu'il ouvre, au lieu de se contenter d'être plus foncé. */
   .code-tabs__tab[aria-selected='true'] {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--paper);
+    background: var(--code-surface);
+    color: var(--code-on-surface);
   }
 
-  .code-tabs__proof {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin: 0;
-    max-width: none;
-    font-size: var(--size-small);
-    color: var(--muted);
+  .code-tabs__tab:focus-visible {
+    outline-color: var(--code-on-surface);
+    outline-offset: -3px;
   }
 
-  .code-tabs__proof-mark {
-    width: 8px;
-    height: 8px;
-    border-radius: var(--radius-pill);
-    flex: none;
-    border: 1px solid var(--ink);
-  }
-
-  .code-tabs__proof--executed .code-tabs__proof-mark {
-    background: var(--ink);
-  }
-
-  .code-tabs__note {
-    margin: 0 0 var(--space-3);
-    font-size: var(--size-small);
-    color: var(--muted);
+  /* Le bloc est posé sous la bande : ses coins hauts s'effacent. */
+  .code-tabs__panel :global(.code-block) {
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
   }
 
   .code-tabs__panel + .code-tabs__panel {
@@ -153,7 +136,12 @@ const proof = strings.code.verification;
     display: none;
   }
 
-  [data-code-tabs]:not([data-enhanced='true']) .code-tabs__tabs {
+  [data-code-tabs]:not([data-enhanced='true']) .code-tabs__strip {
     display: none;
+  }
+
+  /* Sans les onglets, chaque bloc retrouve ses quatre coins. */
+  [data-code-tabs]:not([data-enhanced='true']) .code-tabs__panel :global(.code-block) {
+    border-radius: var(--radius-block);
   }
 </style>

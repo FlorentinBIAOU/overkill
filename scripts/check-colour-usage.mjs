@@ -5,7 +5,10 @@
  *  1. Aucune couleur en dur : toute valeur de couleur passe par un token.
  *  2. --brand et --brand-deep ne sont jamais des couleurs de texte. Le jaune
  *     ne porte que du très gros texte encre, pose en aplat.
- *  3. --go n'apparaît que dans le composant du badge « recommande ».
+ *  3. --go n'apparaît que dans le composant du badge « recommande ». Ailleurs,
+ *     le marquage de l'option recommandée passe par le rôle --recommended, qui
+ *     nomme l'usage ; comme --go, il ne peut pas cohabiter avec un nom de
+ *     classe évoquant bon ou mauvais.
  *  4. La rampe --rung-* ne sert jamais a exprimer un jugement : aucun token de
  *     rampe ne peut cohabiter avec un nom de classe évoquant bon ou mauvais.
  */
@@ -18,11 +21,11 @@ const EXT = new Set(['.astro', '.css', '.ts', '.js', '.mjs']);
 /** Fichiers ou une valeur hexadécimale est légitime. */
 const HEX_ALLOWED = new Set([
   'tokens.css', // la source unique des tokens
-  // Ce composant substitue une couleur du thème de coloration syntaxique, qui
-  // n'appartient pas au système de design : il doit donc nommer la valeur
-  // sortante et la valeur entrante. La mesure qui justifie la substitution est
-  // écrite dans le fichier, au-dessus de la table.
-  'CodeBlock.astro',
+  // Ce module nomme le thème de coloration syntaxique, le fond sur lequel il
+  // est mesuré et les substitutions éventuelles. Ces couleurs n'appartiennent
+  // pas au système de design : elles viennent d'un thème extérieur, et le
+  // contrôle de contraste les relit ici pour les mesurer.
+  'code-theme.mjs',
 ]);
 
 /** Le badge « recommande » est le seul endroit ou --go est autorise. */
@@ -63,6 +66,11 @@ for (const root of ROOTS) {
       // 3. le vert est réservé au badge « recommandé »
       if (/var\(--go\)/.test(code) && !GO_ALLOWED.has(name)) {
         problems.push(`${at}  --go est réservé au badge « recommandé » (CDC 8.3)`);
+      }
+
+      // 3 bis. le marqueur de recommandation ne devient pas un marqueur de qualité
+      if (/var\(--recommended\)/.test(code) && /(good|bad|warn|danger|success|error|bon|mauvais)/i.test(code)) {
+        problems.push(`${at}  --recommended dit « recommandé », jamais « bon » (CDC 8.3, interdit 4)`);
       }
 
       // 4. la rampe ne code pas un jugement

@@ -8,6 +8,23 @@
  * contrôle suive la source unique.
  */
 import { readFile } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
+import { join, extname } from 'node:path';
+import { codeToHtml } from 'shiki';
+import { CODE_THEME, CODE_SURFACE, substitute } from '../src/lib/code-theme.mjs';
+
+/** Les extraits affichés par les fiches : ni les tests, ni les fixtures. */
+async function* walkSnippets(dir) {
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      if (e.name.startsWith('_') || e.name.startsWith('.') || e.name === '__pycache__') continue;
+      yield* walkSnippets(p);
+    } else if (['.py', '.js'].includes(extname(p)) && !p.includes('.test.')) {
+      yield p;
+    }
+  }
+}
 
 const css = await readFile('src/styles/tokens.css', 'utf8');
 
@@ -76,6 +93,13 @@ const PAIRS = [
   ['--on-rung-2', '--rung-2', false, 'texte sur N2'],
   ['--on-rung-3', '--rung-3', false, 'texte sur N3'],
   ['--ink', '--brand', true, 'display sur aplat de marque'],
+
+  /* Le fond des blocs de code est fixe : les trois couples ci-dessous sont
+     donc mesurés à l'identique dans les deux modes. */
+  ['--code-on-surface', '--code-surface', false, 'code sur fond de bloc'],
+  ['--code-on-surface-muted', '--code-surface', false, 'code secondaire sur fond de bloc'],
+  ['--code-on-surface-muted', '--code-surface-2', false, 'barre du bloc de code'],
+  ['--code-on-surface', '--code-surface-2', false, 'bouton copier'],
 ];
 
 let failures = 0;
@@ -98,6 +122,62 @@ for (const [name, scope] of [['clair', light], ['sombre', dark]]) {
     );
   }
 }
+
+/* ---------------------------------------------------------------------------
+   La coloration syntaxique, couleur par couleur, contre le fond des blocs.
+   Le thème par défaut de Shiki échoue sur les commentaires : ce contrôle est
+   la raison pour laquelle on le sait, et il doit rester au vert quand le thème
+   change. Les substitutions de src/lib/code-theme.mjs sont appliquées avant
+   la mesure, puisque c'est ce que le lecteur reçoit.
+   ------------------------------------------------------------------------ */
+
+console.log(`\n  Coloration syntaxique — thème ${CODE_THEME} sur ${CODE_SURFACE}`);
+
+if (resolve(light, light['--code-surface']).toUpperCase() !== CODE_SURFACE.toUpperCase()) {
+  console.error(
+    `\ncheck-contrast: --code-surface vaut ${light['--code-surface']} dans tokens.css ` +
+      `et ${CODE_SURFACE} dans src/lib/code-theme.mjs. Les deux doivent être identiques.`,
+  );
+  process.exit(1);
+}
+
+/* On ne mesure pas les couleurs que le thème déclare, mais celles qu'il pose
+   réellement sur nos extraits : un thème déclare des dizaines de portées dont
+   aucune n'apparaît en Python ni en JavaScript, et les mesurer produirait des
+   échecs sans lecteur. Les 148 extraits du dépôt passent donc par Shiki, et
+   chaque couleur émise est mesurée. */
+const extraits = [];
+for await (const f of walkSnippets('content/snippets')) extraits.push(f);
+
+const couleurs = new Map(); // couleur émise -> premier extrait où elle apparaît
+for (const f of extraits) {
+  const langue = f.endsWith('.py') ? 'python' : 'javascript';
+  const html = substitute(
+    await codeToHtml(await readFile(f, 'utf8'), { lang: langue, theme: CODE_THEME }),
+  );
+  for (const m of html.matchAll(/(?<!background-)color:(#[0-9A-Fa-f]{6})/g)) {
+    if (!couleurs.has(m[1].toUpperCase())) couleurs.set(m[1].toUpperCase(), f);
+  }
+}
+
+let pire = Infinity;
+let nbCouleurs = 0;
+for (const [couleur, fichier] of [...couleurs].sort()) {
+  const r = ratio(couleur, CODE_SURFACE);
+  nbCouleurs++;
+  pire = Math.min(pire, r);
+  const ok = r >= 4.5;
+  if (!ok) failures++;
+  console.log(
+    `    ${ok ? 'ok  ' : 'ECHEC'} ${r.toFixed(2).padStart(6)}:1 (min 4.5) ${couleur}` +
+      (ok ? '' : `, par exemple dans ${fichier}`),
+  );
+}
+
+console.log(
+  `    ok   ${nbCouleurs} couleur(s) émise(s) sur ${extraits.length} extraits, ` +
+    `la plus faible à ${pire.toFixed(2)}:1`,
+);
 
 if (failures) {
   console.error(`\ncheck-contrast: ${failures} couple(s) sous le seuil AA.`);

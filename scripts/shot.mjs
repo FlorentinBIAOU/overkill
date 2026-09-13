@@ -2,6 +2,8 @@
 /**
  * Capture d'une page du site construit, pour vérification visuelle.
  * Usage : node scripts/shot.mjs <chemin> [largeur] [thème] [sortie]
+ * SEL=<sélecteur> limite la capture à un élément, ce qui permet de regarder un
+ * composant de près sans réduire une page de cinq mille pixels de haut.
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -49,7 +51,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(base + path, { waitUntil: 'networkidle' });
   const file = out ?? `/tmp/claude-1000/-home-florentin-overkill/12ef01fd-e268-4a13-9f10-3ce09e7f756f/scratchpad/shot-${width}-${theme}.png`;
-  await page.screenshot({ path: file, fullPage: true });
+  const selector = process.env.SEL;
+  if (selector) {
+    const cible = page.locator(selector).first();
+    await cible.scrollIntoViewIfNeeded();
+    await cible.screenshot({ path: file });
+  } else {
+    await page.screenshot({ path: file, fullPage: true });
+  }
   console.log('capture:', file);
   if (errors.length) console.log('erreurs console:', errors);
   await browser.close();

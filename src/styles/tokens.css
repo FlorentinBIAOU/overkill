@@ -50,6 +50,12 @@
   --on-rung-3: var(--paper);
 
   /* Rôles dérivés. Ils ne créent pas de couleur, ils nomment un usage. */
+  /* Le seul emploi sanctionné du vert : marquer l'option recommandée, badge
+     comme carte. Nommer le rôle plutôt que répéter --go rend chaque emploi
+     lisible et repérable, et laisse --go réservé au composant du badge.
+     Le vert ne dit jamais « bonne solution », il dit « recommandé sur ce
+     besoin », et ce marqueur peut se poser sur N3 (CDC 8.3). */
+  --recommended: var(--go);
   --surface: var(--ink);          /* aplat sombre pleine largeur */
   --on-surface: var(--paper);
   --rule: color-mix(in oklab, var(--ink) 16%, transparent);   /* filets */
@@ -57,6 +63,19 @@
   --muted: #6B6252;               /* texte secondaire, 5,91:1 sur --paper */
   --code-bg: var(--paper-2);
   --focus: var(--ink);
+
+  /* --- Le fond des blocs de code -----------------------------------------
+     Fixe dans les deux thèmes. Un éditeur ne change pas de couleur parce que
+     la page change de thème, et c'est le seul contraste fort de la fiche :
+     celui qui la sort du beige et qui dit « ici, c'est du code ».
+     Ces cinq valeurs ne sont donc jamais redéfinies en mode sombre.
+     Contrastes vérifiés par scripts/check-contrast.mjs, coloration
+     syntaxique comprise. */
+  --code-surface: #17140F;      /* brun-noir, la famille de --ink */
+  --code-surface-2: #221E17;    /* la barre de titre du bloc */
+  --code-on-surface: #EFEADC;   /* 15,4:1 sur --code-surface */
+  --code-on-surface-muted: #ADA48F; /*  7,4:1, chemin de fichier et boutons */
+  --code-rule: #332D23;
 
   /* --- Typographie (CDC 8.4) --------------------------------------------- */
   --font-display: 'Bricolage Grotesque', 'Arial Black', system-ui, sans-serif;
