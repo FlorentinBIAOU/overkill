@@ -127,6 +127,10 @@ const T = {
   },
 };
 
+/** Deux décimales, et la virgule du français : un score n'est pas du code. */
+const nombre = (valeur, lang) =>
+  valeur.toFixed(2).replace('.', lang === 'fr' ? ',' : '.');
+
 export default {
   level: 'N1',
 
@@ -152,7 +156,7 @@ export default {
         columns: t.colonnes,
         rows: voisins.map(([id, score]) => [
           id,
-          { v: score.toFixed(3), caught: score > PLANCHER },
+          { v: nombre(score, lang), caught: score > PLANCHER },
           score > PLANCHER ? t.oui : t.non,
         ]),
       },

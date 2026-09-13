@@ -54,6 +54,9 @@ const FACTURE = {
  * La même facture avec un acompte déjà versé : trois montants au lieu d'un, et
  * une mise en page que l'affinage n'a jamais vue.
  */
+/* données-fictives:début — une facture d'exemple. Ses montants sont les
+   données que l'extrait doit lire, pas un tarif que le site affirme
+   (interdit 2). */
 const ACOMPTE = {
   fr: [
     'VERRERIE DU CENTRE',
@@ -72,6 +75,7 @@ const ACOMPTE = {
     'Balance to pay                               240.00',
   ],
 };
+/* données-fictives:fin */
 
 /**
  * Les étiquettes sont celles qu'un modèle de facture expose ; les scores sont

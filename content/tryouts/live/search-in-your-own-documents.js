@@ -121,6 +121,10 @@ const T = {
   },
 };
 
+/** Deux décimales, et la virgule du français : un score n'est pas du code. */
+const nombre = (valeur, lang) =>
+  valeur.toFixed(2).replace('.', lang === 'fr' ? ',' : '.');
+
 export default {
   level: 'N0',
 
@@ -141,7 +145,7 @@ export default {
             resultat.id,
             /* Le score de la première ligne est surligné : c'est lui qui l'a
                mise en tête, et le reste du tableau dit de combien. */
-            { v: resultat.score.toFixed(4), caught: rang === 0 },
+            { v: nombre(resultat.score, lang), caught: rang === 0 },
           ]),
         },
         note: t.note(resultats.length, index.rows.length),

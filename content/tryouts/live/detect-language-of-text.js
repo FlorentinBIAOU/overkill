@@ -76,6 +76,10 @@ function nommer(code, lang) {
 
 const arrondi = (valeur) => Math.round(valeur * 10) / 10;
 
+/** La virgule du français : une distance affichée n'est pas du code. */
+const nombre = (valeur, lang) =>
+  String(arrondi(valeur)).replace('.', lang === 'fr' ? ',' : '.');
+
 export default {
   level: 'N0',
 
@@ -96,14 +100,14 @@ export default {
         detail:
           ecart === 0 && meilleure === PROFILE_SIZE
             ? t.maximale
-            : t.detail(nommer(classement[1][0], lang), ecart),
+            : t.detail(nommer(classement[1][0], lang), nombre(ecart, lang)),
       },
       rows: {
         columns: [t.langue, t.distance, t.ecart],
         rows: classement.map(([code, distance], rang) => [
           nommer(code, lang),
-          { v: String(arrondi(distance)), caught: rang === 0 },
-          rang === 0 ? '—' : String(arrondi(distance - meilleure)),
+          { v: nombre(distance, lang), caught: rang === 0 },
+          rang === 0 ? '—' : nombre(distance - meilleure, lang),
         ]),
       },
     };

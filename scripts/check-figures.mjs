@@ -74,6 +74,23 @@ const EXCEPTIONS = [
   /\.test\.(py|js)$/, // les jeux de test contiennent des données chiffrées
 ];
 
+/**
+ * Une région de données fictives, déclarée dans le fichier lui-même.
+ *
+ * Une facture d'exemple porte des montants : ce sont les données que l'extrait
+ * doit lire, pas un tarif que le site affirme. Le contrôle ne peut pas faire
+ * la différence tout seul, donc le fichier la déclare, et la déclaration dit
+ * pourquoi. Elle se cherche avec `grep 'données-fictives'`, et elle reste
+ * étroite : une phrase affichée qui annoncerait un prix de fournisseur est
+ * toujours refusée, même dans le même fichier.
+ *
+ *   // données-fictives:début — une facture d'exemple, montants compris
+ *   ...
+ *   // données-fictives:fin
+ */
+const OUVRE_FICTIF = /données-fictives:début/;
+const FERME_FICTIF = /données-fictives:fin/;
+
 async function* parcourir(dossier) {
   for (const e of await readdir(dossier, { withFileTypes: true })) {
     if (e.name.startsWith('_') && e.isDirectory()) continue;
@@ -92,8 +109,27 @@ for (const racine of RACINES) {
     const texte = await readFile(fichier, 'utf8');
     const lignes = texte.split('\n');
 
+    /* Les lignes déclarées comme données fictives, marqueurs compris. */
+    const fictives = new Set();
+    let dedans = false;
+    lignes.forEach((ligne, i) => {
+      if (OUVRE_FICTIF.test(ligne)) dedans = true;
+      if (dedans) fictives.add(i);
+      if (FERME_FICTIF.test(ligne)) dedans = false;
+    });
+    if (dedans) {
+      trouvailles.push({
+        ou: fichier,
+        nom: 'région de données fictives non fermée',
+        raison: 'ajouter le marqueur « données-fictives:fin » là où la région s\'arrête',
+        extrait: '',
+        trouve: 'données-fictives:début',
+      });
+    }
+
     for (const { nom, motif, raison } of MOTIFS) {
       lignes.forEach((ligne, i) => {
+        if (fictives.has(i)) return;
         motif.lastIndex = 0;
         const trouve = ligne.match(motif);
         if (trouve) {
