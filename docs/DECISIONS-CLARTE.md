@@ -54,6 +54,35 @@ le générique sur la fiche de masquage.
 
 ## 5. Essai de code
 
-Pas d'exécution dans le navigateur : un bac à sable WebAssembly pèse plusieurs
-mégaoctets et contredirait la thèse du site. À la place, une zone d'essai
-**statique** : entrée, sortie attendue, calculées au moment de la construction.
+**Révisé au lot 14.** La décision initiale — aucune exécution dans le
+navigateur — visait un bac à sable WebAssembly de plusieurs mégaoctets, qui
+aurait contredit la thèse du site. Elle ne tient plus dès lors qu'on exécute
+**l'extrait lui-même** : quelques kilooctets de JavaScript, sans dépendance,
+qui sont précisément ce que la fiche recommande. Refuser de le faire tourner
+aurait été un aveu.
+
+Deux formes, donc :
+
+- **interactive** quand l'extrait du niveau recommandé existe en JavaScript et
+  tourne sans dépendance : le module est chargé à la demande, l'extrait
+  s'exécute à chaque frappe, et ce qui a été transformé est surligné de part et
+  d'autre. Le résultat du premier exemple est calculé à la construction du
+  site, donc la zone dit déjà quelque chose de vrai sans JavaScript.
+- **figée** quand l'exécution en navigateur est impossible — modèle à
+  télécharger, service externe : cinq à six cas dont les sorties sont calculées
+  à la construction du site en exécutant le vrai code avec le double local des
+  tests. Aucune sortie n'est écrite à la main.
+
+Dans les deux cas, au moins un cas échoue : celui du point de rupture de la
+fiche. Contrat dans `content/tryouts/README.md`.
+
+## 6. Preuve d'exécution
+
+**Décidé au lot 14.** La mention « Code exécuté tel quel », affichée en bloc
+au-dessus du code, disparaît sous cette forme. L'information reste vraie et
+utile — sur 74 extraits publiés, 29 sont testés contre un double local et non
+contre le vrai service — et elle est désormais posée dans la barre du bloc de
+code, au plus près de l'extrait qu'elle qualifie : forme courte visible, phrase
+complète au survol et pour les lecteurs d'écran. Le lecteur peut savoir qu'un
+extrait N3 n'a pas été prouvé contre le vrai fournisseur, sans que la page le
+lui assène.
