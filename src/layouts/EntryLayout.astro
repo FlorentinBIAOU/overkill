@@ -26,6 +26,7 @@ export interface Props {
   neighbours: { href: string; title: string }[];
 }
 
+const vr = (Astro.props as any).entry?.rungs?.find((r: any) => r.level === (Astro.props as any).entry.verdict);
 const { entry, lang, familyTitle, neighbours } = Astro.props;
 const strings = t(lang);
 
@@ -57,7 +58,7 @@ const hasRegulatory = entry.rungs.some(
   register="documentary"
 >
   <article class="entry">
-    <header class="entry__head">
+    <header class="band band-brand entry__head">
       <div class="wrap">
         <p class="entry__breadcrumb">
           <a href={route(lang, 'catalogue')}>{strings.catalogue.title}</a>
@@ -68,18 +69,13 @@ const hasRegulatory = entry.rungs.some(
         <h1 class="entry__title display-l">{entry.title[lang]}</h1>
         <p class="entry__need">{entry.need[lang]}</p>
 
-        <p class="entry__badges">
-          <VerdictBadge label={strings.rung.answer[entry.verdict]} level={entry.verdict} size="large" />
-          {
-            entry.status === 'draft' && (
-              <span class="entry__draft">{strings.entry.draft}</span>
-            )
-          }
-          <span class="entry__updated">
-            {strings.entry.updated} <time datetime={updated.toISOString().slice(0, 10)}>
-              {dateFormat.format(updated)}
-            </time>
-          </span>
+        <p class="entry__answer">{strings.rung.answer[entry.verdict]}</p>
+
+        <p class="entry__facts">
+          <span>{strings.plainCost[vr?.cost] ?? vr?.cost}</span>
+          <span>{strings.plainLatency[vr?.latency] ?? vr?.latency}</span>
+          <span>{strings.plainEgress[vr?.risks.data_egress] ?? vr?.risks.data_egress}</span>
+          {entry.status === 'draft' && <span>{strings.entry.draft}</span>}
         </p>
       </div>
     </header>
@@ -101,33 +97,70 @@ const hasRegulatory = entry.rungs.some(
         </aside>
 
         <div class="entry__body">
-          <Callout title={strings.entry.scenario}>
-            <p>{entry.scenario[lang]}</p>
-          </Callout>
+          {/* Le raisonnement d'abord, en francais : c'est ce qu'on vient
+              chercher. Le code vient apres, pour qui implemente. */}
+          <section id="verdict" class="entry__why">
+            <p class="entry__why-text">{entry.verdict_rationale[lang]}</p>
+          </section>
 
-          <RungTable rungs={entry.rungs} verdict={entry.verdict} lang={lang} strings={strings} />
-
+          {/* Le niveau recommande, seul et deplie. */}
           {
-            entry.rungs.map((rung: any) => (
-              <RungSection
-                rung={rung}
-                isVerdict={rung.level === entry.verdict}
-                lang={lang}
-                strings={strings}
-              />
-            ))
+            entry.rungs
+              .filter((r: any) => r.level === entry.verdict)
+              .map((rung: any) => (
+                <RungSection rung={rung} isVerdict={true} lang={lang} strings={strings} />
+              ))
           }
 
-          <section id="verdict" class="entry__verdict">
-            <h2>{strings.verdict.heading}</h2>
-            <p class="entry__verdict-badge">
-              <VerdictBadge
-                label={strings.rung.answer[entry.verdict]}
-                level={entry.verdict}
-                size="large"
-              />
-            </p>
-            <p>{entry.verdict_rationale[lang]}</p>
+          <h2 class="entry__h2">{strings.entry.fourOptions}</h2>
+          <ol class="scale">
+            {
+              entry.rungs.map((r: any) => (
+                <li class:list={['step', r.level === entry.verdict && 'step--on', !r.available && 'step--off']}>
+                  {r.level === entry.verdict && (
+                    <span class="step__tag">{strings.verdict.badge}</span>
+                  )}
+                  <span class="step__n">{r.level}</span>
+                  <span class="step__name">
+                    {r.available ? r.name[lang] : strings.rung.unavailable}
+                  </span>
+                  <span class="step__f">
+                    {r.available
+                      ? `${strings.plainCost[r.cost] ?? r.cost} · ${strings.plainLatency[r.latency] ?? r.latency}`
+                      : ''}
+                  </span>
+                </li>
+              ))
+            }
+          </ol>
+
+          {/* Les autres niveaux, replies : ils n'interessent que celui qui
+              doute du verdict, et ils ecrasaient la page. */}
+          <section class="entry__others">
+            <h2 class="entry__h2">{strings.entry.otherLevels}</h2>
+            <Callout title={strings.entry.scenario}>
+              <p>{entry.scenario[lang]}</p>
+            </Callout>
+            {
+              entry.rungs
+                .filter((r: any) => r.level !== entry.verdict)
+                .map((rung: any) => (
+                  <details class="entry__fold">
+                    <summary>
+                      <span class="entry__fold-level">{rung.level}</span>
+                      <span class="entry__fold-name">
+                        {rung.available ? rung.name[lang] : strings.rung.unavailable}
+                      </span>
+                      {rung.available && (
+                        <span class="entry__fold-facts">
+                          {strings.plainCost[rung.cost] ?? rung.cost} · {strings.plainLatency[rung.latency] ?? rung.latency}
+                        </span>
+                      )}
+                    </summary>
+                    <RungSection rung={rung} isVerdict={false} lang={lang} strings={strings} />
+                  </details>
+                ))
+            }
           </section>
 
           <section id="sources" class="entry__sources">
@@ -212,11 +245,156 @@ const hasRegulatory = entry.rungs.some(
 
 <style>
   .entry__head {
-    border-block-end: 1px solid var(--rule);
-    padding-block: var(--space-8);
-    margin-block-end: var(--space-8);
-    background: var(--paper-2);
+    padding-block: var(--space-10) var(--space-12);
+    margin-block-end: var(--space-12);
   }
+
+  .entry__answer {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(2.2rem, 6vw, 4.2rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    max-width: 17ch;
+    margin-block: var(--space-8) 0;
+  }
+
+  .entry__facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-block-start: var(--space-6);
+  }
+
+  .entry__facts span {
+    font-size: 0.83rem;
+    font-weight: 500;
+    padding: 7px 14px;
+    border: 1.5px solid rgba(22, 19, 14, 0.28);
+    border-radius: 999px;
+  }
+
+  .entry__h2 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-block: var(--space-16) var(--space-5);
+  }
+
+  /* Les quatre options, en cartes : un tableau a sept colonnes ne se lit pas. */
+  .scale {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: var(--space-4);
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    position: relative;
+    padding: var(--space-6);
+    border: 1px solid var(--rule-strong);
+    border-radius: 14px;
+  }
+
+  .step--on {
+    border: 2px solid var(--go);
+    padding: calc(var(--space-6) - 1px);
+  }
+
+  .step--off { opacity: 0.55; }
+  .step--off .step__name { text-decoration: line-through; }
+
+  .step__tag {
+    position: absolute;
+    inset-block-start: -10px;
+    inset-inline-start: 18px;
+    background: var(--go);
+    color: var(--paper);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 999px;
+  }
+
+  .step__n {
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .step__name {
+    font-weight: 600;
+    font-size: 0.97rem;
+    line-height: 1.35;
+  }
+
+  .step__f {
+    margin-block-start: auto;
+    padding-block-start: var(--space-3);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .entry__why-text {
+    font-size: 1.22rem;
+    line-height: 1.62;
+    max-width: 58ch;
+    margin-block: var(--space-8) var(--space-12);
+  }
+
+  .entry__others {
+    margin-block-start: var(--space-16);
+    padding-block-start: var(--space-8);
+    border-block-start: 1px solid var(--rule-strong);
+  }
+
+  .entry__fold {
+    border-block-end: 1px solid var(--rule);
+  }
+
+  .entry__fold summary {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding-block: var(--space-5);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .entry__fold summary::-webkit-details-marker { display: none; }
+
+  .entry__fold summary::after {
+    content: '+';
+    margin-inline-start: auto;
+    font-family: var(--font-code);
+    color: var(--muted);
+  }
+
+  .entry__fold[open] summary::after { content: '−'; }
+
+  .entry__fold-level {
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    color: var(--muted);
+    flex: none;
+  }
+
+  .entry__fold-name {
+    font-weight: 600;
+  }
+
+  .entry__fold-facts {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
 
   .entry__breadcrumb {
     display: flex;

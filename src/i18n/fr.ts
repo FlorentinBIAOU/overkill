@@ -127,6 +127,8 @@ export default {
   },
 
   entry: {
+    fourOptions: 'Les quatre options',
+    otherLevels: 'Les autres options',
     need: 'Le besoin',
     scenario: 'Le scénario',
     family: 'Famille',

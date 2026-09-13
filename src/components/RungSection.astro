@@ -24,33 +24,31 @@ const anchor = rung.level.toLowerCase();
 const levelName = strings.rung[rung.level as Level];
 ---
 
-<section id={anchor} class="rung-section" aria-labelledby={`${anchor}-title`}>
+<section id={anchor} class:list={["rung-section", isVerdict && "rung-section--verdict", `rung-section--${anchor}`]} aria-labelledby={`${anchor}-title`}>
   <header class="rung-section__head">
-    <p class="rung-section__level">
-      <RungBadge level={rung.level} name={levelName} unavailable={!rung.available} />
-      <span class="rung-section__level-name">{levelName}</span>
-      {isVerdict && <VerdictBadge label={strings.verdict.badge} />}
-    </p>
-
     <h3 id={`${anchor}-title`} class="rung-section__title">
       {rung.available ? rung.name[lang] : strings.rung.unavailable}
     </h3>
+    {isVerdict && (
+      <p class="rung-section__answer">{strings.rung.answer[rung.level as Level]}</p>
+    )}
+    <p class="rung-section__sub">
+      <span>{levelName}</span>
+      <span class="rung-section__code">{rung.level}</span>
+      {rung.available && (
+        <>
+          <span class="rung-section__dot" aria-hidden="true">·</span>
+          <span>{strings.plainCost[rung.cost] ?? rung.cost}</span>
+          <span class="rung-section__dot" aria-hidden="true">·</span>
+          <span>{strings.plainLatency[rung.latency] ?? rung.latency}</span>
+        </>
+      )}
+    </p>
   </header>
 
   {
     rung.available ? (
       <div class="rung-section__body">
-        <dl class="rung-section__figures">
-          <div>
-            <dt>{strings.table.cost}</dt>
-            <dd>{strings.cost[rung.cost as keyof typeof strings.cost]}</dd>
-          </div>
-          <div>
-            <dt>{strings.table.latency}</dt>
-            <dd><code>{rung.latency}</code></dd>
-          </div>
-        </dl>
-
         <CodeTabs
           paths={{ python: rung.code.python, javascript: rung.code.javascript }}
           verification={rung.code.verification}
@@ -61,11 +59,11 @@ const levelName = strings.rung[rung.level as Level];
         <RiskBlock risks={rung.risks} lang={lang} strings={strings} />
 
         <div class="rung-section__limits">
-          <div>
+          <div class="limit limit--break">
             <h4>{strings.entry.breakingPoint}</h4>
             <p>{rung.breaking_point[lang]}</p>
           </div>
-          <div>
+          <div class="limit limit--next">
             <h4>{strings.entry.escalateWhen}</h4>
             <p>{rung.escalate_when[lang]}</p>
           </div>
@@ -78,6 +76,109 @@ const levelName = strings.rung[rung.level as Level];
 </section>
 
 <style>
+  /* Le niveau recommande n'est pas un paragraphe parmi d'autres :
+     il porte la reponse, et la page doit le montrer. */
+  .rung-section--verdict {
+    padding: var(--space-8);
+    border-radius: 14px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+  }
+
+  .rung-section__answer {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--space-2);
+    color: var(--ans-0);
+  }
+
+  .rung-section--n1 .rung-section__answer { color: var(--ans-1); }
+  .rung-section--n2 .rung-section__answer { color: var(--ans-2); }
+  .rung-section--n3 .rung-section__answer { color: var(--ans-3); }
+
+  .rung-section__head {
+    margin-block-end: var(--space-6);
+  }
+
+  .rung-section__title {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  .rung-section--verdict .rung-section__title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .rung-section__sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-block-start: var(--space-2);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .rung-section__code {
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    padding: 2px 7px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 5px;
+  }
+
+  .rung-section__dot { opacity: 0.5; }
+
+  .rung-section__limits {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: var(--space-4);
+    margin-block-start: var(--space-8);
+  }
+
+  /* Le point de rupture est l'information la plus utile de la section :
+     il ne peut pas se lire comme un paragraphe parmi d'autres. */
+  .limit {
+    padding: var(--space-6) var(--space-7);
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+
+  .limit h4 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 var(--space-4);
+  }
+
+  .limit h4::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: none;
+  }
+
+  .limit--break h4 { color: var(--ans-3); }
+  .limit--break h4::before { background: var(--ans-3); }
+  .limit--next h4 { color: var(--ans-1); }
+  .limit--next h4::before { background: var(--ans-1); }
+
+  .limit p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
   .rung-section {
     padding-block: var(--space-8);
     border-block-start: 1px solid var(--rule);
