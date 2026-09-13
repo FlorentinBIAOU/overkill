@@ -109,15 +109,29 @@ function initialiser(form, liste) {
       selects.filter((s) => s.value).map((s) => [s.dataset.filter, s.value]),
     );
 
+    /*
+     * Deux notions, qu'il ne faut pas confondre.
+     *
+     * « Correspondre » porte sur tout le catalogue : c'est ce que compte le
+     * compteur, et c'est ce qui rend un filtre honnête — il trouverait sinon
+     * dans les vingt-quatre fiches sous les yeux seulement.
+     *
+     * « S'afficher » dépend de la pagination : tant qu'aucun filtre n'est
+     * actif, la page montre ce que le site a décidé de mettre sur cette page,
+     * comme elle le fait sans JavaScript. Dès qu'un filtre est actif, la
+     * pagination s'efface et tout ce qui correspond s'affiche.
+     */
+    const filtrant = Object.keys(actifs).length > 0 || correspondances !== null;
+
     let visibles = 0;
     for (const ligne of lignes) {
       const passeFiltres = Object.entries(actifs).every(
         ([cle, valeur]) => ligne.dataset[cle] === valeur,
       );
       const passeRecherche = correspondances === null || correspondances.has(ligne.dataset.entryId);
-      const visible = passeFiltres && passeRecherche;
-      ligne.hidden = !visible;
-      if (visible) visibles += 1;
+      const correspond = passeFiltres && passeRecherche;
+      if (correspond) visibles += 1;
+      ligne.hidden = filtrant ? !correspond : ligne.dataset.offPage === 'true';
     }
 
     // Un intertitre de famille disparaît quand plus aucune de ses fiches
@@ -130,6 +144,11 @@ function initialiser(form, liste) {
     form.dataset.filtered = String(
       Object.keys(actifs).length > 0 || (champ?.value ?? '') !== '',
     );
+
+    /* La pagination ne s'efface que quand les résultats portent réellement sur
+       tout le catalogue. Un seul caractère tapé ne cherche encore rien : si
+       elle s'effaçait déjà, la deuxième page deviendrait inatteignable. */
+    form.dataset.spanning = String(filtrant);
 
     if (compteur) compteur.textContent = String(visibles);
     if (etatVide) etatVide.hidden = visibles > 0;

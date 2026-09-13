@@ -414,6 +414,11 @@ export default {
     empty: 'No entry matches',
     emptyHelp: 'This need is missing from the catalogue. Propose it, that is how it grows.',
     emptyAction: 'Propose this entry',
+    pages: 'Catalogue pagination',
+    pageOf: 'Page {n} of {total}',
+    previous: 'Previous',
+    next: 'Next',
+    allResults: 'across the whole catalogue',
     noJs: 'Search needs JavaScript. Filters do not: submit the form.',
   },
 

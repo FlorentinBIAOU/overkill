@@ -30,17 +30,26 @@ export interface Props {
   deterministic: boolean;
   strings: Strings;
   draft?: boolean;
+  /**
+   * Vrai quand la carte appartient à une autre page du catalogue. Elle est
+   * alors dans le HTML mais masquée : c'est ce qui permet aux filtres de
+   * porter sur le catalogue entier sans recharger la page, tout en laissant la
+   * pagination fonctionner sans JavaScript.
+   */
+  offPage?: boolean;
 }
 
 const {
   id, href, title, need, cost, latency, familyLabel, family, verdict, available, egress, deterministic, strings,
-  draft = false,
+  draft = false, offPage = false,
 } = Astro.props;
 ---
 
 <li
   class={`card card--${verdict.toLowerCase()}`}
   data-entry
+  data-off-page={offPage ? 'true' : undefined}
+  hidden={offPage}
   data-entry-id={id}
   data-family={family}
   data-verdict={verdict}

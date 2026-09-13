@@ -1,0 +1,57 @@
+---
+/**
+ * Le catalogue, paginé (CDC 7.3, lot 14 partie 6).
+ *
+ * Vingt-quatre cartes par page, en prévision des deux cents fiches : une
+ * grille de deux cents cartes n'est pas une liste, c'est un mur.
+ *
+ * La pagination vit dans le chemin et non dans un paramètre de requête, parce
+ * qu'un site statique ne peut pas lire un paramètre de requête au moment de
+ * servir : `/catalogue/2` est une vraie page, qui s'affiche sans JavaScript.
+ *
+ * L'ordre est celui des familles, avant la découpe : une page contient donc
+ * des fiches voisines par le sujet, et pas un tirage arbitraire.
+ */
+import type { GetStaticPaths } from 'astro';
+import CatalogLayout from '../../../layouts/CatalogLayout.astro';
+import { publishedEntries, familyTitles, ISSUE_URL } from '../../../lib/content';
+import { FAMILIES } from '../../../content/schema/enums';
+import { LOCALES, t, type Locale } from '../../../i18n';
+
+/** Vingt-quatre par page : dans la fourchette demandée, et deux pages dès
+    aujourd'hui, ce qui rend la pagination vérifiable plutôt que théorique. */
+export const PAR_PAGE = 24;
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const fiches = (await publishedEntries()).map((e) => e.data);
+  const ordonnees = FAMILIES.flatMap((f) => fiches.filter((e: any) => e.family === f));
+
+  return LOCALES.flatMap((lang) =>
+    paginate(ordonnees, {
+      params: { lang },
+      props: { toutes: ordonnees },
+      pageSize: PAR_PAGE,
+    }),
+  );
+}) satisfies GetStaticPaths;
+
+const lang = Astro.params.lang as Locale;
+const strings = t(lang);
+const { page, toutes } = Astro.props as any;
+const titres = await familyTitles(lang);
+
+const lead = {
+  fr: "Toutes les fiches. Cherchez un besoin, filtrez par famille, par verdict, ou par ce que l'approche fait de vos données.",
+  en: 'Every entry. Search a need, filter by family, by verdict, or by what the approach does with your data.',
+}[lang];
+---
+
+<CatalogLayout
+  lang={lang}
+  title={strings.catalogue.title}
+  lead={lead}
+  entries={toutes}
+  page={page}
+  familyTitles={titres}
+  issueUrl={ISSUE_URL}
+/>

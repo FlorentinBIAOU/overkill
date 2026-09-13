@@ -36,12 +36,17 @@ async function chercher(page, texte) {
   await page.waitForTimeout(400);
 }
 
-test('le catalogue rend les 200 fiches de test', async () => {
+test('le catalogue rend les 200 fiches de test, paginées', async () => {
   const { page, erreurs } = await catalogue();
   assert.deepEqual(erreurs, []);
+  // Les deux cents cartes sont dans le HTML — c'est ce qui permet aux filtres
+  // de porter sur tout le catalogue — mais seule la page demandée s'affiche.
   assert.equal(await page.locator('[data-entry]').count(), 200);
-  assert.equal(await visibles(page), 200);
+  const n = await visibles(page);
+  assert.ok(n >= 24 && n <= 30, `${n} cartes visibles, 24 à 30 attendues`);
+  // Le compteur, lui, annonce le catalogue entier.
   assert.equal((await page.locator('[data-count]').textContent()).trim(), '200');
+  assert.match(await page.locator('[data-pagination]').innerText(), /Page 1 sur 9/);
   await page.close();
 });
 
@@ -50,7 +55,7 @@ test('la recherche cherche dès deux caractères et trouve', async () => {
   await chercher(page, 'facture');
   const n = await visibles(page);
   assert.ok(n > 0 && n < 200, `attendu un sous-ensemble, obtenu ${n}`);
-  const titres = await page.locator('[data-entry]:not([hidden]) .entry-card__title').allTextContents();
+  const titres = await page.locator('[data-entry]:not([hidden]) .card__title').allTextContents();
   assert.ok(titres.some((t) => /facture/i.test(t)), `aucun titre pertinent : ${titres.slice(0, 5)}`);
   await page.close();
 });

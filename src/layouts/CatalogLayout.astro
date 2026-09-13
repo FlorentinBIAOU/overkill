@@ -19,7 +19,18 @@ export interface Props {
   lang: Locale;
   title: string;
   lead?: string;
+  /** Toutes les fiches, dans l'ordre d'affichage. */
   entries: any[];
+  /**
+   * La page courante, telle que la pagination d'Astro la décrit. Absente sur
+   * les pages de démonstration, qui montrent le gabarit sans découpe.
+   */
+  page?: {
+    data: any[];
+    currentPage: number;
+    lastPage: number;
+    url: { prev?: string; next?: string; current: string };
+  };
   familyTitles: Record<string, string>;
   issueUrl: string;
   /** État initial des filtres, lu dans les paramètres d'URL au build. */
@@ -27,14 +38,25 @@ export interface Props {
 }
 
 const {
-  lang, title, lead, entries, familyTitles, issueUrl, activeFilters = {},
+  lang, title, lead, entries, page, familyTitles, issueUrl, activeFilters = {},
 } = Astro.props;
 const strings = t(lang);
 
-/** Les fiches groupées par famille, dans l'ordre des familles. */
-const groupes = FAMILIES
-  .map((f) => [f, entries.filter((e: any) => e.family === f)] as const)
-  .filter(([, fiches]) => fiches.length > 0);
+/*
+ * Toutes les cartes sont rendues, celles des autres pages masquées.
+ *
+ * C'est ce qui permet aux filtres et à la recherche de porter sur le catalogue
+ * entier et non sur la page courante : un filtre qui ne trouverait que dans
+ * les vingt-quatre fiches sous les yeux mentirait sur son compte. Sans
+ * JavaScript, le lecteur voit exactement la page demandée, et la pagination
+ * est faite de vrais liens.
+ */
+const surCettePage = new Set((page?.data ?? entries).map((e: any) => e.id));
+
+/** Les numéros de page à montrer : toutes, tant qu'elles tiennent sur une ligne. */
+const numeros = page
+  ? Array.from({ length: page.lastPage }, (_, i) => i + 1)
+  : [];
 
 const filtres = [
   {
@@ -128,8 +150,7 @@ const filtres = [
 
     <ul class="catalogue__list" data-entry-list>
       {
-        groupes.map(([famille, fiches]) => [
-          ...fiches.map((e: any) => (
+        entries.map((e: any) => (
           <EntryCard
             id={e.id}
             href={route(lang, 'entries', e.id)}
@@ -147,13 +168,59 @@ const filtres = [
             latency={e.rungs.find((r: any) => r.level === e.verdict)?.latency}
             strings={strings}
             draft={e.status === 'draft'}
+            offPage={!surCettePage.has(e.id)}
           />
-          )),
-        ])
+        ))
       }
     </ul>
 
     <EmptyState strings={strings} issueUrl={issueUrl} />
+
+    {
+      page && page.lastPage > 1 && (
+        <nav class="pages" aria-label={strings.catalogue.pages} data-pagination>
+          <p class="pages__state">
+            {strings.catalogue.pageOf
+              .replace('{n}', String(page.currentPage))
+              .replace('{total}', String(page.lastPage))}
+          </p>
+          <ul class="pages__list">
+            <li>
+              {page.url.prev ? (
+                <a class="pages__link" href={page.url.prev} rel="prev">
+                  {strings.catalogue.previous}
+                </a>
+              ) : (
+                <span class="pages__link pages__link--off">{strings.catalogue.previous}</span>
+              )}
+            </li>
+            {numeros.map((n) => (
+              <li>
+                {n === page.currentPage ? (
+                  <span class="pages__link pages__link--current" aria-current="page">{n}</span>
+                ) : (
+                  <a
+                    class="pages__link"
+                    href={n === 1 ? route(lang, 'catalogue') : `${route(lang, 'catalogue')}/${n}`}
+                  >
+                    {n}
+                  </a>
+                )}
+              </li>
+            ))}
+            <li>
+              {page.url.next ? (
+                <a class="pages__link" href={page.url.next} rel="next">
+                  {strings.catalogue.next}
+                </a>
+              ) : (
+                <span class="pages__link pages__link--off">{strings.catalogue.next}</span>
+              )}
+            </li>
+          </ul>
+        </nav>
+      )
+    }
   </div>
 
   <CtaBand
@@ -299,6 +366,74 @@ const filtres = [
     :global(html:not([data-theme='light'])) .catalogue__filter select {
       background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23F5F0E4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     }
+  }
+
+  /* La pagination : de vrais liens, assez grands pour être touchés. */
+  .pages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-block-start: var(--space-12);
+    padding-block-start: var(--space-6);
+    border-block-start: 1px solid var(--rule-strong);
+  }
+
+  .pages__state {
+    margin: 0;
+    font-size: var(--size-small);
+    color: var(--muted);
+  }
+
+  .pages__list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+  }
+
+  .pages__list li {
+    max-width: none;
+  }
+
+  .pages__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: var(--space-4);
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+
+  a.pages__link:hover {
+    border-color: var(--ink);
+  }
+
+  .pages__link--current {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+    font-weight: 600;
+  }
+
+  /* Un bord de liste n'est pas un lien : il reste visible, il ne se clique
+     pas, et il n'entre pas dans l'ordre de tabulation. */
+  .pages__link--off {
+    color: var(--muted);
+    border-style: dashed;
+  }
+
+  /* Quand un filtre ou une recherche porte réellement sur tout le catalogue,
+     la pagination n'a plus de sens et s'efface. */
+  [data-catalogue-form][data-spanning='true'] ~ .pages {
+    display: none;
   }
 
   .catalogue__lead {

@@ -424,6 +424,11 @@ export default {
     empty: 'Aucune fiche ne correspond',
     emptyHelp: 'Ce besoin manque au catalogue. Proposez-le, c’est comme cela qu’il grandit.',
     emptyAction: 'Proposer cette fiche',
+    pages: 'Pagination du catalogue',
+    pageOf: 'Page {n} sur {total}',
+    previous: 'Précédentes',
+    next: 'Suivantes',
+    allResults: 'sur tout le catalogue',
     noJs: 'La recherche a besoin de JavaScript. Les filtres, non : validez le formulaire.',
   },
 
