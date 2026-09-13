@@ -1,0 +1,23 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Une image de remplacement sans modèle : un SVG dérivé d'un hachage de
+  l'identifiant.
+
+  Niveau N0. Aucun fichier écrit et aucun octet téléchargé : la fonction
+  renvoie une chaîne de balisage qu'un gabarit peut incorporer ou qu'un
+  gestionnaire de requête peut servir.
+
+  Deux propriétés portent toute l'approche.
+
+  Elle est déterministe. Le même identifiant donne toujours exactement la même
+  image, sur chaque machine, dans chaque langage, pour toujours. Un remplaçant
+  qui changerait à chaque rendu scintillerait dans une grille et mettrait en
+  échec tous les caches HTTP.
+
+  Son arithmétique est entière. La teinte, le chroma et les positions des
+  cellules sont calculés sans une seule division qui pourrait arrondir
+  autrement d'un environnement d'exécution à l'autre, et c'est ce qui permet à
+  la version Python et à la version JavaScript de s'accorder au caractère près.
