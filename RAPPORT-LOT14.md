@@ -82,6 +82,12 @@ terminée, vérifiée et commitée.
     recommande N3 par défaut ».
 13. **Le message pré-rempli écrivait ses espaces en « + »**, ce qu'un client de
     messagerie n'interprète pas : le brouillon se serait ouvert criblé de plus.
+### Défaut trouvé en regardant l'écran, et corrigé — partie 4
+
+15. **Sur l'aplat de marque, l'action secondaire devenait un rectangle noir
+    illisible** : la règle qui pose l'encre sombre sur le jaune gagnait sur
+    celle du contour. Visible dès la première capture du hero.
+
 14. **Le verdict ne disait rien quand rien ne bloquait.** Quelqu'un qui venait
     de répondre à six questions de contrainte voyait une réponse qui n'en
     parlait pas. Il dit maintenant ce qui tient, et sur quoi.
@@ -102,6 +108,19 @@ terminée, vérifiée et commitée.
 | Le message pré-rempli avant l'issue GitHub | contrôlé au navigateur : la première des deux voies est un `mailto:` qui porte les réponses |
 | Utilisable sans JavaScript | contrôle au navigateur avec JavaScript désactivé : les quatre écrans sont lisibles et la page renvoie aux dix familles |
 | Poids | 19,0 Ko transférés, dont 3,1 Ko de JavaScript |
+| Accessibilité et débordement | `check-a11y` et `check-overflow` sur les deux langues, au vert |
+
+
+### Partie 4 — L'accueil
+
+| Fait | Preuve |
+|---|---|
+| Trois portes nommées par ce que le visiteur sait déjà | captures en clair, en sombre, à 360 et 1280 px |
+| Le questionnaire, les essais et le catalogue mis en avant, chacun avec son appel à l'action | hero à deux portes, trois cartes, bloc d'essai dans la démonstration |
+| Le chiffre du catalogue, compté et non écrit | `Doors.astro` compte les verdicts N0 : vingt-cinq fiches, dont treize sans aucune IA |
+| La démonstration raccourcie : douze lignes contre huit, le reste derrière un dépli | capture regardée ; le dépli prolonge le bloc et garde le code complet accessible |
+| La phrase « Overkill n'est pas anti-IA » juste sous le hero | inchangée, capture regardée |
+| Poids de l'accueil | 53,5 Ko transférés pour un budget de 250 Ko |
 | Accessibilité et débordement | `check-a11y` et `check-overflow` sur les deux langues, au vert |
 
 
@@ -262,6 +281,26 @@ besoin d'une fiche sont déjà dans la page — en option de question et en cart
 les renvoyer en JSON, c'était payer deux fois les mêmes octets. Reste la
 justification, les niveaux et leurs attributs : 10,6 Ko transférés sur les 19
 de la page.
+
+
+### Partie 4
+
+**Deux portes dans le hero, trois détaillées juste après.** Le critère est de
+dix secondes : deux boutons nommés suffisent à trancher entre « je sais ce que
+je cherche » et « je ne sais pas », et les trois cartes qui suivent donnent à
+chacune son argument. *Écarté :* un seul appel à l'action vers le
+questionnaire, qui aurait fait passer un développeur venu chercher une tâche
+par huit questions dont il n'a pas besoin.
+
+**Le chiffre est compté à la construction.** « Sur vingt-cinq fiches, treize se
+règlent sans aucune IA » est l'argument le plus vérifiable de la page : il est
+dérivé des verdicts, et il restera vrai à la fiche suivante. *Écarté :*
+l'écrire dans le texte, où il serait faux au premier ajout.
+
+**La démonstration garde tout son code, replié.** Douze lignes contre huit
+suffisent à montrer l'écart ; le reste est derrière un dépli plutôt que
+supprimé, pour que personne n'ait à nous croire sur le fait qu'on ne l'a pas
+arrangé.
 
 ---
 
