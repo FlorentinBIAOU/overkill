@@ -24,8 +24,8 @@ family: detect-filter
 # published | draft
 status: draft
 
-# Le barreau recommandé. Il doit désigner un barreau dont available vaut true.
-# Il peut valoir N3 : le badge « recommandé » se pose sur n'importe quel barreau.
+# Le niveau recommandé. Il doit désigner un niveau dont available vaut true.
+# Il peut valoir N3 : le badge « recommandé » se pose sur n'importe quel niveau.
 verdict: N0
 
 updated: 2026-01-01
@@ -46,14 +46,14 @@ scenario:
   en: ""
 
 # ----------------------------------------------------------------------------
-# Les quatre barreaux, toujours dans l'ordre N0, N1, N2, N3.
+# Les quatre niveaux, toujours dans l'ordre N0, N1, N2, N3.
 #
 #   N0  règle et algorithme classique
 #   N1  modèle classique léger
 #   N2  petit modèle spécialisé auto-hébergé
 #   N3  API de LLM généraliste
 #
-# Un barreau absent se déclare available: false avec une raison courte et
+# Un niveau absent se déclare available: false avec une raison courte et
 # réelle. Il ne se laisse jamais vide sans explication.
 # ----------------------------------------------------------------------------
 rungs:
@@ -110,7 +110,7 @@ rungs:
       fr: ""
       en: ""
 
-    # La condition précise qui justifie de monter d'un barreau.
+    # La condition précise qui justifie de monter d'un niveau.
     escalate_when:
       fr: ""
       en: ""
@@ -133,7 +133,7 @@ rungs:
       fr: ""
       en: ""
 
-# Deux à trois phrases. Assumées. Pourquoi ce barreau et pas le suivant.
+# Deux à trois phrases. Assumées. Pourquoi ce niveau et pas le suivant.
 verdict_rationale:
   fr: ""
   en: ""

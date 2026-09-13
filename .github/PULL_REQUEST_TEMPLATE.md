@@ -9,7 +9,7 @@
 **La règle qui prime sur tout : aucune fiche n'est publiée si son code n'a pas
 été exécuté et vérifié.** Ces cases ne sont pas une formalité.
 
-- [ ] **J'ai exécuté le code de chaque barreau**, et ses tests passent.
+- [ ] **J'ai exécuté le code de chaque niveau**, et ses tests passent.
 - [ ] Commande employée, collée telle quelle :
 
       ```
@@ -18,7 +18,7 @@
 
 - [ ] **Les deux langues sont renseignées**, français et anglais, chacune écrite
       dans sa langue et non traduite mot à mot depuis l'autre.
-- [ ] **Chaque barreau disponible a un test qui démontre son point de rupture.**
+- [ ] **Chaque niveau disponible a un test qui démontre son point de rupture.**
       Ce que la fiche affirme sur les limites de l'approche est vrai, pas
       plausible.
 - [ ] **Aucun chiffre inventé** : pas de prix absolu, pas de gramme de CO₂, pas

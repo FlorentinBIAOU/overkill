@@ -84,7 +84,7 @@ content/snippets/<identifiant>/
     n1.py   n1.test.py   n1.js   n1.test.js
 ```
 
-Un fichier par barreau et par langage. Les deux langages sont systématiques :
+Un fichier par niveau et par langage. Les deux langages sont systématiques :
 Python et JavaScript, jamais l'un sans l'autre.
 
 Chaque extrait a **trois cas de test au minimum** : le cas nominal, un cas
@@ -134,7 +134,7 @@ fiche ne dit à personne qu'il est conforme ou non.
 
 **Un jugement de valeur sur l'IA.** Ni dans le texte, ni dans la couleur. Le
 site compare des outils sur des tâches ; il ne milite pas. Le badge
-« recommandé » peut se poser sur n'importe quel barreau, N3 compris.
+« recommandé » peut se poser sur n'importe quel niveau, N3 compris.
 
 **Du texte de remplissage.** Un paragraphe creux qui tient lieu de contenu est
 pire qu'un champ marqué brouillon.
