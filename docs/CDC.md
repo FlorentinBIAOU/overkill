@@ -358,7 +358,14 @@ Les verdicts indiqués sont ceux attendus. Si en écrivant la fiche tu établis 
 
 ### 6.2 La feuille de route de 200
 
-Produis **200 intitulés** de fiches futures, répartis sur les dix familles, en incluant les 25 ci-dessus. Chaque intitulé comporte un `id`, un titre bilingue, une famille et une ligne de besoin. Ils sont stockés dans `content/roadmap.yaml` et alimentent la page feuille de route.
+Produis **200 intitulés** de fiches futures, répartis sur les dix familles, en incluant les 25 ci-dessus. Chaque intitulé comporte un `id`, un titre bilingue, une famille et une ligne de besoin. Ils sont stockés dans `content/roadmap.yaml`.
+
+> **Révisé au lot 14.** Les 200 intitulés restent, comme document de travail du
+> dépôt : ils valident que l'architecture tient à cette échelle et donnent aux
+> contributeurs une liste dans laquelle se servir. La **page publique** qu'ils
+> alimentaient est retirée. Annoncer cent soixante-quinze fiches qui n'existent
+> pas est une promesse, et ce site n'en fait pas. Ce qui la remplace côté
+> lecteur, ce sont les dernières fiches publiées et le flux RSS.
 
 Ces 200 ne sont **pas** des fiches. Aucun contenu de barreau n'est généré pour eux. Ils servent à trois choses : montrer l'ampleur du catalogue visé, valider que l'architecture tient à 200 entrées, et donner aux contributeurs une liste dans laquelle se servir.
 
@@ -376,7 +383,6 @@ L'architecture du site, la navigation, la recherche et les filtres doivent fonct
 /familles/<family>             une par famille (10)
 /fiches/<id>                   une par fiche (25 au lancement)
 /methodologie                  les barreaux, comment on évalue, comment on chiffre
-/feuille-de-route              les 200, état d'avancement
 /a-propos                      le projet et son auteur
 /contribuer                    comment proposer une fiche
 /accompagnement                mise en place chez vous, contact
@@ -415,7 +421,7 @@ Outil de consultation. C'est la page qui doit devenir un réflexe.
 - Bandeau avec l'illustration de la famille et sa description
 - La question type, en gros
 - Liste des fiches de la famille, même composant que le catalogue
-- Les intitulés de la feuille de route appartenant à cette famille, en grisé, avec un lien pour la proposer
+- ~~Les intitulés de la feuille de route appartenant à cette famille, en grisé, avec un lien pour la proposer~~ — retiré au lot 14 avec la page feuille de route. La page de famille se termine sur l'appel à proposer un besoin.
 
 ### 7.5 Page de fiche
 
@@ -423,7 +429,7 @@ Registre dense. Peu de DA, beaucoup de contenu.
 
 - En-tête : titre, besoin, famille, badge de verdict, date de révision
 - Le scénario, en encadré
-- Tableau récapitulatif des barreaux, lisible en un coup d'œil, colonnes : barreau, approche, coût, latence, données, déterministe, verdict
+- ~~Tableau récapitulatif des barreaux, colonnes : barreau, approche, coût, latence, données, déterministe, verdict~~ — **révisé au lot 14** : sept colonnes ne se lisent ni à 360 px ni à 1440. Remplacé par quatre cartes, une par niveau, portant le nom de l'approche, le coût et la latence en langage courant, et le marqueur « recommandé » sur celle du verdict. Le verdict apparaît toujours deux fois : en réponse dans le bandeau, et sur cette carte.
 - Les barreaux détaillés, ancrables, avec sommaire latéral collant sur grand écran
 - Blocs de code avec onglets Python et JavaScript, coloration syntaxique effectuée au build, bouton copier, pas de numéros de ligne
 - Verdict argumenté
@@ -480,9 +486,15 @@ Cette page n'est pas une formalité. Sur un site qui parle de sobriété et de r
 
 **Crédits** : licence du contenu (CC BY 4.0), licence du code des exemples (MIT), polices utilisées et leurs licences, sources des méthodologies, contributeurs.
 
-### 7.11 Feuille de route
+### 7.11 ~~Feuille de route~~ — retirée au lot 14
 
-Les 200 intitulés, groupés par famille, avec pour chacun son état : publié, brouillon, à écrire. Un compteur global. Un lien pour se saisir d'un intitulé.
+~~Les 200 intitulés, groupés par famille, avec pour chacun son état : publié, brouillon, à écrire. Un compteur global. Un lien pour se saisir d'un intitulé.~~
+
+La page a existé et a été retirée au lot 14. Les 200 intitulés restent dans
+`content/roadmap.yaml`, où ils servent au jeu de test à deux cents fiches et
+aux contributeurs. Ce que le lecteur veut savoir — ce qui vient d'être publié —
+est servi par la page des dernières fiches et par le flux RSS (section 8.4 du
+lot 14).
 
 ---
 
