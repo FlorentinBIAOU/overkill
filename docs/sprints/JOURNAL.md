@@ -668,3 +668,24 @@ contenu refuse désormais le mot.
 
 **Arbitrage rendu** : la latence annoncée est celle d'une décision sur une
 entrée, pas celle de l'entraînement ni du premier chargement d'un modèle.
+
+### Partie 8 — Diffusion et mesure
+
+**Terminée.** Une image de partage et un badge de README par fiche et par
+langue, produits à la construction du site par le navigateur des dépendances de
+développement — aucune dépendance de production ajoutée. Deux partages, de
+simples liens, sans script tiers. Une page des dernières fiches, dont le premier
+bloc est le flux RSS, qui existait depuis le lot 09 sans que rien n'y mène.
+
+**La mesure d'audience est active**, sans cookie, servie depuis ce domaine sous
+un chemin que l'hébergeur rend : aucune requête ne part vers un tiers, et
+`check-third-party` tient sans exception à écrire. La page confidentialité
+promettait qu'une mesure, si elle arrivait, serait sans cookie, anonyme,
+agrégée, annoncée sur cette page avant d'être mise en place, et que la page
+porterait une nouvelle date. La promesse est tenue, et la page le dit ainsi.
+
+**Deux défauts trouvés en regardant l'écran** : le script de mesure n'existant
+pas en développement, son absence faisait apparaître une erreur 404 en console
+sur chaque page, donc échouer tous les contrôles qui refusent les erreurs de
+console ; et le badge manquait aux pages de démonstration du gabarit, dont les
+fiches factices n'en ont pas.
