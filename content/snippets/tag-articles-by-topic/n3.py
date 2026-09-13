@@ -56,7 +56,7 @@ def tag(article: str, topics: list[str], client=None, *, attempts: int = 3) -> l
     reported = _ask(client, article, topics, attempts)
 
     # Keep only what the taxonomy knows, and answer in the taxonomy's own
-    # order. A model that invents « actualité juridique » must not create a
+    # order. A model that invents "actualité juridique" must not create a
     # topic in your database, and two identical calls must file an article the
     # same way twice.
     answered = {name.strip().lower() for name in reported if isinstance(name, str)}

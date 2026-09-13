@@ -23,8 +23,8 @@ export const DEFAULT_TEAM = 'general';
 function tokens(text) {
   const folded = text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
   const words = folded.match(/[\p{L}\p{N}]+/gu) ?? [];
-  // Word pairs as well as single words, because « mot de passe » and « en
-  // retard » carry more than the words they are made of.
+  // Word pairs as well as single words, because "mot de passe" and "en
+  // retard" carry more than the words they are made of.
   return words.concat(words.slice(0, -1).map((w, i) => `${w} ${words[i + 1]}`));
 }
 

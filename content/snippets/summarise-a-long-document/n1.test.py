@@ -31,7 +31,7 @@ DOCUMENTS = [
     ],
     [
         # This one opens on a formality, so the model cannot simply learn
-        # « the first sentence is always in ».
+        # "the first sentence is always in".
         "The committee met on Thursday in the small room.",
         "The budget for the next year was presented to the committee.",
         "Three members asked about the training line.",
@@ -89,10 +89,10 @@ def test_features_read_position_length_figures_cues_and_echo():
     assert echo == 1.0  # the opening echoes itself entirely
 
     _, _, figure, cue, _ = sentence_features(sentences, 1)
-    assert figure == 1.0 and cue == 0.0  # « 8 » and « 11 » are figures
+    assert figure == 1.0 and cue == 0.0  # "8" and "11" are figures
 
     _, _, _, cue, _ = sentence_features(sentences, 5)
-    assert cue == 1.0  # « Overall »
+    assert cue == 1.0  # "Overall"
 
 
 def test_the_length_feature_saturates_on_a_very_long_sentence():

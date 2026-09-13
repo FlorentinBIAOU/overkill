@@ -95,8 +95,8 @@ def test_breaking_point_a_convention_absent_from_the_training_set():
 
     Every address tagged above puts the number first and five digits before the
     town. A German address puts the number last, a British one has no run of
-    five digits at all, and the model has no way to say « I have never seen
-    this ». It labels every token anyway, confidently and wrongly.
+    five digits at all, and the model has no way to say "I have never seen
+    this". It labels every token anyway, confidently and wrongly.
 
     Widening it costs another round of hand tagging, per country. That is the
     real price of this rung, and it is why the entry does not pretend the model

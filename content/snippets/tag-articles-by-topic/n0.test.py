@@ -47,7 +47,7 @@ def test_a_multi_word_term_matches_across_the_plural_of_both_words():
 
 
 def test_a_stem_never_matches_inside_a_longer_word():
-    # « impôt » must not be found inside « impotent ». Padding the stems with
+    # "impôt" must not be found inside "impotent". Padding the stems with
     # spaces is what buys that.
     assert tag("un vieillard impotent", VOCABULARY) == []
     assert stems("impôts") == " impot "

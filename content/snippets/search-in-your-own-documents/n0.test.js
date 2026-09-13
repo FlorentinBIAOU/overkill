@@ -70,7 +70,7 @@ test('a word present in most documents adds nothing to the score', () => {
 });
 
 test('an empty query returns nothing instead of raising', () => {
-  for (const query of ['', '   ', '!?', '«»']) {
+  for (const query of ['', '   ', '!?', '""']) {
     assert.deepEqual(search(index(), query), []);
   }
 });

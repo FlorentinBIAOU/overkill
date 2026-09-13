@@ -28,7 +28,7 @@ WORD = re.compile(r"[^\W_]+")
 
 
 def normalise(text: str) -> str:
-    """Lowercase and drop accents, so « Fiscalité » and « FISCALITE » meet."""
+    """Lowercase and drop accents, so "Fiscalité" and "FISCALITE" meet."""
     decomposed = unicodedata.normalize("NFD", text.lower())
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 
@@ -46,7 +46,7 @@ def stems(text: str) -> str:
     The text as a run of stems, padded with spaces at both ends.
 
     The padding is what lets a multi-word term be found with a plain substring
-    search: « impot » can then never match inside « impotent ».
+    search: "impot" can then never match inside "impotent".
     """
     return " " + " ".join(lemmatise(w) for w in WORD.findall(normalise(text))) + " "
 

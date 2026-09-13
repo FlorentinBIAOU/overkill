@@ -6,8 +6,8 @@ register, and it does so by looking at the fragments a name is made of.
 
 Two changes matter.
 
-A rare fragment now weighs more than a common one. « boulangerie » appears in
-half the register and tells you almost nothing; « quiquengrogne » appears once
+A rare fragment now weighs more than a common one. "boulangerie" appears in
+half the register and tells you almost nothing; "quiquengrogne" appears once
 and settles the question. TF-IDF is exactly that arithmetic, and N0 has no
 equivalent: Jaro-Winkler treats every character alike.
 
@@ -16,7 +16,7 @@ than a loop over every possible pair, which is what makes a whole register
 searchable at all.
 
 `char_wb` keeps n-grams inside word boundaries, so a fragment never straddles
-two words. « Martin Dubois » and « Dubois Martin » still meet, because word
+two words. "Martin Dubois" and "Dubois Martin" still meet, because word
 order costs nothing here — unlike N0, where it costs almost everything.
 """
 

@@ -81,7 +81,7 @@ test('prose where JSON was asked for throws', async () => {
 });
 
 test('a total that is not a number throws', async () => {
-  // « 92,40 EUR » is what the page says, and it is not a number. Letting it
+  // "92,40 EUR" is what the page says, and it is not a number. Letting it
   // through would put a string where the rest of the pipeline expects a total.
   const client = new FakeLLM({
     response: '{"invoice_number": "x", "date": null, "total": "92,40 EUR"}',

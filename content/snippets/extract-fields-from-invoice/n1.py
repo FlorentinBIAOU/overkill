@@ -1,8 +1,8 @@
 """
 Label each line of the invoice, then read the value out of the line.
 
-Rung N1. N0 asked « what does this line say ». This asks « where does this line
-sit, and what does it look like »: how far down the page, how indented, how
+Rung N1. N0 asked "what does this line say". This asks "where does this line
+sit, and what does it look like": how far down the page, how indented, how
 wordy, how many amounts, and whether the value hangs on the right-hand side.
 
 Those features survive a change of supplier, which is exactly what the labels

@@ -9,8 +9,8 @@
  *
  * What you own on this rung is not the model, it is everything around it: the
  * page geometry you hand it, the threshold under which a field goes to a
- * human, and the answer to « what does the code do when the model says nothing
- * usable ». The weights stay on your machine, which is why an invoice never
+ * human, and the answer to "what does the code do when the model says nothing
+ * usable". The weights stay on your machine, which is why an invoice never
  * leaves it.
  */
 

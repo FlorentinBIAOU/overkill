@@ -84,9 +84,9 @@ def test_breaking_point_a_very_short_text():
     The first breaking point claimed on the entry: below a handful of words
     there are not enough trigrams to rank anything.
 
-    « chat » is French for cat, and the detector reads it as English, because
-    the four trigrams it produces are the ones English uses in « that » and
-    « what ». « ça va » produces trigrams no profile has ever seen, and the
+    "chat" is French for cat, and the detector reads it as English, because
+    the four trigrams it produces are the ones English uses in "that" and
+    "what". "ça va" produces trigrams no profile has ever seen, and the
     answer is then decided by the alphabetical tie-break alone.
     """
     assert detect("chat", PROFILES) == "en"

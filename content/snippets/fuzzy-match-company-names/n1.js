@@ -4,13 +4,13 @@
  * Rung N1. N0 compares two strings. This compares one name against a whole
  * register, and it does so by looking at the fragments a name is made of.
  *
- * A rare fragment now weighs more than a common one. « boulangerie » appears
- * in half the register and tells you almost nothing; « quiquengrogne »
+ * A rare fragment now weighs more than a common one. "boulangerie" appears
+ * in half the register and tells you almost nothing; "quiquengrogne"
  * appears once and settles the question. TF-IDF is exactly that arithmetic,
  * and N0 has no equivalent: Jaro-Winkler treats every character alike.
  *
  * The n-grams are taken inside word boundaries, so a fragment never straddles
- * two words. « Martin Dubois » and « Dubois Martin » still meet, because word
+ * two words. "Martin Dubois" and "Dubois Martin" still meet, because word
  * order costs nothing here — unlike N0, where it costs almost everything.
  *
  * This is the same arithmetic scikit-learn performs, written out: raw counts,

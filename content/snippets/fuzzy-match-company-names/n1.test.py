@@ -28,7 +28,7 @@ def test_word_order_costs_nothing():
 
 
 def test_a_rare_fragment_outweighs_a_common_one():
-    # « boulangerie » is shared by two entries and settles nothing; the surname
+    # "boulangerie" is shared by two entries and settles nothing; the surname
     # is what separates them.
     ranked = dict(match(INDEX, "Boulangerie Martin", top_k=len(REGISTER)))
     assert ranked["Boulangerie Martin SARL"] > ranked["Boulangerie Dupont"]

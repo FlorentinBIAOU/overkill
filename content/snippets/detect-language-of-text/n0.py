@@ -5,15 +5,15 @@ Rung N0. Deterministic, standard library only, and the whole model is a few
 hundred short strings per language.
 
 The idea is older than most of the field. Every language repeats its own
-trigrams: « ent », « les », « eur » in French, « the », « ing » in English,
-« que », « los » in Spanish. Rank those trigrams by frequency in a sample of
+trigrams: "ent", "les", "eur" in French, "the", "ing" in English,
+"que", "los" in Spanish. Rank those trigrams by frequency in a sample of
 the language, rank them again in the text to identify, and compare the two
 orderings. The language whose ordering is closest wins.
 
 Two details make it work.
 
 First, words are padded with spaces before being cut, so a trigram carries
-the information that it opens or closes a word. « les » inside a word is not
+the information that it opens or closes a word. "les" inside a word is not
 the article.
 
 Second, the comparison is on ranks, not on frequencies. A rank survives a

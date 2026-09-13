@@ -93,8 +93,14 @@ def test_breaking_point_a_lost_variable_is_caught_not_shipped():
     ]
 
 
-def test_breaking_point_a_translated_variable_is_caught_too():
-    """The other way it breaks: the model rewrites the variable name."""
+def test_breaking_point_an_invented_variable_is_caught_too():
+    """
+    The other way it breaks: the answer carries a brace the source never had.
+
+    The model is shown ⟦0⟧, never `{count}`, so it cannot translate the
+    variable name. It can still produce something brace-shaped, and the
+    interface would then print that brace. The same check catches it.
+    """
     model = FakeSeq2Seq({"⟦0⟧ items selected": "{compte} éléments sélectionnés"})
     result = translate("{count} items selected", model=model)
     assert result["review"] is True

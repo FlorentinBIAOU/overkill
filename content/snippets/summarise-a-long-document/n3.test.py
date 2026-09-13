@@ -95,10 +95,10 @@ def test_breaking_point_the_model_writes_what_the_document_does_not_say():
     """
     The risk this rung buys, and the one nothing in n3.py catches.
 
-    The prompt says « use only what the document says ». That is a request, not
-    a constraint: the answer below is well-formed JSON, the right shape, the
-    right length, fluent, and it states a figure and a decision that appear
-    nowhere in the document.
+    The prompt says "use only what the document says". That is a request,
+    not a constraint: the answer the double is told to give below is
+    well-formed JSON, the right shape, the right length, fluent, and it states
+    a figure and a decision that appear nowhere in the document.
 
     Every check in n3.py passes, because every check in n3.py is about shape.
     Whether a summary follows from its source is a question about meaning, and

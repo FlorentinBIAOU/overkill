@@ -8,8 +8,8 @@ British postcode that is not five digits, the Japanese order that starts with
 the prefecture. It runs on your machine, so no address ever leaves it.
 
 What you own on this rung is not the model. It is the batch, the size cap, the
-mapping from its label set to yours, and the answer to « what does the code do
-when the parser returns something we cannot use ». The model is a black box
+mapping from its label set to yours, and the answer to "what does the code do
+when the parser returns something we cannot use". The model is a black box
 with a fixed list of labels and no confidence score, and the last function
 below is where that becomes your problem.
 """

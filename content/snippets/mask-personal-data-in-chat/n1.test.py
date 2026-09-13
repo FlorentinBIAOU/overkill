@@ -38,7 +38,7 @@ def test_shape_keeps_words_and_drops_punctuation():
 
 
 def test_shape_does_not_fold_letters_that_carry_no_digit():
-    # Folding unconditionally would turn « loll » into 1011.
+    # Folding unconditionally would turn "loll" into 1011.
     assert shape("loll that is funny") == "loll that is funny"
 
 

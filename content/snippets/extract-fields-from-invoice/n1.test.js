@@ -108,8 +108,8 @@ test('an empty document returns no field', () => {
 });
 
 test('breaking point: a legal footer below the totals', () => {
-  // The features are the whole model, and one of them says « the amount at the
-  // bottom right of the page ». Every French invoice ends with the fixed
+  // The features are the whole model, and one of them says "the amount at the
+  // bottom right of the page". Every French invoice ends with the fixed
   // recovery indemnity, an amount, at the bottom, on the right, on a line of
   // its own. It looks more like a total than the total does, and nothing in
   // the training set said otherwise.

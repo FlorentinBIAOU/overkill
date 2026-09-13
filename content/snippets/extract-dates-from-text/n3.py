@@ -2,7 +2,7 @@
 Extract dates by asking a general-purpose model.
 
 Rung N3. This is the option people reach for first, and it is the only one on
-this entry that reads « jeudi prochain ». That is a real capability, and it is
+this entry that reads "jeudi prochain". That is a real capability, and it is
 why the rung is here.
 
 Note what the code has to do that N0 did not: pass a reference date, because
@@ -20,7 +20,7 @@ PROMPT = (
     "Find every date mentioned in the text below. Answer with JSON only: a list\n"
     "of objects with keys `text` and `date`, where `text` is the words as written\n"
     "and `date` is the day in ISO format, YYYY-MM-DD. Resolve relative dates such\n"
-    "as « next Thursday » against today, which is {today}. If there is no date,\n"
+    "as 'next Thursday' against today, which is {today}. If there is no date,\n"
     "answer with an empty list.\n\nText:\n{text}"
 )
 

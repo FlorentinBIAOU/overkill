@@ -20,7 +20,7 @@ def test_two_different_companies_in_one_trade_land_above_the_threshold():
     """
     Not the headline failure, but the one that bites first in production.
 
-    « Boulangerie Martin » and « Boulangerie Dupont » share a long opening,
+    "Boulangerie Martin" and "Boulangerie Dupont" share a long opening,
     which is exactly what Jaro-Winkler is built to reward. The score sails
     over any threshold that also catches genuine variants, so a pair above
     the cut is a candidate for review, never a decision.

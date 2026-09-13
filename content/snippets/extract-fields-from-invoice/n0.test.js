@@ -58,7 +58,7 @@ test('reads uppercase labels and a grouped amount', () => {
 });
 
 test('ignores a label that carries no value', () => {
-  // « Total » is a column heading here before it is a label. Accepting the
+  // "Total" is a column heading here before it is a label. Accepting the
   // heading would return nothing at all instead of the amount below it.
   const invoice = 'Qté   Prix   Total\n\nTotal TTC   45,00 €';
   assert.equal(extractFields(invoice).total, 45);
@@ -75,14 +75,14 @@ test('parseAmount reads both spellings', () => {
 
 test('breaking point: the next supplier lays the page out otherwise', () => {
   // The rules are written against one supplier's page, and the next supplier
-  // does not use that page. Nord Fournitures writes « N° » where Lambert
-  // writes « Facture n° », spells the date out in words, and calls the total
-  // « NET A PAYER ». Not one of the three fields survives. Two come back null,
+  // does not use that page. Nord Fournitures writes "N°" where Lambert
+  // writes "Facture n°", spells the date out in words, and calls the total
+  // "NET A PAYER". Not one of the three fields survives. Two come back null,
   // and that shows. The third failure is the one that does not: the total comes
-  // back as a confident, well-formed, wrong number, because « Sous-total »
-  // contains « total ».
+  // back as a confident, well-formed, wrong number, because "Sous-total"
+  // contains "total".
   //
-  // Adding « net a payer » to the labels fixes this supplier and waits for the
+  // Adding "net a payer" to the labels fixes this supplier and waits for the
   // next one. That maintenance, invoice by invoice, is the real cost of N0.
   const fields = extractFields(NORD);
   assert.equal(fields.invoice_number, null);

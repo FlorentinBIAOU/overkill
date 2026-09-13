@@ -39,7 +39,7 @@ def test_reads_the_relative_dates_that_stop_n0():
 def test_sends_the_text_and_the_reference_day_in_the_prompt():
     client = FakeLLM(response="[]")
     extract_dates("on se voit jeudi prochain", client=client, today=TODAY)
-    # Without a reference day, « jeudi prochain » cannot be resolved at all.
+    # Without a reference day, "jeudi prochain" cannot be resolved at all.
     assert "on se voit jeudi prochain" in client.last_request["prompt"]
     assert "2024-03-12" in client.last_request["prompt"]
     assert client.last_request["temperature"] == 0

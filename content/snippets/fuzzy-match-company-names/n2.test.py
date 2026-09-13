@@ -85,8 +85,8 @@ def test_breaking_point_shared_generic_words_beat_identity():
     """
     A vector by meaning is not a vector by identity.
 
-    « Boulangerie du Vieux Port » is a different company that happens to share
-    three ordinary words. « Le Vieux Moulin » is the same company under its
+    "Boulangerie du Vieux Port" is a different company that happens to share
+    three ordinary words. "Le Vieux Moulin" is the same company under its
     short name. The stranger ranks above the twin, and no threshold sorts that
     out — which is why this rung still ends in a human review queue.
     """

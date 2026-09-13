@@ -85,7 +85,7 @@ def test_it_clears_the_breaking_point_of_n0():
     The article that defeats the controlled vocabulary of N0: remote work from
     the first line to the last, and not one term of the topic's term list.
 
-    N1 reads « bureau », « semaine » and « visioconférence », which came with
+    N1 reads "bureau", "semaine" and "visioconférence", which came with
     the topic in the corpus, and tags it. This is the whole argument for
     climbing one rung, and it is measured here rather than asserted on the page.
     """

@@ -27,8 +27,8 @@ def train(tickets: list[str], teams: list[str]):
     """
     `teams` is the team that actually handled each past ticket.
 
-    Word pairs as well as single words, because « mot de passe » and « en
-    retard » carry more than the words they are made of. Classes are weighted
+    Word pairs as well as single words, because "mot de passe" and "en
+    retard" carry more than the words they are made of. Classes are weighted
     by their rarity: an archive is never balanced, and an unweighted model
     learns to answer the busiest team.
     """

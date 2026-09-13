@@ -13,7 +13,7 @@
  * keeping it up to date.
  *
  * Second, the street type is read from a dictionary rather than guessed, so the
- * abbreviations people actually type — « av. », « bd », « imp. » — come out as
+ * abbreviations people actually type — "av.", "bd", "imp." — come out as
  * one canonical spelling.
  */
 

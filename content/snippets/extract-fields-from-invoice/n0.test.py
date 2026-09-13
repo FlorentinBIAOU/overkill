@@ -57,7 +57,7 @@ def test_reads_uppercase_labels_and_a_grouped_amount():
 
 
 def test_ignores_a_label_that_carries_no_value():
-    # « Total » is a column heading here before it is a label. Accepting the
+    # "Total" is a column heading here before it is a label. Accepting the
     # heading would return nothing at all instead of the amount below it.
     invoice = "Qté   Prix   Total\n\nTotal TTC   45,00 €"
     assert extract_fields(invoice)["total"] == 45.00
@@ -77,13 +77,13 @@ def test_breaking_point_the_next_supplier_lays_the_page_out_otherwise():
     The breaking point claimed on the entry: the rules are written against one
     supplier's page, and the next supplier does not use that page.
 
-    Nord Fournitures writes « N° » where Lambert writes « Facture n° », spells
-    the date out in words, and calls the total « NET A PAYER ». Not one of the
+    Nord Fournitures writes "N°" where Lambert writes "Facture n°", spells
+    the date out in words, and calls the total "NET A PAYER". Not one of the
     three fields survives. Two come back None, and that shows. The third
     failure is the one that does not: the total comes back as a confident,
-    well-formed, wrong number, because « Sous-total » contains « total ».
+    well-formed, wrong number, because "Sous-total" contains "total".
 
-    Adding « net a payer » to the labels fixes this supplier and waits for the
+    Adding "net a payer" to the labels fixes this supplier and waits for the
     next one. That maintenance, invoice by invoice, is the real cost of N0.
     """
     fields = extract_fields(NORD)

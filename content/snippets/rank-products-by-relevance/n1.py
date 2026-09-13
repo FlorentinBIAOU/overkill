@@ -5,9 +5,9 @@ Rung N1. The score is the one of N0, a weighted sum of the same four signals.
 What changes is where the four numbers come from: a merchandiser's judgement
 on N0, the click log here.
 
-The method is pairwise. What a log really says is never « this product
-deserves 0.8 », it is « shown these two side by side, a shopper took that
-one ». Each such pair becomes one training row, the difference between the two
+The method is pairwise. What a log really says is never "this product
+deserves 0.8", it is "shown these two side by side, a shopper took that
+one". Each such pair becomes one training row, the difference between the two
 signal vectors, and a logistic regression on those differences gives back the
 weights of the original score. Nothing else changes: the serving code, the
 explanation shown to the shop, the scale of the score, all stay as they were.

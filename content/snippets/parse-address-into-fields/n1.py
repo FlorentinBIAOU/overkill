@@ -7,7 +7,7 @@ complement, postcode, town — from what it looks like and from what sits on
 either side of it. Fields are then rebuilt from the labels.
 
 That is the whole gain: a complement in the middle of the line no longer
-swallows the street, because « Bâtiment » is a word the model has seen in that
+swallows the street, because "Bâtiment" is a word the model has seen in that
 position, not an unexpected token in a fixed pattern.
 
 The price is a labelled training set. A few dozen addresses tagged by hand are
@@ -34,7 +34,7 @@ def tokenise(address: str) -> list[str]:
 
 
 def fold(word: str) -> str:
-    """Lowercase and accent-free, so « Allée » and « allee » share a trait."""
+    """Lowercase and accent-free, so "Allée" and "allee" share a trait."""
     decomposed = unicodedata.normalize("NFD", word.lower())
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 

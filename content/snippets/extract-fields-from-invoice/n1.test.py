@@ -112,7 +112,7 @@ def test_an_empty_document_returns_no_field():
 def test_breaking_point_a_legal_footer_below_the_totals():
     """
     The breaking point of this rung: the features are the whole model, and one
-    of them says « the amount at the bottom right of the page ».
+    of them says "the amount at the bottom right of the page".
 
     Every French invoice ends with the fixed recovery indemnity, an amount, at
     the bottom, on the right, on a line of its own. It looks more like a total

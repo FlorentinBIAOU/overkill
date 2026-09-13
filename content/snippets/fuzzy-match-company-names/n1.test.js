@@ -34,7 +34,7 @@ test('word order costs nothing', () => {
 });
 
 test('a rare fragment outweighs a common one', () => {
-  // « boulangerie » is shared by two entries and settles nothing; the surname
+  // "boulangerie" is shared by two entries and settles nothing; the surname
   // is what separates them.
   const scores = ranked('Boulangerie Martin');
   assert.ok(scores['Boulangerie Martin SARL'] > scores['Boulangerie Dupont']);

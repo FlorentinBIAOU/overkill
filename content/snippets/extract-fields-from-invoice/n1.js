@@ -1,8 +1,8 @@
 /**
  * Label each line of the invoice, then read the value out of the line.
  *
- * Rung N1. N0 asked « what does this line say ». This asks « where does this
- * line sit, and what does it look like »: how far down the page, how indented,
+ * Rung N1. N0 asked "what does this line say". This asks "where does this
+ * line sit, and what does it look like": how far down the page, how indented,
  * how wordy, how many amounts, and whether the value hangs on the right-hand
  * side.
  *
@@ -46,7 +46,7 @@ export function lineFeatures(line, index, count) {
  * One binary classifier per label, each trained on every line.
  *
  * The weighting matters more than the optimiser: three lines out of thirty
- * carry a field, and an unweighted fit answers « other » to everything and is
+ * carry a field, and an unweighted fit answers "other" to everything and is
  * right nine times in ten.
  */
 function trainOne(rows, targets, label, epochs, rate) {

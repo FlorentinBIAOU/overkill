@@ -84,10 +84,10 @@ def test_breaking_point_the_confidence_saturates_on_a_mixed_text():
 
     On a French sentence followed by an English one, the model does not
     hesitate the way N0 did. It answers French with a probability above
-    ninety-nine per cent, and the threshold that abstained on « ça va » never
+    ninety-nine per cent, and the threshold that abstained on "ça va" never
     fires. The number looks like a confidence and is not one.
 
-    Short and ambiguous words fail the same way: « chat » is French for cat,
+    Short and ambiguous words fail the same way: "chat" is French for cat,
     and the model is certain it is English.
     """
     mixed = ("La réunion de lundi est reportée au mercredi suivant. "

@@ -7,7 +7,7 @@
  * either side of it. Fields are then rebuilt from the labels.
  *
  * That is the whole gain: a complement in the middle of the line no longer
- * swallows the street, because « Bâtiment » is a word the model has seen in
+ * swallows the street, because "Bâtiment" is a word the model has seen in
  * that position, not an unexpected token in a fixed pattern.
  *
  * One binary regression per label, trained by plain gradient descent, and the
@@ -25,7 +25,7 @@ export function tokenise(address) {
   return address.normalize('NFKC').match(TOKEN) ?? [];
 }
 
-/** Lowercase and accent-free, so « Allée » and « allee » share a trait. */
+/** Lowercase and accent-free, so "Allée" and "allee" share a trait. */
 export function fold(word) {
   return word.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
 }

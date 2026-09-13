@@ -102,7 +102,7 @@ test('what the double cannot prove', async () => {
   //
   // A real encoder is supposed to place it near the topic sentence. The double
   // is a bag of words, so it scores remote work exactly as high as computer
-  // security and recruitment — that is, on « le », « la » and « de », not on
+  // security and recruitment — that is, on "le", "la" and "de", not on
   // meaning. This test asserts the double's silence instead of implying a win
   // nobody measured.
   const article =

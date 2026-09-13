@@ -90,9 +90,9 @@ def test_what_the_double_cannot_prove():
     The reason this rung exists is the paraphrase, and the double cannot show
     it: it is a bag of words, exactly like N1.
 
-    « Je n'arrive plus à entrer dans mon espace client » is the lost password
+    "Je n'arrive plus à entrer dans mon espace client" is the lost password
     of the archive said in other words. The double puts the password ticket
-    third, behind two parcel tickets that merely share « mon » and « plus »,
+    third, behind two parcel tickets that merely share "mon" and "plus",
     and the routing falls to the default queue. Only the real encoder closes
     that gap. This test asserts the double's silence instead of implying a win
     nobody measured.

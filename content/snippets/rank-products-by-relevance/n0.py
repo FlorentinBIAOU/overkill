@@ -29,7 +29,7 @@ DEFAULT_WEIGHTS = {"text": 6.0, "availability": 2.0, "margin": 1.0, "popularity"
 
 
 def fold(text: str) -> str:
-    """Lowercase and drop accents, so that « crème » finds « creme »."""
+    """Lowercase and drop accents, so that "crème" finds "creme"."""
     decomposed = unicodedata.normalize("NFD", text.lower())
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 
@@ -44,8 +44,8 @@ def text_match(query: str, product: dict) -> float:
     """
     Share of the query terms found at the start of a word of the product.
 
-    Prefix matching, not equality: a shopper who types « chauss » is looking
-    for « chaussures », and a shopper who types the plural is looking for the
+    Prefix matching, not equality: a shopper who types "chauss" is looking
+    for "chaussures", and a shopper who types the plural is looking for the
     singular too.
     """
     wanted = terms(query)

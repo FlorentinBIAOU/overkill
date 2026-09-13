@@ -36,13 +36,13 @@ RULES = (
 
 
 def _fold(text: str) -> str:
-    """Lowercase and drop accents, so « Prélèvement » matches « prelevement »."""
+    """Lowercase and drop accents, so "Prélèvement" matches "prelevement"."""
     decomposed = unicodedata.normalize("NFD", text.lower())
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
-# A word boundary on the left only. « facture » then also matches « factures »
-# and « facturation », which is what French tickets are full of; the price is
+# A word boundary on the left only. "facture" then also matches "factures"
+# and "facturation", which is what French tickets are full of; the price is
 # that it would match a longer word starting the same way.
 _COMPILED = tuple(
     (team, tuple((word, re.compile(rf"\b{re.escape(_fold(word))}")) for word in words))

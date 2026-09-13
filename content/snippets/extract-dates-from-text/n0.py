@@ -34,7 +34,7 @@ NUMERIC = re.compile(r"(?<!\d)(\d{1,2}|\d{4})[/.-](\d{1,2})[/.-](\d{2}|\d{4})(?!
 
 
 def _fold(word: str) -> str:
-    """Drop accents, so that « février » and « fevrier » reach the same entry."""
+    """Drop accents, so that "février" and "fevrier" reach the same entry."""
     decomposed = unicodedata.normalize("NFKD", word.lower())
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 

@@ -80,7 +80,7 @@ def test_prose_where_json_was_asked_for_raises():
 
 
 def test_a_total_that_is_not_a_number_raises():
-    # « 92,40 EUR » is what the page says, and it is not a number. Letting it
+    # "92,40 EUR" is what the page says, and it is not a number. Letting it
     # through would put a string where the rest of the pipeline expects a total.
     client = FakeLLM(response='{"invoice_number": "x", "date": null, "total": "92,40 EUR"}')
     with pytest.raises(ExtractionUnavailable):

@@ -75,7 +75,7 @@ def test_breaking_point_a_placeholder_stays_a_placeholder():
     The breaking point claimed on the entry: the hash decides the image, the
     meaning of the identifier never does.
 
-    An identifier that says « red » does not give red, two variants of one
+    An identifier that says "red" does not give red, two variants of one
     product look unrelated, and nothing in the output resembles a photograph.
     If a real picture of the thing is needed, no rung of this entry helps.
     """

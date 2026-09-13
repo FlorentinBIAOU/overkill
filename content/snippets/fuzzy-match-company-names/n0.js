@@ -4,8 +4,8 @@
  * Rung N0. Deterministic, no dependency, and short enough to read in one
  * sitting. Two decisions carry the whole result.
  *
- * First, the legal form is removed rather than compared. « Boulangerie Martin
- * SARL » and « Boulangerie Martin SAS » are one trading name under two
+ * First, the legal form is removed rather than compared. "Boulangerie Martin
+ * SARL" and "Boulangerie Martin SAS" are one trading name under two
  * statuses; leaving SARL and SAS inside the strings would push them apart for
  * a reason nobody cares about.
  *

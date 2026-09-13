@@ -27,7 +27,7 @@ def _is_digits_in_disguise(token: str) -> bool:
     True when folding lookalike characters turns the whole token into digits.
 
     The token must already contain one real digit. Folding unconditionally
-    would be a mistake: « loll » would fold to 1011 and read as a fragment of
+    would be a mistake: "loll" would fold to 1011 and read as a fragment of
     a phone number.
     """
     if not any(c.isdigit() for c in token):

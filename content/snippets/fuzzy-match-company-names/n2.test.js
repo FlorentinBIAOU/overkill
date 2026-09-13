@@ -83,9 +83,9 @@ test('what the double cannot prove', async () => {
 });
 
 test('breaking point: shared generic words beat identity', async () => {
-  // A vector by meaning is not a vector by identity. « Boulangerie du Vieux
-  // Port » is a different company that happens to share three ordinary words.
-  // « Le Vieux Moulin » is the same company under its short name. The
+  // A vector by meaning is not a vector by identity. "Boulangerie du Vieux
+  // Port" is a different company that happens to share three ordinary words.
+  // "Le Vieux Moulin" is the same company under its short name. The
   // stranger ranks above the twin, and no threshold sorts that out — which is
   // why this rung still ends in a human review queue.
   const scores = await ranked('Boulangerie du Vieux Moulin');

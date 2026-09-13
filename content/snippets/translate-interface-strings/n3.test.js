@@ -80,7 +80,7 @@ test('breaking point: prose where JSON was asked for', async () => {
   // sentence around the translation. Returning that sentence as the label of
   // a button is worse than returning nothing, so it throws and the caller
   // decides.
-  const client = new FakeLLM({ response: 'Sure! In French, Save is « Enregistrer ».' });
+  const client = new FakeLLM({ response: 'Sure! In French, Save is "Enregistrer".' });
   await assert.rejects(() => translate('Save', 'French', { client }), TranslationUnavailable);
 });
 

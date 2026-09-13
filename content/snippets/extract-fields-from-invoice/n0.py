@@ -7,7 +7,7 @@ read every invoice from the supplier you wrote it for.
 
 The method is the one anybody reaches for: find the line carrying the label,
 then read the value that follows it on that line. The labels are ordered from
-the most specific to the least, because « Total TTC » and « Total HT » are one
+the most specific to the least, because "Total TTC" and "Total HT" are one
 word apart and the wrong one is a plausible number.
 
 That ordering is also where the approach ends. See the test.

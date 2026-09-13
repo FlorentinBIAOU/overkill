@@ -129,12 +129,14 @@ def test_breaking_point_the_model_writes_what_the_document_does_not_say():
     a conclusion drawn from two passages ten pages apart, which N0 and N1
     cannot. It is also why it can state one the document does not support.
 
-    Below, the same document is summarised twice. One answer follows from it,
-    the other is invented: neither April nor a move to Rouen appears anywhere
-    in the source. The function returns both, identically, without a warning,
-    because the only thing it can check about an answer is that it is not
-    empty. Checking that a summary is entailed by its source is a different
-    problem, and no amount of plumbing here solves it.
+    Below, the double is told to answer each of two summaries of the same
+    document. One follows from it, the other is invented: neither April nor a
+    move to Rouen appears anywhere in the source. The function returns both,
+    identically, without a warning, because the only thing it can check about
+    an answer is that it is not empty. Checking that a summary is entailed by
+    its source is a different problem, and no amount of plumbing here solves
+    it. What this test shows is what the plumbing lets through, not what a real
+    model writes.
     """
     document = (
         "The Rouen plant supplies every battery cell used on the Lyon assembly line. "

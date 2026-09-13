@@ -56,7 +56,7 @@ export async function tag(article, topics, { client, attempts = 3 } = {}) {
   const reported = await ask(client, article, topics, attempts);
 
   // Keep only what the taxonomy knows, and answer in the taxonomy's own order.
-  // A model that invents « actualité juridique » must not create a topic in
+  // A model that invents "actualité juridique" must not create a topic in
   // your database, and two identical calls must file an article the same way
   // twice.
   const answered = new Set(

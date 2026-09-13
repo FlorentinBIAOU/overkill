@@ -90,7 +90,7 @@ test('breaking point: a convention absent from the training set', () => {
   // This rung knows the conventions it was shown. Every address tagged above
   // puts the number first and five digits before the town. A German address
   // puts the number last, a British one has no run of five digits at all, and
-  // the model has no way to say « I have never seen this ». It labels every
+  // the model has no way to say "I have never seen this". It labels every
   // token anyway, confidently and wrongly.
   //
   // Widening it costs another round of hand tagging, per country. That is the

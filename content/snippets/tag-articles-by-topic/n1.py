@@ -3,7 +3,7 @@ Tag articles with a one-versus-rest classifier over TF-IDF features.
 
 Rung N1. The controlled vocabulary of N0 sees the words an editor listed. This
 sees the words that go with a topic in the articles you have already tagged —
-« bureau », « visioconférence » and « domicile » end up carrying the remote
+"bureau", "visioconférence" and "domicile" end up carrying the remote
 work topic, although no editor would ever have written them in a term list.
 
 One classifier per topic, each answering its own yes-or-no question. That is
@@ -31,8 +31,8 @@ def train(articles: list[str], topics_per_article: list[list[str]]) -> dict:
     binariser = MultiLabelBinarizer()
     matrix = binariser.fit_transform(topics_per_article)
     pipeline = make_pipeline(
-        # Word unigrams and bigrams: « à distance » says something that
-        # « distance » alone does not.
+        # Word unigrams and bigrams: "à distance" says something that
+        # "distance" alone does not.
         TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True),
         OneVsRestClassifier(LogisticRegression(C=4.0, max_iter=1000)),
     )

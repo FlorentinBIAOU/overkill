@@ -23,7 +23,7 @@ const SUFFIXES = ['ements', 'ement', 'ations', 'ation', 'es', 's', 'x', 'e'];
 
 const WORD = /[\p{L}\p{N}]+/gu;
 
-/** Lowercase and drop accents, so « Fiscalité » and « FISCALITE » meet. */
+/** Lowercase and drop accents, so "Fiscalité" and "FISCALITE" meet. */
 export function normalise(text) {
   return text.toLowerCase().normalize('NFD').replace(/\p{M}+/gu, '');
 }
@@ -42,7 +42,7 @@ export function lemmatise(word) {
  * The text as a run of stems, padded with spaces at both ends.
  *
  * The padding is what lets a multi-word term be found with a plain substring
- * search: « impot » can then never match inside « impotent ».
+ * search: "impot" can then never match inside "impotent".
  */
 export function stems(text) {
   const found = normalise(text).match(WORD) ?? [];

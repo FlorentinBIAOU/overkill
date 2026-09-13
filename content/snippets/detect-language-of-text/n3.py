@@ -59,7 +59,7 @@ def detect(text: str, languages: Collection[str], client=None, *, attempts: int 
 
     answer = _ask(client, text[:EXCERPT_CHARACTERS], sorted(languages), attempts)
 
-    # Models answer « fr », « FR », « fr-CA » and « French » for the same
+    # Models answer "fr", "FR", "fr-CA" and "French" for the same
     # thing. Everything but the first is a bug waiting to reach production.
     code = str(answer.get("language", "")).strip().lower().split("-")[0]
     if code == "und":

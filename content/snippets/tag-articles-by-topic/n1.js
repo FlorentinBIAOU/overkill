@@ -3,7 +3,7 @@
  *
  * Rung N1. The controlled vocabulary of N0 sees the words an editor listed.
  * This sees the words that go with a topic in the articles you have already
- * tagged — « bureau », « visioconférence » and « domicile » end up carrying
+ * tagged — "bureau", "visioconférence" and "domicile" end up carrying
  * the remote work topic, although no editor would ever have written them in a
  * term list.
  *
@@ -20,7 +20,7 @@
 
 const TOKEN = /[\p{L}\p{N}_]{2,}/gu;
 
-/** Unigrams and bigrams: « à distance » says more than « distance » alone. */
+/** Unigrams and bigrams: "à distance" says more than "distance" alone. */
 function terms(text) {
   const words = text.toLowerCase().match(TOKEN) ?? [];
   const pairs = words.slice(1).map((word, i) => `${words[i]} ${word}`);

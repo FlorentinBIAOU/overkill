@@ -33,13 +33,13 @@ export const RULES = [
   ['shipping', ['livraison', 'colis', 'transporteur', 'expédition', 'suivi', 'retard']],
 ];
 
-/** Lowercase and drop accents, so « Prélèvement » matches « prelevement ». */
+/** Lowercase and drop accents, so "Prélèvement" matches "prelevement". */
 function fold(text) {
   return text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
 }
 
-// A word boundary on the left only. « facture » then also matches « factures »
-// and « facturation », which is what French tickets are full of; the price is
+// A word boundary on the left only. "facture" then also matches "factures"
+// and "facturation", which is what French tickets are full of; the price is
 // that it would match a longer word starting the same way.
 const COMPILED = RULES.map(([team, words]) => [
   team,

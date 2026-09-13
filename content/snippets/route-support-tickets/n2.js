@@ -2,8 +2,8 @@
  * Route a ticket by its nearest resolved tickets, with a self-hosted encoder.
  *
  * Rung N2. N1 learns the words of the archive; an encoder maps a ticket to a
- * vector by meaning, so a customer who says « je n'arrive plus à entrer dans
- * mon espace » lands next to the archived tickets about a lost password even
+ * vector by meaning, so a customer who says "je n'arrive plus à entrer dans
+ * mon espace" lands next to the archived tickets about a lost password even
  * though they share no word with them.
  *
  * There is no training step here, and that is the point of the rung: the index

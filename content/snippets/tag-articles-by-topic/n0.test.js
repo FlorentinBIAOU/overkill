@@ -48,7 +48,7 @@ test('a multi-word term matches across the plural of both words', () => {
 });
 
 test('a stem never matches inside a longer word', () => {
-  // « impôt » must not be found inside « impotent ». Padding the stems with
+  // "impôt" must not be found inside "impotent". Padding the stems with
   // spaces is what buys that.
   assert.deepEqual(tag('un vieillard impotent', VOCABULARY), []);
   assert.equal(stems('impôts'), ' impot ');

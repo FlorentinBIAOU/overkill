@@ -81,7 +81,7 @@ def test_breaking_point_prose_where_json_was_asked_for():
     button is worse than returning nothing, so it raises and the caller
     decides.
     """
-    client = FakeLLM(response="Sure! In French, Save is « Enregistrer ».")
+    client = FakeLLM(response='Sure! In French, Save is "Enregistrer".')
     with pytest.raises(TranslationUnavailable):
         translate("Save", "French", client=client)
 

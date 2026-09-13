@@ -91,8 +91,11 @@ test('breaking point: a lost variable is caught, not shipped', async () => {
   ]);
 });
 
-test('breaking point: a translated variable is caught too', async () => {
-  // The other way it breaks: the model rewrites the variable name.
+test('breaking point: an invented variable is caught too', async () => {
+  // The other way it breaks: the answer carries a brace the source never had.
+  // The model is shown ⟦0⟧, never {count}, so it cannot translate the variable
+  // name; it can still produce something brace-shaped, and the interface would
+  // print that brace. The same check catches it.
   const model = new FakeSeq2Seq({ '⟦0⟧ items selected': '{compte} éléments sélectionnés' });
   const result = await translate('{count} items selected', { model });
   assert.equal(result.review, true);
