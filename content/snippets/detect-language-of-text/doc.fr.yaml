@@ -10,8 +10,8 @@ n0: |
   quelques centaines de chaînes courtes par langue.
 
   L'idée est plus vieille que la plupart du domaine. Chaque langue répète ses
-  propres trigrammes : « ent », « les », « eur » en français, « the », « ing »
-  en anglais, « que », « los » en espagnol. Classez ces trigrammes par
+  propres trigrammes : « ent », « les », « eur » en français, « the »,
+  « ing » en anglais, « que », « los » en espagnol. Classez-les par
   fréquence dans un échantillon de la langue, classez-les de nouveau dans le
   texte à identifier, puis comparez les deux ordres. La langue dont l'ordre
   est le plus proche gagne.

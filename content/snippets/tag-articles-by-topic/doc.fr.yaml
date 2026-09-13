@@ -26,9 +26,9 @@ n1.js: |
 
   Niveau N1. Le vocabulaire contrôlé du niveau N0 voit les mots qu'un rédacteur
   a énumérés. Celui-ci voit les mots qui vont avec un thème dans les articles
-  que vous avez déjà étiquetés — « bureau », « visioconférence » et « domicile »
-  finissent par porter le thème du télétravail, alors qu'aucun rédacteur ne les
-  aurait jamais inscrits dans une liste de termes.
+  que vous avez déjà étiquetés — « bureau », « visioconférence » et
+  « domicile » finissent par porter le thème du télétravail, alors qu'aucun
+  rédacteur ne les aurait jamais inscrits dans une liste de termes.
 
   Un classifieur par thème, chacun répondant à sa propre question par oui ou par
   non. C'est ce que veut dire un contre tous, et c'est ce qui garde l'étiquetage
@@ -47,9 +47,9 @@ n1.py: |
 
   Niveau N1. Le vocabulaire contrôlé du niveau N0 voit les mots qu'un rédacteur
   a énumérés. Celui-ci voit les mots qui vont avec un thème dans les articles
-  que vous avez déjà étiquetés — « bureau », « visioconférence » et « domicile »
-  finissent par porter le thème du télétravail, alors qu'aucun rédacteur ne les
-  aurait jamais inscrits dans une liste de termes.
+  que vous avez déjà étiquetés — « bureau », « visioconférence » et
+  « domicile » finissent par porter le thème du télétravail, alors qu'aucun
+  rédacteur ne les aurait jamais inscrits dans une liste de termes.
 
   Un classifieur par thème, chacun répondant à sa propre question par oui ou par
   non. C'est ce que veut dire un contre tous, et c'est ce qui garde l'étiquetage
