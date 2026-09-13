@@ -53,6 +53,9 @@ for (const verdict of ['N0', 'N1', 'N3', 'N2']) {
               id={e.id}
               href={route(lang, 'entries', e.id)}
               title={e.title[lang]}
+              need={e.need[lang]}
+              cost={e.rungs.find((r: any) => r.level === e.verdict)?.cost}
+              latency={e.rungs.find((r: any) => r.level === e.verdict)?.latency}
               familyLabel={familyTitles[e.family] ?? e.family}
               family={e.family}
               verdict={e.verdict}
@@ -87,10 +90,14 @@ for (const verdict of ['N0', 'N1', 'N3', 'N2']) {
     margin: 0 0 var(--space-8);
   }
 
+  /* Le même format de carte que le catalogue et que les fiches voisines :
+     titre, besoin, réponse colorée. */
   .featured__list {
     list-style: none;
     margin: 0;
     padding: 0;
-    border-block-end: 1px solid var(--rule);
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
   }
 </style>

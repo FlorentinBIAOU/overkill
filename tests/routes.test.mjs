@@ -33,9 +33,15 @@ test('la locale se lit dans le chemin', () => {
   assert.equal(localeOf('/de/catalogue'), undefined);
 });
 
-test("les douze segments de la section 7.1 du CDC sont tous déclarés", () => {
+test('les segments de premier niveau sont tous déclarés', () => {
+  /*
+   * La section 7.1 du CDC en donnait douze. La feuille de route publique en a
+   * été retirée au lot 14 : le document la comptait parmi les décisions
+   * périmées, la navigation ne la porte plus, et les deux cents intitulés
+   * restent un document de travail du dépôt, pas une page.
+   */
   const attendus = [
-    '', 'catalogue', 'familles', 'fiches', 'methodologie', 'feuille-de-route',
+    '', 'catalogue', 'familles', 'fiches', 'methodologie',
     'a-propos', 'contribuer', 'accompagnement', 'mentions-legales',
     'confidentialite', 'credits',
   ];

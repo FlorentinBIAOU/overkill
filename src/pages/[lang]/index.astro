@@ -33,9 +33,8 @@ const textes = {
     featuredTitle: 'Trois fiches pour commencer',
     featuredLead: "Choisies pour la diversité de leurs verdicts, y compris celui qui recommande d'appeler un modèle.",
     contributeTitle: 'Ce catalogue vous appartient',
-    contributeLead: "Deux cents besoins sont sur la feuille de route, vingt-cinq sont écrits. Si vous avez vu quelqu'un employer un modèle généraliste là où une règle aurait suffi, il manque une fiche.",
+    contributeLead: "Vingt-cinq fiches sont écrites, et le catalogue en visera deux cents. Si vous avez vu quelqu'un employer un modèle généraliste là où une règle aurait suffi, il manque une fiche.",
     contribute: 'Comment contribuer',
-    roadmap: 'Voir la feuille de route',
   },
   en: {
     mission: 'Do you really need AI for that?',
@@ -46,9 +45,8 @@ const textes = {
     featuredTitle: 'Three entries to start with',
     featuredLead: 'Chosen for the spread of their verdicts, including the one that recommends calling a model.',
     contributeTitle: 'This catalogue is yours',
-    contributeLead: 'Two hundred needs are on the roadmap, twenty-five are written. If you have seen someone reach for a general-purpose model where a rule would have done, an entry is missing.',
+    contributeLead: 'Twenty-five entries are written, and the catalogue aims at two hundred. If you have seen someone reach for a general-purpose model where a rule would have done, an entry is missing.',
     contribute: 'How to contribute',
-    roadmap: 'See the roadmap',
   },
 }[lang];
 ---
@@ -67,7 +65,7 @@ const textes = {
       <h1 class="display-xl hero__mission">{textes.mission}</h1>
       <p class="hero__lead">{textes.lead}</p>
       <p class="hero__action">
-        <a class="hero__cta" href={route(lang, 'catalogue')}>{textes.catalogue}</a>
+        <a class="button" href={route(lang, 'catalogue')}>{textes.catalogue}</a>
       </p>
     </div>
   </div>
@@ -97,8 +95,8 @@ const textes = {
         <h2 id="closing-title" class="display-l closing__title">{textes.contributeTitle}</h2>
         <p>{textes.contributeLead}</p>
         <p class="closing__links">
-          <a href={route(lang, 'contribute')}>{textes.contribute}</a>
-          <a href={route(lang, 'roadmap')}>{textes.roadmap}</a>
+          <a class="link-action" href={route(lang, 'contribute')}>{textes.contribute}</a>
+          <a class="link-action" href={route(lang, 'families')}>{strings.families.browse}</a>
         </p>
       </div>
       <HelpBlock strings={strings} compact />
@@ -127,16 +125,6 @@ const textes = {
   .hero__action {
     margin-block-start: var(--space-8);
     margin-block-end: 0;
-  }
-
-  .hero__cta {
-    display: inline-block;
-    padding: var(--space-3) var(--space-6);
-    background: var(--on-brand);
-    color: var(--on-brand-text);
-    border-radius: var(--radius-pill);
-    text-decoration: none;
-    font-weight: 600;
   }
 
   .stance {
@@ -174,10 +162,9 @@ const textes = {
   }
 
   .closing__links {
-    margin-block-start: var(--space-6);
+    margin-block-start: var(--space-4);
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-6);
-    font-weight: 600;
+    gap: var(--space-2) var(--space-8);
   }
 </style>

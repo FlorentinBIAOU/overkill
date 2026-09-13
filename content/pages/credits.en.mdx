@@ -6,6 +6,8 @@ description: "Content and code licences, fonts used, cited methodologies, contri
 updated: 2026-09-10
 ---
 
+import Links from '../../src/components/Links.astro';
+
 ## Licences
 
 ### The entries' content
@@ -48,11 +50,13 @@ existing work or a brand's style. They are covered by the content licence.
 The footprint orders of magnitude used on the entries rest on the published work listed and
 cited by name on the [methodology](/en/methodologie) page:
 
-- Green Algorithms — Lannelongue, Grealey and Inouye, *Advanced Science*, 2021
-- Estimating the Carbon Footprint of BLOOM — Luccioni, Viguier and Ligozat, 2022
-- Software Carbon Intensity — Green Software Foundation, now ISO/IEC 21031
-- AFNOR SPEC 2314, Référentiel général pour l'IA frugale — 2024
-- Boavizta — open data and tooling on the impact of digital systems
+<Links lang="en" links={[
+  { label: "Green Algorithms — Lannelongue, Grealey and Inouye, Advanced Science, 2021", url: "https://www.green-algorithms.org/" },
+  { label: "Estimating the Carbon Footprint of BLOOM — Luccioni, Viguier and Ligozat, 2022", url: "https://arxiv.org/abs/2211.02001" },
+  { label: "Software Carbon Intensity — Green Software Foundation, now ISO/IEC 21031", url: "https://sci.greensoftware.foundation/" },
+  { label: "AFNOR SPEC 2314, Référentiel général pour l'IA frugale, 2024", url: "https://normalisation.afnor.org/nos-solutions/afnor-spec/intelligence-artificielle-frugale/" },
+  { label: "Boavizta — open data and tooling on the impact of digital systems", url: "https://boavizta.org/" },
+]} />
 
 That work is not affiliated with Overkill and does not endorse its content.
 

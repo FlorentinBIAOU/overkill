@@ -19,7 +19,6 @@ export default {
     families: 'Familles',
     methodology: 'Comment ça marche',
     guide: 'Par où commencer',
-    roadmap: 'Feuille de route',
     about: 'À propos',
     contribute: 'Contribuer',
     help: 'Contact',
@@ -271,6 +270,27 @@ export default {
     browse: 'Parcourir par famille',
     title: 'Dix familles, rangées par verbe',
     lead: 'Chaque tâche du catalogue appartient à une famille. Choisissez celle qui décrit ce que vous voulez faire.',
+  },
+
+  /* L'appel à l'action de fin des pages éditoriales. Une page qui n'a rien à
+     proposer n'en porte pas : les pages légales s'arrêtent sur leur contenu. */
+  pageCta: {
+    methodology: {
+      heading: 'La méthode à l’œuvre',
+      body: 'Vingt-cinq besoins, leur verdict, le code qui va avec, et une zone d’essai qui le fait tourner devant vous.',
+      action: 'Parcourir le catalogue',
+    },
+    contribute: {
+      heading: 'Proposer une fiche sans écrire de code',
+      body: 'Quatre questions : le besoin en une phrase, la famille qui vous semble la bonne, ce que vous avez vu faire, et ce qui vous semble suffire.',
+      action: 'Ouvrir une proposition',
+      secondary: 'Signaler une fiche fausse',
+    },
+    credits: {
+      heading: 'Le dépôt fait foi',
+      body: 'Le code du site, celui des exemples, les contrôles et l’historique complet des modifications sont publics.',
+      action: 'Voir le dépôt',
+    },
   },
 
   catalogue: {

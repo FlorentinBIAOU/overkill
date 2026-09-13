@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
+import rehypeTableScroll from './src/lib/rehype-table-scroll.mjs';
 
 export const SITE = 'https://isitoverkill.dev';
 
@@ -55,6 +56,8 @@ export default defineConfig({
     build: { rollupOptions: { external: PROVIDERS } },
   },
   markdown: {
+    // Un tableau large défile dans son conteneur, jamais la page.
+    rehypePlugins: [rehypeTableScroll],
     shikiConfig: {
       themes: { light: 'github-light', dark: 'github-dark' },
       wrap: false,

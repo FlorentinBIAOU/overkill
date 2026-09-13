@@ -5,8 +5,9 @@
  * devenu une grille continue, ne donne plus.
  */
 import SiteLayout from '../../../layouts/SiteLayout.astro';
+import CtaBand from '../../../components/CtaBand.astro';
 import FamilyIllustration from '../../../components/FamilyIllustration.astro';
-import { allFamilies, publishedEntries } from '../../../lib/content';
+import { allFamilies, publishedEntries, ISSUE_URL } from '../../../lib/content';
 import { LOCALES, t, type Locale } from '../../../i18n';
 import { route } from '../../../i18n/routes';
 
@@ -53,11 +54,18 @@ const compte = (id: string) => fiches.filter((e) => e.family === id).length;
       }
     </ul>
   </div>
+
+  <CtaBand
+    heading={strings.family.missingHeading}
+    body={strings.family.missingBody}
+    action={{ label: strings.family.missingAction, href: ISSUE_URL, external: true }}
+    secondary={{ label: strings.family.missingHow, href: route(lang, 'contribute') }}
+  />
 </SiteLayout>
 
 <style>
   .families {
-    padding-block: var(--space-12) var(--space-16);
+    padding-block: var(--space-12) 0;
   }
 
   .families__lead {

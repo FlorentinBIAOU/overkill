@@ -1,0 +1,23 @@
+---
+/**
+ * LinkList, employable depuis un fichier MDX.
+ *
+ * Les pages éditoriales sont écrites en MDX et n'ont pas accès au dictionnaire
+ * d'interface. Ce composant ne fait que le chercher à partir de la langue, pour
+ * qu'un rédacteur écrive `<Links lang="fr" links={[…]} />` sans rien savoir du
+ * reste.
+ */
+import LinkList from './LinkList.astro';
+import { t, type Locale } from '../i18n';
+import type { LinkKind } from '../lib/links';
+
+export interface Props {
+  lang: Locale;
+  links: { label: string; url: string; kind?: LinkKind }[];
+  narrow?: boolean;
+}
+
+const { lang, links, narrow = false } = Astro.props;
+---
+
+<LinkList links={links} strings={t(lang)} narrow={narrow} />

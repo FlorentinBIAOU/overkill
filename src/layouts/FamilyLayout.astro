@@ -8,6 +8,7 @@
  * pour les proposer.
  */
 import SiteLayout from './SiteLayout.astro';
+import CtaBand from '../components/CtaBand.astro';
 import EntryCard from '../components/EntryCard.astro';
 import FamilyIllustration from '../components/FamilyIllustration.astro';
 import { t, type Locale } from '../i18n';
@@ -18,12 +19,10 @@ export interface Props {
   family: any;
   entries: any[];
   familyTitles: Record<string, string>;
-  /** Intitulés de la feuille de route qui appartiennent à cette famille. */
-  planned: { id: string; title: { fr: string; en: string } }[];
   issueUrl: string;
 }
 
-const { lang, family, entries, familyTitles, planned, issueUrl } = Astro.props;
+const { lang, family, entries, familyTitles, issueUrl } = Astro.props;
 const strings = t(lang);
 ---
 
@@ -81,18 +80,12 @@ const strings = t(lang);
 
   </div>
 
-  <div class="band band-brand family__suggest">
-    <div class="wrap">
-      <h2 class="display-l">{strings.family.missingHeading}</h2>
-      <p class="family__suggest-lead">{strings.family.missingBody}</p>
-      <p class="family__suggest-actions">
-        <a class="family__suggest-cta" href={issueUrl} rel="noopener">
-          {strings.family.missingAction}
-        </a>
-        <a href={route(lang, 'contribute')}>{strings.family.missingHow}</a>
-      </p>
-    </div>
-  </div>
+  <CtaBand
+    heading={strings.family.missingHeading}
+    body={strings.family.missingBody}
+    action={{ label: strings.family.missingAction, href: issueUrl, external: true }}
+    secondary={{ label: strings.family.missingHow, href: route(lang, 'contribute') }}
+  />
 </SiteLayout>
 
 <style>
@@ -138,41 +131,6 @@ const strings = t(lang);
   }
 
 
-  .family__suggest-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-6);
-    margin-block-start: var(--space-4);
-  }
-
-  .family__suggest {
-    margin-block-start: var(--space-16);
-    padding-block: var(--space-16);
-  }
-
-  .family__suggest-lead {
-    max-width: 46ch;
-    margin-block-start: var(--space-5);
-  }
-
-  .family__suggest-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-6);
-    margin-block-start: var(--space-8);
-  }
-
-  .family__suggest-cta {
-    display: inline-block;
-    padding: var(--space-3) var(--space-6);
-    background: var(--on-brand);
-    color: var(--on-brand-text);
-    border-radius: var(--radius-pill);
-    font-weight: 600;
-    text-decoration: none;
-  }
-
   .family__section-title {
     font-family: var(--font-text);
     font-size: var(--size-small);
@@ -192,31 +150,7 @@ const strings = t(lang);
     border-block-end: 1px solid var(--rule);
   }
 
-  .family__planned {
-    margin-block-start: var(--space-16);
-  }
 
-  .family__planned-help {
-    color: var(--muted);
-    margin-block: 0 var(--space-4);
-  }
 
-  .family__planned-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    font-size: var(--size-small);
-  }
 
-  .family__planned-list li {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    justify-content: space-between;
-    align-items: baseline;
-    padding-block: var(--space-2);
-    border-block-start: 1px solid var(--rule);
-    color: var(--muted);
-    max-width: none;
-  }
 </style>

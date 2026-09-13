@@ -46,18 +46,21 @@ const entries = links.map((l) => ({
 </ul>
 
 <style>
+  /* Deux colonnes quand le conteneur les permet, une sinon. Le calcul porte
+     sur la place disponible et non sur la largeur de l'écran : la même liste
+     sert dans le corps d'une fiche, large, et dans la colonne de lecture
+     d'une page éditoriale, étroite. */
   .links {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
     gap: var(--space-3);
+    grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
   }
 
-  @media (min-width: 900px) {
-    .links:not(.links--narrow) {
-      grid-template-columns: 1fr 1fr;
-    }
+  .links--narrow {
+    grid-template-columns: 1fr;
   }
 
   .links__item {

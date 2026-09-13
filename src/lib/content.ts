@@ -73,5 +73,11 @@ export function neighboursOf(entry: CollectionEntry<'entries'>, toutes: Collecti
 /** Les dix familles, dans l'ordre d'affichage, même si un fichier manque. */
 export const FAMILY_ORDER = FAMILIES;
 
-export const ISSUE_URL =
-  'https://github.com/FlorentinBIAOU/overkill/issues/new?template=propose-entry.yml';
+/** Le dépôt. Seule adresse de forge écrite en dur, et une seule fois. */
+export const REPO_URL = 'https://github.com/FlorentinBIAOU/overkill';
+
+/** Proposer une fiche sans écrire de code : l'issue pré-remplie (CDC 7.8). */
+export const ISSUE_URL = `${REPO_URL}/issues/new?template=propose-entry.yml`;
+
+/** Signaler une fiche fausse. Le chemin le plus court du dépôt. */
+export const ERROR_URL = `${REPO_URL}/issues/new?template=report-error.yml`;

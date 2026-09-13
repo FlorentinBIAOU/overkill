@@ -19,8 +19,8 @@ const chemin = resolve(process.cwd(), 'src/assets/illustrations/not-found.svg');
 const illustration = existsSync(chemin) ? readFileSync(chemin, 'utf8') : null;
 
 const textes = {
-  fr: { contribute: 'Proposer une fiche', roadmap: 'Voir la feuille de route' },
-  en: { contribute: 'Propose an entry', roadmap: 'See the roadmap' },
+  fr: { contribute: 'Proposer une fiche' },
+  en: { contribute: 'Propose an entry' },
 }[lang];
 ---
 
@@ -35,9 +35,9 @@ const textes = {
       <h1 class="display-l">{strings.error.notFoundTitle}</h1>
       <p class="notfound__lead">{strings.error.notFoundBody}</p>
       <p class="notfound__links">
-        <a class="notfound__cta" href={route(lang, 'catalogue')}>{strings.error.notFoundAction}</a>
-        <a href={route(lang, 'roadmap')}>{textes.roadmap}</a>
-        <a href={route(lang, 'contribute')}>{textes.contribute}</a>
+        <a class="button" href={route(lang, 'catalogue')}>{strings.error.notFoundAction}</a>
+        <a class="link-action" href={route(lang, 'families')}>{strings.families.browse}</a>
+        <a class="link-action" href={route(lang, 'contribute')}>{textes.contribute}</a>
       </p>
     </div>
   </div>
@@ -84,12 +84,4 @@ const textes = {
     font-weight: 600;
   }
 
-  .notfound__cta {
-    display: inline-block;
-    padding: var(--space-3) var(--space-6);
-    background: var(--ink);
-    color: var(--paper);
-    border-radius: var(--radius-pill);
-    text-decoration: none;
-  }
 </style>

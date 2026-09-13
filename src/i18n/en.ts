@@ -17,7 +17,6 @@ export default {
     families: 'Families',
     methodology: 'How it works',
     guide: 'Where to start',
-    roadmap: 'Roadmap',
     about: 'About',
     contribute: 'Contribute',
     help: 'Contact',
@@ -263,6 +262,26 @@ export default {
     browse: 'Browse by family',
     title: 'Ten families, sorted by verb',
     lead: 'Every task in the catalogue belongs to a family. Pick the one that describes what you want to do.',
+  },
+
+  /* L'appel à l'action de fin des pages éditoriales. */
+  pageCta: {
+    methodology: {
+      heading: 'The method at work',
+      body: 'Twenty-five needs, their verdict, the code that goes with them, and a try zone that runs it in front of you.',
+      action: 'Browse the catalogue',
+    },
+    contribute: {
+      heading: 'Propose an entry without writing code',
+      body: 'Four questions: the need in one sentence, the family that looks right to you, what you saw someone do, and what you think would be enough.',
+      action: 'Open a proposal',
+      secondary: 'Report a wrong entry',
+    },
+    credits: {
+      heading: 'The repository is the record',
+      body: 'The site’s code, the code of the examples, the checks and the full history of changes are all public.',
+      action: 'See the repository',
+    },
   },
 
   catalogue: {

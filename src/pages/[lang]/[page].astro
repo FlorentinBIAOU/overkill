@@ -9,22 +9,30 @@
  */
 import { getCollection, render } from 'astro:content';
 import EditorialLayout from '../../layouts/EditorialLayout.astro';
+import CtaBand from '../../components/CtaBand.astro';
+import HelpBlock from '../../components/HelpBlock.astro';
 import LegalNotice from '../../components/LegalNotice.astro';
+import { ERROR_URL, ISSUE_URL, REPO_URL } from '../../lib/content';
 import { LOCALES, t, type Locale } from '../../i18n';
-import { SEGMENTS, type PageKey } from '../../i18n/routes';
+import { route, SEGMENTS, type PageKey } from '../../i18n/routes';
 
 /** Les pages qui portent du contenu réglementaire reçoivent l'encadré permanent. */
 const REGLEMENTAIRES = new Set(['methodology', 'legal', 'privacy']);
 
-/** Les pages qui emploient un aplat de marque en en-tête. */
-const APLAT: Record<string, 'brand' | 'ink' | 'paper-2' | 'none'> = {
+/**
+ * L'aplat d'en-tête de chaque page. Toutes en ont un : une page sans aplat
+ * restait en retrait de celles qui en portaient, sans que rien ne le
+ * justifie. Les pages légales prennent le fond secondaire plutôt que le jaune,
+ * qui appartient à ce qui vend l'idée.
+ */
+const APLAT: Record<string, 'brand' | 'ink' | 'paper-2'> = {
   methodology: 'brand',
   about: 'ink',
   contribute: 'brand',
   help: 'brand',
-  legal: 'none',
+  legal: 'paper-2',
   privacy: 'paper-2',
-  credits: 'none',
+  credits: 'paper-2',
 };
 
 export async function getStaticPaths() {
@@ -44,11 +52,42 @@ const { page } = Astro.props;
 const strings = t(lang);
 const { Content } = await render(page);
 const cle = page.data.page;
+
+/*
+ * L'appel à l'action de fin de page, quand la page a quelque chose à proposer.
+ *
+ * La page contribuer en avait besoin pour une autre raison que l'apparence :
+ * elle décrivait le bouton « proposer une fiche sans coder » que la section 7.8
+ * du CDC demande, sans jamais le poser.
+ *
+ * Les pages légales n'en portent pas. Une page qui n'a rien à vendre s'arrête
+ * sur son contenu ; un appel à l'action creux serait pire que rien.
+ */
+const c = strings.pageCta;
+const CTA: Record<string, any> = {
+  methodology: {
+    ...c.methodology,
+    href: route(lang, 'catalogue'),
+  },
+  contribute: {
+    ...c.contribute,
+    href: ISSUE_URL,
+    external: true,
+    secondaryHref: ERROR_URL,
+  },
+  credits: {
+    ...c.credits,
+    href: REPO_URL,
+    external: true,
+  },
+};
+const cta = CTA[cle];
 ---
 
 <EditorialLayout
   title={page.data.title}
   description={page.data.description}
+  lead={page.data.description}
   lang={lang}
   band={APLAT[cle] ?? 'paper-2'}
   draft={page.data.draft}
@@ -66,6 +105,26 @@ const cle = page.data.page;
       </time>
     </p>
   </div>
+
+  {/* L'accompagnement est le seul appel à l'action de la page à propos : c'est
+      la suite naturelle de « voilà qui je suis ». */}
+  {cle === 'about' && <HelpBlock strings={strings} />}
+
+  {
+    cta && (
+      <CtaBand
+        reading
+        heading={cta.heading}
+        body={cta.body}
+        action={{ label: cta.action, href: cta.href, external: cta.external }}
+        secondary={
+          cta.secondary
+            ? { label: cta.secondary, href: cta.secondaryHref, external: true }
+            : undefined
+        }
+      />
+    )
+  }
 </EditorialLayout>
 
 <style>
@@ -118,11 +177,14 @@ const cle = page.data.page;
     border-radius: var(--radius-block);
   }
 
+  /* Le même fond sombre que les blocs de code des fiches : il n'y a qu'un
+     traitement du code sur le site. */
   .page :global(pre) {
-    background: var(--code-bg);
-    border: 1px solid var(--rule);
+    background: var(--code-surface);
+    color: var(--code-on-surface);
     border-radius: var(--radius-block);
-    padding: var(--space-4);
+    padding: var(--space-4) var(--space-6);
+    margin-block: var(--space-6);
     overflow-x: auto;
   }
 

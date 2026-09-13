@@ -1,0 +1,78 @@
+---
+/**
+ * L'appel à l'action de fin de page (lot 14, partie 2).
+ *
+ * Le même traitement partout : aplat pleine largeur, grand titre, bouton
+ * sombre, et un lien secondaire quand il y a une seconde porte. Le catalogue,
+ * les familles et les fiches posaient chacun le leur, avec des valeurs qui
+ * divergeaient ; il n'y en a plus qu'un.
+ *
+ * Une page qui n'a rien à proposer n'en met pas : un appel à l'action creux
+ * est pire que pas d'appel du tout.
+ */
+export interface Props {
+  heading: string;
+  body?: string;
+  action: { label: string; href: string; external?: boolean };
+  secondary?: { label: string; href: string; external?: boolean };
+  /** L'aplat. Le jaune par défaut ; le fond secondaire quand deux aplats de
+      marque se suivraient. */
+  tone?: 'brand' | 'paper-2';
+  /**
+   * Aligné sur la colonne de lecture plutôt que sur la largeur de contenu :
+   * sur une page éditoriale, un titre qui commence au bord de la page quand
+   * tout le texte au-dessus est centré se lit comme un décalage.
+   */
+  reading?: boolean;
+}
+
+const { heading, body, action, secondary, tone = 'brand', reading = false } = Astro.props;
+---
+
+<aside class:list={['band', `band-${tone}`, 'cta']}>
+  <div class={reading ? 'wrap-reading' : 'wrap'}>
+    <h2 class="display-l cta__heading">{heading}</h2>
+    {body && <p class="cta__body">{body}</p>}
+    <p class="cta__actions">
+      <a class="button" href={action.href} rel={action.external ? 'noopener' : undefined}>
+        {action.label}
+      </a>
+      {
+        secondary && (
+          <a
+            class="link-action"
+            href={secondary.href}
+            rel={secondary.external ? 'noopener' : undefined}
+          >
+            {secondary.label}
+          </a>
+        )
+      }
+    </p>
+  </div>
+</aside>
+
+<style>
+  .cta {
+    margin-block-start: var(--space-24);
+    padding-block: var(--space-16);
+  }
+
+  .cta__heading {
+    max-width: 24ch;
+  }
+
+  .cta__body {
+    margin: var(--space-5) 0 0;
+    max-width: 46ch;
+  }
+
+  .cta__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4) var(--space-6);
+    margin: var(--space-8) 0 0;
+    max-width: none;
+  }
+</style>

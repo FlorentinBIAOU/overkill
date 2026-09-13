@@ -5,10 +5,6 @@ import {
 } from '../../../tests/fixtures/pages/entries';
 
 const entries = DEMO_ENTRIES.filter((e) => e.family === DEMO_FAMILY.id);
-const planned = [
-  { id: 'detect-spam-in-contact-form', title: { fr: 'Repérer le spam dans un formulaire de contact', en: 'Detect spam in a contact form' } },
-  { id: 'find-duplicate-records', title: { fr: 'Repérer les doublons dans une base clients', en: 'Find duplicate records' } },
-];
 ---
 
 <FamilyLayout
@@ -16,6 +12,5 @@ const planned = [
   family={DEMO_FAMILY}
   entries={entries}
   familyTitles={DEMO_FAMILY_TITLES}
-  planned={planned}
   issueUrl={ISSUE_URL}
 />
