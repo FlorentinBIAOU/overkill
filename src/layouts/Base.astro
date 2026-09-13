@@ -70,6 +70,22 @@ const {
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="google-site-verification" content="Tfl7t8WHIpn3A3jS923dJP2riNpKiDIZRfSnIgDBO6Y" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!--
+      La seule mesure d'audience du site, et la seule exception à l'interdit 6
+      du cahier des charges.
+
+      Elle est servie **depuis ce domaine** : le chemin `/_vercel/insights/` est
+      rendu par l'hébergeur, pas par un tiers. Aucun cookie n'est déposé, aucun
+      identifiant individuel n'est écrit, et rien ne relie deux visites. Ce
+      qu'elle compte : des pages vues et des provenances, agrégées.
+
+      Ce n'est donc pas un traceur, et ce n'est pas non plus rien : la page
+      confidentialité le dit en clair plutôt que de le passer sous silence.
+      En développement, le chemin n'existe pas et la requête échoue sans
+      conséquence.
+    -->
+    <script defer src="/_vercel/insights/script.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">

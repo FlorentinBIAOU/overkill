@@ -2,8 +2,8 @@
 page: privacy
 lang: fr
 title: "Confidentialité"
-description: "Ce site ne dépose aucun cookie, n’utilise aucun traceur et ne collecte aucune donnée personnelle."
-updated: 2026-09-10
+description: "Ce site ne dépose aucun cookie et ne collecte aucune donnée personnelle. Sa mesure d’audience est anonyme, sans cookie, et servie depuis ce domaine."
+updated: 2026-09-14
 ---
 
 ## Ce que ce site ne fait pas
@@ -12,13 +12,15 @@ updated: 2026-09-10
 cookie de préférence. Aucun bandeau de consentement n’est nécessaire, parce qu’il n’y a rien
 à consentir.
 
-**Aucun traceur n’est chargé.** Ni mesure d’audience, ni pixel, ni empreinte de navigateur, ni
-carte de chaleur, ni enregistrement de session.
+**Aucun traceur n’est chargé.** Ni pixel publicitaire, ni empreinte de navigateur, ni carte de
+chaleur, ni enregistrement de session, ni profil. Rien ne relie deux de vos visites, et rien
+ne vous suit d’un site à l’autre.
 
 **Aucune ressource tierce n’est chargée à l’exécution.** Les polices sont servies depuis ce
-domaine. Il n’y a ni bibliothèque distante, ni police en ligne, ni image externe, ni lecteur
-vidéo intégré. Votre navigateur ne contacte aucun autre serveur que celui-ci pendant votre
-visite.
+domaine, et la mesure d’audience aussi : son script vit sous `/_vercel/insights/`, un chemin
+que l’hébergeur rend sur ce domaine. Il n’y a ni bibliothèque distante, ni police en ligne, ni
+image externe, ni lecteur vidéo intégré. Votre navigateur ne contacte aucun autre serveur que
+celui-ci pendant votre visite.
 
 **Aucun compte n’existe.** Pas d’inscription, pas de connexion, pas de profil, pas de base de
 données d’utilisateurs. Le site est un ensemble de fichiers statiques.
@@ -64,19 +66,45 @@ l’hébergeur, dont l’identité figure sur la page
 [mentions légales](/fr/mentions-legales). Nous n’y avons pas accès et n’en tirons aucune
 statistique.
 
-## Si cela change un jour
+## La mesure d’audience, et ce qu’elle ne fait pas
 
-Nous n’avons pas de mesure d’audience et n’en voulons pas. Si le besoin d’en connaître le
-volume se faisait sentir, la mesure serait **sans cookie, sans identifiant individuel et
-agrégée**, elle serait annoncée ici avant d’être mise en place, et cette page porterait une
-nouvelle date.
+Cette page promettait, jusqu’au 14 septembre 2026, qu’aucune mesure d’audience n’existait, et
+que si elle arrivait un jour elle serait **sans cookie, sans identifiant individuel et
+agrégée**, annoncée ici avant d’être mise en place, et que cette page porterait une nouvelle
+date. Elle est arrivée, et la promesse est tenue.
+
+Ce qui est mesuré : le nombre de pages vues, la page concernée, la provenance quand le
+navigateur l’envoie, le pays, le type d’appareil. C’est tout, et c’est agrégé.
+
+| Ce que la mesure fait | Ce qu’elle ne fait pas |
+|---|---|
+| Compter les pages vues | Déposer un cookie, ou lire ceux des autres |
+| Nommer la page et la provenance | Écrire un identifiant dans votre navigateur |
+| Situer un pays et un type d’appareil | Relier deux de vos visites entre elles |
+| Agréger le tout | Vous suivre sur un autre site |
+| Être servie depuis ce domaine | Vendre, revendre ou enrichir quoi que ce soit |
+
+Le traitement est fait par l’hébergeur, dont l’identité figure sur la page
+[mentions légales](/fr/mentions-legales), dans le cadre du service qu’il rend au site. Aucune
+donnée personnelle n’en sort, et aucun profil n’est constitué.
+
+**Pourquoi nous l’avons ajoutée.** Un catalogue qui recommande l’option la plus frugale doit
+savoir lesquelles de ses fiches servent à quelqu’un : écrire vingt-cinq fiches à l’aveugle
+n’est pas de la sobriété, c’est du gaspillage. Le choix s’est porté sur la mesure la moins
+intrusive disponible, et elle reste la seule exception à la règle qui interdit toute ressource
+tierce.
+
+**Si vous préférez ne pas être compté**, un bloqueur de requêtes y suffit, et le site
+fonctionne exactement pareil : il n’y a rien à débloquer pour le lire.
 
 ## Pourquoi cette page dit quelque chose
 
-Sur un site qui parle de sobriété et de risques réglementaires, l’absence totale de traceurs
-n’est pas une formalité, c’est une démonstration. Chaque traceur qu’un site ajoute est une
-décision : quelqu’un a jugé que connaître votre comportement valait plus que votre
-tranquillité. Ici, cette décision n’a pas été prise.
+Sur un site qui parle de sobriété et de risques réglementaires, ce qu’on charge chez le
+lecteur n’est pas une formalité, c’est une démonstration. Chaque traceur qu’un site ajoute est
+une décision : quelqu’un a jugé que connaître votre comportement valait plus que votre
+tranquillité. Ici, cette décision-là n’a pas été prise. Ce qui a été pris, c’est un compteur
+de pages vues qui ne sait pas qui vous êtes, et qui est écrit noir sur blanc plutôt que caché
+dans une politique de trente paragraphes.
 
 Vous pouvez le vérifier vous-même. Ouvrez l’onglet réseau de votre navigateur et rechargez :
 vous ne verrez que ce domaine.

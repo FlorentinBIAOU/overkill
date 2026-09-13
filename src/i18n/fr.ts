@@ -474,7 +474,7 @@ export default {
   footer: {
     weight: 'Poids de cette page',
     weightNote: 'Mesuré à la construction du site, ressources comprises.',
-    noTracking: 'Aucun cookie, aucun traceur, aucune mesure d’audience.',
+    noTracking: 'Aucun cookie, aucun traceur. Mesure d’audience anonyme et sans cookie.',
     contentLicence: 'Contenu sous licence CC BY 4.0',
     codeLicence: 'Code des exemples sous licence MIT',
   },

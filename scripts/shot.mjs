@@ -19,6 +19,19 @@ const TYPES = {
 export function serve(root = 'dist', port = 0) {
   const server = createServer(async (req, res) => {
     let p = decodeURIComponent(req.url.split('?')[0]);
+
+    /*
+     * La mesure d'audience est servie par l'hébergeur, sous un chemin de ce
+     * domaine qui n'existe pas dans `dist`. Sans cette réponse vide, chaque
+     * page renverrait une erreur 404 en console, et tous les contrôles qui
+     * refusent les erreurs de console échoueraient sur un défaut qui n'existe
+     * pas en production.
+     */
+    if (p.startsWith('/_vercel/insights/')) {
+      res.writeHead(200, { 'content-type': 'text/javascript' });
+      res.end('/* servi par l\'hébergeur en production */\n');
+      return;
+    }
     let file = join(root, p);
     try {
       if ((await stat(file)).isDirectory()) file = join(file, 'index.html');

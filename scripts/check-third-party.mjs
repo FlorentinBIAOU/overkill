@@ -11,6 +11,14 @@
  *
  * C'est une vérification de comportement, pas de source : elle attrape aussi
  * ce qu'un script chargerait de lui-même après le rendu.
+ *
+ * **Révisé au lot 14.** Le site porte désormais une mesure d'audience, et la
+ * moitié de phrase du CDC qui l'interdisait est levée. Ce contrôle reste
+ * inchangé dans sa règle, et c'est précisément pourquoi il tient toujours : la
+ * mesure retenue est servie depuis ce domaine, sous `/_vercel/insights/`, par
+ * l'hébergeur. Aucune requête ne part vers un autre hôte, et le jour où
+ * quelqu'un remplacerait ce chemin par le domaine d'un fournisseur, ce
+ * contrôle échouerait — ce qu'on lui demande.
  */
 import { chromium } from 'playwright';
 import { serve } from './shot.mjs';

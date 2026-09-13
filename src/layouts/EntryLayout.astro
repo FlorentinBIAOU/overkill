@@ -34,9 +34,15 @@ export interface Props {
   neighbours: any[];
   /** Titres de famille, pour les cartes des fiches voisines. */
   familyTitles: Record<string, string>;
+  /**
+   * Le badge de README de la fiche. Produit à la construction du site pour
+   * chaque fiche publiée ; les pages de démonstration du gabarit en désignent
+   * un qui existe, puisque leurs fiches factices n'en ont pas.
+   */
+  badge?: string;
 }
 
-const { entry, lang, familyTitle, neighbours, familyTitles } = Astro.props;
+const { entry, lang, familyTitle, neighbours, familyTitles, badge } = Astro.props;
 const strings = t(lang);
 
 /** Le niveau recommandé : c'est lui qui porte les faits du bandeau. */
@@ -246,7 +252,7 @@ const hasRegulatory = entry.rungs.some(
               url={url}
               title={entry.title[lang]}
               answer={strings.rung.answer[entry.verdict]}
-              badge={`/badge/${lang}/${entry.id}.png`}
+              badge={badge ?? `/badge/${lang}/${entry.id}.png`}
               site={site}
               strings={strings}
             />

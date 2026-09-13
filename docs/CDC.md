@@ -484,7 +484,14 @@ Page dédiée, plus un bloc en fin de chaque fiche.
 
 **Mentions légales** : éditeur du site, statut, adresse de contact, directeur de publication, hébergeur avec ses coordonnées, référence au dépôt.
 
-**Confidentialité** : le site ne dépose aucun cookie, n'utilise aucun traceur, ne collecte aucune donnée personnelle, ne fait aucune mesure d'audience côté client. Si un jour une mesure est ajoutée, elle sera sans cookie et anonyme. Le seul traitement possible est l'email envoyé volontairement via le lien de contact, avec sa finalité et sa durée de conservation.
+**Confidentialité** : le site ne dépose aucun cookie, n'utilise aucun traceur, ne collecte aucune donnée personnelle, ~~ne fait aucune mesure d'audience côté client~~. Si un jour une mesure est ajoutée, elle sera sans cookie et anonyme.
+
+> **Révisé au lot 14.** La mesure a été ajoutée, et la condition posée ici est
+> respectée : sans cookie, anonyme, agrégée, et servie depuis ce domaine sous
+> `/_vercel/insights/` — aucune requête ne part vers un tiers, ce que
+> `check-third-party` continue de vérifier sans modification. La page
+> confidentialité dit ce qui est compté et ce qui ne l'est pas, sous forme de
+> tableau. Le seul traitement possible est l'email envoyé volontairement via le lien de contact, avec sa finalité et sa durée de conservation.
 
 Cette page n'est pas une formalité. Sur un site qui parle de sobriété et de risques réglementaires, l'absence totale de traceurs est un argument. Affiche-la comme telle.
 
@@ -761,7 +768,11 @@ Le site incarne sa propre thèse. Ces budgets sont vérifiés en CI et bloquants
 
 Le poids de la page courante est affiché en pied de page, calculé au build. C'est un argument, pas un gadget : personne d'autre ne peut le copier sans refaire son site.
 
-Aucun traceur, aucune mesure d'audience côté client, aucune ressource tierce chargée à l'exécution. Les polices sont auto-hébergées.
+Aucun traceur, ~~aucune mesure d'audience côté client~~, aucune ressource tierce chargée à l'exécution. Les polices sont auto-hébergées.
+
+> **Révisé au lot 14** : une mesure d'audience anonyme et sans cookie est
+> servie depuis ce domaine. C'est la seule exception, et elle ne contredit pas
+> la règle des ressources tierces, qu'elle respecte.
 
 ---
 

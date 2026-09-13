@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/compute-page-weight.mjs && node scripts/strip-dev-pages.mjs && npm run share",
-    "build:dev": "OVERKILL_DEV_PAGES=1 astro build && node scripts/compute-page-weight.mjs",
+    "build:dev": "OVERKILL_DEV_PAGES=1 astro build && node scripts/compute-page-weight.mjs && npm run share",
     "preview": "astro preview",
     "share": "node --import tsx scripts/build-share-assets.mjs",
     "fonts": "bash scripts/build-fonts.sh",

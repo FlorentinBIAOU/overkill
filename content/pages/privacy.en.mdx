@@ -2,8 +2,8 @@
 page: privacy
 lang: en
 title: "Privacy"
-description: "This site sets no cookies, loads no trackers and collects no personal data."
-updated: 2026-09-10
+description: "This site sets no cookies and collects no personal data. Its analytics are anonymous, cookieless, and served from this domain."
+updated: 2026-09-14
 ---
 
 ## What this site does not do
@@ -11,12 +11,14 @@ updated: 2026-09-10
 **No cookies are set.** No session cookie, no technical cookie, no preference cookie. No
 consent banner is needed, because there is nothing to consent to.
 
-**No trackers are loaded.** No analytics, no pixel, no browser fingerprinting, no heatmap, no
-session recording.
+**No trackers are loaded.** No advertising pixel, no browser fingerprinting, no heatmap, no
+session recording, no profile. Nothing links two of your visits, and nothing follows you from
+one site to another.
 
-**No third-party resource is loaded at runtime.** Fonts are served from this domain. There is
-no remote library, no web font service, no external image, no embedded video player. Your
-browser contacts no server other than this one during your visit.
+**No third-party resource is loaded at runtime.** Fonts are served from this domain, and so are
+the analytics: their script lives under `/_vercel/insights/`, a path the host serves on this
+domain. There is no remote library, no web font service, no external image, no embedded video
+player. Your browser contacts no server other than this one during your visit.
 
 **No accounts exist.** No sign-up, no log-in, no profile, no user database. The site is a set of
 static files.
@@ -59,18 +61,43 @@ service and defend against abuse. That processing is the host’s, whose identit
 [legal notice](/en/mentions-legales) page. We have no access to it and derive no statistics
 from it.
 
-## If that ever changes
+## The analytics, and what they do not do
 
-We have no analytics and do not want any. If knowing the volume ever became necessary, the
-measurement would be **cookie-free, without individual identifiers and aggregated**, it would
-be announced here before being put in place, and this page would carry a new date.
+Until 14 September 2026, this page promised that no analytics existed, and that if they ever
+arrived they would be **cookie-free, without individual identifiers and aggregated**,
+announced here before being put in place, and that this page would carry a new date. They have
+arrived, and the promise is kept.
+
+What is measured: the number of page views, which page, the referrer when the browser sends
+one, the country, the kind of device. That is all, and it is aggregated.
+
+| What the measurement does | What it does not do |
+|---|---|
+| Count page views | Set a cookie, or read anyone else’s |
+| Name the page and the referrer | Write an identifier in your browser |
+| Place a country and a device kind | Link two of your visits together |
+| Aggregate all of it | Follow you onto another site |
+| Get served from this domain | Sell, resell or enrich anything |
+
+The processing is the host’s, whose identity appears on the
+[legal notice](/en/mentions-legales) page, as part of the service it provides to the site. No
+personal data leaves it, and no profile is built.
+
+**Why we added them.** A catalogue that recommends the most frugal option has to know which of
+its entries are of use to anyone: writing twenty-five entries blind is not frugality, it is
+waste. We picked the least intrusive measurement available, and it remains the only exception
+to the rule that forbids third-party resources.
+
+**If you would rather not be counted**, a request blocker is enough, and the site works
+exactly the same: there is nothing to unblock in order to read it.
 
 ## Why this page says something
 
-On a site that talks about frugality and regulatory risk, the total absence of trackers is not
-a formality, it is a demonstration. Every tracker a site adds is a decision: someone judged
-that knowing your behaviour was worth more than leaving you alone. Here, that decision was not
-taken.
+On a site that talks about frugality and regulatory risk, what you load onto a reader's
+machine is not a formality, it is a demonstration. Every tracker a site adds is a decision:
+someone judged that knowing your behaviour was worth more than leaving you alone. Here, that
+decision was not taken. What was taken is a page-view counter that does not know who you are,
+and that is written down plainly rather than buried in a thirty-paragraph policy.
 
 You can check for yourself. Open your browser’s network tab and reload: you will see only this
 domain.

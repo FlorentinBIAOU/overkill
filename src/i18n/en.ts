@@ -464,7 +464,7 @@ export default {
   footer: {
     weight: 'Weight of this page',
     weightNote: 'Measured at build time, resources included.',
-    noTracking: 'No cookies, no trackers, no analytics.',
+    noTracking: 'No cookies, no trackers. Anonymous, cookieless analytics.',
     contentLicence: 'Content under CC BY 4.0',
     codeLicence: 'Example code under MIT',
   },
