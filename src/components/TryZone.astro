@@ -37,7 +37,8 @@ const { tryout, lang, strings, nextLevel, headingLevel = 4 } = Astro.props;
 const Heading = `h${headingLevel}` as 'h3' | 'h4';
 const s = strings.tryout;
 const labels = {
-  caught: s.caught, output: s.output, empty: s.empty, given: s.given, failed: s.failed,
+  caught: s.caught, output: s.output, conclusion: s.conclusion, detail: s.detail,
+  image: s.image, empty: s.empty, given: s.given, failed: s.failed,
 };
 
 const live = tryout.mode === 'live';
@@ -262,15 +263,27 @@ const note = bilingual(tryout.spec.note, lang);
     display: none;
   }
 
+  /* Deux panneaux côte à côte quand la place le permet, l'un sous l'autre
+     sinon. En flex et non en grille : un panneau seul doit prendre toute la
+     largeur, et une grille à deux colonnes le laissait serré dans une demie
+     dès que la phrase de commentaire occupait la seconde. Un tableau de
+     résultats y perdait ses dernières colonnes. */
   .tryout__result,
   .tryout__panes {
-    display: grid;
-    gap: var(--space-4);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-4) var(--space-6);
     margin-block-start: var(--space-6);
   }
 
   .tryout :global(.tryout__pane) {
+    flex: 1 1 20rem;
     min-width: 0;
+  }
+
+  .tryout :global(.tryout__pane--wide) {
+    flex-basis: 100%;
   }
 
   .tryout :global(.tryout__pane-label) {
@@ -422,16 +435,8 @@ const note = bilingual(tryout.spec.note, lang);
     margin-block-start: var(--space-3);
   }
 
-  @media (min-width: 900px) {
-    .tryout__result,
-    .tryout__panes {
-      grid-template-columns: 1fr 1fr;
-      align-items: start;
-    }
-
-    .tryout__result > :global(.tryout__note),
-    .tryout__panes > :global(.tryout__note) {
-      grid-column: 1 / -1;
-    }
+  .tryout__result > :global(.tryout__note),
+  .tryout__panes > :global(.tryout__note) {
+    flex: 1 1 100%;
   }
 </style>

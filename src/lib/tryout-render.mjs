@@ -92,19 +92,30 @@ export function renderResult(result, input, labels, options = {}) {
     );
   }
 
+  /* Un même résultat peut porter plusieurs panneaux — ce que le code renvoie,
+     ce qu'il en conclut, le détail chiffré — et chacun porte alors son propre
+     intitulé. Deux panneaux voisins intitulés « ce qu'il renvoie » ne
+     s'expliquent pas l'un l'autre. */
+  let premier = true;
+  const marque = () => {
+    const seul = premier;
+    premier = false;
+    return seul;
+  };
+
   if (typeof result?.output === 'string') {
     const sortie = result.diff
       ? renderSegments(segments(input, result.output).after)
       : escape(result.output);
     morceaux.push(
-      `<div class="tryout__pane"><p class="tryout__pane-label">${escape(labels.output)}</p>` +
+      `<div class="tryout__pane"><p class="tryout__pane-label">${escape((marque(), labels.output))}</p>` +
         `<p class="tryout__text tryout__text--out">${sortie || `<span class="tryout__void">${escape(labels.empty)}</span>`}</p></div>`,
     );
   }
 
   if (result?.verdict) {
     morceaux.push(
-      `<div class="tryout__pane"><p class="tryout__pane-label">${escape(labels.output)}</p>` +
+      `<div class="tryout__pane"><p class="tryout__pane-label">${escape(marque() ? labels.output : labels.conclusion)}</p>` +
         `<p class="tryout__verdict">${escape(result.verdict.label)}</p>` +
         (result.verdict.detail
           ? `<p class="tryout__detail">${escape(result.verdict.detail)}</p>`
@@ -114,8 +125,12 @@ export function renderResult(result, input, labels, options = {}) {
   }
 
   if (result?.rows) {
+    /* Un tableau de trois colonnes ou plus prend la largeur entière : serré
+       dans une demi-colonne, il perdait sa dernière colonne derrière un
+       défilement que personne ne remarque. */
+    const large = (result.rows.columns?.length ?? 0) >= 3 ? ' tryout__pane--wide' : '';
     morceaux.push(
-      `<div class="tryout__pane"><p class="tryout__pane-label">${escape(labels.output)}</p>` +
+      `<div class="tryout__pane${large}"><p class="tryout__pane-label">${escape(marque() ? labels.output : labels.detail)}</p>` +
         renderRows(result.rows) +
         `</div>`,
     );
@@ -127,7 +142,7 @@ export function renderResult(result, input, labels, options = {}) {
   if (result?.image) {
     const uri = `data:image/svg+xml,${encodeURIComponent(result.image.svg)}`;
     morceaux.push(
-      `<div class="tryout__pane"><p class="tryout__pane-label">${escape(labels.output)}</p>` +
+      `<div class="tryout__pane"><p class="tryout__pane-label">${escape(marque() ? labels.output : labels.image)}</p>` +
         `<img class="tryout__image" src="${uri}" alt="${escape(result.image.alt)}" width="160" height="160"></div>`,
     );
   }
