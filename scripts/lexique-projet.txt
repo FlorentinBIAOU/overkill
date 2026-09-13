@@ -210,6 +210,7 @@ lemmatisation
 level
 levenshtein
 # Lexique du projet Overkill.
+lib
 libpostal
 library
 license
@@ -309,6 +310,8 @@ ratcliff
 rationale
 rcharpe
 reading
+recommended
+render
 réaffinage
 réaffiner
 reason
@@ -393,6 +396,7 @@ tfidf
 than
 that
 the
+theme
 third
 this
 ticketing
@@ -411,6 +415,8 @@ triay
 trigramme
 trigrammes
 true
+tryout
+tryouts
 tsvector
 two
 # --- Typographie et design

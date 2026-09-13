@@ -112,12 +112,58 @@ export default {
     },
   },
 
+  /* Le bloc risques en langage clair : des phrases qui se comprennent seules.
+     Les libellés courts de `riskValue` restent employés par les filtres du
+     catalogue, où il faut un libellé et non une phrase. */
+  riskPlain: {
+    heading: 'What this means for you',
+    data_egress: {
+      none: 'Your data stays put',
+      'own-infra': 'Your data stays on your own machines',
+      'third-party': 'Your data goes to a third party',
+    },
+    deterministic: {
+      true: 'Always the same result',
+      false: 'The result varies from one call to the next',
+    },
+    testability: {
+      unit: 'Unit-testable, case by case',
+      statistical: 'Measured on a sample, not case by case',
+      hard: 'Hard to test',
+    },
+    vendor_lock: {
+      none: 'No provider in the loop',
+      library: 'Depends on a library',
+      provider: 'Depends on an outside provider',
+    },
+    footprint: {
+      negligible: 'Negligible footprint',
+      low: 'Low footprint',
+      moderate: 'Moderate footprint',
+      high: 'High footprint',
+    },
+    regulatory: 'What this adds to your regulatory scope',
+  },
+
   cost: {
     nul: 'None',
     négligeable: 'Negligible',
     faible: 'Low',
     modéré: 'Moderate',
     élevé: 'High',
+  },
+
+  /* La nature d'un lien, déduite de son adresse par src/lib/links.ts. Le
+     repli « page web » est vrai de n'importe quelle adresse. */
+  linkKind: {
+    repo: 'Code repository',
+    doc: 'Documentation',
+    spec: 'Specification',
+    paper: 'Research paper',
+    academic: 'University publication',
+    law: 'Regulatory text',
+    reference: 'Encyclopaedia',
+    page: 'Web page',
   },
 
   entry: {
@@ -139,8 +185,8 @@ export default {
     draftNote: 'This entry is a draft. Its content has not been verified yet.',
   },
 
-  /* The try zone. Two shapes: interactive when the snippet runs in a browser,
-     frozen when it cannot. */
+  /* La zone d'essai. Deux formes : interactive quand l'extrait tourne dans un
+     navigateur, figée quand il ne peut pas. */
   tryout: {
     heading: 'Try it',
     leadLive: 'The code above runs in your browser. Change the text and the result follows.',
@@ -165,8 +211,8 @@ export default {
     copyFailed: 'Could not copy',
     tabsLabel: 'Example language',
     source: 'Source',
-    /* Proof of execution, shown in the bar of the code block and nowhere else:
-       next to the snippet it is about, quiet, with no explanatory panel. */
+    /* La preuve d'exécution, posée dans la barre du bloc de code et nulle part
+       ailleurs : au plus près de l'extrait concerné, sans bloc explicatif. */
     proof: {
       executed: {
         short: 'Tested as shown',

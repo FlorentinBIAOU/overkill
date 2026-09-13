@@ -126,9 +126,30 @@ async function jsEnLigne(cheminHtml) {
   return gzipSync(Buffer.from(morceaux.join('\n')), { level: 9 }).length;
 }
 
+/**
+ * Le module d'essai d'une fiche est chargé à la demande, donc il n'apparaît
+ * dans aucune balise `script` : il serait invisible au budget alors que le
+ * navigateur le télécharge. La page nomme l'essai qu'elle emploie dans
+ * `data-tryout`, et le module émis porte ce nom — c'est ce lien qu'on suit.
+ */
+async function jsDiffere(cheminHtml) {
+  const html = await readFile(cheminHtml, 'utf8');
+  const m = html.match(/data-tryout="([a-z0-9-]+)"/);
+  if (!m) return 0;
+  const dossier = join(DIST, '_astro');
+  let poids = 0;
+  for (const f of await readdir(dossier)) {
+    if (f.startsWith(`${m[1]}.`) && f.endsWith('.js')) poids += await transfere(join(dossier, f));
+  }
+  return poids;
+}
+
 async function poidsPage(chemin, { sansIllustrations = false } = {}) {
   let total = await transfere(chemin);
   let js = await jsEnLigne(chemin);
+  const differe = await jsDiffere(chemin);
+  total += differe;
+  js += differe;
   for (const r of await ressourcesDe(chemin)) {
     if (sansIllustrations && /\.(svg|png|jpe?g|webp|avif)$/.test(r)) continue;
     const t = await transfere(r);
@@ -141,14 +162,23 @@ async function poidsPage(chemin, { sansIllustrations = false } = {}) {
 // La page de fiche la plus lourde, pas la moyenne : le budget vaut pour toutes.
 const fiches = toutes.filter(estFiche);
 if (fiches.length) {
+  // La plus lourde et celle qui charge le plus de JavaScript ne sont pas
+  // forcément la même fiche : le budget vaut pour toutes, donc on mesure les
+  // deux pires séparément.
   let pire = { chemin: '', total: 0, js: 0 };
+  let pireJs = { chemin: '', total: 0, js: 0 };
   for (const f of fiches) {
     const m = await poidsPage(f, { sansIllustrations: true });
     if (m.total > pire.total) pire = { chemin: f, ...m };
+    if (m.js > pireJs.js) pireJs = { chemin: f, ...m };
   }
   const nom = pire.chemin.replace(`${DIST}/`, '');
   verifier(`fiche la plus lourde, hors illustrations (${nom})`, pire.total / KO, BUDGETS.entryPage);
-  verifier('JavaScript sur cette fiche', pire.js / KO, BUDGETS.entryJs);
+  verifier(
+    `JavaScript, fiche la plus chargée (${pireJs.chemin.replace(`${DIST}/`, '')})`,
+    pireJs.js / KO,
+    BUDGETS.entryJs,
+  );
 }
 
 for (const accueil of toutes.filter(estAccueil)) {

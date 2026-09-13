@@ -91,13 +91,23 @@ for (const [nom, chemin] of Object.entries(GABARITS)) {
   });
 }
 
-test('la fiche affiche le verdict deux fois : en badge et dans le tableau', async () => {
+test('la fiche affiche le verdict deux fois : en réponse et sur la carte', async () => {
   const { page } = await ouvrir('/dev/entry');
-  const badgeEntete = page.locator('.entry__badges .verdict-badge');
-  const badgeTableau = page.locator('.rung-table .verdict-badge');
-  assert.equal(await badgeEntete.count(), 1);
-  assert.equal(await badgeTableau.count(), 1);
-  assert.ok((await badgeEntete.textContent()).includes('N0'));
+  // La réponse en toutes lettres dans le bandeau, et le marqueur
+  // « recommandé » sur la carte du niveau retenu parmi les quatre. Le tableau
+  // à sept colonnes qui portait le second verdict a été remplacé par ces
+  // cartes : il ne se lisait pas.
+  const reponse = page.locator('.entry__answer');
+  assert.equal(await reponse.count(), 1);
+  assert.ok((await reponse.textContent()).trim().length > 0);
+
+  const carteRetenue = page.locator('.scale .step--on');
+  assert.equal(await carteRetenue.count(), 1, 'une seule option recommandée');
+  assert.ok(
+    (await carteRetenue.locator('.step__tag').textContent()).trim().length > 0,
+    'la carte recommandée porte son marqueur',
+  );
+  assert.ok((await carteRetenue.locator('.step__n').textContent()).includes('N0'));
   await page.close();
 });
 
@@ -138,7 +148,12 @@ test('le sommaire est collant au-delà de 900 px et ne l\'est pas en dessous', a
 
 test('la fiche en brouillon le dit visiblement', async () => {
   const { page } = await ouvrir('/dev/entry-draft');
-  assert.ok(await page.locator('.entry__draft').first().isVisible());
+  // Deux fois : dans les faits du bandeau, et en encadré au-dessus du corps.
+  const faits = await page.locator('.entry__facts span').allInnerTexts();
+  assert.ok(
+    faits.some((t) => t.trim().length > 0 && /brouillon|draft/i.test(t)),
+    `les faits du bandeau doivent dire le brouillon : ${faits.join(' | ')}`,
+  );
   assert.ok(await page.locator('.callout--marked').first().isVisible());
   await page.close();
 });

@@ -80,5 +80,36 @@ function setUpCopy(button) {
   });
 }
 
+/**
+ * Un lien vers un niveau replié doit ouvrir le repli.
+ *
+ * Le sommaire et les liens « voir le niveau au-dessus » pointent vers des
+ * sections rangées dans un <details> fermé. Sans cela, le navigateur saute à
+ * un endroit où il n'y a rien à voir.
+ */
+function openTarget(hash) {
+  if (!hash || hash.length < 2) return;
+  const cible = document.getElementById(decodeURIComponent(hash.slice(1)));
+  if (!cible) return;
+  for (let n = cible.closest('details'); n; n = n.parentElement?.closest('details')) {
+    n.open = true;
+  }
+  cible.scrollIntoView({ block: 'start' });
+}
+
+document.addEventListener('click', (event) => {
+  const lien = event.target.closest?.('a[href^="#"]');
+  if (!lien) return;
+  const hash = lien.getAttribute('href');
+  const cible = document.getElementById(decodeURIComponent(hash.slice(1)));
+  if (!cible?.closest('details')) return;
+  event.preventDefault();
+  history.pushState(null, '', hash);
+  openTarget(hash);
+});
+
+window.addEventListener('hashchange', () => openTarget(location.hash));
+openTarget(location.hash);
+
 document.querySelectorAll('[data-code-tabs]').forEach(setUpTabs);
 document.querySelectorAll('[data-copy]').forEach(setUpCopy);

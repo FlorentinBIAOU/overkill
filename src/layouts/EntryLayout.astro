@@ -3,48 +3,46 @@
  * Gabarit de fiche. Registre documentaire (CDC 7.5) : peu de direction
  * artistique, beaucoup de contenu, le code visible immédiatement.
  *
- * Le verdict apparaît deux fois, en badge d'en-tête et dans le tableau, pour
- * que quelqu'un qui ne lit rien reparte quand même avec la réponse (CDC 4.3).
+ * L'ordre de lecture est celui de quelqu'un qui arrive avec une question :
+ * la réponse en toutes lettres dans le bandeau, pourquoi juste après, le code
+ * du niveau recommandé, l'essai qui le fait tourner, ce que ça implique, ce
+ * qui le fait céder. Les trois autres niveaux viennent ensuite, repliés : ils
+ * n'intéressent que celui qui doute du verdict.
+ *
+ * Le verdict apparaît deux fois, en réponse dans le bandeau et sur la carte du
+ * niveau recommandé, pour que quelqu'un qui ne lit rien reparte quand même
+ * avec la réponse (CDC 4.3).
  */
 import SiteLayout from './SiteLayout.astro';
 import Callout from '../components/Callout.astro';
+import EntryCard from '../components/EntryCard.astro';
 import HelpBlock from '../components/HelpBlock.astro';
 import LegalNotice from '../components/LegalNotice.astro';
+import LinkList from '../components/LinkList.astro';
 import RungSection from '../components/RungSection.astro';
-import RungTable from '../components/RungTable.astro';
 import TocSticky from '../components/TocSticky.astro';
-import VerdictBadge from '../components/VerdictBadge.astro';
 import { tryoutFor } from '../lib/tryouts.mjs';
 import { t, type Locale } from '../i18n';
 import { route } from '../i18n/routes';
-import type { Level } from '../content/schema/enums';
 
 export interface Props {
   entry: any;
   lang: Locale;
   familyTitle: string;
   /** Deux ou trois fiches de la même famille, calculées au build. */
-  neighbours: { href: string; title: string }[];
+  neighbours: any[];
+  /** Titres de famille, pour les cartes des fiches voisines. */
+  familyTitles: Record<string, string>;
 }
 
-const vr = (Astro.props as any).entry?.rungs?.find((r: any) => r.level === (Astro.props as any).entry.verdict);
-const { entry, lang, familyTitle, neighbours } = Astro.props;
+const { entry, lang, familyTitle, neighbours, familyTitles } = Astro.props;
 const strings = t(lang);
+
+/** Le niveau recommandé : c'est lui qui porte les faits du bandeau. */
+const vr = entry.rungs.find((r: any) => r.level === entry.verdict);
 
 const dateFormat = new Intl.DateTimeFormat(lang, { dateStyle: 'long' });
 const updated = entry.updated instanceof Date ? entry.updated : new Date(entry.updated);
-
-const toc = [
-  ...entry.rungs.map((r: any) => ({
-    href: `#${r.level.toLowerCase()}`,
-    label: r.available
-      ? `${r.level} — ${r.name[lang]}`
-      : `${r.level} — ${strings.rung.unavailable}`,
-    muted: !r.available,
-  })),
-  { href: '#verdict', label: strings.verdict.heading },
-  { href: '#sources', label: strings.entry.sources },
-];
 
 /* L'essai de la fiche, s'il en a un, et le niveau vers lequel renvoie un cas
    qui échoue : le suivant qui soit documenté, pas le suivant en numéro. */
@@ -56,6 +54,23 @@ const above = entry.rungs.find(
 const nextLevel = above
   ? { href: `#${String(above.level).toLowerCase()}`, label: above.name[lang] }
   : undefined;
+
+const toc = [
+  { href: '#verdict', label: strings.verdict.heading },
+  { href: `#${String(entry.verdict).toLowerCase()}`, label: `${entry.verdict} — ${vr.name[lang]}` },
+  ...(tryout ? [{ href: '#essai', label: strings.tryout.heading }] : []),
+  { href: '#options', label: strings.entry.fourOptions },
+  ...entry.rungs
+    .filter((r: any) => r.level !== entry.verdict)
+    .map((r: any) => ({
+      href: `#${r.level.toLowerCase()}`,
+      label: r.available
+        ? `${r.level} — ${r.name[lang]}`
+        : `${r.level} — ${strings.rung.unavailable}`,
+      muted: !r.available,
+    })),
+  { href: '#sources', label: strings.entry.sources },
+];
 
 /** Le périmètre réglementaire n'est affiché que s'il dit quelque chose. */
 const hasRegulatory = entry.rungs.some(
@@ -92,7 +107,7 @@ const hasRegulatory = entry.rungs.some(
       </div>
     </header>
 
-    <div class="wrap">
+    <div class="wrap entry__main">
       {
         entry.status === 'draft' && (
           <div class="entry__draft-note">
@@ -109,91 +124,84 @@ const hasRegulatory = entry.rungs.some(
         </aside>
 
         <div class="entry__body">
-          {/* Le raisonnement d'abord, en francais : c'est ce qu'on vient
-              chercher. Le code vient apres, pour qui implemente. */}
-          <section id="verdict" class="entry__why">
-            <p class="entry__why-text">{entry.verdict_rationale[lang]}</p>
+          {/* Le raisonnement d'abord, en français : c'est ce qu'on vient
+              chercher. Le code vient après, pour qui implémente. */}
+          <section id="verdict" class="entry__lede">
+            <h2 class="visually-hidden">{strings.verdict.heading}</h2>
+            <p class="entry__lede-text">{entry.verdict_rationale[lang]}</p>
           </section>
 
-          {/* Le niveau recommande, seul et deplie. */}
-          {
-            entry.rungs
-              .filter((r: any) => r.level === entry.verdict)
-              .map((rung: any) => (
-                <RungSection
-                  rung={rung}
-                  isVerdict={true}
-                  lang={lang}
-                  strings={strings}
-                  tryout={tryout}
-                  nextLevel={nextLevel}
-                />
-              ))
-          }
+          {/* Le niveau recommandé, seul et déplié. */}
+          <RungSection
+            rung={vr}
+            isVerdict={true}
+            lang={lang}
+            strings={strings}
+            tryout={tryout}
+            nextLevel={nextLevel}
+          />
 
-          <h2 class="entry__h2">{strings.entry.fourOptions}</h2>
-          <ol class="scale">
-            {
-              entry.rungs.map((r: any) => (
-                <li class:list={['step', r.level === entry.verdict && 'step--on', !r.available && 'step--off']}>
-                  {r.level === entry.verdict && (
-                    <span class="step__tag">{strings.verdict.badge}</span>
-                  )}
-                  <span class="step__n">{r.level}</span>
-                  <span class="step__name">
-                    {r.available ? r.name[lang] : strings.rung.unavailable}
-                  </span>
-                  <span class="step__f">
-                    {r.available
-                      ? `${strings.plainCost[r.cost] ?? r.cost} · ${strings.plainLatency[r.latency] ?? r.latency}`
-                      : ''}
-                  </span>
-                </li>
-              ))
-            }
-          </ol>
+          <section id="options" class="entry__section">
+            <h2 class="entry__h2">{strings.entry.fourOptions}</h2>
+            <ol class="scale">
+              {
+                entry.rungs.map((r: any) => (
+                  <li class:list={['step', r.level === entry.verdict && 'step--on', !r.available && 'step--off']}>
+                    {r.level === entry.verdict && (
+                      <span class="step__tag">{strings.verdict.badge}</span>
+                    )}
+                    <span class="step__n">{r.level}</span>
+                    <span class="step__name">
+                      {r.available ? r.name[lang] : strings.rung.unavailable}
+                    </span>
+                    <span class="step__f">
+                      {r.available
+                        ? `${strings.plainCost[r.cost] ?? r.cost} · ${strings.plainLatency[r.latency] ?? r.latency}`
+                        : ''}
+                    </span>
+                  </li>
+                ))
+              }
+            </ol>
+          </section>
 
-          {/* Les autres niveaux, replies : ils n'interessent que celui qui
-              doute du verdict, et ils ecrasaient la page. */}
-          <section class="entry__others">
+          {/* Les autres niveaux, repliés : ils n'intéressent que celui qui
+              doute du verdict, et ils écrasaient la page. */}
+          <section class="entry__section">
             <h2 class="entry__h2">{strings.entry.otherLevels}</h2>
             <Callout title={strings.entry.scenario}>
               <p>{entry.scenario[lang]}</p>
             </Callout>
-            {
-              entry.rungs
-                .filter((r: any) => r.level !== entry.verdict)
-                .map((rung: any) => (
-                  <details class="entry__fold">
-                    <summary>
-                      <span class="entry__fold-level">{rung.level}</span>
-                      <span class="entry__fold-name">
-                        {rung.available ? rung.name[lang] : strings.rung.unavailable}
-                      </span>
-                      {rung.available && (
-                        <span class="entry__fold-facts">
-                          {strings.plainCost[rung.cost] ?? rung.cost} · {strings.plainLatency[rung.latency] ?? rung.latency}
+            <div class="entry__folds">
+              {
+                entry.rungs
+                  .filter((r: any) => r.level !== entry.verdict)
+                  .map((rung: any) => (
+                    <details class="entry__fold">
+                      <summary>
+                        <span class="entry__fold-level">{rung.level}</span>
+                        <span class="entry__fold-name">
+                          {rung.available ? rung.name[lang] : strings.rung.unavailable}
                         </span>
-                      )}
-                    </summary>
-                    <RungSection rung={rung} isVerdict={false} lang={lang} strings={strings} />
-                  </details>
-                ))
-            }
+                        {rung.available && (
+                          <span class="entry__fold-facts">
+                            {strings.plainCost[rung.cost] ?? rung.cost} · {strings.plainLatency[rung.latency] ?? rung.latency}
+                          </span>
+                        )}
+                      </summary>
+                      <RungSection rung={rung} isVerdict={false} lang={lang} strings={strings} />
+                    </details>
+                  ))
+              }
+            </div>
           </section>
 
-          <section id="sources" class="entry__sources">
+          <section id="sources" class="entry__section entry__refs">
             {
               entry.further_reading.length > 0 && (
                 <>
-                  <h2>{strings.entry.furtherReading}</h2>
-                  <ul>
-                    {entry.further_reading.map((l: any) => (
-                      <li>
-                        <a href={l.url} rel="noopener">{l.label}</a>
-                      </li>
-                    ))}
-                  </ul>
+                  <h2 class="entry__h2">{strings.entry.furtherReading}</h2>
+                  <LinkList links={entry.further_reading} strings={strings} />
                 </>
               )
             }
@@ -201,19 +209,13 @@ const hasRegulatory = entry.rungs.some(
             {
               entry.sources.length > 0 && (
                 <>
-                  <h2>{strings.entry.sources}</h2>
-                  <ul>
-                    {entry.sources.map((l: any) => (
-                      <li>
-                        <a href={l.url} rel="noopener">{l.label}</a>
-                      </li>
-                    ))}
-                  </ul>
+                  <h2 class="entry__h2">{strings.entry.sources}</h2>
+                  <LinkList links={entry.sources} strings={strings} />
                 </>
               )
             }
 
-            <h2>{strings.entry.metadata}</h2>
+            <h2 class="entry__h2">{strings.entry.metadata}</h2>
             <dl class="entry__meta">
               <div>
                 <dt>{strings.entry.family}</dt>
@@ -232,16 +234,34 @@ const hasRegulatory = entry.rungs.some(
             {hasRegulatory && <LegalNotice strings={strings} />}
           </section>
 
+          {/* Les fiches voisines reprennent le format du catalogue : on
+              comprend ce qu'on va ouvrir avant de cliquer. */}
           {
             neighbours.length > 0 && (
-              <nav class="entry__neighbours" aria-labelledby="neighbours-title">
-                <h2 id="neighbours-title">{strings.entry.neighbours}</h2>
-                <ul>
-                  {neighbours.map((n) => (
-                    <li>
-                      <a href={n.href}>{n.title}</a>
-                    </li>
-                  ))}
+              <nav class="entry__section" aria-labelledby="neighbours-title">
+                <h2 id="neighbours-title" class="entry__h2">{strings.entry.neighbours}</h2>
+                <ul class="entry__neighbours">
+                  {neighbours.map((n: any) => {
+                    const nr = n.rungs.find((r: any) => r.level === n.verdict);
+                    return (
+                      <EntryCard
+                        id={n.id}
+                        href={route(lang, 'entries', n.id)}
+                        title={n.title[lang]}
+                        need={n.need[lang]}
+                        familyLabel={familyTitles[n.family] ?? n.family}
+                        family={n.family}
+                        verdict={n.verdict}
+                        available={n.rungs.filter((r: any) => r.available).map((r: any) => r.level)}
+                        egress={nr?.risks.data_egress ?? 'none'}
+                        deterministic={nr?.risks.deterministic ?? true}
+                        cost={nr?.cost}
+                        latency={nr?.latency}
+                        strings={strings}
+                        draft={n.status === 'draft'}
+                      />
+                    );
+                  })}
                 </ul>
               </nav>
             )
@@ -250,11 +270,7 @@ const hasRegulatory = entry.rungs.some(
       </div>
     </div>
 
-    <div class="entry__help">
-      <div class="wrap">
-        <HelpBlock strings={strings} source={entry.title[lang]} />
-      </div>
-    </div>
+    <HelpBlock strings={strings} source={entry.title[lang]} />
   </article>
 </SiteLayout>
 
@@ -264,10 +280,33 @@ const hasRegulatory = entry.rungs.some(
 
 <style>
   .entry__head {
-    padding-block: var(--space-10) var(--space-12);
-    margin-block-end: var(--space-12);
+    padding-block: var(--space-12) var(--space-16);
   }
 
+  .entry__main {
+    padding-block: var(--space-16) var(--space-24);
+  }
+
+  .entry__breadcrumb {
+    display: flex;
+    gap: var(--space-2);
+    font-size: var(--size-small);
+    margin: 0 0 var(--space-4);
+    max-width: none;
+  }
+
+  .entry__title {
+    max-width: 20ch;
+  }
+
+  .entry__need {
+    margin-block-start: var(--space-4);
+    font-size: var(--size-h3);
+    line-height: 1.45;
+  }
+
+  /* La réponse en toutes lettres : c'est elle qu'on emporte si on ne lit
+     rien d'autre (décisions de clarté, section 3). */
   .entry__answer {
     font-family: var(--font-display);
     font-weight: 800;
@@ -282,7 +321,8 @@ const hasRegulatory = entry.rungs.some(
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-    margin-block-start: var(--space-6);
+    margin-block-start: var(--space-8);
+    max-width: none;
   }
 
   .entry__facts span {
@@ -290,7 +330,11 @@ const hasRegulatory = entry.rungs.some(
     font-weight: 500;
     padding: 7px 14px;
     border: 1.5px solid var(--rule-strong);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
+  }
+
+  .entry__draft-note {
+    margin-block-end: var(--space-12);
   }
 
   .entry__h2 {
@@ -299,10 +343,24 @@ const hasRegulatory = entry.rungs.some(
     font-size: clamp(1.6rem, 3vw, 2.1rem);
     line-height: 1.1;
     letter-spacing: -0.02em;
-    margin-block: var(--space-16) var(--space-5);
+    margin: 0 0 var(--space-6);
   }
 
-  /* Les quatre options, en cartes : un tableau a sept colonnes ne se lit pas. */
+  /* Le rythme de la page : une respiration franche entre les sections, pas
+     des blocs qui se touchent. */
+  .entry__section {
+    margin-block-start: var(--space-24);
+  }
+
+  .entry__lede-text {
+    font-size: 1.22rem;
+    line-height: 1.62;
+    max-width: 58ch;
+    margin: 0 0 var(--space-16);
+  }
+
+  /* Les quatre options, en cartes : un tableau à sept colonnes ne se lit pas
+     à 360 px, et personne ne lit sept colonnes de toute façon. */
   .scale {
     list-style: none;
     margin: 0;
@@ -318,6 +376,7 @@ const hasRegulatory = entry.rungs.some(
     gap: var(--space-2);
     position: relative;
     padding: var(--space-6);
+    max-width: none;
     border: 1px solid var(--rule-strong);
     border-radius: 14px;
   }
@@ -327,8 +386,18 @@ const hasRegulatory = entry.rungs.some(
     padding: calc(var(--space-6) - 1px);
   }
 
-  .step--off { opacity: 0.55; }
-  .step--off .step__name { text-decoration: line-through; }
+  /* Un niveau sans objet est marqué absent, jamais atténué : une opacité de
+     0,55 faisait passer son texte sous le seuil AA, ce que l'audit a
+     signalé. Le trait et le pointillé disent la même chose sans coûter la
+     lisibilité. */
+  .step--off {
+    border-style: dashed;
+  }
+
+  .step--off .step__name {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
 
   .step__tag {
     position: absolute;
@@ -339,7 +408,7 @@ const hasRegulatory = entry.rungs.some(
     font-size: 0.7rem;
     font-weight: 600;
     padding: 5px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
   }
 
   .step__n {
@@ -361,17 +430,9 @@ const hasRegulatory = entry.rungs.some(
     color: var(--muted);
   }
 
-  .entry__why-text {
-    font-size: 1.22rem;
-    line-height: 1.62;
-    max-width: 58ch;
-    margin-block: var(--space-8) var(--space-12);
-  }
-
-  .entry__others {
-    margin-block-start: var(--space-16);
-    padding-block-start: var(--space-8);
-    border-block-start: 1px solid var(--rule-strong);
+  .entry__folds {
+    margin-block-start: var(--space-8);
+    border-block-start: 1px solid var(--rule);
   }
 
   .entry__fold {
@@ -414,90 +475,29 @@ const hasRegulatory = entry.rungs.some(
     color: var(--muted);
   }
 
-
-  .entry__breadcrumb {
-    display: flex;
-    gap: var(--space-2);
-    font-size: var(--size-small);
-    color: var(--muted);
-    margin: 0 0 var(--space-3);
-    max-width: none;
+  /* Dans un repli, la section de niveau n'a plus besoin de son filet ni de
+     son retrait : le repli les porte déjà. */
+  .entry__fold :global(.rung-section) {
+    border-block-start: 0;
+    padding-block-start: 0;
   }
 
-  .entry__title {
-    max-width: 20ch;
-  }
-
-  .entry__need {
-    margin-block-start: var(--space-3);
-    font-size: var(--size-h3);
-  }
-
-  .entry__badges {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-4);
-    margin-block-start: var(--space-6);
-    margin-block-end: 0;
-    max-width: none;
-  }
-
-  .entry__draft {
-    border: 1px dashed var(--ink);
-    border-radius: var(--radius-pill);
-    padding: var(--space-1) var(--space-3);
-    font-size: var(--size-small);
-  }
-
-  .entry__updated {
-    font-size: var(--size-small);
-    color: var(--muted);
-  }
-
-  .entry__draft-note {
-    margin-block-end: var(--space-8);
-  }
-
-  .entry__body > * + * {
-    margin-block-start: var(--space-8);
-  }
-
-  .entry__verdict,
-  .entry__sources,
-  .entry__neighbours {
-    border-block-start: 1px solid var(--rule);
-    padding-block-start: var(--space-8);
-  }
-
-  .entry__verdict-badge {
-    margin-block: var(--space-4);
-    max-width: none;
-  }
-
-  .entry__sources h2,
-  .entry__neighbours h2 {
-    font-family: var(--font-text);
-    font-size: var(--size-h3);
-    font-weight: var(--weight-h3);
-    margin-block: var(--space-6) var(--space-2);
-  }
-
-  .entry__sources ul,
-  .entry__neighbours ul {
-    padding-inline-start: var(--space-4);
-    font-size: var(--size-small);
+  .entry__refs .entry__h2 + .entry__h2,
+  .entry__refs :global(.links) + .entry__h2,
+  .entry__refs .entry__meta + .entry__h2 {
+    margin-block-start: var(--space-12);
   }
 
   .entry__meta {
     display: grid;
-    gap: var(--space-2);
+    gap: var(--space-3);
     font-size: var(--size-small);
     margin: 0;
   }
 
   .entry__meta div {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-3);
   }
 
@@ -510,7 +510,16 @@ const hasRegulatory = entry.rungs.some(
     margin: 0;
   }
 
-  .entry__help {
-    margin-block-start: var(--space-16);
+  .entry__refs :global(.legal-notice) {
+    margin-block-start: var(--space-8);
+  }
+
+  .entry__neighbours {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   }
 </style>

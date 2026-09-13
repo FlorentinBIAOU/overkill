@@ -147,7 +147,7 @@ test('un seul h1, et aucune hiérarchie de titres sautée', async () => {
 
 test("l'adresse d'accompagnement est cliquable et absente en clair du HTML", async () => {
   const { page } = await ouvrir();
-  const lien = page.locator('.help__link');
+  const lien = page.locator('.help__button');
   const href = await lien.getAttribute('href');
   assert.ok(href.startsWith('mailto:biaouflo@gmail.com'), `href inattendu : ${href}`);
   assert.ok(href.includes('subject='), "l'objet doit être pré-rempli");
@@ -156,7 +156,7 @@ test("l'adresse d'accompagnement est cliquable et absente en clair du HTML", asy
   // et non `page.content()`, qui rend le DOM analysé, donc les entités déjà
   // décodées : ce serait mesurer autre chose que ce que reçoit un aspirateur.
   const brut = await (await fetch(`${BASE}/dev/components`)).text();
-  assert.ok(brut.includes('help__link'), 'le bloc doit bien être dans la page');
+  assert.ok(brut.includes('help__button'), 'le bloc doit bien être dans la page');
   assert.ok(!brut.includes('biaouflo@gmail.com'), "l'adresse ne doit pas apparaître en clair");
   assert.ok(!brut.includes('mailto:biaouflo'), "le mailto ne doit pas apparaître en clair");
 

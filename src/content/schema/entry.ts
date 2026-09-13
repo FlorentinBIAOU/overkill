@@ -2,12 +2,18 @@ import { z } from 'zod';
 import { bilingual } from './bilingual';
 import { rungSchema } from './rung';
 import { FAMILIES, LEVELS, STATUSES } from './enums';
+import { LINK_KINDS } from '../../lib/links';
 
 const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+/**
+ * Un lien. Sa nature est déduite de son adresse (src/lib/links.ts) ; `kind`
+ * n'est là que pour corriger une déduction fausse, jamais pour la répéter.
+ */
 const link = z.object({
   label: z.string().trim().min(1),
   url: z.string().url(),
+  kind: z.enum(LINK_KINDS).optional(),
 });
 
 /**

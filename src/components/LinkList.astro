@@ -1,0 +1,120 @@
+---
+/**
+ * Une liste de liens qui dit où elle mène (lot 14, partie 1.5).
+ *
+ * Chaque entrée porte trois choses : ce qu'on va lire, la nature du document,
+ * et la source. Le lecteur sait donc, avant de cliquer, s'il ouvre une
+ * documentation, une spécification, un dépôt ou un article de recherche, et
+ * chez qui.
+ *
+ * Pas de flèche collée au texte (CDC 8.2) : c'est la ligne entière qui est
+ * cliquable, et la nature du lien tient la place du décor.
+ */
+import { classify, source, type LinkKind } from '../lib/links';
+import type { Strings } from '../i18n';
+
+export interface Props {
+  links: { label: string; url: string; kind?: LinkKind }[];
+  strings: Strings;
+  /** Rend la liste sur une seule colonne, pour les endroits étroits. */
+  narrow?: boolean;
+}
+
+const { links, strings, narrow = false } = Astro.props;
+
+const entries = links.map((l) => ({
+  ...l,
+  kind: l.kind ?? classify(l.url),
+  host: source(l.url),
+}));
+---
+
+<ul class:list={['links', narrow && 'links--narrow']}>
+  {
+    entries.map((l) => (
+      <li class="links__item">
+        <a class="links__link" href={l.url} rel="noopener">
+          <span class="links__label">{l.label}</span>
+          <span class="links__meta">
+            <span class="links__kind">{strings.linkKind[l.kind]}</span>
+            <span class="links__host">{l.host}</span>
+          </span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 900px) {
+    .links:not(.links--narrow) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .links__item {
+    max-width: none;
+  }
+
+  .links__link {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    height: 100%;
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    background: var(--paper);
+  }
+
+  .links__link:hover,
+  .links__link:focus-visible {
+    border-color: var(--ink);
+  }
+
+  .links__label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .links__link:hover .links__label {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .links__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-block-start: auto;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  /* La nature du lien est un repère, pas une étiquette de couleur : un filet
+     et de la graisse suffisent à la distinguer de la source. */
+  .links__kind {
+    font-weight: 600;
+    color: var(--ink);
+    padding: 2px 8px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+  }
+
+  .links__host {
+    font-family: var(--font-code);
+    overflow-wrap: anywhere;
+  }
+</style>

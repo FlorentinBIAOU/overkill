@@ -117,6 +117,39 @@ export default {
     },
   },
 
+  /* Le bloc risques en langage clair : des phrases qui se comprennent seules,
+     sans légende. La version courte de `riskValue` reste employée par les
+     filtres du catalogue, où il faut un libellé et non une phrase. */
+  riskPlain: {
+    heading: 'Ce que ça implique',
+    data_egress: {
+      none: 'Vos données ne sortent pas',
+      'own-infra': 'Vos données restent chez vous',
+      'third-party': 'Vos données partent chez un tiers',
+    },
+    deterministic: {
+      true: 'Résultat toujours identique',
+      false: 'Résultat variable d’un appel à l’autre',
+    },
+    testability: {
+      unit: 'Se teste unitairement, cas par cas',
+      statistical: 'Se mesure sur un échantillon, pas cas par cas',
+      hard: 'Difficile à tester',
+    },
+    vendor_lock: {
+      none: 'Aucun fournisseur dans la boucle',
+      library: 'Dépend d’une bibliothèque',
+      provider: 'Dépend d’un fournisseur externe',
+    },
+    footprint: {
+      negligible: 'Empreinte négligeable',
+      low: 'Empreinte faible',
+      moderate: 'Empreinte modérée',
+      high: 'Empreinte élevée',
+    },
+    regulatory: 'Ce que cela ajoute à votre périmètre réglementaire',
+  },
+
   /** Vocabulaire de coût imposé (CDC 4.5). */
   cost: {
     nul: 'Nul',
@@ -124,6 +157,19 @@ export default {
     faible: 'Faible',
     modéré: 'Modéré',
     élevé: 'Élevé',
+  },
+
+  /* La nature d'un lien, déduite de son adresse par src/lib/links.ts. Le
+     repli « page web » est vrai de n'importe quelle adresse. */
+  linkKind: {
+    repo: 'Dépôt de code',
+    doc: 'Documentation',
+    spec: 'Spécification',
+    paper: 'Article de recherche',
+    academic: 'Publication universitaire',
+    law: 'Texte réglementaire',
+    reference: 'Encyclopédie',
+    page: 'Page web',
   },
 
   entry: {
