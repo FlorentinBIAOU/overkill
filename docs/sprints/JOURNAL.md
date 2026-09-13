@@ -633,3 +633,38 @@ catalogue entier et non sur la page sous les yeux.
 **Défaut trouvé en passant** : deux contrôles de recherche étaient périmés depuis la
 refonte des cartes du catalogue. Ils n'échouaient pas parce que `test:search` n'est pas
 dans la chaîne de `npm run check`, faute de construction du jeu de deux cents fiches.
+
+### Partie 7 — Le contenu
+
+**Terminée.** Les vingt-cinq fiches relues, leurs cent quarante-huit extraits
+réexécutés hors de leurs tests, leurs vingt-cinq verdicts contestés.
+
+**Aucun verdict n'est tombé.** Deux ont demandé un examen long et sont laissés en
+place avec le doute écrit : `fuzzy-match-company-names`, dont le besoin annoncé
+ressemble à l'emploi du niveau du dessus, et `show-similar-articles`, seule fiche
+où un niveau gratuit et déterministe n'est pas retenu.
+
+**Vingt-six affirmations étaient fausses.** La famille la plus instructive touche
+les fiches N2 et N3 : onze champs présentaient comme une observation ce que le
+double local des tests écrit lui-même — « le modèle traduit le nom de la
+variable », alors qu'il ne reçoit jamais la variable. Les autres sont des classes
+de latence qui surévaluaient le coût d'une décision, une sortie de données mal
+déclarée, un niveau qui ne faisait pas ce que son nom disait, et cinq points de
+rupture vrais mais invérifiables tels qu'ils étaient écrits.
+
+**Deux extraits réparés.** Le plus grave est l'extrait N0 de
+`read-text-from-a-scanned-page` : il comptait les octets des images et des
+programmes de police comme du texte, donc répondait « cette page porte déjà du
+texte » sur une page scannée — l'inverse de la vérité, sur le cas central de la
+fiche.
+
+**Les soixante-quatorze docstrings d'en-tête sont traduites**, servies selon la
+langue de la page, et `check-content` compare le corps du code caractère par
+caractère après substitution : une traduction qui toucherait au code fait
+échouer la construction.
+
+**« Barreau » a disparu**, des fiches comme du reste du dépôt, et le contrôle de
+contenu refuse désormais le mot.
+
+**Arbitrage rendu** : la latence annoncée est celle d'une décision sur une
+entrée, pas celle de l'entraînement ni du premier chargement d'un modèle.
