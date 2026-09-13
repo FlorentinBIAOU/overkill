@@ -377,6 +377,22 @@ vocabulaire du document. Le fait tient, l'explication était incomplète.
 | Dates de révision remontées | les 25 fiches portent la date de leur relecture |
 
 
+### Partie 8 — Diffusion et mesure
+
+| Fait | Preuve |
+|---|---|
+| Une image de partage par fiche et par langue, produite au build | 50 images 1200×630 ; deux regardées à l'œil, un titre court et un titre de trois lignes |
+| Le titre et le verdict lisibles sur l'aplat de marque | « Masquer les coordonnées dans un message · Pas besoin d'IA », capture regardée |
+| Un badge de README par fiche, avec sa ligne de Markdown | 50 badges ; largeur mesurée par le navigateur, rendu au double pour rester net |
+| Deux partages, sans script tiers | de simples liens vers LinkedIn et X ; `check-third-party` au vert |
+| Page des dernières fiches, flux mis en avant | capture regardée ; le flux est le premier bloc de la page, avec son adresse à coller |
+| La page est atteignable | pied de page et accueil ; `check-links` au vert |
+| Mesure d'audience active, sans cookie, servie depuis ce domaine | `check-third-party` inchangé et au vert : aucune requête vers un tiers |
+| La page confidentialité réécrite honnêtement | capture regardée : ce qui est compté et ce que la mesure ne fait pas, en deux colonnes, dans le ton de la page |
+| Les trois autres affirmations d'absence de mesure corrigées | pied de page, page « Comment ça marche », page à propos |
+| `npm run check` au vert | de bout en bout |
+
+
 ### Défauts trouvés en regardant l'écran, et corrigés — parties 1 et 2
 
 1. **L'adresse de contact s'affichait à l'envers** (`moc.liamg@olfuoaib`) sur
@@ -637,6 +653,45 @@ posée sur les niveaux N1, où l'entraînement coûte mille fois la décision.
 Tranché une fois, écrit sur la page « Comment ça marche », et appliqué : sept
 fiches annonçaient `~10 ms` pour une décision qui se prend en moins d'une
 milliseconde.
+
+
+### Partie 8
+
+**Les images sont rendues par le navigateur des dépendances de développement.**
+Playwright est déjà là pour les contrôles ; il sait charger les polices du site
+et appliquer ses couleurs. *Écarté :* une bibliothèque de génération d'images
+en dépendance de production, qu'il aurait fallu justifier et maintenir pour un
+travail qui n'a lieu qu'à la construction.
+
+**La largeur du badge n'est pas calculée, elle est mesurée.** Le navigateur
+dispose le texte, et la capture suit l'élément. C'est ce qui permet à
+« Oui, un modèle généraliste se justifie » et à « Pas besoin d'IA » d'avoir le
+même badge bien proportionné sans table de métriques de police.
+
+**Aucun nom de fichier haché pour ces images.** Un badge collé dans un README
+il y a deux ans doit continuer de s'afficher : l'adresse doit donc rester
+prévisible, et c'est aussi ce qui permet à la page d'annoncer son image de
+partage avant que le script ne l'ait produite.
+
+**La mesure d'audience est servie depuis ce domaine.** Le chemin
+`/_vercel/insights/` est rendu par l'hébergeur : aucune requête ne part vers un
+tiers, et `check-third-party` continue de tenir sans exception à écrire. Le jour
+où quelqu'un remplacerait ce chemin par le domaine d'un fournisseur, le contrôle
+échouerait — ce qu'on lui demande. *Écarté :* le paquet npm du fournisseur, qui
+aurait ajouté une dépendance de production pour poser la même balise.
+
+**La page confidentialité garde son ton et change son fond.** Elle promettait
+qu'une mesure, si elle arrivait, serait sans cookie, anonyme, agrégée, annoncée
+sur cette page avant d'être mise en place, et que la page porterait une nouvelle
+date. Tout cela est vrai. La page dit donc que la promesse est tenue, puis ce
+qui est compté et ce que la mesure ne fait pas, en deux colonnes. *Écarté :*
+retirer la promesse pour faire comme si elle n'avait jamais existé.
+
+**Le serveur local des contrôles répond un fichier vide sur le chemin de la
+mesure.** Il n'existe pas hors production, et son absence faisait apparaître une
+erreur 404 en console sur chaque page — donc échouer tous les contrôles qui
+refusent les erreurs de console. Le stub est documenté à l'endroit où il est
+posé.
 
 ---
 
