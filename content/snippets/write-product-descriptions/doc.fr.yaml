@@ -1,0 +1,75 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Rédiger une description produit en remplissant des gabarits à trous.
+
+  Niveau N0. Déterministe, sans dépendance. Un gabarit n'est pas le parent
+  pauvre du modèle : il n'affirme jamais une caractéristique que le produit n'a
+  pas, il s'affiche dans le temps qu'il faut pour lire un dictionnaire, et
+  chaque phrase qu'il peut produire a été écrite et approuvée par un humain
+  avant la mise en ligne.
+
+  Trois choses séparent un gabarit qui survit à un vrai catalogue de celui que
+  tout le monde écrit en dix minutes et jette au bout d'une semaine.
+
+  D'abord, un attribut manquant ne doit pas laisser un trou dans une phrase.
+  Chaque bloc de la description propose plusieurs formulations ; seules celles
+  dont tous les trous sont remplis sont éligibles, et celles qui emploient le
+  plus d'attributs sont préférées. Un produit sans liste de couleurs n'a
+  simplement pas de phrase de couleur, au lieu de « Disponible en . ».
+
+  Ensuite, l'accord n'est pas facultatif sur une page de vente. Les marques
+  `{un}`, `{e}` et `{s}` portent le genre grammatical du nom de catégorie et le
+  nombre de la liste énumérée, si bien que « Garantie deux ans » et « Points
+  forts » sortent justes sans un second gabarit par cas.
+
+  Enfin, une énumération s'écrit avec des virgules et une seule conjonction à
+  la fin, jamais déversée en liste séparée par des virgules.
+
+  Ce que ceci ne sait pas faire est le sujet du test de point de rupture placé
+  à côté.
+
+n2: |
+  Rédiger une description produit avec un petit modèle génératif auto-hébergé.
+
+  Niveau N2. Un point de contrôle de séquence à séquence qui vit sur votre
+  propre disque, affiné sur les descriptions que votre boutique a déjà
+  publiées, pour qu'il écrive dans votre voix plutôt que dans la voix moyenne
+  du web. Rien ne sort de vos machines et rien n'est facturé au compteur.
+
+  La prose est plus libre que celle d'un gabarit, et tout le reste de ce niveau
+  est du code dont vous héritez : la ligne de source que le modèle a été affiné
+  à lire, le plafond de taille, la reprise, la phrase qu'un petit modèle laisse
+  à moitié finie quand son budget de jetons s'épuise, et le contrôle final.
+
+  Ce contrôle est la raison d'être de ce fichier. Un modèle génératif écrit ce
+  qui sonne juste. Donnez-lui un sac, et tôt ou tard il le dira étanche, parce
+  que les phrases dont il a appris finissaient ainsi, et que rien en lui ne
+  distingue un attribut de ce produit d'un attribut plausible. La copie est
+  donc relue contre le dossier, terme à terme, et tout ce que le dossier
+  n'étaye pas est refusé. Une boutique qui promet ce qu'elle ne vend pas a un
+  problème juridique, pas un problème de style.
+
+n3: |
+  Rédiger une description produit en interrogeant un modèle généraliste.
+
+  Niveau N3. Sur la plupart des fiches de ce site, ce niveau est la réponse
+  chère à une question qui ne la demandait pas. Ici, c'est lui qui gagne :
+  transformer un sac d'attributs en une prose qui se lit différemment pour
+  chaque produit est précisément ce qu'un modèle généraliste fait mieux que
+  tout ce qui se trouve en dessous, et aucune quantité de gabarits écrits ne
+  comble cet écart.
+
+  Ce qu'il coûte est visible dans le code, et rien de tout cela n'est le fait
+  du modèle : la requête, le plafond de taille, la reprise, une réponse qui
+  n'est que probablement du JSON, et une température supérieure à zéro — parce
+  que c'est la variété qu'on achète ici, donc deux exécutions sur le même
+  produit ne s'accorderont pas, et rien ne peut être relu une fois et tenu pour
+  bon ensuite.
+
+  C'est pourquoi le dernier contrôle est celui du niveau du dessous. Un modèle
+  qui écrit librement affirme aussi librement. La copie est relue contre le
+  dossier, terme à terme, et tout ce que le dossier n'étaye pas est refusé
+  plutôt que publié.
