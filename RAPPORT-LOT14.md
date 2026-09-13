@@ -140,6 +140,18 @@ terminée, vérifiée et commitée.
 | Contrôles | `npm run check` au vert ; `check-a11y` et `check-overflow` sur les deux langues |
 
 
+### Partie 6 — Le catalogue
+
+| Fait | Preuve |
+|---|---|
+| Vingt-quatre cartes par page | `npm run test:catalogue` ; captures des deux pages regardées |
+| L'appel à l'action jaune sur chaque page | contrôlé au navigateur sur la deuxième page |
+| L'état de pagination dans l'URL, en chemin et non en paramètre | `/fr/catalogue` et `/fr/catalogue/2` sont deux vraies pages |
+| Combinaison avec la recherche et les filtres | un filtre posé depuis la deuxième page retrouve les fiches de la première ; le compteur suit |
+| Utilisable sans JavaScript | contrôle au navigateur avec JavaScript désactivé : la tranche demandée s'affiche, la pagination est faite de liens |
+| L'architecture tient à deux cents fiches | `npm run build:fixtures` puis `test:search` : neuf pages, douze contrôles au vert, 24,6 Ko transférés par page |
+
+
 ### Défauts trouvés en regardant l'écran, et corrigés — parties 1 et 2
 
 1. **L'adresse de contact s'affichait à l'envers** (`moc.liamg@olfuoaib`) sur
@@ -340,6 +352,31 @@ devait le dire, pas seulement la mise en page.
 décisions de clarté — laquelle le conservait ici pour la métaphore de
 l'échelle. La métaphore reste : elle se dit « échelle » et « niveau ». Le
 document est mis à jour.
+
+
+### Partie 6
+
+**Vingt-quatre par page plutôt que trente.** La fourchette demandée est de
+vingt-quatre à trente ; trente aurait donné une seule page sur les
+vingt-cinq fiches d'aujourd'hui, donc une pagination invisible et non
+vérifiable à l'écran. Vingt-quatre en donne deux. Conséquence assumée : la
+deuxième page ne porte qu'une carte, et cela disparaît à la quarante-neuvième
+fiche.
+
+**Toutes les cartes restent dans le HTML de chaque page, les autres masquées.**
+C'est ce qui permet à un filtre de porter sur le catalogue entier sans
+recharger : sinon il n'aurait trouvé que dans les vingt-quatre fiches sous les
+yeux, et son compteur aurait menti. *Écarté :* reconstruire les cartes en
+JavaScript depuis l'index de recherche — cela dupliquait le format de carte
+dans du code, et les deux auraient divergé au premier changement. Le prix est
+mesuré : 24,6 Ko transférés par page de catalogue à deux cents fiches, contre
+environ 6 Ko si la page ne portait que sa tranche. C'est la première chose à
+reprendre si le catalogue dépasse les deux cents, et elle est notée comme
+telle.
+
+**La pagination s'efface quand un filtre porte**, et seulement à ce
+moment-là : tant qu'un seul caractère est tapé, la recherche ne cherche pas
+encore, et la deuxième page doit rester atteignable.
 
 ---
 
