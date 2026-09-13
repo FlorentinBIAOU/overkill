@@ -106,6 +106,7 @@ draft
 echa
 echarpe
 egress
+eight
 email
 embedding
 embeddings

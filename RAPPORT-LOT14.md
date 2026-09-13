@@ -70,8 +70,42 @@ terminée, vérifiée et commitée.
     devenaient illisibles. Le calcul porte désormais sur la place réellement
     disponible.
 
+### Défauts trouvés en regardant l'écran, et corrigés — partie 3
 
-### Défauts trouvés en regardant l'écran, et corrigés — partie 1
+11. **Le message honnête s'affichait en vert**, la couleur que ce site réserve
+    à la recommandation. « Le catalogue ne couvre pas encore ce besoin » n'est
+    pas une réponse de niveau : il ne prend pas la teinte d'un niveau.
+12. **La justification de la fiche était étiquetée « pourquoi »** même quand
+    les contraintes avaient déplacé la réponse vers un autre niveau — le texte
+    argumentait alors exactement le contraire de ce qui s'affichait au-dessus.
+    Elle est maintenant étiquetée pour ce qu'elle est : « pourquoi la fiche
+    recommande N3 par défaut ».
+13. **Le message pré-rempli écrivait ses espaces en « + »**, ce qu'un client de
+    messagerie n'interprète pas : le brouillon se serait ouvert criblé de plus.
+14. **Le verdict ne disait rien quand rien ne bloquait.** Quelqu'un qui venait
+    de répondre à six questions de contrainte voyait une réponse qui n'en
+    parlait pas. Il dit maintenant ce qui tient, et sur quoi.
+
+
+### Partie 3 — Le questionnaire
+
+| Fait | Preuve |
+|---|---|
+| Page « Par où commencer », cinquième entrée de la navigation | captures en clair et en sombre, à 360 et 1280 px |
+| Huit questions, quatre écrans, deux par écran, questions restantes affichées | `npm run test:guide` — le compte suit les réponses, contrôlé au navigateur |
+| Les questions suivantes dépendent des précédentes | la liste des tâches n'affiche que celles de la famille choisie ; « je ne sais pas » sur la famille retire la question et le compte passe de huit à sept |
+| « Je ne sais pas » partout, et prise en compte | elle n'écarte aucune option et fait dire au verdict ce que l'option implique sur ce point |
+| Arbre déterministe, aucun appel de modèle, rien ne sort de la page | `npm run check:third-party` ; le calcul est dans `src/lib/guide-verdict.mjs`, sans réseau |
+| Arbre piloté par les données des fiches | familles, tâches, niveaux, sortie de données, déterminisme et testabilité viennent du contenu ; `src/lib/guide.ts` ne fait que les extraire |
+| Chaque parcours aboutit à une fiche existante ou au message honnête | `npm run test:guide` — 32 400 verdicts par langue, toutes les combinaisons de réponses pour chacune des 25 fiches, sur la charge utile réellement livrée |
+| Verdict explicatif, jamais une réponse seule | trois formes capturées et regardées : fiche désignée, famille sans tâche, aucune tâche |
+| Le message pré-rempli avant l'issue GitHub | contrôlé au navigateur : la première des deux voies est un `mailto:` qui porte les réponses |
+| Utilisable sans JavaScript | contrôle au navigateur avec JavaScript désactivé : les quatre écrans sont lisibles et la page renvoie aux dix familles |
+| Poids | 19,0 Ko transférés, dont 3,1 Ko de JavaScript |
+| Accessibilité et débordement | `check-a11y` et `check-overflow` sur les deux langues, au vert |
+
+
+### Défauts trouvés en regardant l'écran, et corrigés — parties 1 et 2
 
 1. **L'adresse de contact s'affichait à l'envers** (`moc.liamg@olfuoaib`) sur
    toutes les fiches et sur l'accueil. Le CSS de portée automatique d'Astro ne
@@ -194,6 +228,40 @@ rédacteur ait à connaître le reste. *Écarté :* transformer les listes de li
 du Markdown par un greffon de rendu — impossible d'y deviner la nature d'un
 lien sans son adresse, et cela aurait transformé aussi les listes qui doivent
 rester des listes.
+
+
+### Partie 3
+
+**Le questionnaire a besoin de JavaScript pour enchaîner ses écrans.** Sans
+lui, les quatre écrans restent lisibles et la page renvoie aux dix familles,
+qui rangent le catalogue par ce qu'on veut faire. *Écarté :* pré-calculer un
+arbre de pages statiques — huit questions à trois ou onze réponses font
+cinquante mille pages, pour un outil qu'on parcourt une fois.
+
+**Les contraintes choisissent un niveau, elles ne filtrent pas les fiches.**
+Écarter une fiche parce que son option recommandée envoie des données chez un
+tiers aurait caché le besoin au lieu de répondre. Le questionnaire garde la
+fiche, et déplace la réponse vers le niveau qui satisfait la contrainte, en le
+nommant. C'est ce qui produit un verdict explicatif plutôt qu'un tri.
+
+**Le verdict garde le niveau de la fiche quand il satisfait la contrainte**,
+même si un niveau plus bas la satisfait aussi. Descendre « parce que c'est plus
+frugal » reviendrait à recommander une option dont la fiche a établi qu'elle ne
+fait pas le travail. La frugalité est déjà dans le verdict de la fiche ; le
+questionnaire ne la surenchérit pas.
+
+**Les cartes du verdict sont clonées depuis un gabarit rendu par le site.** Le
+verdict n'écrit pas de carte à la main : `EntryCard` est rendu au build dans un
+`<template>`, que le module clone. Le format reste celui du catalogue sans
+duplication de balisage, et un gabarit ne s'affiche pas sans JavaScript.
+*Écarté :* reconstruire la carte en JavaScript, qui aurait fait diverger les
+deux formats au premier changement.
+
+**La charge utile ne porte que ce que le verdict calcule.** Le titre et le
+besoin d'une fiche sont déjà dans la page — en option de question et en carte ;
+les renvoyer en JSON, c'était payer deux fois les mêmes octets. Reste la
+justification, les niveaux et leurs attributs : 10,6 Ko transférés sur les 19
+de la page.
 
 ---
 
