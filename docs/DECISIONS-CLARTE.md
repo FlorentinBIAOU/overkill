@@ -17,8 +17,13 @@ Prises le 12 septembre 2026. Ne pas rouvrir sans raison nouvelle.
 ## 2. Vocabulaire de l'interface
 
 - « **Niveau** » dans toute l'interface : tableau, badges, filtres, navigation.
-- « **Barreau** » conservé uniquement dans la page méthodologie, où la
-  métaphore de l'échelle est expliquée.
+- « **Barreau** » ~~conservé uniquement dans la page méthodologie~~ —
+  **révisé au lot 14** : le mot disparaît aussi de la page « Comment ça
+  marche » et des vingt-cinq fiches. La métaphore de l'échelle reste, mais elle
+  se dit « échelle » et « niveau » : personne n'appelle « barreau » ce qu'il
+  vient de choisir, et le mot obligeait à une traduction mentale à chaque
+  lecture. `rung` reste l'identifiant dans le code et le schéma, comme les
+  autres identifiants, qui sont en anglais.
 - Règle générale : un mot ordinaire là où l'on n'a rien lu, un mot imagé là
   où l'on lit.
 

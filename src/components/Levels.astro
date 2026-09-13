@@ -1,0 +1,334 @@
+---
+/**
+ * Les quatre niveaux, expliqués, avec un exemple tiré d'une vraie fiche
+ * (lot 14, partie 5).
+ *
+ * C'est l'explication qui n'existait nulle part : la page méthodologie
+ * définissait les quatre niveaux, mais elle ne disait ni ce que chacun coûte,
+ * ni ce qu'il garantit, ni ce qui le fait céder, ni surtout la condition
+ * précise qui fait passer au suivant. Cette dernière est la valeur propre du
+ * site : personne ne la formule ailleurs.
+ *
+ * L'exemple de chaque niveau n'est pas écrit à la main : c'est une fiche
+ * publiée dont le verdict est ce niveau. Il ne peut donc pas devenir faux, et
+ * il change de lui-même si le catalogue change.
+ */
+import { publishedEntries } from '../lib/content';
+import { LEVELS } from '../content/schema/enums';
+import { t, type Locale } from '../i18n';
+import { route } from '../i18n/routes';
+
+export interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const strings = t(lang);
+const fiches = (await publishedEntries()).map((e) => e.data);
+
+/** La fiche exemple d'un niveau : la première, dans l'ordre des identifiants. */
+const exemple = (niveau: string) =>
+  fiches
+    .filter((e: any) => e.verdict === niveau)
+    .sort((a: any, b: any) => a.id.localeCompare(b.id))[0];
+
+/**
+ * Le texte éditorial de la page, à côté de ce qu'il commente plutôt que dans
+ * le dictionnaire d'interface : il n'est employé qu'ici, et il se relit mieux
+ * en un bloc.
+ */
+const textes = {
+  fr: {
+    quoi: [
+      'Une expression régulière, une requête, un automate, un tri. Le code fait exactement ce qu’il dit, à chaque fois, et vous pouvez le lire en entier.',
+      'Une régression logistique, un TF-IDF, un gradient boosting, des plus proches voisins. Un modèle entraîné sur vos exemples, assez petit pour être versionné à côté du code qui s’en sert.',
+      'Un encodeur distillé, un modèle d’embeddings, un moteur de reconnaissance optique. Il pèse des centaines de mégaoctets, il tourne chez vous, et il fait une chose.',
+      'Un appel à un fournisseur externe. Le modèle sait tout faire à peu près, rien exactement, et il ne vous appartient pas.',
+    ],
+    coute: [
+      'Rien. Le coût marginal est nul, à perpétuité, et il ne dépend d’aucun tarif.',
+      'Le temps d’étiqueter des exemples, puis presque rien : l’entraînement tient sur un ordinateur portable et la prédiction sur un processeur ordinaire.',
+      'Une machine à tenir en marche, de la mémoire, et quelqu’un qui sache la remettre en route. Aucun abonnement.',
+      'Un coût récurrent qui croît avec l’usage, et qui change quand le fournisseur en décide.',
+    ],
+    garantit: [
+      'Le même résultat à chaque fois, un test qui le prouve, et rien qui sorte de chez vous.',
+      'Un résultat reproductible, mesurable sur un échantillon, et des données qui restent chez vous.',
+      'Des données qui ne sortent pas de votre infrastructure, et un modèle qui ne se déprécie pas sous vos pieds.',
+      'Une réponse à peu près sur presque tout, sans rien à installer ni à entraîner.',
+    ],
+    cede: [
+      'Une entrée que la règle n’a pas prévue : une orthographe, un format, une intention. La règle ne se trompe pas, elle passe à côté.',
+      'Un cas dont ce qui le distingue n’est pas dans ses mots. Le modèle compte des formes ; il ne sait pas que deux phrases sans un mot commun demandent la même chose.',
+      'Une tâche qui demande de produire et non de reconnaître, ou une consigne qui change tous les mois.',
+      'Rien ne le fait céder en dernier recours — et c’est le problème : on ne sait pas quand il a tort, parce qu’il répond toujours.',
+    ],
+    monte: [
+      {
+        de: 'N0',
+        vers: 'N1',
+        texte: 'Quand la liste des exceptions ne se ferme plus. Tant qu’on peut écrire les cas ratés un par un, la règle gagne : elle est lisible, gratuite et testable. Dès que la liste s’allonge à chaque nouveau cas, il faut apprendre au lieu d’énumérer — et il faut donc des exemples déjà étiquetés, ce que N0 ne demandait pas.',
+      },
+      {
+        de: 'N1',
+        vers: 'N2',
+        texte: 'Quand ce qui distingue les cas n’est plus dans les mots mais dans le sens. Un modèle léger compte des mots et des caractères ; il ne rapproche pas « résilier mon abonnement » et « je voudrais arrêter ». Le prix du saut est une machine à tenir en marche, et il ne se paye que si vos cas se ressemblent sans se répéter.',
+      },
+      {
+        de: 'N2',
+        vers: 'N3',
+        texte: 'Quand la tâche demande de produire, pas de reconnaître. Un petit modèle spécialisé classe, extrait, transcrit. Écrire une phrase que personne n’a écrite, suivre une consigne formulée en langue, traiter un cas jamais vu : c’est là que le généraliste gagne, et le prix est double — vos données sortent, et deux exécutions ne se ressemblent plus.',
+      },
+    ],
+    labels: {
+      quoi: 'Ce que c’est',
+      coute: 'Ce que ça coûte',
+      garantit: 'Ce que ça garantit',
+      cede: 'Ce qui le fait céder',
+      exemple: 'Une fiche qui le recommande',
+      monte: 'De {de} à {vers}',
+    },
+  },
+  en: {
+    quoi: [
+      'A regular expression, a query, a state machine, a sort. The code does exactly what it says, every time, and you can read all of it.',
+      'A logistic regression, a TF-IDF, a gradient boosting, nearest neighbours. A model trained on your examples, small enough to be versioned next to the code that uses it.',
+      'A distilled encoder, an embedding model, an optical recognition engine. It weighs hundreds of megabytes, it runs on your machines, and it does one thing.',
+      'A call to an outside provider. The model does everything roughly and nothing exactly, and it is not yours.',
+    ],
+    coute: [
+      'Nothing. The marginal cost is zero, for good, and it depends on no price list.',
+      'The time to label examples, then almost nothing: training fits on a laptop and prediction on an ordinary processor.',
+      'A machine to keep running, memory, and someone who knows how to restart it. No subscription.',
+      'A recurring cost that grows with use, and changes when the provider decides it does.',
+    ],
+    garantit: [
+      'The same result every time, a test that proves it, and nothing leaving your side.',
+      'A reproducible result, measurable on a sample, and data that stays with you.',
+      'Data that never leaves your infrastructure, and a model that will not be deprecated under your feet.',
+      'A roughly right answer on almost anything, with nothing to install or train.',
+    ],
+    cede: [
+      'An input the rule did not foresee: a spelling, a format, an intent. The rule does not get it wrong, it walks past it.',
+      'A case whose distinguishing feature is not in its words. The model counts shapes; it does not know that two sentences with no word in common ask for the same thing.',
+      'A task that asks you to produce rather than recognise, or an instruction that changes every month.',
+      'Nothing makes it give way as a last resort — and that is the problem: you cannot tell when it is wrong, because it always answers.',
+    ],
+    monte: [
+      {
+        de: 'N0',
+        vers: 'N1',
+        texte: 'When the list of exceptions stops closing. As long as you can write the missed cases one by one, the rule wins: it is readable, free and testable. As soon as the list grows with every new case, you have to learn instead of enumerate — and that means labelled examples, which N0 never asked for.',
+      },
+      {
+        de: 'N1',
+        vers: 'N2',
+        texte: 'When what tells cases apart is no longer in the words but in the meaning. A light model counts words and characters; it does not bring “cancel my subscription” and “I would like to stop” together. The price of the jump is a machine to keep running, and it only pays off if your cases resemble each other without repeating.',
+      },
+      {
+        de: 'N2',
+        vers: 'N3',
+        texte: 'When the task asks you to produce, not to recognise. A small specialised model classifies, extracts, transcribes. Writing a sentence nobody has written, following an instruction phrased in language, handling a case never seen: that is where the generalist wins, and the price is double — your data leaves, and two runs no longer match.',
+      },
+    ],
+    labels: {
+      quoi: 'What it is',
+      coute: 'What it costs',
+      garantit: 'What it guarantees',
+      cede: 'What makes it give way',
+      exemple: 'An entry that recommends it',
+      monte: 'From {de} to {vers}',
+    },
+  },
+}[lang];
+---
+
+<div class="levels">
+  {
+    LEVELS.map((niveau, i) => {
+      const fiche = exemple(niveau);
+      const suite = textes.monte.find((m) => m.de === niveau);
+      return (
+        <>
+          <section class={`level level--${niveau.toLowerCase()}`} aria-labelledby={`level-${niveau}`}>
+            <p class="level__code">{niveau}</p>
+            <h3 class="level__name" id={`level-${niveau}`}>{strings.rung[niveau]}</h3>
+            <p class="level__what">{textes.quoi[i]}</p>
+
+            <dl class="level__facts">
+              <div>
+                <dt>{textes.labels.coute}</dt>
+                <dd>{textes.coute[i]}</dd>
+              </div>
+              <div>
+                <dt>{textes.labels.garantit}</dt>
+                <dd>{textes.garantit[i]}</dd>
+              </div>
+              <div>
+                <dt>{textes.labels.cede}</dt>
+                <dd>{textes.cede[i]}</dd>
+              </div>
+            </dl>
+
+            {fiche && (
+              <p class="level__example">
+                <span class="level__example-label">{textes.labels.exemple}</span>
+                <a href={route(lang, 'entries', fiche.id)}>{fiche.title[lang]}</a>
+                <span class="level__example-answer">{strings.rung.answer[niveau]}</span>
+              </p>
+            )}
+          </section>
+
+          {suite && (
+            <section class="climb" aria-label={textes.labels.monte.replace('{de}', suite.de).replace('{vers}', suite.vers)}>
+              <p class="climb__label">
+                {textes.labels.monte.replace('{de}', suite.de).replace('{vers}', suite.vers)}
+              </p>
+              <p class="climb__text">{suite.texte}</p>
+            </section>
+          )}
+        </>
+      );
+    })
+  }
+</div>
+
+<style>
+  /* Les colonnes se décident sur la place réellement disponible et non sur la
+     largeur de l'écran : cette explication vit dans une colonne de lecture de
+     680 px, où trois colonnes de faits deviendraient trois colonnes de deux
+     cents pixels. */
+  .levels {
+    container-type: inline-size;
+    display: grid;
+    gap: var(--space-4);
+    margin-block: var(--space-8);
+  }
+
+  .level {
+    padding: var(--space-6);
+    border: 1px solid var(--rule-strong);
+    border-radius: 14px;
+  }
+
+  .level__code {
+    margin: 0;
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .level__name {
+    margin: var(--space-1) 0 var(--space-3);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.45rem;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .level__what {
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  .level__facts {
+    display: grid;
+    gap: var(--space-4);
+    margin: var(--space-6) 0 0;
+  }
+
+  @container (min-width: 46rem) {
+    .level__facts {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+    }
+  }
+
+  /* Dans une colonne étroite, chaque fait se lit en ligne : l'intitulé devant,
+     le texte derrière. */
+  @container (max-width: 46rem) {
+    .level__facts div {
+      display: grid;
+      grid-template-columns: 10rem 1fr;
+      gap: var(--space-4);
+      align-items: baseline;
+    }
+
+    .level__facts dt {
+      margin-block-end: 0;
+    }
+  }
+
+  @container (max-width: 30rem) {
+    .level__facts div {
+      grid-template-columns: 1fr;
+      gap: var(--space-1);
+    }
+  }
+
+  .level__facts dt {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-block-end: var(--space-1);
+  }
+
+  .level__facts dd {
+    margin: 0;
+    font-size: 0.93rem;
+    line-height: 1.5;
+  }
+
+  .level__example {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-4);
+    margin: var(--space-6) 0 0;
+    padding-block-start: var(--space-4);
+    border-block-start: 1px solid var(--rule);
+    max-width: none;
+    font-size: 0.93rem;
+  }
+
+  .level__example-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .level__example a {
+    font-weight: 600;
+  }
+
+  .level__example-answer {
+    color: var(--ans-0);
+    font-weight: 600;
+  }
+
+  .level--n1 .level__example-answer { color: var(--ans-1); }
+  .level--n2 .level__example-answer { color: var(--ans-2); }
+  .level--n3 .level__example-answer { color: var(--ans-3); }
+
+  /* La condition de montée : c'est elle que personne ne formule ailleurs, et
+     elle se lit entre deux niveaux, pas dans un tableau. */
+  .climb {
+    padding-inline-start: var(--space-6);
+    border-inline-start: 3px solid var(--brand-deep);
+    margin-block: var(--space-2);
+  }
+
+  .climb__label {
+    margin: 0 0 var(--space-1);
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .climb__text {
+    margin: 0;
+    max-width: 62ch;
+  }
+</style>

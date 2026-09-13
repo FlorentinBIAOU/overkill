@@ -216,6 +216,7 @@ learn
 legitimate
 lemmatisation
 level
+levels
 levenshtein
 # Lexique du projet Overkill.
 lib

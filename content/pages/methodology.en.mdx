@@ -1,58 +1,71 @@
 ---
 page: methodology
 lang: en
-title: "How we judge"
-description: "The four rungs, how a verdict is reached, why there are no prices, and how footprint is estimated."
-updated: 2026-09-10
+title: "How it works"
+description: "The four levels, the condition that moves you from one to the next, how a verdict is reached and how footprint is estimated."
+updated: 2026-09-13
 ---
 
-## The four rungs
+import Levels from '../../src/components/Levels.astro';
 
-The ladder is fixed and identical on every entry. It does not measure how good a solution is.
-It measures **its weight**: what you have to start up, keep running, watch and pay for to get
-the result.
+## Why a scale
 
-**N0 — Rule and classic algorithm.** A regular expression, a query, a state machine, a parser,
-a sort. The code does exactly what it says, every time, and you can read all of it.
+Every task admits several solutions, and they do not weigh the same. Masking a phone number
+in a message can be done with three regular expressions, or with a general-purpose model call
+on every inbound message. Both work. One costs nothing and is done before the next line of
+code runs; the other costs on every call, takes about a second, and sends the message to a
+third party.
 
-**N1 — Lightweight classic model.** Logistic regression, TF-IDF, gradient boosting, nearest
-neighbours. A model small enough to be versioned next to the code that uses
-it, trained on your data, running on an ordinary processor.
+The reflex, today, is to take the most powerful one. It will surely work, it asks for less
+thinking up front, and it is what everyone shows. The price turns up later — on the invoice,
+in an audit, or the day the provider deprecates the model.
 
-**N2 — Small self-hosted specialised model.** A distilled encoder, an embedding model, an OCR
-engine, a translation model. It weighs hundreds of megabytes, it runs on your machines, and
-it does one thing.
+The scale exists to make that choice visible instead of flattening it. It is fixed and
+identical on every entry, and it does not measure how good a solution is: it measures **its
+weight**, that is, what you have to start up, keep running, watch and pay for to get the
+result.
 
-**N3 — General-purpose LLM API.** A call to an outside provider. The model does everything
-roughly and nothing exactly, and it is not yours.
+## The four levels
 
-Not every rung appears on every entry. A rung that does not apply is marked as such, with a
-short, real reason. It is never left blank: a blank cell reads as an oversight, not as a
-decision.
+Every entry presents these four levels, always in the same order, from lightest to heaviest.
+Between two levels, the condition that moves you from one to the next: not “when it is
+better”, but what makes the level below insufficient.
 
-## How a verdict is reached
+<Levels lang="en" />
 
-The verdict is **the lightest rung that does the job properly**, for the most common shape of
+Not every level is present on every entry. A missing level is marked missing, with a short
+and real reason. It is never left blank: a blank cell reads as an oversight, not a decision.
+
+**The heaviest level is not the wrong choice. It is the wrong default.**
+
+## The method, for those who dig
+
+What follows explains how verdicts are reached, how the figures are expressed, and what this
+site refuses to do. None of it is needed to read an entry.
+
+### How a verdict is reached
+
+The verdict is **the lightest level that does the job properly**, for the most common shape of
 the need.
 
 Three questions, in this order:
 
-1. **Does this rung actually do the job?** Not "roughly", not "in most cases if you do not
-   look too closely". Each rung's breaking point is written on the entry, and it is
+1. **Does this level actually do the job?** Not "roughly", not "in most cases if you do not
+   look too closely". Each level's breaking point is written on the entry, and it is
    demonstrated by a test that fails on purpose.
-2. **Does the next rung give you something this one cannot?** If not, the next rung is weight
+2. **Does the next level give you something this one cannot?** If not, the next level is weight
    added for nothing.
 3. **Is what it costs in return acceptable?** Data leaving, determinism lost, a provider to
    depend on, a regulatory scope you did not choose.
 
-The "recommended" badge can sit on any rung, **N3 included**. Some entries recommend a
+The "recommended" badge can sit on any level, **N3 included**. Some entries recommend a
 general-purpose model without hedging, because that is the right answer. Those are the ones
 that make the entries recommending the opposite worth believing.
 
 Where a verdict depends on a condition, the entry says so in its reasoning. A verdict is not
 a universal prescription, it is an argued starting point.
 
-## How the code is verified
+### How the code is verified
 
 **No entry is published unless its code has been run.** It is the most important rule in the
 project.
@@ -60,21 +73,22 @@ project.
 Every snippet lives in a real file in the repository, with a test beside it. The entry imports
 the file, it does not contain code retyped by hand. If a test fails, the site does not build.
 
-Two levels of proof are possible, and **each snippet declares its own**, shown above the code:
+Two levels of proof are possible, and **each snippet declares its own**, in the bar of the
+code block:
 
-**Code runs as shown.** The snippet runs with its real dependencies, and its test runs on
-every build of the site. This is the case for every N0 and N1 rung.
+**Tested as shown.** The snippet runs with its real dependencies, and its test runs on
+every build of the site. This is the case for every N0 and N1 level.
 
-**Code runs, external service simulated.** The snippet runs, but its test replaces the
+**Tested, service simulated.** The snippet runs, but its test replaces the
 external service with a local double. This is the case for N2 and N3: downloading a model of
 several hundred megabytes on every build, or calling a paid API, is not sustainable. What the
 test then verifies: the request built, the response decoded, the error paths. What it does
-not verify: how good the model's answer is. That is stated on the page, under every snippet
+not verify: how good the model's answer is. That is stated on the page, next to every snippet
 concerned.
 
 We prefer partial proof shown as partial to complete proof claimed without being it.
 
-## Why there are no prices
+### Why there are no prices
 
 Provider pricing changes every quarter, and not always in the direction you would guess. An
 absolute figure written today would be wrong in six months, and a wrong entry casts doubt on
@@ -95,7 +109,7 @@ Latency follows the same principle, in five classes: `<1 ms`, `~10 ms`, `~100 ms
 
 This vocabulary is deliberately coarse. It is enough to decide with, and it does not go stale.
 
-## How footprint is estimated
+### How footprint is estimated
 
 **These are estimates, and an exact measurement is impossible from the client side of an API.**
 
@@ -106,7 +120,7 @@ Anyone quoting you grams of CO₂ per API call is giving you the output of an es
 not a measurement.
 
 Overkill therefore publishes **no footprint figure**. Entries use relative orders of
-magnitude: negligible, low, moderate, high. They compare rungs against each other on the same
+magnitude: negligible, low, moderate, high. They compare levels against each other on the same
 task, which is the only comparison we can make honestly.
 
 Those orders of magnitude rest on the following published work, cited by name:
@@ -130,9 +144,9 @@ Those orders of magnitude rest on the following published work, cited by name:
 If you find that an order of magnitude on an entry contradicts one of these sources, that is
 a mistake on our part and we want to hear about it.
 
-## Why rung colour carries no judgement
+### Why level colour carries no judgement
 
-The rung scale is a ramp of warm neutrals, light to dark. It is not a green-to-red gradient,
+The level scale is a ramp of warm neutrals, light to dark. It is not a green-to-red gradient,
 and it never will be.
 
 A green-to-red gradient would say "N0 good, N3 bad". That is false, and it would be the
@@ -142,11 +156,11 @@ is.
 
 The ramp measures **weight**, which is a quantity, not a value. The only colour that carries
 a judgement on this site is the green of the "recommended" badge, and that badge sits on
-whichever rung fits the need.
+whichever level fits the need.
 
-## What we do not do
+### What we do not do
 
-**We do not write legal advice.** The "regulatory scope" block on each rung describes, factually
+**We do not write legal advice.** The regulatory block on each level describes, factually
 and with a date, what the approach brings you into the scope of, and what it does not excuse
 you from. No entry tells anyone they are compliant or not. This is general information; have a
 professional review your situation.
@@ -161,7 +175,7 @@ weight of each page is shown in the footer, computed at build time.
 **We call no model API from the site.** The site contains no AI. That is not a technical
 constraint, it is an argument.
 
-## How to report a mistake
+### How to report a mistake
 
 A wrong entry does more harm than a missing one. If you find one:
 

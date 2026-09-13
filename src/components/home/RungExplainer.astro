@@ -1,7 +1,10 @@
 ---
 /**
- * La bande « comment lire une fiche » (CDC 7.2) : les quatre barreaux
- * expliqués en une bande visuelle.
+ * La version courte des quatre niveaux, sur l'accueil (lot 14, partie 5).
+ *
+ * Quatre blocs de deux lignes, et un lien vers la page qui les explique
+ * entièrement — avec ce que chacun coûte, ce qu'il garantit, ce qui le fait
+ * céder, et la condition qui fait passer au suivant.
  *
  * L'illustration large de la section 8.6 est employée ici, et non dans le
  * hero, parce que la section 7.2 interdit toute illustration décorative dans
@@ -27,10 +30,10 @@ const hero = existsSync(chemin) ? readFileSync(chemin, 'utf8') : null;
 
 const textes = {
   fr: {
-    title: 'Comment lire une fiche',
-    lead: "Quatre barreaux, toujours dans le même ordre. L'échelle ne mesure pas la qualité d'une solution, elle mesure son poids : ce qu'il faut mettre en marche pour obtenir le résultat.",
+    title: 'Les quatre niveaux',
+    lead: "Toujours dans le même ordre, du plus léger au plus lourd. L'échelle ne mesure pas la qualité d'une solution, elle mesure son poids : ce qu'il faut mettre en marche pour obtenir le résultat.",
     alt: 'La même tâche, quatre fois, avec de plus en plus de machinerie en marche',
-    more: 'Comment on évalue',
+    more: 'Ce que chacun coûte, et quand il cède',
     rungs: [
       'Une expression régulière, une requête, un automate. Le code fait exactement ce qu’il dit, et vous pouvez le lire en entier.',
       'Un modèle entraîné sur vos données, assez petit pour être versionné à côté du code qui s’en sert, et qui tourne sur un processeur ordinaire.',
@@ -39,10 +42,10 @@ const textes = {
     ],
   },
   en: {
-    title: 'How to read an entry',
-    lead: 'Four rungs, always in the same order. The ladder does not measure how good a solution is, it measures its weight: what you have to start up to get the result.',
+    title: 'The four levels',
+    lead: 'Always in the same order, from lightest to heaviest. The scale does not measure how good a solution is, it measures its weight: what you have to start up to get the result.',
     alt: 'The same task, four times, with more and more machinery running',
-    more: 'How we judge',
+    more: 'What each one costs, and when it gives way',
     rungs: [
       'A regular expression, a query, a state machine. The code does exactly what it says, and you can read all of it.',
       'A model trained on your data, small enough to be versioned next to the code that uses it, running on an ordinary processor.',
@@ -80,7 +83,7 @@ const textes = {
     </ol>
 
     <p class="rungs__more">
-      <a href={route(lang, 'methodology')}>{textes.more}</a>
+      <a class="link-action" href={route(lang, 'methodology')}>{textes.more}</a>
     </p>
   </div>
 </section>

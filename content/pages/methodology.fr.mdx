@@ -1,59 +1,73 @@
 ---
 page: methodology
 lang: fr
-title: "Comment on évalue"
-description: "Les quatre barreaux, comment un verdict est déterminé, pourquoi il n'y a pas de prix, et comment l'empreinte est estimée."
-updated: 2026-09-10
+title: "Comment ça marche"
+description: "Les quatre niveaux, la condition qui fait passer de l'un à l'autre, comment un verdict est déterminé et comment l'empreinte est estimée."
+updated: 2026-09-13
 ---
 
-## Les quatre barreaux
+import Levels from '../../src/components/Levels.astro';
 
-L'échelle est fixe et identique sur toutes les fiches. Elle ne mesure pas la qualité d'une
-solution, elle mesure **son poids** : ce qu'il faut mettre en marche, faire tourner,
-surveiller et payer pour obtenir le résultat.
+## Pourquoi une échelle
 
-**N0 — Règle et algorithme classique.** Une expression régulière, une requête, un automate,
-un parseur, un tri. Le code fait exactement ce qu'il dit, à chaque fois, et vous pouvez le
-lire en entier.
+Toute tâche admet plusieurs solutions, et elles ne pèsent pas le même poids. Masquer un
+numéro de téléphone dans un message peut se faire avec trois expressions régulières ou avec
+un appel de modèle généraliste sur chaque message entrant. Les deux marchent. L'une coûte
+zéro et rend la main avant la ligne de code suivante, l'autre coûte à chaque appel, prend
+environ une seconde, et envoie le message chez un tiers.
 
-**N1 — Modèle classique léger.** Une régression logistique, un TF-IDF, un gradient boosting,
-des plus proches voisins. Un modèle assez petit pour être versionné à côté du
-code qui s'en sert, entraîné sur vos données, et qui tourne sur un processeur ordinaire.
+Le réflexe, aujourd'hui, est de prendre la plus puissante. Elle marchera sûrement, elle
+demande moins de réflexion en amont, et c'est ce que tout le monde montre. Le prix se
+découvre ensuite, sur la facture, dans un audit, ou le jour où le fournisseur déprécie le
+modèle.
 
-**N2 — Petit modèle spécialisé auto-hébergé.** Un encodeur distillé, un modèle d'embeddings,
-un moteur de reconnaissance optique, un modèle de traduction. Il pèse des centaines de
-mégaoctets, il tourne chez vous, et il fait une chose.
+L'échelle sert à rendre ce choix visible au lieu de l'écraser. Elle est fixe et identique sur
+toutes les fiches, et elle ne mesure pas la qualité d'une solution : elle mesure **son
+poids**, c'est-à-dire ce qu'il faut mettre en marche, faire tourner, surveiller et payer pour
+obtenir le résultat.
 
-**N3 — API de modèle généraliste.** Un appel à un fournisseur externe. Le modèle sait tout
-faire à peu près, rien exactement, et il ne vous appartient pas.
+## Les quatre niveaux
 
-Tous les barreaux ne sont pas présents sur toutes les fiches. Un barreau absent est marqué
+Chaque fiche présente ces quatre niveaux, toujours dans le même ordre, du plus léger au plus
+lourd. Entre deux niveaux, la condition qui fait passer de l'un à l'autre : pas « quand c'est
+mieux », mais ce qui rend le niveau du dessous insuffisant.
+
+<Levels lang="fr" />
+
+Tous les niveaux ne sont pas présents sur toutes les fiches. Un niveau absent est marqué
 absent, avec une raison courte et réelle. Il n'est jamais laissé vide : une case vide se lit
 comme un oubli, pas comme une décision.
 
-## Comment un verdict est déterminé
+**Le niveau le plus lourd n'est pas le mauvais choix. Il est le mauvais choix par défaut.**
 
-Le verdict est **le barreau le plus léger qui fait le travail correctement**, pour le cas
+## La méthode, pour qui creuse
+
+Ce qui suit explique comment les verdicts sont établis, comment les chiffres sont exprimés,
+et ce que ce site refuse de faire. Rien n'y est nécessaire pour lire une fiche.
+
+### Comment un verdict est déterminé
+
+Le verdict est **le niveau le plus léger qui fait le travail correctement**, pour le cas
 d'usage le plus courant du besoin.
 
 Trois questions, dans cet ordre :
 
-1. **Est-ce que ce barreau fait vraiment le travail ?** Pas « à peu près », pas « dans la
+1. **Est-ce que ce niveau fait vraiment le travail ?** Pas « à peu près », pas « dans la
    plupart des cas si on ne regarde pas de trop près ». Le point de rupture de chaque
-   barreau est écrit sur la fiche, et il est démontré par un test qui échoue exprès.
-2. **Est-ce que le barreau suivant apporte quelque chose que celui-ci ne peut pas ?** Si la
-   réponse est non, le barreau suivant est du poids ajouté sans contrepartie.
+   niveau est écrit sur la fiche, et il est démontré par un test qui échoue exprès.
+2. **Est-ce que le niveau suivant apporte quelque chose que celui-ci ne peut pas ?** Si la
+   réponse est non, le niveau suivant est du poids ajouté sans contrepartie.
 3. **Est-ce que ce que ça coûte en retour est acceptable ?** Sortie de données, perte de
    déterminisme, dépendance à un fournisseur, périmètre réglementaire.
 
-Le badge « recommandé » peut se poser sur n'importe quel barreau, **y compris N3**. Certaines
+Le badge « recommandé » peut se poser sur n'importe quel niveau, **y compris N3**. Certaines
 fiches recommandent franchement un modèle généraliste, parce que c'est la bonne réponse. Ce
 sont elles qui rendent crédibles celles qui recommandent l'inverse.
 
 Quand un verdict dépend d'une condition, la fiche le dit dans sa justification. Un verdict
 n'est pas une prescription universelle, c'est un point de départ argumenté.
 
-## Comment le code est vérifié
+### Comment le code est vérifié
 
 **Aucune fiche n'est publiée si son code n'a pas été exécuté.** C'est la règle la plus
 importante du projet.
@@ -62,23 +76,23 @@ Chaque extrait vit dans un fichier réel du dépôt, avec un test à côté de l
 importe le fichier, elle ne contient pas de code recopié. Si un test échoue, le site ne se
 construit pas.
 
-Deux niveaux de preuve sont possibles, et **chaque extrait déclare le sien**, affiché
-au-dessus du code :
+Deux niveaux de preuve sont possibles, et **chaque extrait déclare le sien**, dans la barre
+du bloc de code :
 
-**Code exécuté tel quel.** L'extrait tourne avec ses vraies dépendances, et son test tourne
-à chaque construction du site. C'est le cas de tous les barreaux N0 et N1.
+**Testé tel quel.** L'extrait tourne avec ses vraies dépendances, et son test tourne à chaque
+construction du site. C'est le cas de tous les niveaux N0 et N1.
 
-**Code exécuté, service externe simulé.** L'extrait tourne, mais son test remplace le service
-externe par un double local. C'est le cas des barreaux N2 et N3 : télécharger un modèle de
+**Testé, service simulé.** L'extrait tourne, mais son test remplace le service externe par un
+double local. C'est le cas des niveaux N2 et N3 : télécharger un modèle de
 plusieurs centaines de mégaoctets à chaque construction, ou appeler une API payante, n'est
 pas tenable. Ce que le test vérifie alors : la requête construite, la réponse décodée, les
 cas d'erreur. Ce qu'il ne vérifie pas : la qualité de la réponse du modèle. C'est dit sur la
-page, sous chaque extrait concerné.
+page, au plus près de l'extrait concerné.
 
 Nous préférons une preuve partielle affichée comme telle à une preuve complète affirmée sans
 l'être.
 
-## Pourquoi il n'y a pas de prix
+### Pourquoi il n'y a pas de prix
 
 Les tarifs des fournisseurs changent tous les trimestres, et pas toujours dans le sens qu'on
 croit. Une valeur absolue écrite aujourd'hui serait fausse dans six mois, et une fiche
@@ -99,7 +113,7 @@ Les latences suivent le même principe, avec cinq classes : `<1 ms`, `~10 ms`, `
 
 Ce vocabulaire est volontairement grossier. Il suffit pour décider, et il ne périme pas.
 
-## Comment l'empreinte est estimée
+### Comment l'empreinte est estimée
 
 **Ce sont des estimations, et une mesure exacte est impossible côté client d'une API.**
 
@@ -110,7 +124,7 @@ connaît, et ne les publie pas. Toute personne qui vous annonce des grammes de C
 d'API vous donne le résultat d'un modèle d'estimation, pas une mesure.
 
 Overkill n'annonce donc **aucun chiffre d'empreinte**. Les fiches emploient des ordres de
-grandeur relatifs : négligeable, faible, modérée, élevée. Ils comparent les barreaux entre
+grandeur relatifs : négligeable, faible, modérée, élevée. Ils comparent les niveaux entre
 eux sur une même tâche, ce qui est la seule comparaison que nous puissions faire honnêtement.
 
 Ces ordres de grandeur s'appuient sur les travaux publiés suivants, cités nommément :
@@ -134,9 +148,9 @@ Ces ordres de grandeur s'appuient sur les travaux publiés suivants, cités nomm
 Si vous constatez qu'un ordre de grandeur d'une fiche contredit l'une de ces sources, c'est
 une erreur de notre part et nous voulons le savoir.
 
-## Pourquoi la couleur des barreaux n'exprime pas de jugement
+### Pourquoi la couleur des niveaux n'exprime pas de jugement
 
-L'échelle des barreaux est une rampe de neutres chauds, du plus clair au plus foncé. Ce n'est
+L'échelle des niveaux est une rampe de neutres chauds, du plus clair au plus foncé. Ce n'est
 pas un dégradé du vert au rouge, et ce ne le sera jamais.
 
 Un dégradé vert-rouge dirait « N0 c'est bien, N3 c'est mal ». C'est faux, et ce serait le
@@ -146,12 +160,11 @@ mauvais choix, quelle que soit sa légèreté.
 
 La rampe mesure **le poids**, c'est-à-dire une quantité, pas une valeur. La seule couleur qui
 porte un jugement sur ce site est le vert du badge « recommandé », et ce badge se pose sur le
-barreau qui convient au besoin, quel qu'il soit.
+niveau qui convient au besoin, quel qu'il soit.
 
-## Ce que nous ne faisons pas
+### Ce que nous ne faisons pas
 
-**Nous n'écrivons pas de conseil juridique.** Le bloc « périmètre réglementaire » de chaque
-barreau décrit, de façon factuelle et datée, ce que l'approche vous fait entrer dans le
+**Nous n'écrivons pas de conseil juridique.** Le bloc réglementaire de chaque niveau décrit, de façon factuelle et datée, ce que l'approche vous fait entrer dans le
 périmètre de, et ce dont elle ne vous dispense pas. Aucune fiche ne dit à personne qu'il est
 conforme ou non. C'est une information générale ; faites valider votre situation par un
 professionnel.
@@ -167,7 +180,7 @@ site.
 **Nous n'appelons aucune API de modèle depuis le site.** Le site ne contient pas d'IA. Ce
 n'est pas une contrainte technique, c'est un argument.
 
-## Comment signaler une erreur
+### Comment signaler une erreur
 
 Une fiche fausse est plus nuisible qu'une fiche absente. Si vous en trouvez une :
 
