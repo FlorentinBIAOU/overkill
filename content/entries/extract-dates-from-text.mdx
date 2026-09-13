@@ -40,11 +40,11 @@ rungs:
       javascript: snippets/extract-dates-from-text/n0.js
       verification: executed
     breaking_point:
-      fr: "Les dates relatives. « jeudi prochain », « dans quinze jours », « à partir de demain » : il n'y a pas de chiffres à faire correspondre, donc il ne se trouve rien du tout. L'échec est silencieux, une liste vide et non une erreur, et un outil de planification bâti sur ce barreau ne voit jamais la moitié de ce que les gens écrivent."
-      en: "Relative dates. \"next Thursday\", \"in a fortnight\", \"from tomorrow\": there are no digits to match, so nothing at all is found. The failure is silent, an empty list rather than an error, and a planning tool built on this rung simply never sees half of what people write."
+      fr: "Les dates relatives. « jeudi prochain », « dans quinze jours », « à partir de demain » : il n'y a pas de chiffres à faire correspondre, donc il ne se trouve rien du tout. L'échec est silencieux, une liste vide et non une erreur, et un outil de planification bâti sur ce niveau ne voit jamais la moitié de ce que les gens écrivent."
+      en: "Relative dates. \"next Thursday\", \"in a fortnight\", \"from tomorrow\": there are no digits to match, so nothing at all is found. The failure is silent, an empty list rather than an error, and a planning tool built on this level simply never sees half of what people write."
     escalate_when:
-      fr: "Vos documents fixent les échéances par rapport à aujourd'hui, et vos extractions reviennent vides sur exactement ces phrases-là."
-      en: "Your documents set deadlines relative to today, and your extraction comes back empty on exactly those sentences."
+      fr: "Un même corpus mêle les conventions : des documents français écrits en jour-mois et des documents venus d'ailleurs écrits en mois-jour. La convention unique que vous passez à l'extrait est alors fausse pour une partie du fichier, et elle rend des dates plausibles."
+      en: "One corpus mixes conventions: French documents written day-first and documents from elsewhere written month-first. The single convention you hand the snippet is then wrong for part of the file, and it returns plausible dates."
 
   - level: N1
     available: true
@@ -52,7 +52,7 @@ rungs:
       fr: "Candidats trouvés par règle, puis classifieur de contexte pour l'ambiguïté jour-mois"
       en: "Rule-found candidates, then a context classifier for the day-month ambiguity"
     cost: négligeable
-    latency: "~10 ms"
+    latency: "<1 ms"
     risks:
       data_egress: none
       deterministic: true
@@ -71,8 +71,8 @@ rungs:
       javascript: snippets/extract-dates-from-text/n1.js
       verification: executed
     breaking_point:
-      fr: "Le classifieur ne s'abstient jamais. Sur « 03/04/2024 » seul, sans une phrase autour à lire, il tranche quand même, dans le sens vers lequel penchait le jeu d'entraînement, et rend sa supposition avec exactement la forme d'un fait : rien dans la sortie ne dit à l'appelant laquelle des deux il tient. Les dates relatives, elles, restent invisibles, puisque les candidats viennent toujours d'une règle."
-      en: "The classifier never abstains. On a bare 03/04/2024, with no prose around it to read, it commits anyway, to whichever way the training set leaned, and hands its guess back in exactly the shape of a fact: nothing in the output tells the caller which of the two it is holding. Relative dates stay invisible as well, since the candidates still come from a rule."
+      fr: "Le classifieur ne s'abstient jamais. Sur « 03/04/2024 » seul, sans une phrase autour à lire, il tranche quand même, dans le sens vers lequel penchait le jeu d'entraînement, et rend sa supposition avec exactement la forme d'un fait : rien dans la sortie ne dit à l'appelant laquelle des deux il tient. Et la règle qui fournit les candidats est plus étroite que celle de N0 : elle ne voit que la forme tout en chiffres à année sur quatre positions. « 3 avril 2024 », « 12.03.24 » et « 2024-03-12 », que N0 trouvait, ne ressortent plus. Les dates relatives, elles, restent invisibles, puisque les candidats viennent toujours d'une règle."
+      en: "The classifier never abstains. On a bare 03/04/2024, with no prose around it to read, it commits anyway, to whichever way the training set leaned, and hands its guess back in exactly the shape of a fact: nothing in the output tells the caller which of the two it is holding. And the rule that supplies the candidates is narrower than the one in N0: it only sees the all-numeric shape with a four-digit year. \"3 avril 2024\", \"12.03.24\" and \"2024-03-12\", which N0 found, no longer come out. Relative dates stay invisible as well, since the candidates still come from a rule."
     escalate_when:
       fr: "Vos textes portent des dates qu'aucune règle ne peut trouver, et pas seulement des dates qu'une règle lit à l'envers."
       en: "Your texts hold dates no rule can find at all, not just dates a rule reads back to front."
@@ -113,12 +113,12 @@ rungs:
       fr: "La fluidité n'est pas l'exactitude. Le modèle rend « 2024-02-31 » en JSON impeccable, et à côté une date qu'il a fabriquée. La vérification calendaire de N0 doit rester, et elle écarte le jour impossible ; la date inventée passe, et rien dans la réponse ne la signale. Sommé de répondre en JSON, il peut aussi répondre en prose : l'extrait lève alors une erreur, plutôt que de rendre une liste vide qui affirmerait qu'il n'y avait pas de date."
       en: "Fluency is not correctness. The model returns 2024-02-31 in flawless JSON, and next to it a date it made up. The calendar check from N0 has to stay, and it drops the impossible day; the invented one gets through, and nothing in the answer marks it. Asked for JSON, the model can also answer prose: the snippet raises rather than returning an empty list, which would claim there was no date to find."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus."
-      en: "There is no rung above this one."
+      fr: "Il n'y a pas de niveau au-dessus."
+      en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0, parce que la difficulté de ce besoin n'est pas de repérer les dates mais de refuser celles qui n'existent pas, et c'est un calendrier qui le fait, pas un modèle : 31/02/2024 et 29/02/1900 sont écartés par une ligne, et le résultat se teste unitairement. Ce que le barreau ne sait pas faire, il ne le fait pas à moitié, il rend une liste vide. Montez à N1 le jour où un même corpus mêle les conventions jour-mois et mois-jour ; à N3 seulement si les échéances de vos textes s'écrivent en relation avec aujourd'hui, en sachant que vous échangerez un test unitaire contre une réponse à relire."
-  en: "N0, because the hard part of this need is not spotting dates but refusing the ones that do not exist, and a calendar does that, not a model: 31/02/2024 and 29/02/1900 are dropped by a single line, and the result is unit testable. What this rung cannot do, it does not do halfway — it returns an empty list. Move up to N1 the day one corpus mixes day-first and month-first conventions; to N3 only if your texts write their deadlines relative to today, knowing you will trade a unit test for an answer that needs reviewing."
+  fr: "N0, parce que la difficulté de ce besoin n'est pas de repérer les dates mais de refuser celles qui n'existent pas, et c'est un calendrier qui le fait, pas un modèle : 31/02/2024 et 29/02/1900 sont écartés par une ligne, et le résultat se teste unitairement. Ce que ce niveau ne sait pas faire, il ne le fait pas à moitié, il rend une liste vide. Montez à N1 le jour où un même corpus mêle les conventions jour-mois et mois-jour, en sachant que sa règle ne reconnaît plus que la forme tout en chiffres et qu'il faut garder N0 à côté pour les mois écrits en lettres ; à N3 seulement si les échéances de vos textes s'écrivent en relation avec aujourd'hui, en sachant que vous échangerez un test unitaire contre une réponse à relire."
+  en: "N0, because the hard part of this need is not spotting dates but refusing the ones that do not exist, and a calendar does that, not a model: 31/02/2024 and 29/02/1900 are dropped by a single line, and the result is unit testable. What this level cannot do, it does not do halfway — it returns an empty list. Move up to N1 the day one corpus mixes day-first and month-first conventions, knowing that its rule recognises only the all-numeric shape and that N0 has to stay alongside it for months written in letters; to N3 only if your texts write their deadlines relative to today, knowing you will trade a unit test for an answer that needs reviewing."
 
 further_reading:
   - label: "Python — module datetime, le calendrier grégorien proleptique et ses années bissextiles"

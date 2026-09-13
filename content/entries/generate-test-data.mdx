@@ -71,8 +71,8 @@ rungs:
       javascript: snippets/generate-test-data/n1.js
       verification: executed
     breaking_point:
-      fr: "Chaque colonne est tirée seule, donc la distribution conjointe disparaît. Le test tire une ville et un code postal depuis leurs effectifs respectifs : les parts par ville sont justes, et près d'une ligne sur deux annonce Nantes avec un code postal parisien. Le jeu ne démontre plus rien sur un code qui lit deux colonnes à la fois, et le fait que les marges soient exactes est exactement ce qui rend l'erreur facile à manquer."
-      en: "Each column is drawn on its own, so the joint distribution is gone. The test draws a city and a postcode from their own observed counts: the per-city shares come out right, and close to one row in two claims Nantes with a Paris postcode. The set proves nothing any more about code that reads two columns at once, and the marginals being exact is precisely what makes that easy to miss."
+      fr: "Chaque colonne est tirée seule, donc la distribution conjointe disparaît. Le test tire une ville et un code postal depuis leurs effectifs respectifs : les parts par ville sont justes, et près d'une ligne sur deux associe une ville à un code postal qui n'est pas le sien — une sur vingt annonce Nantes avec un code postal parisien. Le jeu ne démontre plus rien sur un code qui lit deux colonnes à la fois, et le fait que les marges soient exactes est exactement ce qui rend l'erreur facile à manquer."
+      en: "Each column is drawn on its own, so the joint distribution is gone. The test draws a city and a postcode from their own observed counts: the per-city shares come out right, and close to one row in two pairs a city with a postcode that is not its own — one row in twenty claims Nantes with a Paris postcode. The set proves nothing any more about code that reads two columns at once, and the marginals being exact is precisely what makes that easy to miss."
     escalate_when:
       fr: "Vous écrivez un test qui croise deux colonnes — une règle de zone de livraison, un taux de taxe, une règle de fraude — et il faut d'abord écarter à la main les lignes impossibles."
       en: "You write a test that crosses two columns — a delivery-zone rule, a tax rate, a fraud rule — and you first have to weed out the impossible rows by hand."
@@ -113,8 +113,8 @@ rungs:
       fr: "La réponse est plausible et fausse, et c'est du JSON valide dans les deux cas que le test rejoue : le modèle a renommé `display_name` en `name` et rendu une ligne de moins, puis a donné le même nom à deux lignes. Un décodeur qui se contente d'analyser le JSON les accepte, et le second transforme un test sur les comptes en double en un test qui passe toujours. L'extrait vérifie lui-même ce qu'il a demandé, réessaie, puis échoue plutôt que de rendre ça — et sans exigence d'unicité, la même réponse est acceptée."
       en: "The answer is plausible and wrong, and it is valid JSON in both cases the test replays: the model renamed `display_name` to `name` and returned one row short, then gave two rows the same name. A decoder that merely parses the JSON accepts both, and the second turns a test about duplicate accounts into a test that always passes. The snippet checks what it asked for, retries, then fails rather than hand that back — and with no uniqueness requirement, the very same answer goes through."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus."
-      en: "There is no rung above this one."
+      fr: "Il n'y a pas de niveau au-dessus."
+      en: "There is no level above this one."
 
 verdict_rationale:
   fr: "N0 donne la propriété dont un jeu de test vit : la même graine reconstruit exactement les mêmes lignes, dans les deux langages, sur n'importe quelle machine, et une graine imprimée à côté d'un échec suffit à le rejouer. Il coûte une fonction de hachage, rien ne sort de votre infrastructure, et un identifiant de séquence est unique par construction plutôt que par chance. Montez à N1 le jour où vous mesurez quelque chose sur ce jeu, en sachant ce que vous échangez : chaque colonne tirée seule donne des lignes réalistes une par une et impossibles deux colonnes à la fois."

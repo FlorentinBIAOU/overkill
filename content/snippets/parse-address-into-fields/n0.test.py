@@ -41,6 +41,10 @@ def test_handles_an_empty_string():
 def test_normalisation_and_folding():
     assert normalise("8 rue  des Lilas,\n75011 Paris") == "8 rue des Lilas 75011 Paris"
     assert fold("Av.") == "av"
+    # The trailing dot, and only that one: a leading dot is not an
+    # abbreviation mark, and dropping it would make this snippet disagree
+    # with its JavaScript twin.
+    assert fold(".av") == ".av"
 
 
 def test_keeps_a_cedex_mention_with_the_town():

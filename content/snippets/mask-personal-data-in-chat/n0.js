@@ -6,16 +6,19 @@
  *
  * Two things make this work.
  *
- * First, normalisation only touches the spellings of a space. Rewriting the
- * whole message before matching would destroy the very characters an email
- * address is made of.
+ * First, normalisation only changes how a character is written. Compatibility
+ * folding brings full-width digits and the narrow spaces of French typography
+ * back to their plain forms; the invisible joiners it leaves behind are turned
+ * into a space. Going further — stripping punctuation, say — would destroy the
+ * very characters an email address is made of.
  *
  * Second, each pattern tolerates the separators people actually type inside a
  * number, instead of assuming one canonical form.
  */
 
-// The space characters French typography puts inside numbers.
-const UNUSUAL_SPACES = /[    ⁠]/g;
+// The space characters French typography puts inside numbers, plus the word
+// joiner that compatibility folding leaves in place.
+const UNUSUAL_SPACES = /[     ⁠]/g;
 
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 

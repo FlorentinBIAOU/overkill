@@ -1,11 +1,16 @@
 /**
  * Decide whether 03/04/2024 is 3 April or 4 March, with a light classifier.
  *
- * Rung N1. Rules still find the candidates, exactly as N0 does: a date is a
- * shape, and a shape is what regular expressions are for. What a rule cannot
- * do is read 03/04/2024, because nothing in those digits says which field is
- * the day. N0 answers by asking the caller to pick one convention for a whole
- * document, which is wrong the moment a document quotes a supplier from abroad.
+ * Rung N1. A rule still finds the candidates: a date is a shape, and a shape
+ * is what regular expressions are for. The rule here is narrower than the one
+ * in N0, and only covers the all-numeric form with a four-digit year, which is
+ * the one form the ambiguity touches. A document writing its months in letters
+ * still needs N0 beside this.
+ *
+ * What no rule can do is read 03/04/2024, because nothing in those digits says
+ * which field is the day. N0 answers by asking the caller to pick one
+ * convention for a whole document, which is wrong the moment a document quotes
+ * a supplier from abroad.
  *
  * The convention is not in the digits, it is in the prose around them. That is
  * a classification problem, and a few hundred labelled sentences are enough.

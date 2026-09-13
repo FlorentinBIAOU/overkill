@@ -21,7 +21,9 @@ export const HONEYPOT_FIELD = 'website';
 export const MINIMUM_SECONDS = 3;
 export const MAXIMUM_LINKS = 2;
 
-const LINK = /https?:\/\/|www\.|\b[\w-]+\.(?:com|net|org|ru|xyz|top)\b/g;
+// One match per link, not one per part: a bare `https?://` alternative would
+// count `http://example.com` twice and reject the customer who sends two.
+const LINK = /(?:https?:\/\/|www\.)\S+|\b[\w-]+\.(?:com|net|org|ru|xyz|top)\b/g;
 
 // Phrases that no customer of this form has ever written, and that the trade
 // they come from cannot do without.

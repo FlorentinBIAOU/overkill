@@ -28,7 +28,10 @@ def train(comments: list[str], labels: list[int]):
     """
     model = make_pipeline(
         TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), min_df=1),
-        LogisticRegression(class_weight="balanced", max_iter=1000),
+        # `C` above one because a couple of dozen short examples under the
+        # default regulariser leave every score sitting near a half, which
+        # makes the threshold in `is_abusive` meaningless.
+        LogisticRegression(class_weight="balanced", C=10.0, max_iter=1000),
     )
     model.fit(comments, labels)
     return model

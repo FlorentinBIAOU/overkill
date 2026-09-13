@@ -77,9 +77,10 @@ test('breaking point: the next supplier lays the page out otherwise', () => {
   // The rules are written against one supplier's page, and the next supplier
   // does not use that page. Nord Fournitures writes « N° » where Lambert
   // writes « Facture n° », spells the date out in words, and calls the total
-  // « NET A PAYER ». Not one of the three fields survives, and only one of the
-  // three failures is visible: the total comes back as a confident,
-  // well-formed, wrong number, because « Sous-total » contains « total ».
+  // « NET A PAYER ». Not one of the three fields survives. Two come back null,
+  // and that shows. The third failure is the one that does not: the total comes
+  // back as a confident, well-formed, wrong number, because « Sous-total »
+  // contains « total ».
   //
   // Adding « net a payer » to the labels fixes this supplier and waits for the
   // next one. That maintenance, invoice by invoice, is the real cost of N0.

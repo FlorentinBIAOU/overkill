@@ -18,11 +18,30 @@ from n0 import MIN_CHARACTERS, read_text_layer
 PIXELS = bytes(range(64)) * 8
 
 
-def build_pdf(content: bytes, *, compress: bool = True) -> bytes:
+def photograph(length: int) -> bytes:
+    """
+    What a scanner really puts in the picture: bytes already compressed by JPEG.
+
+    They do not inflate, so they are read exactly as they lie. A quarter of a
+    megabyte of them is one page at a modest resolution, and there is no reason
+    at all why `BT`, a bracket and `Tj` should not all turn up in there by
+    chance. The same congruential generator is written in the JavaScript test,
+    so both languages are handed the very same bytes.
+    """
+    values = bytearray(b"\xff\xd8\xff\xe0")  # the marker that opens a JPEG
+    state = 1
+    for _ in range(length):
+        state = (state * 1103515245 + 12345) & 0xFFFFFFFF
+        values.append((state >> 16) & 0xFF)
+    return bytes(values)
+
+
+def build_pdf(content: bytes, *, compress: bool = True, photo: bytes | None = None) -> bytes:
     """Assemble a small but valid PDF whose single page draws `content`."""
     stream = zlib.compress(content) if compress else content
     flate = b"/Filter /FlateDecode " if compress else b""
-    image = zlib.compress(PIXELS)
+    image = photo if photo is not None else zlib.compress(PIXELS)
+    image_filter = b"/DCTDecode" if photo is not None else b"/FlateDecode"
     bodies = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -31,7 +50,7 @@ def build_pdf(content: bytes, *, compress: bool = True) -> bytes:
         b"<< " + flate + b"/Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
         b"<< /Type /XObject /Subtype /Image /Width 64 /Height 8 /ColorSpace /DeviceGray "
-        b"/BitsPerComponent 8 /Filter /FlateDecode /Length %d >>\nstream\n" % len(image)
+        b"/BitsPerComponent 8 /Filter " + image_filter + b" /Length %d >>\nstream\n" % len(image)
         + image
         + b"\nendstream",
     ]
@@ -57,6 +76,16 @@ TYPESET = (
 
 # What a scanner writes: one image, drawn to fill the page. No text at all.
 SCANNED = b"q 595 0 0 842 0 0 cm /Im0 Do Q\n"
+
+# What a word processor writes: a subset font whose glyphs are renumbered from
+# one, so the strings on the page are codes and not letters. The page carries
+# its text; turning it back into letters needs the font's own table.
+GLYPH_CODES = (
+    b"BT /F1 12 Tf 72 780 Td (\\001\\002\\003\\004\\005\\006\\007\\010\\016\\017\\020"
+    b"\\021\\022\\023\\024\\025\\026\\027\\030\\031\\032\\033) Tj\n"
+    b"0 -16 Td (\\001\\002\\003\\004\\005\\006\\007\\010\\016\\017\\020"
+    b"\\021\\022\\023\\024\\025\\026\\027\\030\\031\\032\\033) Tj ET\n"
+)
 
 
 def test_reads_the_text_layer_of_a_generated_pdf():
@@ -131,3 +160,41 @@ def test_breaking_point_a_really_scanned_page_has_no_text_layer():
     assert report["has_text_layer"] is False
     assert report["characters"] == 0
     assert "OCR" in report["reason"]
+
+
+def test_breaking_point_a_scan_whose_picture_is_a_jpeg_holds_just_as_well():
+    """
+    The same claim on the document a scanner really produces.
+
+    Its picture is already compressed, so it does not inflate and is read byte
+    for byte; a quarter of a megabyte of such bytes holds `BT`, a bracket and
+    `Tj` by chance many times over.
+
+    Which is why the streams a page does not draw text from are left alone. A
+    reader that walked all of them would report several thousand characters
+    here, and the caller would file a scanned page as already read.
+    """
+    report = read_text_layer(build_pdf(SCANNED, photo=photograph(250_000)))
+    assert report["pages"] == 1
+    assert report["has_text_layer"] is False
+    assert report["characters"] == 0
+    assert "OCR" in report["reason"]
+
+
+def test_a_text_layer_this_function_cannot_decode_is_not_called_readable():
+    """
+    The other honest no, and the one that costs the most when it is got wrong.
+
+    A word processor exports its text through a subset font whose glyphs are
+    renumbered from one. The page does carry its text, and this function does
+    not carry the table that turns those codes back into letters. Counting them
+    would report a readable page and hand back gibberish to index.
+
+    So the answer is no, and the reason is not the OCR one: a recognition
+    engine is the wrong tool for a document that was never a picture.
+    """
+    report = read_text_layer(build_pdf(GLYPH_CODES))
+    assert report["has_text_layer"] is False
+    assert report["characters"] == 0
+    assert "font table" in report["reason"]
+    assert "OCR" not in report["reason"]

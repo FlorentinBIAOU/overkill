@@ -23,7 +23,9 @@ HONEYPOT_FIELD = "website"
 MINIMUM_SECONDS = 3.0
 MAXIMUM_LINKS = 2
 
-LINK = re.compile(r"https?://|www\.|\b[\w-]+\.(?:com|net|org|ru|xyz|top)\b")
+# One match per link, not one per part: a bare `https?://` alternative would
+# count `http://example.com` twice and reject the customer who sends two.
+LINK = re.compile(r"(?:https?://|www\.)\S+|\b[\w-]+\.(?:com|net|org|ru|xyz|top)\b")
 
 # Phrases that no customer of this form has ever written, and that the trade
 # they come from cannot do without.

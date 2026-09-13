@@ -5,7 +5,7 @@ calendar check.
 Rung N0. Deterministic, standard library only, and the whole of it fits on a
 screen.
 
-The regular expression is the easy half. It finds three digits groups and
+The regular expression is the easy half. It finds three groups of digits and
 knows nothing else: 31/02/2024 matches it perfectly, and so does 29/02/2023.
 The second half is what makes the difference, and it is one line long, because
 `datetime.date` already owns the calendar — month lengths, leap years, and the

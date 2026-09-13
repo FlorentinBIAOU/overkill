@@ -1,14 +1,15 @@
 """
-Score a comment through a provider's moderation endpoint.
+Score a comment by asking a general-purpose model.
 
 Rung N3. The shortest code on the ladder to write, and the one that hands the
-most away: the taxonomy, the calibration, the right to appeal, and the text of
-your users' comments, which leaves your premises on every call.
+most away: what each category means, the calibration, the right to appeal, and
+the text of your users' comments, which leaves your premises on every call.
 
-The endpoint returns a number per category. Everything else here — capping the
-input, retrying, refusing to act on an answer that is not the shape you asked
-for — is plumbing you own, and it is where the bugs of this rung live. It is
-also all your tests can reach, because the judgement itself is not testable.
+You name the categories below; the model decides what they mean. Everything
+else here — capping the input, retrying, refusing to act on an answer that is
+not the shape you asked for — is plumbing you own, and it is where the bugs of
+this rung live. It is also all your tests can reach, because the judgement
+itself is not testable.
 """
 
 from __future__ import annotations
@@ -43,7 +44,7 @@ def moderate(comment: str, client=None, *, thresholds=None, attempts: int = 3) -
 
         client = OpenAI()
 
-    # An endpoint charges by the token, and a comment that long is a bug or an
+    # A model charges by the token, and a comment that long is a bug or an
     # attack. Refusing it is a cost control, not an optimisation.
     if len(comment) > MAX_CHARACTERS:
         raise ValueError(f"comment longer than {MAX_CHARACTERS} characters")

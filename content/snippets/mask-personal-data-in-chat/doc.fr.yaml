@@ -11,35 +11,49 @@ n0: |
 
   Deux choses font que ça marche.
 
-  D'abord, la normalisation ne touche qu'aux façons d'écrire une espace.
-  Réécrire tout le message avant de chercher détruirait les caractères mêmes
-  dont une adresse électronique est faite.
+  D'abord, la normalisation ne change que la façon d'écrire un caractère. Le
+  repli de compatibilité ramène les chiffres pleine largeur et les espaces
+  fines de la typographie française à leur forme ordinaire ; les liants
+  invisibles qu'il laisse derrière lui deviennent une espace. Aller plus loin —
+  retirer la ponctuation, par exemple — détruirait les caractères mêmes dont
+  une adresse électronique est faite.
 
   Ensuite, chaque motif tolère les séparateurs que les gens tapent réellement
   dans un numéro, au lieu de supposer une seule forme canonique.
 
-n1: |
-  Rattraper les coordonnées obfusquées avec une régression logistique sur des
-  traits de jetons.
+n1.js: |
+  Rattraper les coordonnées obfusquées avec un classifieur léger.
 
-  Niveau N1. La règle du niveau N0 cherche des chiffres ; celui-ci apprend à
-  quoi ressemble un jeton qui cache un numéro — des lettres à la place de
-  chiffres, des points de suspension, un emoji intercalé.
+  Niveau N1. Les expressions régulières du niveau N0 voient une façon d'écrire
+  un numéro. Celui-ci en voit la forme : une suite de jetons surtout faits de
+  chiffres, plutôt courts, posés à côté de mots comme « call » ou « reach ».
 
-  Le modèle décide jeton par jeton, et non message par message : c'est ce qui
-  permet de masquer le seul morceau fautif sans effacer la phrase autour.
+  Écrit en entier plutôt que tiré d'une bibliothèque, parce qu'une régression
+  logistique sur des n-grammes de caractères hachés tient en quarante lignes.
+  C'est tout l'argument de ce niveau : l'outil classique est assez petit pour
+  être lu.
+
+n1.py: |
+  Rattraper les coordonnées obfusquées avec un classifieur léger.
+
+  Niveau N1. Les expressions régulières du niveau N0 voient une façon d'écrire
+  un numéro. Celui-ci en voit la forme : une suite de jetons surtout faits de
+  chiffres, plutôt courts, et posés à côté de mots comme « call » ou « reach ».
+
+  Le jeu d'entraînement, c'est quelques centaines de messages étiquetés, pas
+  quelques millions. Les poids sont assez petits pour vivre dans le dépôt, à
+  côté de ce fichier, et il n'y a aucun service à exploiter : le modèle se
+  charge avec le processus.
 
 n3: |
-  Extraction structurée par appel à un modèle généraliste.
+  Masquer les coordonnées en interrogeant un modèle généraliste.
 
-  Niveau N3. Présent pour qu'on voie ce qu'il coûte, pas parce que cette fiche
-  le recommande.
+  Niveau N3. C'est l'option vers laquelle on se tourne d'abord. Elle est ici
+  pour qu'on voie ce qu'elle coûte, pas parce que cette fiche la recommande.
 
-  Ce qu'il apporte sur les deux niveaux du dessous est réel : aucune règle à
-  écrire, aucun jeu d'entraînement à constituer, et une tolérance à des formes
-  qu'on n'a pas prévues.
-
-  Ce qu'il coûte est dans ce fichier. Le message part chez un tiers. Chaque
-  appel se paie. La réponse doit être relue avant d'être crue, parce qu'un
-  modèle qui ne trouve rien invente parfois une plage de caractères plutôt que
-  de rendre une liste vide.
+  Voyez ce que le code doit faire et que le niveau N0 n'avait pas à faire :
+  réessayer après un échec, plafonner la taille de l'entrée, analyser une
+  réponse qui n'est que probablement du JSON valide, et refuser de laisser
+  passer le message non masqué quand la réponse est inutilisable. Cette
+  plomberie est le vrai coût de ce niveau, et c'est la part que vos tests
+  doivent couvrir, puisque le modèle lui-même n'est pas testable.

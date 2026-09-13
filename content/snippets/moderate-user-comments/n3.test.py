@@ -26,7 +26,7 @@ def scored(**values):
     return json.dumps({name: values.get(name, 0.0) for name in CATEGORIES})
 
 
-def test_blocks_what_the_endpoint_scores_high():
+def test_blocks_what_the_model_scores_high():
     client = FakeLLM(response=scored(harassment=0.97))
     decision = moderate(ATTACK, client=client)
     assert decision["action"] == "block"
@@ -90,7 +90,7 @@ def test_breaking_point_the_score_is_asserted_not_measured():
     Here a plainly harmless comment comes back scored as harassment, and the
     function blocks it, correctly by its own logic. There is no feature to
     inspect, no weight to print, and no answer to give the user beyond the
-    provider's number. The endpoint changes on their schedule, not yours.
+    provider's number, and the model changes on their schedule, not yours.
     """
     client = FakeLLM(response=scored(harassment=0.95))
     decision = moderate(CALM, client=client)

@@ -56,7 +56,7 @@ def normalise(text: str) -> str:
 def fold(word: str) -> str:
     """Lowercase, drop the accents and the trailing dot, for lookup only."""
     decomposed = unicodedata.normalize("NFD", word.lower())
-    return "".join(c for c in decomposed if not unicodedata.combining(c)).strip(".")
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).rstrip(".")
 
 
 def parse(address: str) -> dict:

@@ -92,10 +92,11 @@ def test_breaking_point_two_ideas_ten_pages_apart_are_never_joined():
     relate two ideas separated by ten pages, and it never rewrites.
 
     Both halves of the argument are in this document. The closing sentence is
-    short, late, and uses vocabulary the rest of the document never repeats,
-    so it scores lowest of all eleven sentences and is dropped first. The
-    reader of the summary learns that Rouen supplies Lyon, and never learns
-    that Rouen is closing.
+    short and late, its own terms turn up nowhere else, and the digression about
+    the warehouse takes up the whole vocabulary of the document, so it scores
+    lowest of all eleven sentences and is dropped first. The reader of the
+    summary learns that Rouen supplies Lyon, and never learns that Rouen is
+    closing.
 
     Widening the summary does not save it: the conclusion is not a sentence
     anyone wrote, so no selection of sentences can contain it. Only a method

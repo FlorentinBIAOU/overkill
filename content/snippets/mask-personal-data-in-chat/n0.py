@@ -6,9 +6,11 @@ find it in a profile.
 
 Two things make this work.
 
-First, normalisation only touches the spellings of a space. Rewriting the whole
-message before matching would destroy the very characters an email address is
-made of.
+First, normalisation only changes how a character is written. Compatibility
+folding brings full-width digits and the narrow spaces of French typography back
+to their plain forms; the invisible joiners it leaves behind are turned into a
+space. Going further — stripping punctuation, say — would destroy the very
+characters an email address is made of.
 
 Second, each pattern tolerates the separators people actually type inside a
 number, instead of assuming one canonical form.
@@ -17,15 +19,16 @@ number, instead of assuming one canonical form.
 import re
 import unicodedata
 
-# The space characters French typography puts inside numbers.
-UNUSUAL_SPACES = re.compile(r"[     ]")
+# The space characters French typography puts inside numbers, plus the word
+# joiner that compatibility folding leaves in place.
+UNUSUAL_SPACES = re.compile(r"[     ⁠]")
 
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 
 # French numbers: 0X XX XX XX XX, or +33 X XX XX XX XX. The separator between
 # digits may be a space, a dot or a dash, or absent.
 SEP = r"[ .-]?"
-PHONE = re.compile(rf"(?<![\d+]){SEP}(?:\+{SEP}33{SEP}|0)[1-9](?:{SEP}\d){{8}}(?!\d)")
+PHONE = re.compile(rf"(?<![\d+])(?:\+{SEP}33{SEP}|0)[1-9](?:{SEP}\d){{8}}(?!\d)")
 
 # IBAN: two letters, two check digits, then up to thirty alphanumerics,
 # conventionally grouped in fours.

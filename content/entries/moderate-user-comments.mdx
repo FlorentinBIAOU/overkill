@@ -52,7 +52,7 @@ rungs:
       fr: "Classifieur linéaire sur n-grammes de caractères"
       en: "Linear classifier on character n-grams"
     cost: négligeable
-    latency: "~10 ms"
+    latency: "<1 ms"
     risks:
       data_egress: own-infra
       deterministic: true
@@ -113,8 +113,8 @@ rungs:
   - level: N3
     available: true
     name:
-      fr: "Point de terminaison de modération d'un fournisseur"
-      en: "A provider's moderation endpoint"
+      fr: "Notation du commentaire par un modèle généraliste"
+      en: "Scoring the comment with a general-purpose model"
     cost: élevé
     latency: "~1 s"
     risks:
@@ -140,12 +140,12 @@ rungs:
       fr: "Le score est une opinion, pas une mesure, et le code n'a rien pour la confronter. Dans le test, « the diagram is much clearer than the text » revient noté en harcèlement au-delà du seuil de blocage, et la fonction bloque, correctement selon sa propre logique. Aucun trait à inspecter, aucun poids à imprimer, et rien à répondre à l'auteur du commentaire hormis le nombre du fournisseur, qui change au calendrier du fournisseur."
       en: "The score is an opinion, not a measurement, and the code has nothing to hold it against. In the test, “the diagram is much clearer than the text” comes back scored for harassment past the blocking threshold, and the function blocks it, correctly by its own logic. No feature to inspect, no weight to print, and nothing to tell the commenter but the provider's number, which changes on the provider's schedule."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus."
-      en: "There is no rung above this one."
+      fr: "Il n'y a pas de niveau au-dessus."
+      en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2 est recommandé parce que la difficulté de ce besoin n'est pas lexicale. N0 et N1 tombent sur le même exemple du test, le signalement d'une insulte marqué comme l'insulte elle-même, et ni une liste plus longue ni un corpus plus fourni ne les en sortent : ils regardent la surface du texte. Le classifieur auto-hébergé lit ce contexte, garde chez vous des messages qui sont souvent le préjudice subi par quelqu'un, et vous laisse les deux seuils, dont celui qui envoie un commentaire à un humain au lieu de trancher. N3 rendrait au fournisseur la taxonomie, l'étalonnage et la seule explication que vous pourriez donner à l'auteur d'un commentaire masqué ; l'échange ne se défend que si le préjudice qui vous occupe n'a d'étiquette nulle part."
-  en: "N2 is the recommendation because the difficulty here is not lexical. N0 and N1 fall on the same test example, a report of an insult flagged as the insult itself, and neither a longer list nor a larger corpus gets them out of it: they read the surface of the text. The self-hosted classifier reads the context around it, keeps on your premises messages that are often somebody's account of what was done to them, and leaves you both thresholds, including the one that sends a comment to a human instead of ruling on it. N3 would hand the provider the taxonomy, the calibration, and the only explanation you could offer the author of a hidden comment; that trade only holds up when the harm you care about has a label nowhere else."
+  fr: "N2 est recommandé parce que la difficulté de ce besoin n'est pas lexicale. N0 et N1 tombent sur le même exemple du test, le signalement d'une insulte marqué comme l'insulte elle-même, et ni une liste plus longue ni un corpus plus fourni ne les en sortent : ils regardent la surface du texte. Le classifieur auto-hébergé lit ce contexte, garde chez vous des messages qui sont souvent le préjudice subi par quelqu'un, et vous laisse les deux seuils, dont celui qui envoie un commentaire à un humain au lieu de trancher. N3 rendrait au fournisseur le sens de chaque catégorie, l'étalonnage et la seule explication que vous pourriez donner à l'auteur d'un commentaire masqué ; l'échange ne se défend que si le préjudice qui vous occupe n'a d'étiquette nulle part."
+  en: "N2 is the recommendation because the difficulty here is not lexical. N0 and N1 fall on the same test example, a report of an insult flagged as the insult itself, and neither a longer list nor a larger corpus gets them out of it: they read the surface of the text. The self-hosted classifier reads the context around it, keeps on your premises messages that are often somebody's account of what was done to them, and leaves you both thresholds, including the one that sends a comment to a human instead of ruling on it. N3 would hand the provider the meaning of each category, the calibration, and the only explanation you could offer the author of a hidden comment; that trade only holds up when the harm you care about has a label nowhere else."
 
 further_reading:
   - label: "unitary/unbiased-toxic-roberta — la fiche du modèle N2 et la liste de ses étiquettes"

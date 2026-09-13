@@ -7,7 +7,7 @@
  * vocabulary of the rule writer, decides.
  *
  * Written out rather than pulled from a library, because TF-IDF and a softmax
- * regression are forty lines. The model is a table of weights: small enough to
+ * regression are sixty lines. The model is a table of weights: small enough to
  * keep beside the code, retrained while you read this, and every weight can be
  * printed and argued about when someone asks why their ticket moved.
  *

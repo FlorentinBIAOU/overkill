@@ -86,8 +86,9 @@ test('breaking point: two ideas ten pages apart are never joined', () => {
   // relate two ideas separated by ten pages, and it never rewrites.
   //
   // Both halves of the argument are in this document. The closing sentence is
-  // short, late, and uses vocabulary the rest of the document never repeats,
-  // so it scores lowest of all eleven sentences and is dropped first. The
+  // short and late, its own terms turn up nowhere else, and the digression
+  // about the warehouse takes up the whole vocabulary of the document, so it
+  // scores lowest of all eleven sentences and is dropped first. The
   // reader of the summary learns that Rouen supplies Lyon, and never learns
   // that Rouen is closing.
   const sentences = splitSentences(FACTORY);

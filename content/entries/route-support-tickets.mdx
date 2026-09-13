@@ -15,8 +15,8 @@ need:
   en: "Send each incoming support ticket to the team that can answer it."
 
 scenario:
-  fr: "Le premier réflexe est un appel de modèle par ticket entrant, avec les noms des équipes dans l'invite. Pendant ce temps, l'outil de ticketing contient déjà tous les tickets résolus, chacun étiqueté par l'équipe qui l'a fermé : un jeu d'entraînement payé depuis des années et laissé de côté. Et la difficulté du routage n'est pas le ticket qui appartient clairement à une équipe, c'est celui qui appartient à deux, ou à aucune : aucun barreau ne le supprime, et chacun doit dire ce qu'il en fait."
-  en: "The first move is usually one model call per inbound ticket, with the team names in the prompt. Meanwhile the ticketing system already holds every ticket the desk has resolved, each labelled with the team that closed it: a training set paid for years ago and left unused. And the hard part of routing is not the ticket that clearly belongs to one team, it is the one that belongs to two, or to none. No rung removes that ticket, and each has to say what it does with it."
+  fr: "Le premier réflexe est un appel de modèle par ticket entrant, avec les noms des équipes dans l'invite. Pendant ce temps, l'outil de ticketing contient déjà tous les tickets résolus, chacun étiqueté par l'équipe qui l'a fermé : un jeu d'entraînement payé depuis des années et laissé de côté. Et la difficulté du routage n'est pas le ticket qui appartient clairement à une équipe, c'est celui qui appartient à deux, ou à aucune : aucun niveau ne le supprime, et chacun doit dire ce qu'il en fait."
+  en: "The first move is usually one model call per inbound ticket, with the team names in the prompt. Meanwhile the ticketing system already holds every ticket the desk has resolved, each labelled with the team that closed it: a training set paid for years ago and left unused. And the hard part of routing is not the ticket that clearly belongs to one team, it is the one that belongs to two, or to none. No level removes that ticket, and each has to say what it does with it."
 
 rungs:
   - level: N0
@@ -52,7 +52,7 @@ rungs:
       fr: "TF-IDF et classifieur linéaire entraîné sur l'archive"
       en: "TF-IDF and a linear classifier trained on the archive"
     cost: négligeable
-    latency: "~10 ms"
+    latency: "<1 ms"
     risks:
       data_egress: own-infra
       deterministic: true
@@ -105,7 +105,7 @@ rungs:
       verification: stubbed
     breaking_point:
       fr: "Il n'y a pas de modèle des équipes ici, seulement une archive, et le ticket le plus proche n'est pas toujours un ticket pertinent. « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier » ne s'adresse à personne en particulier, et part chez facturation avec un score élevé : l'archive contient un ticket de facturation écrit avec les mêmes formules de politesse, et le vote y voit une forte ressemblance. Un vrai encodeur déplace l'accident, il ne le supprime pas : ce dont l'archive est faite est la politique de routage, y compris ce que personne n'y a choisi."
-      en: "There is no model of the teams on this rung, only an archive, and the nearest ticket is not always a relevant one. « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier » is addressed to nobody in particular and lands on billing with a high score: the archive happens to hold one billing ticket written with the same politeness formulas, and the vote reads that as a strong match. A real encoder moves where the accident happens, it does not remove it: whatever the archive is made of is the routing policy, including the parts nobody chose."
+      en: "There is no model of the teams on this level, only an archive, and the nearest ticket is not always a relevant one. « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier » is addressed to nobody in particular and lands on billing with a high score: the archive happens to hold one billing ticket written with the same politeness formulas, and the vote reads that as a strong match. A real encoder moves where the accident happens, it does not remove it: whatever the archive is made of is the routing policy, including the parts nobody chose."
     escalate_when:
       fr: "Des tickets arrivent dans une langue absente de l'archive, ou la règle de routage existe sous forme de consigne écrite qu'aucun ticket résolu n'illustre."
       en: "Tickets arrive in a language the archive does not contain, or the routing rule exists as a written instruction that no resolved ticket illustrates."
@@ -142,8 +142,8 @@ rungs:
       fr: "Le modèle répond des mots, et les mots ne sont pas des files. Interrogé sur trois équipes, il en renvoie une quatrième qui sonne juste et n'existe pas : « customer success », en JSON parfaitement formé, sans la moindre hésitation. La liste fermée l'attrape et le ticket part dans la file par défaut ; retirez ce contrôle, comme le fait la première version de ce genre de code, et le ticket est classé dans une équipe que personne n'a créée et que personne ne surveille."
       en: "The model answers words, and words are not queues. Asked to pick from three teams, it returns a fourth that sounds right and does not exist: « customer success », as well-formed JSON, with no hedging at all. The closed list catches it and the ticket goes to the default queue; take that check out, as the first version of this kind of code usually does, and the ticket is filed into a team nobody created and nobody watches."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus."
-      en: "There is no rung above this one."
+      fr: "Il n'y a pas de niveau au-dessus."
+      en: "There is no level above this one."
 
 verdict_rationale:
   fr: "N1 l'emporte parce que ses données d'entraînement existent déjà : l'archive des tickets résolus, chacun étiqueté par l'équipe qui l'a fermé, est à un export de distance, et elle route les formulations que la liste de mots-clés de N0 n'avait pas prévues. Elle remet aussi le ticket ambigu sur la table, puisque l'équipe suivante figure dans la réponse, là où N0 la laissait tomber sans le dire. N2 achète la reconnaissance des paraphrases au prix d'un fichier de modèle, d'un processus chaud et d'un index à ré-encoder à chaque mise à jour : ce prix se paie le jour où vos agents repêchent des problèmes connus dans la file par défaut, pas avant."

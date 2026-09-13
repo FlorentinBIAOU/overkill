@@ -49,8 +49,8 @@ rungs:
   - level: N1
     available: false
     unavailable_reason:
-      fr: "La traduction statistique par segments exige un corpus aligné dans votre paire de langues, hors de portée d'une petite équipe, pour un résultat en deçà de ce qu'un modèle neuronal déjà entraîné donne au barreau suivant."
-      en: "Phrase-based statistical translation needs an aligned corpus in your own language pair, out of reach for a small team, for a result below what an already-trained neural model gives on the rung above."
+      fr: "La traduction statistique par segments exige un corpus aligné dans votre paire de langues, hors de portée d'une petite équipe, pour un résultat en deçà de ce qu'un modèle neuronal déjà entraîné donne au niveau suivant."
+      en: "Phrase-based statistical translation needs an aligned corpus in your own language pair, out of reach for a small team, for a result below what an already-trained neural model gives on the level above."
 
   - level: N2
     available: true
@@ -113,17 +113,17 @@ rungs:
       fr: "Demander n'est pas obtenir, et deux tests le montrent. La consigne réclame du JSON : la réponse est “Sure! In French, Save is « Enregistrer ».”, une phrase de politesse qu'on ne pose pas sur un bouton, alors l'extrait lève une erreur plutôt que de la rendre. La consigne réclame ensuite de garder {count} tel quel : il revient traduit en {compte}, et seul le contrôle de la réponse l'attrape."
       en: "Asking is not getting, and two tests show it. The instruction asks for JSON: the answer is “Sure! In French, Save is « Enregistrer ».”, a courtesy sentence you do not put on a button, so the snippet raises rather than return it. The instruction then asks for {count} to be kept exactly as written: it comes back as {compte}, and only the check on the answer catches it."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus."
-      en: "There is no rung above this one."
+      fr: "Il n'y a pas de niveau au-dessus."
+      en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2 est recommandé parce que c'est le premier barreau qui traduit. N0 garde sa place devant lui, et l'essentiel d'un fichier d'interface s'y arrête, mais il n'a rien à dire d'une chaîne nouvelle : son test le montre en renvoyant une absence de correspondance plutôt qu'une approximation présentable. Ce que N3 ajoute est le contexte d'interface, et il le fait payer le texte de votre application chez un tiers, une réponse non déterministe et une dépendance de fournisseur ; sur les variables, les deux barreaux échouent exactement de la même manière et réclament le même contrôle en sortie. Le modèle auto-hébergé garde les chaînes chez vous et tient dans un fichier que vous versionnez, ce qu'un point de terminaison qui évolue au calendrier de son fournisseur n'offre pas."
-  en: "N2 is the recommendation because it is the first rung that translates at all. N0 keeps its place in front of it, and most of an interface file stops there, but it has nothing to say about a new string: its test shows exactly that, returning no match rather than a presentable approximation. What N3 adds is the interface context, and it charges your application's text to a third party, a non-deterministic answer and a provider dependency for it; on the variables the two rungs fail in precisely the same way and call for precisely the same check on the answer. The self-hosted model keeps the strings on your side and fits in a file you version, which an endpoint that moves on its provider's schedule does not."
+  fr: "N2 est recommandé parce que c'est le premier niveau qui traduit. N0 garde sa place devant lui, et l'essentiel d'un fichier d'interface s'y arrête, mais il n'a rien à dire d'une chaîne nouvelle : son test le montre en renvoyant une absence de correspondance plutôt qu'une approximation présentable. Ce que N3 ajoute est le contexte d'interface, et il le fait payer le texte de votre application chez un tiers, une réponse non déterministe et une dépendance de fournisseur ; sur les variables, les deux niveaux échouent exactement de la même manière et réclament le même contrôle en sortie. Le modèle auto-hébergé garde les chaînes chez vous et tient dans un fichier que vous versionnez, ce qu'un point de terminaison qui évolue au calendrier de son fournisseur n'offre pas."
+  en: "N2 is the recommendation because it is the first level that translates at all. N0 keeps its place in front of it, and most of an interface file stops there, but it has nothing to say about a new string: its test shows exactly that, returning no match rather than a presentable approximation. What N3 adds is the interface context, and it charges your application's text to a third party, a non-deterministic answer and a provider dependency for it; on the variables the two levels fail in precisely the same way and call for precisely the same check on the answer. The self-hosted model keeps the strings on your side and fits in a file you version, which an endpoint that moves on its provider's schedule does not."
 
 further_reading:
-  - label: "Helsinki-NLP/opus-mt-en-fr — la fiche du modèle employé au barreau N2"
+  - label: "Helsinki-NLP/opus-mt-en-fr — la fiche du modèle employé au niveau N2"
     url: "https://huggingface.co/Helsinki-NLP/opus-mt-en-fr"
-  - label: "Python — difflib.SequenceMatcher, l'appariement approché du barreau N0"
+  - label: "Python — difflib.SequenceMatcher, l'appariement approché du niveau N0"
     url: "https://docs.python.org/3/library/difflib.html"
   - label: "XLIFF 2.1 — le format d'échange qui porte une mémoire de traduction et son état de relecture"
     url: "http://docs.oasis-open.org/xliff/xliff-core/v2.1/os/xliff-core-v2.1-os.html"

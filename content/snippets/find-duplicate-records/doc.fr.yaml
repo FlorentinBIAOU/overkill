@@ -1,0 +1,80 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n1.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Repérer les doublons d'un fichier : normaliser, grouper, puis ne comparer
+  qu'à l'intérieur d'un groupe.
+
+  Niveau N0. Déterministe, bibliothèque standard seule, et le seul niveau ici
+  qui reste rapide quand le fichier grossit, parce qu'il ne compare jamais
+  toutes les paires.
+
+  Deux choses font que ça marche.
+
+  D'abord, la normalisation retire ce qu'un humain ignore en lisant un nom : la
+  casse, les accents, la ponctuation, les espaces doubles. Deux graphies qui ne
+  diffèrent que par là deviennent la même chaîne, et les repérer ne coûte rien.
+
+  Ensuite, le groupement. Comparer toutes les paires de dix mille fiches fait
+  cinquante millions de comparaisons. Les grouper d'abord par une clé qui coûte
+  peu, et ne comparer qu'à l'intérieur d'un groupe, ramène cela à quelques
+  milliers. Tout le prix du niveau est dans la clé que vous choisissez, et son
+  angle mort aussi.
+
+n1.py: |
+  Repérer les doublons d'un fichier en comparant l'orthographe, pas les
+  chaînes.
+
+  Niveau N1. La clé de blocage de N0 décide à l'avance quelles paires méritent
+  un regard, et tout ce qu'elle place dans deux groupes différents reste
+  invisible. Ce niveau abandonne la clé : chaque fiche devient un vecteur de
+  ses n-grammes de caractères, et les voisins se cherchent par cosinus.
+
+  Pourquoi des n-grammes de caractères plutôt que des mots : ils survivent à
+  une faute de frappe, à un ordre des mots inversé et à un champ tronqué,
+  parce qu'un mot mal orthographié partage encore l'essentiel de ses tranches
+  de trois lettres avec le mot correct. Rien ici n'est appris d'un corpus, et
+  il n'y a aucun modèle à entraîner. C'est une pondération et une distance.
+
+  Le prix, c'est la recherche elle-même : sans clé, dans le pire des cas,
+  toutes les paires. Un index de voisinage se justifie bien avant que le
+  fichier devienne gros.
+
+n1.js: |
+  Repérer les doublons d'un fichier en comparant l'orthographe, pas les
+  chaînes.
+
+  Niveau N1. La clé de blocage de N0 décide à l'avance quelles paires méritent
+  un regard, et tout ce qu'elle place dans deux groupes différents reste
+  invisible. Ce niveau abandonne la clé : chaque fiche devient un vecteur de
+  ses n-grammes de caractères, et les paires sont classées par cosinus.
+
+  Pourquoi des n-grammes de caractères plutôt que des mots : ils survivent à
+  une faute de frappe, à un ordre des mots inversé et à un champ tronqué,
+  parce qu'un mot mal orthographié partage encore l'essentiel de ses tranches
+  de trois lettres avec le mot correct. Rien ici n'est appris d'un corpus, et
+  il n'y a aucun modèle à entraîner. C'est une pondération et une distance, et
+  c'est pour cela que le tout tient sur un écran, sans dépendance.
+
+  Le prix, c'est la recherche elle-même : sans clé, dans le pire des cas,
+  toutes les paires. Un index de voisinage se justifie bien avant que le
+  fichier devienne gros.
+
+n2: |
+  Repérer les doublons d'un fichier avec un encodeur de phrases auto-hébergé.
+
+  Niveau N2. N1 compare des graphies ; deux fiches qui disent la même chose
+  avec d'autres mots ne partagent aucun n-gramme de caractères et restent
+  invisibles. Un encodeur de phrases envoie chaque fiche vers un vecteur où
+  « Société Nationale des Chemins de Fer » et « SNCF » peuvent se retrouver
+  proches, parce que le modèle a été entraîné sur des textes où les deux
+  apparaissent aux mêmes places.
+
+  Ce que ce niveau coûte vraiment n'est pas la comparaison, c'est le
+  déploiement : quelques centaines de mégaoctets de poids à charger, un
+  processus à garder chaud, et un index vectoriel dès que le fichier ne tient
+  plus dans une liste.
+
+  L'encodeur est un paramètre doté d'une vraie valeur par défaut : le lecteur
+  voit le code de chargement, et le test injecte un double local.

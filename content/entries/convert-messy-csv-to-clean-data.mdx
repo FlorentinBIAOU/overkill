@@ -117,12 +117,12 @@ rungs:
       fr: "L'invention bien formée. Une ligne refusée qui portait « in the spring » là où une date était attendue revient en « 2024-03-01 » : la valeur passe la coercition, rejoint les lignes propres, et plus rien ne la distingue d'une valeur qui était dans le fichier. Une réponse malformée, elle, est attrapée et consignée ; celle-ci ne l'est pas, parce qu'une date est une date."
       en: "The well-formed invention. A refused row that carried « in the spring » where a date was expected comes back as « 2024-03-01 »: the value passes coercion, joins the clean rows, and nothing tells it apart from a value that was in the file. A malformed answer is caught and recorded; this one is not, because a date is a date."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus."
-      en: "There is no rung above this one."
+      fr: "Il n'y a pas de niveau au-dessus."
+      en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0 lit le fichier tel qu'il est, et surtout il nomme ce qu'il refuse : la ligne, la colonne, la raison, et les champs d'origine. C'est ce journal qui rend les deux barreaux du dessus utilisables — N1 devine le schéma que N0 réclame, N3 ne travaille que sur les lignes que N0 a rejetées — et aucun des deux ne remplace le nettoyage. Un fichier de cent mille lignes dont trois coincent ne justifie pas cent mille appels."
-  en: "N0 reads the file as it is, and above all it names what it refuses: the line, the column, the reason, and the fields as they were read. That journal is what makes the two rungs above it usable — N1 guesses the schema N0 asks for, N3 works only on the rows N0 rejected — and neither replaces the cleaning. A file of a hundred thousand rows with three bad ones does not justify a hundred thousand calls."
+  fr: "N0 lit le fichier tel qu'il est, et surtout il nomme ce qu'il refuse : la ligne, la colonne, la raison, et les champs d'origine. C'est ce journal qui rend les deux niveaux du dessus utilisables — N1 devine le schéma que N0 réclame, N3 ne travaille que sur les lignes que N0 a rejetées — et aucun des deux ne remplace le nettoyage. Un fichier de cent mille lignes dont trois coincent ne justifie pas cent mille appels."
+  en: "N0 reads the file as it is, and above all it names what it refuses: the line, the column, the reason, and the fields as they were read. That journal is what makes the two levels above it usable — N1 guesses the schema N0 asks for, N3 works only on the rows N0 rejected — and neither replaces the cleaning. A file of a hundred thousand rows with three bad ones does not justify a hundred thousand calls."
 
 further_reading:
   - label: "RFC 4180 — Common Format and MIME Type for CSV Files"

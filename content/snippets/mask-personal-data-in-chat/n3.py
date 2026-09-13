@@ -5,9 +5,10 @@ Rung N3. This is the option people reach for first. It is here so you can see
 what it costs, not because this entry recommends it.
 
 Note what the code has to do that N0 did not: retry on failure, cap the input
-size, parse an answer that is only probably valid JSON, and fall back when the
-answer is unusable. That plumbing is the real cost of this rung, and it is the
-part your tests have to cover, because the model itself is not testable.
+size, parse an answer that is only probably valid JSON, and refuse to pass the
+message through unmasked when the answer is unusable. That plumbing is the real
+cost of this rung, and it is the part your tests have to cover, because the
+model itself is not testable.
 """
 
 from __future__ import annotations

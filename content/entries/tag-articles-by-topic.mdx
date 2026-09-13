@@ -52,7 +52,7 @@ rungs:
       fr: "TF-IDF et classification multi-étiquette un contre tous"
       en: "TF-IDF features and one-versus-rest multi-label classification"
     cost: négligeable
-    latency: "~10 ms"
+    latency: "<1 ms"
     risks:
       data_egress: none
       deterministic: true
@@ -98,8 +98,8 @@ rungs:
       javascript: snippets/tag-articles-by-topic/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le score est un cosinus, pas une probabilité, et il ne veut pas dire la même chose d'un thème à l'autre. Sur un article de quatre phrases de cybersécurité qui se termine par une ligne sur l'amende non déductible de l'impôt, la fiscalité passe sous le seuil ; le seuil qui la rattrape fait entrer aussi le télétravail, dont l'article ne parle jamais. Aucun seuil ne sépare les deux, et en régler un demande des articles déjà étiquetés à la main : le corpus que ce barreau devait épargner."
-      en: "The score is a cosine, not a probability, and it does not mean the same thing from one topic to the next. On an article that spends four sentences on computer security and closes with one line about a fine not being tax deductible, the tax topic falls below the threshold; the threshold that brings it back also lets in remote work, which the article never mentions. No threshold separates the two, and setting one calls for articles already tagged by hand: the very corpus this rung was meant to save."
+      fr: "Le score est un cosinus, pas une probabilité, et il ne veut pas dire la même chose d'un thème à l'autre. Sur un article de quatre phrases de cybersécurité qui se termine par une ligne sur l'amende non déductible de l'impôt, la fiscalité passe sous le seuil ; le seuil qui la rattrape fait entrer aussi le télétravail, dont l'article ne parle jamais. Aucun seuil ne sépare les deux, et en régler un demande des articles déjà étiquetés à la main : le corpus que ce niveau devait épargner."
+      en: "The score is a cosine, not a probability, and it does not mean the same thing from one topic to the next. On an article that spends four sentences on computer security and closes with one line about a fine not being tax deductible, the tax topic falls below the threshold; the threshold that brings it back also lets in remote work, which the article never mentions. No threshold separates the two, and setting one calls for articles already tagged by hand: the very corpus this level was meant to save."
     escalate_when:
       fr: "Aucun réglage du seuil ne vous donne à la fois les thèmes secondaires réels et le silence sur les thèmes absents, et vos relecteurs retirent plus d'étiquettes qu'ils n'en gardent."
       en: "No setting of the threshold gives you both the real secondary topics and silence on the absent ones, and your reviewers remove more tags than they keep."
@@ -134,12 +134,12 @@ rungs:
       fr: "Le modèle peut répondre n'importe quoi, « Bien sûr ! Voici les thèmes de cet article : » là où du JSON était demandé. Or la liste vide est ici une réponse légitime, puisque des articles ne portent aucun thème : avaler l'erreur rendrait la panne indiscernable du résultat correct, et les articles tomberaient sans bruit de toutes les pages de rubrique. L'extrait lève une erreur, et l'appelant décide."
       en: "The model can answer anything, prose where JSON was asked for. An empty list is a legitimate answer here, since plenty of articles carry no topic at all: swallowing the error would make a failure indistinguishable from a correct result, and articles would drop out of every section page without a sound. The snippet raises instead, and the caller decides."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus."
-      en: "There is no rung above this one."
+      fr: "Il n'y a pas de niveau au-dessus."
+      en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N1 est le premier barreau qui voit des sujets plutôt que des mots : l'article de télétravail qui n'emploie aucun terme de la liste, et que le vocabulaire contrôlé laisse filer, il l'étiquette, et le test le mesure. Ce qu'il coûte n'est pas le code, qui tient sur une page, mais quelques centaines d'articles étiquetés à la main — qu'une rédaction qui étiquette depuis des années possède déjà. N2 lèverait la vraie limite de N1, l'ajout d'un thème sans corpus derrière lui, mais au prix d'un seuil qu'on ne peut plus calibrer et d'un service à tenir chaud : montez-y le jour où la taxonomie bouge plus vite que vous n'étiquetez."
-  en: "N1 is the first rung that sees subjects rather than words: the remote-work article that uses none of the listed terms, and slips past the controlled vocabulary, gets tagged here, and the test measures it. What it costs is not the code, which fits on a page, but a few hundred hand-tagged articles — which a newsroom that has been tagging for years already owns. N2 would lift N1's real limit, adding a topic with no corpus behind it, but it charges a threshold you can no longer calibrate and a service to keep warm: climb there the day your taxonomy moves faster than you can label."
+  fr: "N1 est le premier niveau qui voit des sujets plutôt que des mots : l'article de télétravail qui n'emploie aucun terme de la liste, et que le vocabulaire contrôlé laisse filer, il l'étiquette, et le test le mesure. Ce qu'il coûte n'est pas le code, qui tient sur une page, mais quelques centaines d'articles étiquetés à la main — qu'une rédaction qui étiquette depuis des années possède déjà. N2 lèverait la vraie limite de N1, l'ajout d'un thème sans corpus derrière lui, mais au prix d'un seuil qu'on ne peut plus calibrer et d'un service à tenir chaud : montez-y le jour où la taxonomie bouge plus vite que vous n'étiquetez."
+  en: "N1 is the first level that sees subjects rather than words: the remote-work article that uses none of the listed terms, and slips past the controlled vocabulary, gets tagged here, and the test measures it. What it costs is not the code, which fits on a page, but a few hundred hand-tagged articles — which a newsroom that has been tagging for years already owns. N2 would lift N1's real limit, adding a topic with no corpus behind it, but it charges a threshold you can no longer calibrate and a service to keep warm: climb there the day your taxonomy moves faster than you can label."
 
 further_reading:
   - label: "W3C — SKOS Reference, modéliser un vocabulaire contrôlé et ses termes"
@@ -148,7 +148,7 @@ further_reading:
     url: "https://scikit-learn.org/stable/modules/multiclass.html"
   - label: "Introduction to Information Retrieval — Vector space classification, le fondement de TF-IDF appliqué à la classification"
     url: "https://nlp.stanford.edu/IR-book/html/htmledition/vector-space-classification-1.html"
-  - label: "Sentence-Transformers — documentation de l'encodeur employé au barreau N2"
+  - label: "Sentence-Transformers — documentation de l'encodeur employé au niveau N2"
     url: "https://www.sbert.net/"
 
 sources: []

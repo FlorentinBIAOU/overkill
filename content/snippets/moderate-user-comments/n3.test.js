@@ -22,7 +22,7 @@ function scored(values = {}) {
   return JSON.stringify(Object.fromEntries(CATEGORIES.map((n) => [n, values[n] ?? 0])));
 }
 
-test('blocks what the endpoint scores high', async () => {
+test('blocks what the model scores high', async () => {
   const client = new FakeLLM({ response: scored({ harassment: 0.97 }) });
   const decision = await moderate(ATTACK, { client });
   assert.equal(decision.action, 'block');
@@ -82,7 +82,7 @@ test('breaking point: the score is asserted, not measured', async () => {
   // against. Here a plainly harmless comment comes back scored as harassment,
   // and the function blocks it, correctly by its own logic. There is no
   // feature to inspect, no weight to print, and no answer to give the user
-  // beyond the provider's number. The endpoint changes on their schedule.
+  // beyond the provider's number, and the model changes on their schedule.
   const client = new FakeLLM({ response: scored({ harassment: 0.95 }) });
   const decision = await moderate(CALM, { client });
   assert.equal(decision.action, 'block');

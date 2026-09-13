@@ -79,9 +79,9 @@ def test_breaking_point_the_next_supplier_lays_the_page_out_otherwise():
 
     Nord Fournitures writes « N° » where Lambert writes « Facture n° », spells
     the date out in words, and calls the total « NET A PAYER ». Not one of the
-    three fields survives, and only one of the three failures is visible: the
-    total comes back as a confident, well-formed, wrong number, because
-    « Sous-total » contains « total ».
+    three fields survives. Two come back None, and that shows. The third
+    failure is the one that does not: the total comes back as a confident,
+    well-formed, wrong number, because « Sous-total » contains « total ».
 
     Adding « net a payer » to the labels fixes this supplier and waits for the
     next one. That maintenance, invoice by invoice, is the real cost of N0.

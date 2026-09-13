@@ -32,6 +32,12 @@ def test_tolerates_the_one_link_a_customer_actually_sends():
     assert reasons(fields, seconds_on_page=42) == []
 
 
+def test_counts_a_link_once_not_once_per_part_of_it():
+    """A customer who points at two pages is under the cap, and stays under it."""
+    message = "see http://example.com/a and http://example.com/b for the two photos"
+    assert reasons({**GENUINE, "message": message}, seconds_on_page=42) == []
+
+
 def test_names_the_banned_phrase_it_found():
     fields = {**GENUINE, "message": "We sell cheap backlink packages for your site."}
     assert reasons(fields, seconds_on_page=42) == ["banned phrase: backlink"]

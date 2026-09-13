@@ -18,13 +18,34 @@ import { MIN_CHARACTERS, readTextLayer } from './n0.js';
 // so nothing in here can be mistaken for a text operator once inflated.
 const PIXELS = Buffer.from(Array.from({ length: 64 * 8 }, (_, i) => i % 64));
 
+/**
+ * What a scanner really puts in the picture: bytes already compressed by JPEG.
+ *
+ * They do not inflate, so they are read exactly as they lie. A quarter of a
+ * megabyte of them is one page at a modest resolution, and there is no reason
+ * at all why `BT`, a bracket and `Tj` should not all turn up in there by
+ * chance. The same congruential generator is written in the Python test, so
+ * both languages are handed the very same bytes.
+ */
+function photograph(length) {
+  const bytes = Buffer.alloc(length + 4);
+  bytes.set([0xff, 0xd8, 0xff, 0xe0]); // the marker that opens a JPEG
+  let state = 1;
+  for (let i = 0; i < length; i += 1) {
+    state = (Math.imul(state, 1103515245) + 12345) >>> 0;
+    bytes[i + 4] = (state >>> 16) & 0xff;
+  }
+  return bytes;
+}
+
 const latin1 = (text) => Buffer.from(text, 'latin1');
 
 /** Assemble a small but valid PDF whose single page draws `content`. */
-function buildPdf(content, { compress = true } = {}) {
+function buildPdf(content, { compress = true, photo = null } = {}) {
   const stream = compress ? zlib.deflateSync(latin1(content)) : latin1(content);
   const flate = compress ? '/Filter /FlateDecode ' : '';
-  const image = zlib.deflateSync(PIXELS);
+  const image = photo ?? zlib.deflateSync(PIXELS);
+  const imageFilter = photo ? '/DCTDecode' : '/FlateDecode';
   const bodies = [
     latin1('<< /Type /Catalog /Pages 2 0 R >>'),
     latin1('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'),
@@ -37,7 +58,7 @@ function buildPdf(content, { compress = true } = {}) {
     Buffer.concat([
       latin1(
         '<< /Type /XObject /Subtype /Image /Width 64 /Height 8 /ColorSpace /DeviceGray ' +
-          `/BitsPerComponent 8 /Filter /FlateDecode /Length ${image.length} >>\nstream\n`,
+          `/BitsPerComponent 8 /Filter ${imageFilter} /Length ${image.length} >>\nstream\n`,
       ),
       image,
       latin1('\nendstream'),
@@ -65,6 +86,15 @@ const TYPESET =
 
 // What a scanner writes: one image, drawn to fill the page. No text at all.
 const SCANNED = 'q 595 0 0 842 0 0 cm /Im0 Do Q\n';
+
+// What a word processor writes: a subset font whose glyphs are renumbered from
+// one, so the strings on the page are codes and not letters. The page carries
+// its text; turning it back into letters needs the font's own table.
+const GLYPH_CODES =
+  'BT /F1 12 Tf 72 780 Td (\\001\\002\\003\\004\\005\\006\\007\\010\\016\\017\\020' +
+  '\\021\\022\\023\\024\\025\\026\\027\\030\\031\\032\\033) Tj\n' +
+  '0 -16 Td (\\001\\002\\003\\004\\005\\006\\007\\010\\016\\017\\020' +
+  '\\021\\022\\023\\024\\025\\026\\027\\030\\031\\032\\033) Tj ET\n';
 
 test('reads the text layer of a generated PDF', () => {
   const report = readTextLayer(buildPdf(TYPESET));
@@ -138,4 +168,37 @@ test('breaking point: a really scanned page has no text layer', () => {
   assert.equal(report.hasTextLayer, false);
   assert.equal(report.characters, 0);
   assert.match(report.reason, /OCR/);
+});
+
+test('breaking point: a scan whose picture is a JPEG holds just as well', () => {
+  // The same claim on the document a scanner really produces. Its picture is
+  // already compressed, so it does not inflate and is read byte for byte; a
+  // quarter of a megabyte of such bytes holds `BT`, a bracket and `Tj` by
+  // chance many times over.
+  //
+  // Which is why the streams a page does not draw text from are left alone. A
+  // reader that walked all of them would report several thousand characters
+  // here, and the caller would file a scanned page as already read.
+  const report = readTextLayer(buildPdf(SCANNED, { photo: photograph(250_000) }));
+  assert.equal(report.pages, 1);
+  assert.equal(report.hasTextLayer, false);
+  assert.equal(report.characters, 0);
+  assert.match(report.reason, /OCR/);
+});
+
+test('a text layer this function cannot decode is not called readable', () => {
+  // The other honest no, and the one that costs the most when it is got wrong.
+  //
+  // A word processor exports its text through a subset font whose glyphs are
+  // renumbered from one. The page does carry its text, and this function does
+  // not carry the table that turns those codes back into letters. Counting
+  // them would report a readable page and hand back gibberish to index.
+  //
+  // So the answer is no, and the reason is not the OCR one: a recognition
+  // engine is the wrong tool for a document that was never a picture.
+  const report = readTextLayer(buildPdf(GLYPH_CODES));
+  assert.equal(report.hasTextLayer, false);
+  assert.equal(report.characters, 0);
+  assert.match(report.reason, /font table/);
+  assert.ok(!report.reason.includes('OCR'));
 });

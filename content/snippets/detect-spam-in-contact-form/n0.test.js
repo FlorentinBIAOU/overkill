@@ -32,6 +32,12 @@ test('tolerates the one link a customer actually sends', () => {
   assert.deepEqual(reasons({ ...GENUINE, message }, 42), []);
 });
 
+test('counts a link once, not once per part of it', () => {
+  // A customer who points at two pages is under the cap, and stays under it.
+  const message = 'see http://example.com/a and http://example.com/b for the two photos';
+  assert.deepEqual(reasons({ ...GENUINE, message }, 42), []);
+});
+
 test('names the banned phrase it found', () => {
   const message = 'We sell cheap backlink packages for your site.';
   assert.deepEqual(reasons({ ...GENUINE, message }, 42), ['banned phrase: backlink']);

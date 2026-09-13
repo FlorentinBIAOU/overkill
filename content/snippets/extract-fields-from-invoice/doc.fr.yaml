@@ -1,0 +1,72 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n1.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Lire les champs d'en-tête d'une facture dans un texte déjà extrait : ancrage
+  sur des mots-clés, puis expressions régulières.
+
+  Niveau N0. Aucun modèle, aucun jeu d'entraînement, aucun service. Deux heures
+  de travail, et vous lisez toutes les factures du fournisseur pour lequel vous
+  l'avez écrit.
+
+  La méthode est celle que tout le monde trouve : repérer la ligne qui porte le
+  libellé, puis lire la valeur qui le suit sur cette ligne. Les libellés sont
+  rangés du plus précis au moins précis, parce que « Total TTC » et « Total HT »
+  ne diffèrent que d'un mot et que le mauvais donne un nombre plausible.
+
+  Ce rangement est aussi là où l'approche s'arrête. Voir le test.
+
+n1.js: |
+  Étiqueter chaque ligne de la facture, puis lire la valeur dans la ligne.
+
+  Niveau N1. N0 demandait « que dit cette ligne ». Celui-ci demande « où se
+  trouve cette ligne, et à quoi ressemble-t-elle » : à quelle hauteur de page,
+  quelle indentation, combien de mots, combien de montants, et si la valeur pend
+  du côté droit.
+
+  Ces traits survivent à un changement de fournisseur, ce que les libellés de N0
+  ne font justement pas. L'entraînement tient en quelques dizaines de lignes
+  étiquetées, et la régression logistique est assez courte pour être lue plutôt
+  qu'importée.
+
+n1.py: |
+  Étiqueter chaque ligne de la facture, puis lire la valeur dans la ligne.
+
+  Niveau N1. N0 demandait « que dit cette ligne ». Celui-ci demande « où se
+  trouve cette ligne, et à quoi ressemble-t-elle » : à quelle hauteur de page,
+  quelle indentation, combien de mots, combien de montants, et si la valeur pend
+  du côté droit.
+
+  Ces traits survivent à un changement de fournisseur, ce que les libellés de N0
+  ne font justement pas. L'entraînement tient en quelques dizaines de lignes
+  étiquetées, le modèle pèse quelques kilooctets, et rien ne se télécharge.
+
+n2: |
+  Étiqueter les lignes de la facture avec un modèle de document auto-hébergé.
+
+  Niveau N2. Même idée qu'au niveau N1 — étiqueter les lignes, puis y lire la
+  valeur — sauf que les traits ne sont plus les vôtres. Un encodeur de document
+  affiné sur des factures lit d'un coup la ligne, ses voisines et sa place dans
+  la page, et il continue de les lire quand un fournisseur déplace son bloc de
+  totaux.
+
+  Ce qui vous appartient à ce niveau n'est pas le modèle, c'est tout ce qui
+  l'entoure : la géométrie de page que vous lui donnez, le seuil sous lequel un
+  champ part à une personne, et la réponse à « que fait le code quand le modèle
+  ne dit rien d'utilisable ». Les poids restent sur votre machine, et c'est
+  pourquoi une facture n'en sort jamais.
+
+n3: |
+  Demander à un modèle généraliste multimodal de lire la facture.
+
+  Niveau N3. C'est l'option vers laquelle on va d'abord, et sur cette tâche elle
+  a un argument réel : on donne au modèle une image de la page, il voit donc la
+  colonne dans laquelle se trouve un montant, ce que le texte extrait a déjà
+  perdu.
+
+  Notez ce que le code doit faire et que N0 ne faisait pas : borner la taille de
+  ce qu'il envoie, réessayer après un échec, analyser une réponse qui n'est que
+  probablement du JSON, et vérifier la forme de ce qui revient. Cette plomberie
+  est le vrai coût de ce niveau, et c'est la part que vos tests doivent couvrir,
+  parce que le modèle lui-même n'est pas testable.

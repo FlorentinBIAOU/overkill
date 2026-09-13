@@ -15,7 +15,7 @@ need:
   en: "Prevent phone numbers and email addresses from appearing in a sent message."
 
 scenario:
-  fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, pour repérer les coordonnées avant publication. Le besoin est pourtant déterministe : le motif d'une adresse électronique n'a pas changé depuis vingt ans, et celui d'un numéro français non plus. La question n'est pas de savoir si un modèle sait le faire, c'est de savoir ce qu'on paie pour un travail qu'une expression régulière fait en un dixième de milliseconde."
+  fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, pour repérer les coordonnées avant publication. Le besoin est pourtant déterministe : le motif d'une adresse électronique n'a pas changé depuis vingt ans, et celui d'un numéro français non plus. La question n'est pas de savoir si un modèle sait le faire, c'est de savoir ce qu'on paie pour un travail qu'une expression régulière fait en une fraction de milliseconde."
   en: "A common pattern is calling a general-purpose model on every inbound message to spot contact details before publication. The need is deterministic, though: the shape of an email address has not changed in twenty years, and neither has the shape of a French phone number. The question is not whether a model can do it, it is what you are paying for work a regular expression does in a fraction of a millisecond."
 
 rungs:
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n0.js
       verification: executed
     breaking_point:
-      fr: "L'obfuscation volontaire. « zéro six douze », « O6 I2 34 » avec des lettres à la place des chiffres, ou des emojis intercalés : rien de tout cela ne ressemble à un numéro pour un motif."
-      en: "Deliberate obfuscation. Spelled-out digits, lookalike characters such as O6 I2 34, or interspersed emoji: none of it looks like a number to a pattern."
+      fr: "L'obfuscation volontaire. « zéro six douze », « O6 I2 34 » avec des lettres à la place des chiffres, ou des emojis intercalés : rien de tout cela ne ressemble à un numéro pour un motif. Dans l'autre sens, le motif d'IBAN n'a pas de somme de contrôle : une référence de commande écrite « DE 12 3456 7890 1234 » est masquée à tort."
+      en: "Deliberate obfuscation. Spelled-out digits, lookalike characters such as O6 I2 34, or interspersed emoji: none of it looks like a number to a pattern. The other way round, the IBAN pattern carries no checksum: an order reference written DE 12 3456 7890 1234 is masked when it should not be."
     escalate_when:
       fr: "Vos utilisateurs contournent activement le filtre, et vous le voyez dans les messages signalés."
       en: "Your users are actively working around the filter, and you can see it in the reported messages."
@@ -52,7 +52,7 @@ rungs:
       fr: "Régression logistique sur la forme des jetons"
       en: "Logistic regression on token shape"
     cost: négligeable
-    latency: "~10 ms"
+    latency: "<1 ms"
     risks:
       data_egress: none
       deterministic: true
@@ -113,8 +113,8 @@ rungs:
       fr: "Le modèle peut répondre n'importe quoi, y compris de la prose là où du JSON était demandé. Le comportement dangereux serait de hausser les épaules et de renvoyer le message intact, ce qui laisserait fuir exactement ce qu'on voulait retirer. L'extrait lève une erreur, et c'est à l'appelant de décider."
       en: "The model can answer anything, including prose where JSON was asked for. The dangerous behaviour would be to shrug and return the message unmasked, leaking precisely what you meant to remove. The snippet raises instead, and the caller decides."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus."
-      en: "There is no rung above this one."
+      fr: "Il n'y a pas de niveau au-dessus."
+      en: "There is no level above this one."
 
 verdict_rationale:
   fr: "N0 suffit dans l'immense majorité des intégrations. Le besoin est déterministe, le coût marginal est nul, rien ne sort de votre infrastructure, et le résultat se teste unitairement, ce qui compte quand un faux négatif publie le numéro de quelqu'un. Montez à N1 le jour où vous constatez des contournements délibérés, pas avant : vous échangeriez un test unitaire contre un jeu d'entraînement à maintenir."
