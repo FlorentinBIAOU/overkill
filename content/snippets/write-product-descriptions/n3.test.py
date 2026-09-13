@@ -141,7 +141,8 @@ def test_breaking_point_the_model_promises_what_the_shop_does_not_sell():
 
 def test_the_same_product_gets_a_different_description_at_each_run():
     """
-    The other half of the bargain, and the reason the rung above exists.
+    The other half of the bargain, and what the rungs below give you in
+    exchange for their limits.
 
     Two calls, two answers, both acceptable. That is what is being bought here,
     and it is also what makes review impossible: nothing you approved yesterday

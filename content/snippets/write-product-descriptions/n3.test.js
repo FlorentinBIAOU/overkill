@@ -131,7 +131,8 @@ test('breaking point: the model promises what the shop does not sell', async () 
 });
 
 test('the same product gets a different description at each run', async () => {
-  // The other half of the bargain, and the reason the rung above exists.
+  // The other half of the bargain, and what the rungs below give you in
+  // exchange for their limits.
   //
   // Two calls, two answers, both acceptable. That is what is being bought here,
   // and it is also what makes review impossible: nothing you approved yesterday
