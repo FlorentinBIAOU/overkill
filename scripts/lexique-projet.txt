@@ -92,6 +92,7 @@ decide
 deep
 délégable
 description
+dépli
 désuffixation
 detect
 deterministic
