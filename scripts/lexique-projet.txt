@@ -137,6 +137,7 @@ false
 family
 fasttext
 feature
+feed
 fetch
 fields
 fieldset
@@ -204,6 +205,7 @@ joachims
 json
 kebab
 kernel
+knew
 knn
 know
 label
@@ -213,6 +215,7 @@ language
 lannelongue
 # la page méthodologie cite des travaux publiés par leur titre et leur
 latency
+latest
 layout
 layoutlm
 layouts
@@ -268,6 +271,7 @@ neumaier
 n-gramme
 n-grammes
 nks
+nobody
 node
 # --- Nom du projet et personnes
 # --- Noms propres cités dans les crédits et la méthodologie
