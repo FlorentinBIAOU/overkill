@@ -81,3 +81,10 @@ test('breaking point: a well formed address that does not exist', () => {
   // different need.
   assert.deepEqual(validate({ ...VALID, email: 'ada@no-such-mailbox.example' }, SCHEMA), {});
 });
+
+test('breaking point: a name made of spaces satisfies a minimum length', () => {
+  // The second half of the same breaking point: `min` counts characters, and a
+  // space is a character. Two spaces pass a minimum of two, and the profile
+  // shows up blank. A rule can require a length; it cannot require meaning.
+  assert.deepEqual(validate({ ...VALID, display_name: '  ' }, SCHEMA), {});
+});

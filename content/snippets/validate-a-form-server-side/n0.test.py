@@ -82,3 +82,13 @@ def test_breaking_point_a_well_formed_address_that_does_not_exist():
     """
     unreachable = {**VALID, "email": "ada@no-such-mailbox.example"}
     assert validate(unreachable, SCHEMA) == {}
+
+
+def test_breaking_point_a_name_made_of_spaces_satisfies_a_minimum_length():
+    """
+    The second half of the same breaking point: `min` counts characters, and a
+    space is a character. Two spaces pass a minimum of two, and the profile
+    shows up blank. A rule can require a length; it cannot require meaning.
+    """
+    blank = {**VALID, "display_name": "  "}
+    assert validate(blank, SCHEMA) == {}
