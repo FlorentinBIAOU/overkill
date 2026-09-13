@@ -42,6 +42,7 @@ test('les segments de premier niveau sont tous déclarés', () => {
    */
   const attendus = [
     '', 'catalogue', 'familles', 'fiches', 'methodologie', 'par-ou-commencer',
+    'dernieres-fiches',
     'a-propos', 'contribuer', 'accompagnement', 'mentions-legales',
     'confidentialite', 'credits',
   ];

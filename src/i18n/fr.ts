@@ -19,6 +19,7 @@ export default {
     families: 'Familles',
     methodology: 'Comment ça marche',
     guide: 'Par où commencer',
+    latest: 'Dernières fiches',
     about: 'À propos',
     contribute: 'Contribuer',
     help: 'Contact',
@@ -402,6 +403,18 @@ export default {
         frequenceBasse: 'À cette fréquence, le coût d’un appel à un modèle reste faible : c’est le cas où l’option la plus lourde se défend le plus facilement.',
       },
     },
+  },
+
+  /* La page des dernières fiches, et le flux que personne ne connaissait. */
+  latest: {
+    title: 'Les dernières fiches',
+    lead: 'Les fiches du catalogue, de la plus récemment révisée à la plus ancienne. Une révision compte autant qu’une publication : une fiche dont le verdict change vous concerne davantage qu’une fiche nouvelle.',
+    revised: 'Révisée le',
+    feedTitle: 'Le flux, pour ne pas revenir voir',
+    feedLead: 'Chaque publication et chaque révision y passe. Le flux est un fichier servi depuis ce domaine : aucun compte, aucun traceur, aucune mesure de qui le lit.',
+    feedAction: 'Ouvrir le flux',
+    feedAddress: 'L’adresse à coller dans votre lecteur',
+    count: '{n} fiches publiées',
   },
 
   catalogue: {

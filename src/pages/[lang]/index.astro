@@ -105,7 +105,9 @@ const textes = {
         <p>{textes.contributeLead}</p>
         <p class="closing__links">
           <a class="link-action" href={route(lang, 'contribute')}>{textes.contribute}</a>
-          <a class="link-action" href={route(lang, 'families')}>{strings.families.browse}</a>
+          {/* Ce qui donne envie de revenir : ce qui vient de bouger, et le
+              flux pour ne pas avoir à revenir voir. */}
+          <a class="link-action" href={route(lang, 'latest')}>{strings.nav.latest}</a>
         </p>
       </div>
       <HelpBlock strings={strings} compact />

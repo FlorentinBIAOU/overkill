@@ -1,0 +1,211 @@
+---
+/**
+ * Les dernières fiches, et le flux (lot 14, partie 8.4).
+ *
+ * Le flux RSS existait depuis le lot 09 et rien n'y menait : cette page est
+ * son point d'entrée. Elle sert aussi ce que le catalogue, rangé par famille,
+ * ne montre pas — ce qui vient de bouger.
+ *
+ * Une révision compte autant qu'une publication : une fiche dont le verdict
+ * change concerne davantage un lecteur qu'une fiche nouvelle, et c'est la date
+ * de révision qui ordonne la page comme elle ordonne le flux.
+ */
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import CtaBand from '../../components/CtaBand.astro';
+import EntryCard from '../../components/EntryCard.astro';
+import { publishedEntries, familyTitles, ISSUE_URL } from '../../lib/content';
+import { LOCALES, t, type Locale } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export function getStaticPaths() {
+  return LOCALES.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Locale;
+const strings = t(lang);
+const s = strings.latest;
+const titres = await familyTitles(lang);
+
+/* Par date de révision, la plus récente d'abord ; à date égale, par titre,
+   pour que l'ordre soit stable d'une construction à l'autre. */
+const fiches = (await publishedEntries())
+  .map((e) => e.data)
+  .sort((a: any, b: any) => {
+    const ecart = new Date(b.updated).getTime() - new Date(a.updated).getTime();
+    return ecart !== 0 ? ecart : a.title[lang].localeCompare(b.title[lang], lang);
+  });
+
+const dateFormat = new Intl.DateTimeFormat(lang, { dateStyle: 'long' });
+const flux = `${(Astro.site ?? new URL('https://isitoverkill.dev')).origin}/${lang}/rss.xml`;
+---
+
+<SiteLayout title={s.title} description={s.lead} lang={lang} register="editorial">
+  <div class="band band-paper-2 latest__head">
+    <div class="wrap">
+      <h1 class="display-l">{s.title}</h1>
+      <p class="latest__lead">{s.lead}</p>
+    </div>
+  </div>
+
+  <div class="wrap latest">
+    {/* Le flux d'abord : c'est ce que la page vient faire connaître. */}
+    <section class="feed" aria-labelledby="feed-title">
+      <h2 id="feed-title" class="feed__title">{s.feedTitle}</h2>
+      <p class="feed__lead">{s.feedLead}</p>
+      <p class="feed__actions">
+        <a class="button" href={`/${lang}/rss.xml`}>{s.feedAction}</a>
+      </p>
+      <p class="feed__address-label">{s.feedAddress}</p>
+      <p class="feed__address"><code>{flux}</code></p>
+    </section>
+
+    <section class="latest__list" aria-labelledby="latest-list-title">
+      <h2 id="latest-list-title" class="latest__count">
+        {s.count.replace('{n}', String(fiches.length))}
+      </h2>
+      <ul class="latest__cards">
+        {
+          fiches.map((e: any) => {
+            const rung = e.rungs.find((r: any) => r.level === e.verdict);
+            return (
+              <li class="latest__item">
+                <p class="latest__date">
+                  {s.revised}{' '}
+                  <time datetime={new Date(e.updated).toISOString().slice(0, 10)}>
+                    {dateFormat.format(new Date(e.updated))}
+                  </time>
+                </p>
+                <ul class="latest__card">
+                  <EntryCard
+                    id={e.id}
+                    href={route(lang, 'entries', e.id)}
+                    title={e.title[lang]}
+                    need={e.need[lang]}
+                    cost={rung?.cost}
+                    latency={rung?.latency}
+                    familyLabel={titres[e.family] ?? e.family}
+                    family={e.family}
+                    verdict={e.verdict}
+                    available={e.rungs.filter((r: any) => r.available).map((r: any) => r.level)}
+                    egress={rung?.risks.data_egress ?? 'none'}
+                    deterministic={rung?.risks.deterministic ?? true}
+                    strings={strings}
+                  />
+                </ul>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </section>
+  </div>
+
+  <CtaBand
+    heading={strings.family.missingHeading}
+    body={strings.family.missingBody}
+    action={{ label: strings.family.missingAction, href: ISSUE_URL, external: true }}
+    secondary={{ label: strings.catalogue.title, href: route(lang, 'catalogue') }}
+  />
+</SiteLayout>
+
+<style>
+  .latest__head {
+    padding-block: var(--space-16) var(--space-12);
+  }
+
+  .latest__lead {
+    margin-block-start: var(--space-6);
+    font-size: var(--size-h3);
+    max-width: 52ch;
+  }
+
+  .latest {
+    padding-block: var(--space-16) 0;
+  }
+
+  .feed {
+    padding: var(--space-8);
+    border: 1px solid var(--rule-strong);
+    border-radius: 14px;
+  }
+
+  .feed__title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--space-4);
+  }
+
+  .feed__lead {
+    margin: 0;
+    max-width: 60ch;
+  }
+
+  .feed__actions {
+    margin: var(--space-6) 0 0;
+  }
+
+  .feed__address-label {
+    margin: var(--space-8) 0 var(--space-2);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .feed__address {
+    margin: 0;
+    max-width: none;
+  }
+
+  .feed__address code {
+    display: inline-block;
+    padding: var(--space-2) var(--space-3);
+    background: var(--paper-2);
+    border-radius: var(--radius-block);
+    overflow-wrap: anywhere;
+  }
+
+  .latest__list {
+    margin-block-start: var(--space-16);
+  }
+
+  .latest__count {
+    font-family: var(--font-text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 var(--space-6);
+  }
+
+  .latest__cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 900px) {
+    .latest__cards {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .latest__item {
+    max-width: none;
+  }
+
+  .latest__date {
+    margin: 0 0 var(--space-2);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .latest__card {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+</style>

@@ -17,6 +17,7 @@ export default {
     families: 'Families',
     methodology: 'How it works',
     guide: 'Where to start',
+    latest: 'Latest entries',
     about: 'About',
     contribute: 'Contribute',
     help: 'Contact',
@@ -392,6 +393,18 @@ export default {
         frequenceBasse: 'At that frequency, the cost of a model call stays low: this is the case where the heaviest option is easiest to defend.',
       },
     },
+  },
+
+  /* The latest entries, and the feed nobody knew about. */
+  latest: {
+    title: 'The latest entries',
+    lead: 'The catalogue’s entries, from the most recently revised to the oldest. A revision counts as much as a publication: an entry whose verdict changes concerns you more than a new one.',
+    revised: 'Revised on',
+    feedTitle: 'The feed, so you need not come back to look',
+    feedLead: 'Every publication and every revision goes through it. The feed is a file served from this domain: no account, no tracker, no measure of who reads it.',
+    feedAction: 'Open the feed',
+    feedAddress: 'The address to paste into your reader',
+    count: '{n} published entries',
   },
 
   catalogue: {
