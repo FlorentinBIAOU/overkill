@@ -15,11 +15,12 @@
  * extrait n'a pas de test est refusée. En cas de doute, `status: draft`.
  */
 import { readdir, readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
 import matter from 'gray-matter';
 import { parse as parseYaml } from 'yaml';
 
+import { corpsApresDoc, docTraduite, replaceHeaderDoc } from '../src/lib/snippets.ts';
 import { entrySchema } from '../src/content/schema/entry.ts';
 import { familySchema } from '../src/content/schema/family.ts';
 import { roadmapItemSchema } from '../src/content/schema/roadmap.ts';
@@ -124,6 +125,30 @@ for (const f of fiches) {
       if (!existsSync(chemin)) {
         echec(ou, `fichier de code introuvable : ${chemin}`);
         continue;
+      }
+
+      /*
+       * La docstring d'en-tête est traduite, et rien d'autre.
+       *
+       * On substitue vraiment le texte, puis on compare le code qui suit la
+       * docstring, caractère par caractère, avec l'original. C'est la seule
+       * garantie qui compte : le lecteur français doit voir le même code que
+       * le lecteur anglais, avec une explication qu'il peut lire.
+       */
+      const source = readFileSync(chemin, 'utf8');
+      const traduite = docTraduite(rel, 'fr');
+      if (!traduite) {
+        if (e.status === 'published') {
+          avertir(ou, `docstring d'en-tête non traduite : ${rel}`);
+        }
+      } else {
+        const rendu = replaceHeaderDoc(source, langage, traduite);
+        if (corpsApresDoc(rendu, langage) !== corpsApresDoc(source, langage)) {
+          echec(ou, `la traduction de ${rel} ne se limite pas à la docstring d'en-tête`);
+        }
+        if (rendu === source) {
+          echec(ou, `la traduction de ${rel} n'a rien remplacé : l'extrait a-t-il une docstring d'en-tête ?`);
+        }
       }
 
       // Une fiche publiée exige un test à côté de chaque extrait (CDC 4.6).

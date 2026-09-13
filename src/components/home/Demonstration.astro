@@ -24,8 +24,8 @@ const { lang, strings } = Astro.props;
 /** La fiche dont vient la démonstration. Le lien y renvoie. */
 const ENTRY = 'mask-personal-data-in-chat';
 
-const lourd = readSnippet(`snippets/${ENTRY}/n3.py`, 'python');
-const leger = readSnippet(`snippets/${ENTRY}/n0.py`, 'python');
+const lourd = readSnippet(`snippets/${ENTRY}/n3.py`, 'python', lang);
+const leger = readSnippet(`snippets/${ENTRY}/n0.py`, 'python', lang);
 
 /** On ne montre que le cœur : le code, pas la longue docstring d'en-tête. */
 const extraire = (code: string, depuis: string) => {

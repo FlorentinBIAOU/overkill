@@ -22,15 +22,17 @@ export interface Props {
   strings: Strings;
   /** Identifiant unique dans la page, pour lier onglets et panneaux. */
   id: string;
+  /** Langue de la page : la docstring d'en-tête est servie dans cette langue. */
+  lang?: 'en' | 'fr';
   /** Profondeur du titre masqué de chaque panneau. */
   headingLevel?: 3 | 4 | 5;
 }
 
-const { paths, verification, strings, id, headingLevel = 4 } = Astro.props;
+const { paths, verification, strings, id, lang = 'en', headingLevel = 4 } = Astro.props;
 const PanelHeading = `h${headingLevel}` as 'h3' | 'h4' | 'h5';
 
 const languages = (['python', 'javascript'] as const).filter((l) => paths[l]);
-const snippets = languages.map((l) => readSnippet(paths[l]!, l));
+const snippets = languages.map((l) => readSnippet(paths[l]!, l, lang));
 
 /* La preuve d'exécution descend dans la barre du bloc, au plus près du code
    qu'elle qualifie (partie 1.4 du lot). */

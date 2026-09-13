@@ -1,0 +1,45 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Masquer les coordonnées dans un message : normalisation, puis expressions
+  régulières.
+
+  Niveau N0. Déterministe, bibliothèque standard seule, assez rapide pour que
+  vous ne le retrouviez jamais dans un profil d'exécution.
+
+  Deux choses font que ça marche.
+
+  D'abord, la normalisation ne touche qu'aux façons d'écrire une espace.
+  Réécrire tout le message avant de chercher détruirait les caractères mêmes
+  dont une adresse électronique est faite.
+
+  Ensuite, chaque motif tolère les séparateurs que les gens tapent réellement
+  dans un numéro, au lieu de supposer une seule forme canonique.
+
+n1: |
+  Rattraper les coordonnées obfusquées avec une régression logistique sur des
+  traits de jetons.
+
+  Niveau N1. La règle du niveau N0 cherche des chiffres ; celui-ci apprend à
+  quoi ressemble un jeton qui cache un numéro — des lettres à la place de
+  chiffres, des points de suspension, un emoji intercalé.
+
+  Le modèle décide jeton par jeton, et non message par message : c'est ce qui
+  permet de masquer le seul morceau fautif sans effacer la phrase autour.
+
+n3: |
+  Extraction structurée par appel à un modèle généraliste.
+
+  Niveau N3. Présent pour qu'on voie ce qu'il coûte, pas parce que cette fiche
+  le recommande.
+
+  Ce qu'il apporte sur les deux niveaux du dessous est réel : aucune règle à
+  écrire, aucun jeu d'entraînement à constituer, et une tolérance à des formes
+  qu'on n'a pas prévues.
+
+  Ce qu'il coûte est dans ce fichier. Le message part chez un tiers. Chaque
+  appel se paie. La réponse doit être relue avant d'être crue, parce qu'un
+  modèle qui ne trouve rien invente parfois une plage de caractères plutôt que
+  de rendre une liste vide.
