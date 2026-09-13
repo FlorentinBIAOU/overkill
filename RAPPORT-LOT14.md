@@ -103,7 +103,57 @@ point de rupture de la fiche, qui est celui de N0 » — alors que la fiche déc
 bien un point de rupture pour ces deux niveaux, et que ce sont exactement ces
 tests qu'elle cite.
 
-### Une arbitrage rendu : ce que la latence annoncée mesure
+
+### Onze affirmations qui attribuaient à un modèle ce qu'écrit un double local
+
+C'est la famille de défauts la plus intéressante du lot, parce qu'elle
+touchait précisément les fiches qui recommandent un modèle — celles dont la
+crédibilité porte celle des vingt-trois autres.
+
+Les extraits N2 et N3 sont testés contre un double local : le dépôt ne
+télécharge aucun poids et n'appelle aucune API. Onze champs de fiche
+présentaient pourtant comme une observation ce que le harnais de test écrit
+lui-même : « le même document donne ceci puis cela », « il rend une facture
+entière et plausible », « le modèle traduit le nom de la variable », « deux
+appels sur le même produit rendent deux textes ».
+
+Vérifié, pour l'un d'entre eux, en instrumentant le double : à ce niveau, le
+modèle ne reçoit jamais `{count}` — il reçoit `⟦0⟧ items selected`. Il ne peut
+donc pas traduire un nom de variable, et ce que le second test montrait était
+une accolade **inventée**, ce qui n'est pas la même limite.
+
+Les onze champs disent désormais d'où vient la réponse, et ce qui est
+réellement démontré : ce que la plomberie laisse passer, l'aveuglement d'un
+seuil, l'absence de garde-fou dans l'extrait. C'est moins spectaculaire, et
+c'est la seule preuve qu'un dépôt sans poids ni API puisse produire.
+
+Dans un cas, l'affirmation a été remplacée par une autre, vérifiable :
+« deux appels rendent deux textes » est devenu « l'extrait demande une
+température non nulle », ce qui se lit dans le code et que le test contrôle.
+
+### Quatre autres corrections du même examen
+
+- Un **scénario** affirmait que le niveau le plus cher « est le seul qui fasse
+  le travail demandé ». Faux : le niveau du dessous reformule aussi, et son
+  test le démontre.
+- Une **justification de verdict** affirmait que deux niveaux « échouent
+  exactement de la même manière » sur les variables d'interface, quand l'un les
+  masque et l'autre non.
+- Un **point de rupture** annonçait trois refus là où le code n'en a que deux.
+  Vérifié : le tampon de numéro de page rend le même refus que le scan.
+- Une **justification** disait d'un test qu'il « rend un résumé impeccable »
+  quand il montre seulement que les contrôles l'acceptent : « laisse passer ».
+
+### Un point de rupture complété plutôt que corrigé
+
+`validate-a-form-server-side` annonçait une seule limite : aucune règle ne dit
+si une adresse existe. Il en a une seconde, aussi reproductible et plus
+courante : `min` compte des caractères, une espace en est un, donc un pseudonyme
+fait de deux espaces passe un minimum de deux et le profil s'affiche vide.
+Vérifié dans les deux langages, écrit dans la fiche, et démontré par un test
+nouveau de chaque côté.
+
+### Un arbitrage rendu : ce que la latence annoncée mesure
 
 Le cahier des charges fixe cinq classes de latence sans dire ce qu'elles
 mesurent. La question s'est posée sur les niveaux N1, où l'entraînement coûte
@@ -112,6 +162,29 @@ mille fois la décision. Tranché, et écrit sur la page « Comment ça marche �
 l'entraînement, qui n'a lieu qu'une fois, ni celle du premier chargement d'un
 modèle. Quand l'entraînement pèse dans le choix d'un niveau, la fiche le dit
 dans son texte, pas dans sa classe de latence.
+
+
+### Ce que la relecture n'a pas pu établir, et qui reste écrit tel quel
+
+- **Les latences des niveaux N2 et N3** (`~100 ms`, `~1 s`, `>1 s`). Aucune
+  exécution ne peut les établir : les extraits sont testés contre des doubles,
+  et le dépôt ne télécharge jamais de poids. Elles restent cohérentes entre
+  fiches ; personne ne les a mesurées, et le rapport le dit plutôt que la fiche
+  ne le prétende.
+- **La qualité d'écriture attribuée à N2 et N3** sur les deux fiches qui les
+  recommandent. C'est l'argument sur lequel repose leur verdict, et aucun test
+  ne peut l'établir. Les fiches le disent déjà à côté de leurs extraits.
+- **`~10 ms` pour le niveau N0 de `translate-interface-strings`** : mesuré à
+  9,2 ms sur une mémoire de deux cents chaînes, mais 88 ms sur deux mille côté
+  Python. La classe tient pour une mémoire moyenne, pas pour une grosse.
+- **Une seconde façon de tromper le niveau N0 de
+  `read-text-from-a-scanned-page`** : un scan portant un tampon de plus de
+  vingt-quatre caractères lisibles est rendu « porte déjà du texte ». Le seuil
+  est documenté dans le code, aucun champ ne prétend le contraire, et l'ajouter
+  au point de rupture demanderait un test de plus — noté, pas fait.
+- **`generate-placeholder-images` en très petite taille** : à trois pixels, la
+  grille de cinq donne des rectangles de largeur nulle et l'image se réduit au
+  fond. La fiche ne promet rien en dessous de la taille que son test couvre.
 
 ---
 
@@ -285,6 +358,23 @@ vocabulaire du document. Le fait tient, l'explication était incomplète.
 | Combinaison avec la recherche et les filtres | un filtre posé depuis la deuxième page retrouve les fiches de la première ; le compteur suit |
 | Utilisable sans JavaScript | contrôle au navigateur avec JavaScript désactivé : la tranche demandée s'affiche, la pagination est faite de liens |
 | L'architecture tient à deux cents fiches | `npm run build:fixtures` puis `test:search` : neuf pages, douze contrôles au vert, 24,6 Ko transférés par page |
+
+
+### Partie 7 — Le contenu
+
+| Fait | Preuve |
+|---|---|
+| Les 148 extraits exécutés | `npm run test:snippets` — 148 extraits, aucun échec ; et chaque niveau réexécuté hors de ses tests, sur des entrées choisies par le relecteur |
+| Les 25 verdicts contestés | aucun renversé ; deux examinés longuement et laissés en place avec le doute écrit |
+| Vingt-six affirmations fausses corrigées | détaillées plus haut, avec la mesure ou l'exécution qui les a démasquées |
+| Deux extraits réparés | dont l'extrait N0 de l'OCR, qui répondait le contraire de la vérité sur le cas central de sa fiche |
+| « Barreau » retiré des 25 fiches, relu phrase par phrase | `check-content` refuse désormais le mot dans une fiche, et le contrôle a été éprouvé en le réintroduisant |
+| Les 74 docstrings d'en-tête traduites | `check-content` refuse une fiche publiée dont une docstring n'est pas traduite, et vérifie que la traduction ne change rien au code |
+| La traduction ne touche que la docstring | comparaison caractère par caractère du corps, sur chaque extrait traduit, plus cinq contrôles unitaires |
+| Les deux langues servies | capture des pages française et anglaise d'une même fiche : docstring traduite, commentaires en ligne et identifiants en anglais |
+| Guillemets anglais dans les commentaires anglais | 86 fichiers repris, deux laissés à raison ; les 148 extraits compilent et passent |
+| Apostrophe typographique dans la prose du contenu | 1 474 apostrophes, hors code et hors adresses ; `check-links` au vert |
+| Dates de révision remontées | les 25 fiches portent la date de leur relecture |
 
 
 ### Défauts trouvés en regardant l'écran, et corrigés — parties 1 et 2
@@ -512,6 +602,41 @@ telle.
 **La pagination s'efface quand un filtre porte**, et seulement à ce
 moment-là : tant qu'un seul caractère est tapé, la recherche ne cherche pas
 encore, et la deuxième page doit rester atteignable.
+
+
+### Partie 7
+
+**La docstring traduite vit à côté du code, pas dedans.** Un fichier
+`doc.fr.yaml` par dossier d'extraits, rangé par niveau — une clé pour les deux
+langages — ou par fichier quand les deux docstrings anglaises disent réellement
+autre chose. Le fichier sur le disque, celui que les tests exécutent, garde sa
+docstring anglaise. *Écarté :* deux fichiers d'extrait par langue, qui auraient
+doublé le code exécuté et laissé les deux diverger.
+
+**Le contrôle compare le corps du code, pas la confiance.** `check-content`
+substitue réellement la traduction, puis compare caractère par caractère ce qui
+suit la docstring. Une traduction qui toucherait au code fait échouer la
+construction : c'est ce qui permet d'affirmer que le lecteur français voit le
+même code que le lecteur anglais.
+
+**L'apostrophe typographique dans la prose, l'apostrophe droite dans le code.**
+Les trois relecteurs ont signalé l'incohérence : l'interface employait ’ et le
+contenu '. Les 1 474 apostrophes de la prose sont passées en ’ — hors des
+portions entre accents graves et hors des adresses. Les fichiers de code gardent
+l'apostrophe droite, y compris les traductions de docstring, qui s'affichent
+dans un bloc de code où l'ASCII est la convention.
+
+**Un verdict ne change que si la fiche dit faux.** La consigne donnée aux
+relecteurs était explicite : contester, démontrer, et ne pas substituer son goût
+à celui de l'auteur. Aucun des vingt-cinq n'est tombé, et les deux cas limites
+sont écrits comme tels plutôt que tranchés en silence.
+
+**La latence annoncée mesure une décision sur une entrée.** Le cahier des
+charges fixait cinq classes sans dire ce qu'elles mesurent, et la question s'est
+posée sur les niveaux N1, où l'entraînement coûte mille fois la décision.
+Tranché une fois, écrit sur la page « Comment ça marche », et appliqué : sept
+fiches annonçaient `~10 ms` pour une décision qui se prend en moins d'une
+milliseconde.
 
 ---
 
