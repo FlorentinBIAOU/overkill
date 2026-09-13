@@ -275,6 +275,7 @@ nobody
 node
 # --- Nom du projet et personnes
 # --- Noms propres cités dans les crédits et la méthodologie
+noindex
 none
 normalization
 not
