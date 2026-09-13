@@ -63,7 +63,7 @@ async function lireDossier(dossier) {
     const chemin = join(dossier, nom);
     const brut = await readFile(chemin, 'utf8');
     try {
-      documents.push({ nom, chemin, ...matter(brut) });
+      documents.push({ nom, chemin, brut, ...matter(brut) });
     } catch (erreur) {
       const detail = String(erreur.message ?? erreur).split('\n')[0];
       echec(
@@ -104,6 +104,28 @@ for (const f of fiches) {
   }
   vus.set(e.id, f.chemin);
   if (e.status === 'published') verdicts.set(e.id, e.verdict);
+
+  /*
+   * Le mot « barreau » ne paraît plus dans une fiche.
+   *
+   * L'interface dit « niveau » depuis le lot 14, y compris sur la page qui
+   * explique l'échelle : personne n'appelle « barreau » ce qu'il vient de
+   * choisir. `rungs` reste la clé du frontmatter, comme les autres
+   * identifiants, qui sont en anglais.
+   */
+  const texte = f.brut ?? '';
+  for (const [mot, motif] of [
+    ['barreau', /barreaux?\b/gi],
+    ['rung', /(?<!\w)rungs?(?!:)(?!\w)/g],
+  ]) {
+    const trouve = [...texte.matchAll(motif)];
+    if (trouve.length > 0) {
+      echec(
+        f.chemin,
+        `« ${mot} » apparaît ${trouve.length} fois : l'interface dit « niveau » / « level »`,
+      );
+    }
+  }
 
   if (e.status === 'published') publiees++;
   else brouillons++;
