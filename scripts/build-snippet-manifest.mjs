@@ -47,14 +47,14 @@ for (const bloc of blocs) {
   }
 
   if (rungs.length !== 4) {
-    throw new Error(`${id} : ${rungs.length} barreaux au lieu de 4`);
+    throw new Error(`${id} : ${rungs.length} niveaux au lieu de 4`);
   }
   if (!rungs.every((r, i) => r.level === ['N0', 'N1', 'N2', 'N3'][i])) {
-    throw new Error(`${id} : barreaux hors de l'ordre N0 à N3`);
+    throw new Error(`${id} : niveaux hors de l'ordre N0 à N3`);
   }
   const cible = rungs.find((r) => r.level === verdict);
   if (!cible?.available) {
-    throw new Error(`${id} : le verdict ${verdict} désigne un barreau absent`);
+    throw new Error(`${id} : le verdict ${verdict} désigne un niveau absent`);
   }
 
   const rupture = bloc.match(/\*\*Point de rupture (N[0-3])\*\*\s*:\s*([\s\S]*?)(?:\n\n|\n---|$)/);
@@ -102,6 +102,6 @@ if (process.argv.includes('--check')) {
 
 const t = manifeste.totals;
 console.log(
-  `  ${t.entries} fiches, ${t.available_rungs} barreaux disponibles ` +
+  `  ${t.entries} fiches, ${t.available_rungs} niveaux disponibles ` +
     `(${t.executed} executed, ${t.stubbed} stubbed), ${t.files} fichiers attendus`,
 );

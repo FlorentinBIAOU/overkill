@@ -93,7 +93,7 @@ Termes contractuels, à utiliser tels quels dans le code, les URL et l'interface
 | Fiche | *entry* | Une unité de contenu, traitant un besoin |
 | Besoin | *need* | Ce que l'utilisateur veut faire, formulé comme il le dirait |
 | Famille | *family* | Un des dix regroupements par verbe |
-| Barreau | *rung* | Un des quatre niveaux de solution, N0 à N3 |
+| ~~Barreau~~ Niveau | *rung* | Un des quatre niveaux de solution, N0 à N3. **Révisé au lot 14** : l'interface, les fiches et la page « Comment ça marche » disent « niveau » ; `rung` reste l'identifiant dans le code et le schéma. |
 | Verdict | *verdict* | Le barreau recommandé par défaut pour ce besoin |
 | Déclencheur | *escalation trigger* | La condition qui justifie de monter d'un barreau |
 | Point de rupture | *breaking point* | Ce qui fait échouer un barreau donné |
@@ -103,6 +103,10 @@ Termes contractuels, à utiliser tels quels dans le code, les URL et l'interface
 ## 4. Modèle de contenu
 
 ### 4.1 Les quatre barreaux
+
+> **Révisé au lot 14.** Ce document continue de dire « barreau » là où il a été
+> écrit ; le site dit « niveau », partout. La métaphore de l'échelle reste, elle
+> se dit « échelle » et « niveau ».
 
 L'échelle est fixe et identique sur toutes les fiches.
 

@@ -1,13 +1,13 @@
 # Matrice des extraits
 
-Pour chacune des 25 fiches de lancement : quels barreaux sont disponibles, quelle approche
-chaque barreau met en œuvre, et quel niveau de preuve d'exécution est atteignable.
+Pour chacune des 25 fiches de lancement : quels niveaux sont disponibles, quelle approche
+chaque niveau met en œuvre, et quel niveau de preuve d'exécution est atteignable.
 
 Cette matrice est le **contrat** des extraits. Elle est arrêtée avant leur écriture pour que
 25 auteurs indépendants produisent un ensemble cohérent, et pour que la fiche décrive ce que
 le code fait réellement.
 
-**Un barreau marqué absent l'est pour une raison réelle, écrite ici.** Elle sera reprise
+**Un niveau marqué absent l'est pour une raison réelle, écrite ici.** Elle sera reprise
 telle quelle dans le champ `unavailable_reason` de la fiche.
 
 ---
@@ -18,9 +18,9 @@ telle quelle dans le champ `unavailable_reason` de la fiche.
 |---|---|
 | **E** | `executed` — l'extrait tourne tel quel, avec ses vraies dépendances |
 | **S** | `stubbed` — il tourne, un service ou un modèle externe étant remplacé par un double local |
-| **—** | barreau absent, avec sa raison |
+| **—** | niveau absent, avec sa raison |
 
-Les quatre barreaux : N0 règle et algorithme classique · N1 modèle classique léger ·
+Les quatre niveaux : N0 règle et algorithme classique · N1 modèle classique léger ·
 N2 petit modèle spécialisé auto-hébergé · N3 API de LLM généraliste.
 
 ---
@@ -29,7 +29,7 @@ N2 petit modèle spécialisé auto-hébergé · N3 API de LLM généraliste.
 
 ### 1. `mask-personal-data-in-chat` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Normalisation Unicode puis expressions régulières sur les motifs à forte structure : adresse électronique, numéro de téléphone, IBAN | **E** |
 | N1 | Régression logistique sur des traits de jetons, pour rattraper les formes obfusquées que la règle rate | **E** |
@@ -41,7 +41,7 @@ sosies, emojis intercalés.
 
 ### 2. `detect-spam-in-contact-form` — verdict attendu **N1**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Pot de miel, délai minimal de soumission, plafond de liens, motifs interdits | **E** |
 | N1 | Régression logistique sur n-grammes de caractères en TF-IDF | **E** |
@@ -52,7 +52,7 @@ sosies, emojis intercalés.
 
 ### 3. `find-duplicate-records` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Normalisation, clé de blocage, puis distance d'édition sur les seuls candidats du même bloc | **E** |
 | N1 | TF-IDF sur n-grammes de caractères et plus proches voisins par cosinus | **E** |
@@ -64,7 +64,7 @@ jamais comparées.
 
 ### 4. `moderate-user-comments` — verdict attendu **N2**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Liste de termes après normalisation, avec fenêtre de contexte | **E** |
 | N1 | Classifieur linéaire entraîné sur un corpus étiqueté | **E** |
@@ -80,7 +80,7 @@ citations et le second degré.
 
 ### 5. `extract-dates-from-text` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Expressions régulières par format, puis validation calendaire réelle | **E** |
 | N1 | Génération de candidats par règle, puis classifieur pour lever l'ambiguïté jour-mois | **E** |
@@ -91,7 +91,7 @@ citations et le second degré.
 
 ### 6. `extract-fields-from-invoice` — verdict attendu **N2**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Ancrage par mots-clés et expressions régulières sur le texte déjà extrait | **E** |
 | N1 | Traits de position et de mise en forme, puis classifieur de lignes | **E** |
@@ -103,7 +103,7 @@ citations et le second degré.
 
 ### 7. `parse-address-into-fields` — verdict attendu **N1**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Expressions régulières, dictionnaire de types de voie, ancrage sur le code postal | **E** |
 | N1 | Étiquetage de jetons par régression logistique sur traits de contexte | **E** |
@@ -118,7 +118,7 @@ citations et le second degré.
 
 ### 8. `route-support-tickets` — verdict attendu **N1**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Règles par mots-clés, avec priorité explicite et équipe par défaut | **E** |
 | N1 | TF-IDF et classifieur linéaire entraîné sur l'historique de tickets | **E** |
@@ -129,7 +129,7 @@ citations et le second degré.
 
 ### 9. `tag-articles-by-topic` — verdict attendu **N1**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Vocabulaire contrôlé, correspondance de termes après lemmatisation simple | **E** |
 | N1 | TF-IDF et classification multi-étiquette un contre tous | **E** |
@@ -140,7 +140,7 @@ citations et le second degré.
 
 ### 10. `detect-language-of-text` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Profils de trigrammes de caractères par langue, distance de rang | **E** |
 | N1 | Classifieur bayésien naïf sur n-grammes de caractères | **E** |
@@ -155,7 +155,7 @@ citations et le second degré.
 
 ### 11. `search-in-your-own-documents` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Index plein texte de la base de données, avec classement BM25 intégré | **E** |
 | N1 | Index inversé et classement BM25 écrit à la main, pour comprendre ce que fait N0 | **E** |
@@ -167,7 +167,7 @@ mots de la requête.
 
 ### 12. `add-autocomplete-to-a-search-bar` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Arbre de préfixes, tri par fréquence d'usage | **E** |
 | N1 | Réordonnancement appris sur les clics passés | **E** |
@@ -178,7 +178,7 @@ mots de la requête.
 
 ### 13. `fuzzy-match-company-names` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Normalisation, retrait des formes juridiques, similarité de Jaro-Winkler | **E** |
 | N1 | TF-IDF sur n-grammes de caractères et plus proches voisins par cosinus | **E** |
@@ -194,7 +194,7 @@ contre raison sociale développée.
 
 ### 14. `show-similar-articles` — verdict attendu **N1**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Chevauchement d'étiquettes, pondéré par la rareté de l'étiquette | **E** |
 | N1 | TF-IDF sur le texte et similarité cosinus, calculée hors ligne | **E** |
@@ -205,7 +205,7 @@ contre raison sociale développée.
 
 ### 15. `rank-products-by-relevance` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Score pondéré déterministe : correspondance textuelle, disponibilité, marge, popularité | **E** |
 | N1 | Apprentissage du classement sur les interactions passées | **E** |
@@ -221,7 +221,7 @@ que personne ne s'en aperçoive.
 
 ### 16. `forecast-weekly-sales` — verdict attendu **N1**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Moyenne mobile et coefficient saisonnier calculé sur l'historique | **E** |
 | N1 | Régression linéaire sur variables calendaires, tendance et saisonnalité | **E** |
@@ -233,7 +233,7 @@ exceptionnelle.
 
 ### 17. `detect-anomalies-in-metrics` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Seuil robuste sur médiane et écart absolu médian, avec fenêtre glissante | **E** |
 | N1 | Forêt d'isolement sur plusieurs métriques conjointes | **E** |
@@ -249,7 +249,7 @@ nouvelle normale.
 
 ### 18. `generate-test-data` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Générateur déterministe à graine, respectant les contraintes du schéma | **E** |
 | N1 | Échantillonnage des distributions marginales observées en production | **E** |
@@ -261,7 +261,7 @@ les bugs que provoquent les vraies.
 
 ### 19. `write-product-descriptions` — verdict attendu **N3**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Gabarits à trous alimentés par les attributs du produit | **E** |
 | N1 | — Aucun modèle classique léger ne produit de la prose commercialement acceptable ; ce n'est pas ce pour quoi ils sont faits | — |
@@ -273,7 +273,7 @@ descriptions issues du même gabarit.
 
 ### 20. `generate-placeholder-images` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | SVG déterministe dérivé d'un hachage de l'identifiant | **E** |
 | N1 | — Il n'y a rien à apprendre : la sortie voulue est décorative et arbitraire | — |
@@ -289,7 +289,7 @@ vous avez besoin d'une vraie photographie, aucune approche de cette fiche ne con
 
 ### 21. `summarise-a-long-document` — verdict attendu **N3**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Résumé extractif : notation des phrases par position et fréquence des termes | **E** |
 | N1 | Notation supervisée des phrases sur des traits de surface | **E** |
@@ -301,7 +301,7 @@ et il ne reformule jamais.
 
 ### 22. `translate-interface-strings` — verdict attendu **N2**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Mémoire de traduction : correspondance exacte, puis correspondance approchée signalée pour relecture | **E** |
 | N1 | — La traduction statistique par segments exige un corpus aligné hors de portée d'une petite équipe, pour un résultat en deçà de N2 | — |
@@ -312,7 +312,7 @@ et il ne reformule jamais.
 
 ### 23. `convert-messy-csv-to-clean-data` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Détection du dialecte, normalisation d'encodage, coercition typée avec journal des rejets | **E** |
 | N1 | Inférence du type de colonne par classifieur sur des traits d'échantillon | **E** |
@@ -328,7 +328,7 @@ ou dont les séparateurs sont incohérents d'une ligne à l'autre.
 
 ### 24. `read-text-from-a-scanned-page` — verdict attendu **N2**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Vérifier d'abord qu'une couche de texte existe déjà dans le document et l'extraire | **E** |
 | N1 | — Un OCR par segmentation de caractères écrit à la main est un projet de plusieurs mois, pour un résultat très inférieur aux moteurs existants | — |
@@ -344,7 +344,7 @@ C'est le premier réflexe à avoir, pas une solution générale.
 
 ### 25. `validate-a-form-server-side` — verdict attendu **N0**
 
-| Barreau | Approche | Preuve |
+| Niveau | Approche | Preuve |
 |---|---|---|
 | N0 | Schéma de validation déclaratif, avec messages d'erreur par champ | **E** |
 | N1 | — Une règle métier n'a rien à apprendre : elle est écrite, connue et opposable | — |
@@ -360,7 +360,7 @@ demande une vérification externe, qui est un autre besoin.
 
 Chiffres obtenus en analysant ce fichier, par `node scripts/build-snippet-manifest.mjs`.
 
-| Barreau | Disponibles | Absents | `executed` | `stubbed` |
+| Niveau | Disponibles | Absents | `executed` | `stubbed` |
 |---|---|---|---|---|
 | N0 | 25 | 0 | 25 | 0 |
 | N1 | 20 | 5 | 20 | 0 |
@@ -368,14 +368,14 @@ Chiffres obtenus en analysant ce fichier, par `node scripts/build-snippet-manife
 | N3 | 16 | 9 | 0 | 16 |
 | **Total** | **74** | **26** | **45** | **29** |
 
-74 barreaux disponibles × 2 langages = **148 extraits**, plus autant de tests, soit
+74 niveaux disponibles × 2 langages = **148 extraits**, plus autant de tests, soit
 **296 fichiers**.
 
-Les 45 extraits `executed` couvrent la totalité des barreaux N0 et N1, c'est-à-dire
+Les 45 extraits `executed` couvrent la totalité des niveaux N0 et N1, c'est-à-dire
 exactement les approches que le site recommande le plus souvent. Les 29 extraits `stubbed`
 sont tous sur N2 et N3, où l'exécution en intégration continue exigerait un modèle de
 plusieurs centaines de mégaoctets ou une clé d'API payante.
 
-Vingt-six barreaux sont déclarés absents, chacun avec une raison écrite. C'est un quart de
-la grille : une fiche qui présenterait quatre barreaux disponibles à chaque fois serait une
+Vingt-six niveaux sont déclarés absents, chacun avec une raison écrite. C'est un quart de
+la grille : une fiche qui présenterait quatre niveaux disponibles à chaque fois serait une
 fiche qui n'a pas choisi.
