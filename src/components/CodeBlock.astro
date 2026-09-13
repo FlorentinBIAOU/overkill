@@ -18,7 +18,9 @@ import type { Language } from '../lib/snippets';
 
 export interface Props {
   code: string;
-  language: Language;
+  /** Le langage à coloriser. Les extraits sont en Python ou en JavaScript ;
+      le Markdown sert au badge de README, qui n'est pas un extrait. */
+  language: Language | 'markdown';
   /** Chemin du fichier réel, affiché dans la barre du bloc. */
   path?: string;
   copyLabel: string;
@@ -37,10 +39,7 @@ const { code, language, path, copyLabel, copiedLabel, failedLabel, proof } = Ast
    contrôle de contraste les relit pour vérifier chaque couleur du thème
    contre --code-surface. */
 const html = substitute(
-  await codeToHtml(code, {
-    lang: language === 'python' ? 'python' : 'javascript',
-    theme: CODE_THEME,
-  }),
+  await codeToHtml(code, { lang: language, theme: CODE_THEME }),
 );
 ---
 

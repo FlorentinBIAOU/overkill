@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Une image de partage par fiche, produite à la construction du site.
+ * Ce qu'une fiche donne à coller ailleurs, produit à la construction du site :
+ * son image de partage, et son badge de README.
  *
  * Jusqu'ici, une seule image servait tout le site : un lien de fiche collé sur
  * un réseau social ne disait pas de quelle fiche il s'agissait. Chaque fiche a
@@ -12,9 +13,11 @@
  * sert de ses propres polices, de ses propres tokens, et aucune dépendance de
  * production n'entre au dépôt.
  *
- * Les fichiers sont écrits dans `dist/og/<langue>/<id>.png`, chemin que les
- * pages annoncent en `og:image`. Aucun nom haché : l'adresse doit rester
- * prévisible pour que la page puisse la nommer avant que l'image existe.
+ * Les fichiers sont écrits dans `dist/og/<langue>/<id>.png` et
+ * `dist/badge/<langue>/<id>.png`, chemins que les pages annoncent. Aucun nom
+ * haché : l'adresse doit rester prévisible pour que la page puisse la nommer
+ * avant que l'image existe, et pour qu'un badge collé dans un README d'il y a
+ * deux ans continue de s'afficher.
  */
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -98,6 +101,43 @@ function gabarit({ base, titre, reponse, niveau, langue }) {
 </body></html>`;
 }
 
+/**
+ * Le badge à coller dans un README.
+ *
+ * Deux parties, comme les badges qu'on trouve en tête des dépôts : le nom du
+ * site sur l'encre, le verdict sur l'aplat de marque. La largeur n'est pas
+ * calculée à la main — le navigateur mesure le texte, et la capture suit
+ * l'élément. Rendu au double de la taille d'affichage, pour rester net.
+ */
+function gabaritBadge({ base, verifie, reponse }) {
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('${base}/fonts/inter-600.woff2') format('woff2');
+    font-weight: 600;
+    font-display: block;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  body { background: transparent; }
+  .badge {
+    display: inline-flex; align-items: stretch;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 26px;
+    line-height: 1; border-radius: 8px; overflow: hidden;
+  }
+  /* Les deux moitiés seulement : sans le sélecteur d'enfant direct, le carré
+     de marque héritait de la hauteur et du padding, et devenait un bloc. */
+  .badge > span { display: flex; align-items: center; padding: 0 20px; height: 56px; }
+  .gauche { background: #16130E; color: #FFFDF7; gap: 12px; }
+  .carre { width: 16px; height: 16px; background: #FFCE00; }
+  .droite { background: #FFCE00; color: #16130E; }
+</style></head>
+<body><span class="badge">
+  <span class="gauche"><span class="carre"></span>${verifie}</span>
+  <span class="droite">${reponse}</span>
+</span></body></html>`;
+}
+
 const echappe = (t) =>
   String(t).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
@@ -111,24 +151,50 @@ const page = await navigateur.newPage({
 
 const publiees = await fiches();
 let ecrites = 0;
+let badges = 0;
+
+const pageBadge = await navigateur.newPage({
+  viewport: { width: 900, height: 120 },
+  deviceScaleFactor: 2,
+});
 
 for (const langue of ['fr', 'en']) {
-  const dossier = join('dist', 'og', langue);
-  await mkdir(dossier, { recursive: true });
+  const dossierOg = join('dist', 'og', langue);
+  const dossierBadge = join('dist', 'badge', langue);
+  await mkdir(dossierOg, { recursive: true });
+  await mkdir(dossierBadge, { recursive: true });
 
   for (const fiche of publiees) {
-    const html = gabarit({
-      base,
-      titre: echappe(fiche.title[langue]),
-      reponse: echappe(STRINGS[langue].rung.answer[fiche.verdict]),
-      niveau: fiche.verdict,
-      langue,
-    });
-    await page.setContent(html, { waitUntil: 'load' });
+    const reponse = STRINGS[langue].rung.answer[fiche.verdict];
+
+    await page.setContent(
+      gabarit({
+        base,
+        titre: echappe(fiche.title[langue]),
+        reponse: echappe(reponse),
+        niveau: fiche.verdict,
+        langue,
+      }),
+      { waitUntil: 'load' },
+    );
     await page.evaluate(() => document.fonts.ready);
-    const image = await page.screenshot({ type: 'png' });
-    await writeFile(join(dossier, `${fiche.id}.png`), image);
+    await writeFile(join(dossierOg, `${fiche.id}.png`), await page.screenshot({ type: 'png' }));
     ecrites += 1;
+
+    await pageBadge.setContent(
+      gabaritBadge({
+        base,
+        verifie: echappe(STRINGS[langue].share.badgeVerified),
+        reponse: echappe(reponse),
+      }),
+      { waitUntil: 'load' },
+    );
+    await pageBadge.evaluate(() => document.fonts.ready);
+    await writeFile(
+      join(dossierBadge, `${fiche.id}.png`),
+      await pageBadge.locator('.badge').screenshot({ type: 'png', omitBackground: true }),
+    );
+    badges += 1;
   }
 }
 
@@ -136,6 +202,6 @@ await navigateur.close();
 serveur.close();
 
 console.log(
-  `\nbuild-og-images — ${ecrites} image(s) de partage, ` +
-    `${publiees.length} fiche(s) × 2 langues, ${LARGEUR}×${HAUTEUR}\n`,
+  `\nbuild-share-assets — ${ecrites} image(s) de partage ${LARGEUR}×${HAUTEUR} ` +
+    `et ${badges} badge(s), ${publiees.length} fiche(s) × 2 langues\n`,
 );

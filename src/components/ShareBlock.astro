@@ -1,0 +1,120 @@
+---
+/**
+ * Ce qu'une fiche donne à coller ailleurs (lot 14, partie 8).
+ *
+ * Deux partages et un badge de README. Les partages sont de simples liens —
+ * aucun script tiers, aucune requête vers un réseau social depuis cette page :
+ * rien n'est chargé, et personne n'est mesuré tant que le lecteur ne clique
+ * pas.
+ *
+ * Le badge est le mécanisme qui crée des liens entrants : un dépôt qui affiche
+ * « Vérifié sur Overkill — Pas besoin d'IA » fait connaître le projet et sa
+ * propre décision d'ingénierie en même temps.
+ */
+import CodeBlock from './CodeBlock.astro';
+import type { Strings } from '../i18n';
+
+export interface Props {
+  /** L'adresse absolue de la fiche, celle qu'on partage. */
+  url: string;
+  title: string;
+  /** La réponse en toutes lettres, reprise dans le texte partagé. */
+  answer: string;
+  /** `/badge/<langue>/<id>.png`, produit à la construction du site. */
+  badge: string;
+  /** Racine absolue du site, pour que le Markdown soit collable tel quel. */
+  site: string;
+  strings: Strings;
+}
+
+const { url, title, answer, badge, site, strings } = Astro.props;
+const s = strings.share;
+
+const texte = `${title} — ${answer}`;
+/* LinkedIn ne lit plus que l'adresse : le titre et le verdict lui viennent des
+   métadonnées de la page, et de l'image de partage de la fiche. */
+const linkedin = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+const x = `https://x.com/intent/post?text=${encodeURIComponent(texte)}&url=${encodeURIComponent(url)}`;
+
+const alt = s.badgeAlt.replace('{reponse}', answer);
+const markdown = `[![${alt}](${site}${badge})](${url})`;
+---
+
+<section class="share" aria-labelledby="share-title">
+  <h2 id="share-title" class="share__title">{s.heading}</h2>
+  <p class="share__lead">{s.lead}</p>
+
+  <p class="share__links">
+    <a class="button button--ghost" href={linkedin} rel="noopener" target="_blank">
+      {s.linkedin}
+    </a>
+    <a class="button button--ghost" href={x} rel="noopener" target="_blank">{s.x}</a>
+  </p>
+
+  <div class="share__badge">
+    <h3 class="share__badge-title">{s.badgeTitle}</h3>
+    <p class="share__lead">{s.badgeLead}</p>
+    <p class="share__preview">
+      <img src={badge} alt={alt} width="300" height="28" />
+    </p>
+    <CodeBlock
+      code={markdown}
+      language="markdown"
+      path={s.snippet}
+      copyLabel={strings.code.copy}
+      copiedLabel={strings.code.copied}
+      failedLabel={strings.code.copyFailed}
+    />
+  </div>
+</section>
+
+<style>
+  .share__title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--space-4);
+  }
+
+  .share__lead {
+    margin: 0;
+    max-width: 58ch;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  .share__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: var(--space-6) 0 0;
+    max-width: none;
+  }
+
+  .share__badge {
+    margin-block-start: var(--space-12);
+    padding-block-start: var(--space-8);
+    border-block-start: 1px solid var(--rule);
+  }
+
+  .share__badge-title {
+    font-family: var(--font-text);
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 var(--space-2);
+  }
+
+  /* L'image est rendue au double de sa taille d'affichage : elle doit rester
+     nette dans un README, où personne ne contrôle le facteur d'échelle. */
+  .share__preview {
+    margin: var(--space-6) 0;
+  }
+
+  .share__preview img {
+    display: block;
+    width: 300px;
+    height: auto;
+  }
+</style>

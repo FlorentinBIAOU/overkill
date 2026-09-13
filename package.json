@@ -10,10 +10,10 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/compute-page-weight.mjs && node scripts/strip-dev-pages.mjs && npm run og",
+    "build": "astro build && node scripts/compute-page-weight.mjs && node scripts/strip-dev-pages.mjs && npm run share",
     "build:dev": "OVERKILL_DEV_PAGES=1 astro build && node scripts/compute-page-weight.mjs",
     "preview": "astro preview",
-    "og": "node --import tsx scripts/build-og-images.mjs",
+    "share": "node --import tsx scripts/build-share-assets.mjs",
     "fonts": "bash scripts/build-fonts.sh",
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",

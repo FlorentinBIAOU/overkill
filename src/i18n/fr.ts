@@ -432,6 +432,20 @@ export default {
     noJs: 'La recherche a besoin de JavaScript. Les filtres, non : validez le formulaire.',
   },
 
+  /* Ce qu'une fiche donne à coller ailleurs : les deux partages, et le badge
+     de README qui fait les liens entrants. */
+  share: {
+    heading: 'Partager, ou coller dans un README',
+    lead: 'Deux liens simples, sans script tiers : rien n’est chargé depuis un réseau social sur cette page.',
+    linkedin: 'Partager sur LinkedIn',
+    x: 'Partager sur X',
+    badgeVerified: 'Vérifié sur Overkill',
+    badgeTitle: 'Le badge, pour un README',
+    badgeLead: 'Collez cette ligne dans le README d’un dépôt : l’image renvoie à cette fiche.',
+    badgeAlt: 'Badge : vérifié sur Overkill — {reponse}',
+    snippet: 'Markdown à copier',
+  },
+
   help: {
     heading: 'Un cas que le catalogue ne couvre pas ?',
     body: 'Dites-moi ce que fait la tâche et ce qui vous fait douter. Un cas réel fait souvent une bonne fiche.',

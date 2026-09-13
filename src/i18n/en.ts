@@ -422,6 +422,20 @@ export default {
     noJs: 'Search needs JavaScript. Filters do not: submit the form.',
   },
 
+  /* What an entry gives you to paste elsewhere: the two share links, and the
+     README badge that earns inbound links. */
+  share: {
+    heading: 'Share, or paste into a README',
+    lead: 'Two plain links, no third-party script: nothing is loaded from a social network on this page.',
+    linkedin: 'Share on LinkedIn',
+    x: 'Share on X',
+    badgeVerified: 'Checked on Overkill',
+    badgeTitle: 'The badge, for a README',
+    badgeLead: 'Paste this line into a repository’s README: the image links back to this entry.',
+    badgeAlt: 'Badge: checked on Overkill — {reponse}',
+    snippet: 'Markdown to copy',
+  },
+
   help: {
     heading: 'A case the catalogue does not cover?',
     body: 'Tell me what the task does and what makes you doubt it. A real case often makes a good entry.',

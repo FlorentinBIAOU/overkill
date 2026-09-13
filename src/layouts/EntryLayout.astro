@@ -20,6 +20,7 @@ import HelpBlock from '../components/HelpBlock.astro';
 import LegalNotice from '../components/LegalNotice.astro';
 import LinkList from '../components/LinkList.astro';
 import RungSection from '../components/RungSection.astro';
+import ShareBlock from '../components/ShareBlock.astro';
 import TocSticky from '../components/TocSticky.astro';
 import { tryoutFor } from '../lib/tryouts.mjs';
 import { t, type Locale } from '../i18n';
@@ -54,6 +55,11 @@ const above = entry.rungs.find(
 const nextLevel = above
   ? { href: `#${String(above.level).toLowerCase()}`, label: above.name[lang] }
   : undefined;
+
+/* L'adresse absolue de la fiche : ce qu'on partage, et ce que le Markdown du
+   badge doit porter pour être collable tel quel. */
+const site = (Astro.site ?? new URL('https://isitoverkill.dev')).origin;
+const url = `${site}${route(lang, 'entries', entry.id)}`;
 
 const toc = [
   { href: '#verdict', label: strings.verdict.heading },
@@ -234,6 +240,17 @@ const hasRegulatory = entry.rungs.some(
 
             {hasRegulatory && <LegalNotice strings={strings} />}
           </section>
+
+          <div class="entry__section">
+            <ShareBlock
+              url={url}
+              title={entry.title[lang]}
+              answer={strings.rung.answer[entry.verdict]}
+              badge={`/badge/${lang}/${entry.id}.png`}
+              site={site}
+              strings={strings}
+            />
+          </div>
 
           {/* Les fiches voisines reprennent le format du catalogue : on
               comprend ce qu'on va ouvrir avant de cliquer. */}
