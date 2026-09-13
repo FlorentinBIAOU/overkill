@@ -37,7 +37,41 @@ terminée, vérifiée et commitée.
 | Marges et espacement repris | captures 360 / 1440, clair et sombre, regardées |
 | Aucun débordement horizontal | `node scripts/check-overflow.mjs /fr/fiches/mask-personal-data-in-chat /fr/fiches/summarise-a-long-document` — 4 largeurs, aucun |
 
+### Partie 2 — Le design appliqué partout
+
+| Fait | Preuve |
+|---|---|
+| Un seul traitement de bouton et de lien d'action pour tout le site, dans `global.css` | l'accueil, le catalogue, les familles, les fiches, le 404 et les pages éditoriales posaient chacun le leur ; captures des onze pages regardées |
+| Un seul composant d'appel à l'action, `CtaBand` | employé par le catalogue, les familles, l'index des familles, la méthodologie, contribuer et les crédits |
+| Les pages éditoriales reçoivent l'appel à l'action qui leur correspond, ou aucun | captures regardées page par page |
+| Les liens en cartes, employables depuis un fichier MDX | crédits et à propos : les méthodologies citées et les liens de l'auteur étaient du texte nu |
+| Un aplat d'en-tête sur chacune des onze pages publiques | mentions légales, confidentialité et crédits n'en avaient pas |
+| Les blocs de code des pages éditoriales sur le même fond sombre que les fiches | capture de la page contribuer regardée |
+| Les fiches mises en avant sur l'accueil au format carte du catalogue | capture regardée |
+| Accessibilité, clair et sombre | `node scripts/check-a11y.mjs /fr/credits /fr/contribuer /fr/familles /fr/a-propos /fr/404` — aucune violation sérieuse ni critique |
+| Aucun débordement horizontal, onze pages, quatre largeurs | `node scripts/check-overflow.mjs` sur les onze pages publiques |
+| `npm run check` au vert | de bout en bout, trois constructions comprises |
+
 ### Défauts trouvés en regardant l'écran, et corrigés
+
+7. **La page contribuer décrivait un bouton qui n'existait pas.** La section 7.8
+   du CDC demande « le bouton proposer une fiche sans coder, qui ouvre une issue
+   GitHub pré-remplie » : la page en parlait au futur depuis le lot 09 sans
+   jamais le poser. Il est là, dans l'appel à l'action de fin de page.
+8. **Le tableau des polices de la page crédits débordait à 360 px** et poussait
+   la page entière. Tout tableau du Markdown est désormais enveloppé dans un
+   conteneur qui défile, par un greffon de rendu : le contenu large défile dans
+   son conteneur, jamais la page.
+9. **Un appel à l'action commençait au bord de la page** sur les pages
+   éditoriales, dont tout le texte est centré dans une colonne de lecture. Il
+   s'aligne maintenant sur cette colonne.
+10. **Les listes de liens se mettaient sur deux colonnes selon la largeur de
+    l'écran**, y compris dans une colonne de lecture de 680 px où elles
+    devenaient illisibles. Le calcul porte désormais sur la place réellement
+    disponible.
+
+
+### Défauts trouvés en regardant l'écran, et corrigés — partie 1
 
 1. **L'adresse de contact s'affichait à l'envers** (`moc.liamg@olfuoaib`) sur
    toutes les fiches et sur l'accueil. Le CSS de portée automatique d'Astro ne
@@ -127,6 +161,39 @@ d'exceptions du contrôle, ce qui aurait blanchi un fichier entier.
 **Un seul thème de coloration syntaxique est rendu**, puisque le fond du code
 ne suit plus le thème de la page. Chaque jeton portait deux couleurs dans le
 HTML, une par thème ; il n'en porte plus qu'une.
+
+
+### Partie 2
+
+**La feuille de route publique est retirée.** Le document de lot la compte
+parmi les décisions périmées, la nouvelle navigation ne la porte plus, et la
+partie 8.4 lui substitue une page des dernières fiches et le flux RSS. Une page
+qui annonce cent soixante-quinze fiches inexistantes est une promesse, et ce
+site n'en fait pas. Les deux cents intitulés restent dans `content/roadmap.yaml`
+— ils servent au jeu de test à deux cents fiches et aux contributeurs. Les
+liens qui y menaient, sur l'accueil, le 404 et la page contribuer, renvoient
+désormais au catalogue ou aux familles. `docs/CDC.md` est mis à jour aux
+sections 6.2, 7.1, 7.4 et 7.11. *Écarté :* la garder en la vidant de ses
+promesses, ce qui aurait laissé une page sans lecteur.
+
+**Les pages légales n'ont pas d'appel à l'action.** Toutes les autres pages en
+portent un. Une page de mentions légales n'a rien à proposer, et un appel à
+l'action creux y serait pire que son absence. Ce n'est pas un retrait de
+traitement : elles ont le même aplat d'en-tête, la même colonne, les mêmes
+liens et les mêmes tableaux que les autres.
+
+**Le sous-titre visible des pages éditoriales est leur description.** Elle
+existait déjà, exacte et écrite pour ces pages, et elle ne servait qu'au
+référencement. *Écarté :* écrire un second texte pour l'en-tête, qui aurait
+été un doublon à maintenir.
+
+**Les liens en cartes passent par un composant employable depuis MDX.** Les
+pages éditoriales sont écrites en MDX et n'ont pas accès au dictionnaire
+d'interface ; `<Links lang="fr" links={[…]} />` le leur donne sans qu'un
+rédacteur ait à connaître le reste. *Écarté :* transformer les listes de liens
+du Markdown par un greffon de rendu — impossible d'y deviner la nature d'un
+lien sans son adresse, et cela aurait transformé aussi les listes qui doivent
+rester des listes.
 
 ---
 
