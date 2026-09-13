@@ -1,0 +1,576 @@
+---
+/**
+ * Le questionnaire d'orientation (lot 14, partie 3).
+ *
+ * Pour qui connaît sa finalité mais pas la solution, et n'est souvent pas
+ * développeur. Huit questions, quatre écrans, deux ou trois questions par
+ * écran, le nombre de questions restantes affiché.
+ *
+ * L'arbre est déterministe et aucun modèle n'est appelé : un site qui prêche
+ * la sobriété ne met pas un LLM à son accueil. Il est piloté par les données
+ * des fiches — familles, tâches, niveaux, sortie de données, déterminisme,
+ * testabilité — et non par une suite de conditions écrites à la main : une
+ * fiche nouvelle devient atteignable sans qu'on y touche.
+ *
+ * Les questions les plus clivantes viennent en premier : la famille partage
+ * le catalogue en dix, la tâche désigne la fiche. Les contraintes qui suivent
+ * ne filtrent pas les fiches — elles choisissent le niveau à l'intérieur de la
+ * fiche, et expliquent pourquoi.
+ */
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import CtaBand from '../../components/CtaBand.astro';
+import EntryCard from '../../components/EntryCard.astro';
+import { guideData } from '../../lib/guide';
+import { allFamilies, publishedEntries, familyTitles, ISSUE_URL } from '../../lib/content';
+import { LOCALES, t, type Locale } from '../../i18n';
+import { route } from '../../i18n/routes';
+
+export function getStaticPaths() {
+  return LOCALES.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Locale;
+const strings = t(lang);
+const g = strings.guide;
+/* Deux jeux de données, et c'est volontaire : les fiches entières servent à
+   écrire les options et les cartes, ici, au moment de la construction ; la
+   charge utile envoyée au navigateur ne porte que ce que le verdict calcule.
+   Le titre d'une fiche est déjà dans son option et dans sa carte. */
+const familles = (await allFamilies()).map((f) => f.data);
+const fiches = (await publishedEntries()).map((e) => e.data);
+const donnees = await guideData(lang);
+const titres = await familyTitles(lang);
+
+/** Oui / non / je ne sais pas, l'ossature de la plupart des questions. */
+const ouiNon = [
+  { value: 'oui', label: g.yes },
+  { value: 'non', label: g.no },
+  { value: 'nsp', label: g.unknown },
+];
+
+/**
+ * Les quatre écrans. Deux questions chacun : assez pour qu'un écran dise
+ * quelque chose, assez peu pour qu'on ne le quitte pas.
+ */
+const ecrans = [
+  {
+    titre: g.screens[0],
+    questions: [
+      {
+        cle: 'family',
+        label: g.q.family.label,
+        help: g.q.family.help,
+        options: [
+          ...familles.map((f: any) => ({
+            value: f.id,
+            label: f.title[lang],
+            help: f.question[lang],
+          })),
+          { value: 'nsp', label: g.q.family.unknown },
+        ],
+      },
+      {
+        cle: 'frequence',
+        label: g.q.frequence.label,
+        help: g.q.frequence.help,
+        options: [
+          { value: 'basse', label: g.q.frequence.basse },
+          { value: 'moyenne', label: g.q.frequence.moyenne },
+          { value: 'haute', label: g.q.frequence.haute },
+          { value: 'nsp', label: g.unknown },
+        ],
+      },
+    ],
+  },
+  {
+    titre: g.screens[1],
+    questions: [
+      {
+        cle: 'entry',
+        label: g.q.entry.label,
+        help: g.q.entry.help,
+        /* Les tâches de chaque famille, telles que les fiches les formulent.
+           Le module d'affichage ne montre que celles de la famille choisie ;
+           une fiche ajoutée apparaît ici sans autre intervention. */
+        options: [
+          ...fiches.map((e: any) => ({
+            value: e.id,
+            label: e.need[lang],
+            help: e.title[lang],
+            family: e.family,
+          })),
+          { value: 'aucune', label: g.q.entry.none },
+        ],
+      },
+      {
+        cle: 'egress',
+        label: g.q.egress.label,
+        help: g.q.egress.help,
+        options: ouiNon,
+      },
+    ],
+  },
+  {
+    titre: g.screens[2],
+    questions: [
+      { cle: 'meme', label: g.q.meme.label, help: g.q.meme.help, options: ouiNon },
+      { cle: 'verifier', label: g.q.verifier.label, help: g.q.verifier.help, options: ouiNon },
+    ],
+  },
+  {
+    titre: g.screens[3],
+    questions: [
+      {
+        cle: 'exemples',
+        label: g.q.exemples.label,
+        help: g.q.exemples.help,
+        options: [
+          { value: 'beaucoup', label: g.q.exemples.beaucoup },
+          { value: 'quelques', label: g.q.exemples.quelques },
+          { value: 'aucun', label: g.q.exemples.aucun },
+          { value: 'nsp', label: g.unknown },
+        ],
+      },
+      {
+        cle: 'heberger',
+        label: g.q.heberger.label,
+        help: g.q.heberger.help,
+        options: ouiNon,
+      },
+    ],
+  },
+];
+
+/** Ce que le module a besoin de savoir, et rien de plus. */
+const charge = {
+  lang,
+  data: donnees,
+  strings: {
+    remaining: g.remaining,
+    remainingOne: g.remainingOne,
+    step: g.step,
+    required: g.required,
+    next: g.next,
+    finish: g.finish,
+    verdict: g.verdict,
+    answer: strings.rung.answer,
+    plainEgress: strings.plainEgress,
+    riskPlain: strings.riskPlain,
+  },
+  links: {
+    catalogue: route(lang, 'catalogue'),
+    contribute: route(lang, 'contribute'),
+    issue: ISSUE_URL,
+  },
+  /* L'adresse est assemblée dans le navigateur à partir de deux moitiés :
+     le HTML livré ne porte aucune chaîne exploitable par un aspirateur, comme
+     ailleurs sur le site. */
+  mail: { user: 'biaouflo', domain: 'gmail.com' },
+};
+---
+
+<SiteLayout title={g.title} description={g.lead} lang={lang} register="editorial">
+  <div class="band band-brand guide__head">
+    <div class="wrap">
+      <h1 class="display-l">{g.title}</h1>
+      <p class="guide__lead">{g.lead}</p>
+    </div>
+  </div>
+
+  <div class="wrap guide" data-guide>
+    <form class="guide__form" data-guide-form novalidate>
+      <p class="guide__progress" data-guide-progress aria-live="polite"></p>
+
+      <ol class="guide__screens">
+        {
+          ecrans.map((ecran, i) => (
+            <li class="guide__screen" data-screen={i} hidden={i > 0}>
+              <h2 class="guide__screen-title">{ecran.titre}</h2>
+
+              {ecran.questions.map((q) => (
+                <fieldset class="q" data-question={q.cle}>
+                  <legend class="q__label">{q.label}</legend>
+                  <p class="q__help">{q.help}</p>
+                  <ul class="q__options">
+                    {q.options.map((o: any) => (
+                      <li data-family={o.family}>
+                        <label class="q__option">
+                          <input type="radio" name={q.cle} value={o.value} />
+                          <span class="q__option-text">
+                            <span class="q__option-label">{o.label}</span>
+                            {o.help && <span class="q__option-help">{o.help}</span>}
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </fieldset>
+              ))}
+            </li>
+          ))
+        }
+      </ol>
+
+      <p class="guide__error" data-guide-error role="alert" hidden></p>
+
+      <p class="guide__actions">
+        <button class="button" type="button" data-guide-next>{g.next}</button>
+        <button class="button button--ghost" type="button" data-guide-back hidden>{g.back}</button>
+      </p>
+
+      <p class="guide__nojs">
+        {g.noJs} <a class="link-action" href={route(lang, 'families')}>{strings.families.browse}</a>
+      </p>
+    </form>
+
+    <section class="guide__verdict" data-guide-verdict hidden aria-labelledby="verdict-title">
+      <h2 class="visually-hidden" id="verdict-title">{g.verdict.heading}</h2>
+    </section>
+
+    <p class="guide__restart" data-guide-restart hidden>
+      <button class="button button--ghost" type="button">{g.restart}</button>
+    </p>
+  </div>
+
+  {/* Les cartes sont rendues par le même composant que le catalogue, puis
+      clonées par le module : le verdict ne reconstruit pas une carte à la
+      main, et un gabarit ne s'affiche pas sans JavaScript. */}
+  <template data-guide-cards>
+    <ul class="guide__cards">
+      {
+        fiches.map((e: any) => {
+          const rung = e.rungs.find((r: any) => r.level === e.verdict);
+          return (
+            <div data-card-id={e.id}>
+              <EntryCard
+                id={e.id}
+                href={route(lang, 'entries', e.id)}
+                title={e.title[lang]}
+                need={e.need[lang]}
+                cost={rung?.cost}
+                latency={rung?.latency}
+                familyLabel={titres[e.family] ?? e.family}
+                family={e.family}
+                verdict={e.verdict}
+                available={e.rungs.filter((r: any) => r.available).map((r: any) => r.level)}
+                egress={rung?.risks.data_egress ?? 'none'}
+                deterministic={rung?.risks.deterministic ?? true}
+                strings={strings}
+                draft={e.status === 'draft'}
+              />
+            </div>
+          );
+        })
+      }
+    </ul>
+  </template>
+
+  <script type="application/json" data-guide-payload set:html={JSON.stringify(charge)} />
+
+  <CtaBand
+    heading={strings.families.ctaHeading}
+    body={strings.families.ctaBody}
+    action={{ label: strings.families.browse, href: route(lang, 'families') }}
+    secondary={{ label: strings.catalogue.title, href: route(lang, 'catalogue') }}
+  />
+</SiteLayout>
+
+<script>
+  import '../../scripts/guide.js';
+</script>
+
+<style>
+  .guide__head {
+    padding-block: var(--space-16) var(--space-12);
+  }
+
+  .guide__lead {
+    margin-block-start: var(--space-6);
+    font-size: var(--size-h3);
+    max-width: 48ch;
+  }
+
+  .guide {
+    padding-block: var(--space-16) 0;
+    max-width: 820px;
+    margin-inline: auto;
+  }
+
+  .guide__progress {
+    margin: 0 0 var(--space-8);
+    font-size: var(--size-small);
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .guide__progress:empty {
+    display: none;
+  }
+
+  .guide__screens {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .guide__screen {
+    max-width: none;
+  }
+
+  .guide__screen + .guide__screen {
+    margin-block-start: var(--space-16);
+  }
+
+  /* Le titre d'écran reçoit le focus au changement d'écran, pour que le
+     changement soit annoncé. Il n'est pas interactif : l'anneau de focus y
+     serait du bruit, et l'interdiction de le retirer vise les éléments
+     interactifs (CDC 8.7). */
+  .guide__screen-title:focus {
+    outline: none;
+  }
+
+  .guide__screen-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--space-8);
+  }
+
+  .q {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Pas de filet entre deux questions : une légende de fieldset se pose sur
+     la bordure et la chevauche. L'air suffit à les séparer. */
+  .q + .q {
+    margin-block-start: var(--space-16);
+  }
+
+  .q__label {
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 0;
+    max-width: 44ch;
+  }
+
+  .q__help {
+    margin: var(--space-2) 0 var(--space-5);
+    font-size: 0.92rem;
+    color: var(--muted);
+    max-width: 52ch;
+  }
+
+  .q__options {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-2);
+    grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  }
+
+  .q__options li {
+    max-width: none;
+  }
+
+  /* La cible fait toute la ligne : on clique où on lit, et la zone dépasse
+     largement les 44 px au toucher. */
+  .q__option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    height: 100%;
+    padding: var(--space-4);
+    border: 1.5px solid var(--rule);
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+  .q__option:hover {
+    border-color: var(--rule-strong);
+  }
+
+  .q__option:has(input:checked) {
+    border-color: var(--ink);
+    background: var(--paper-2);
+  }
+
+  .q__option:has(input:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .q__option input {
+    margin: 0;
+    margin-block-start: 0.25em;
+    accent-color: var(--ink);
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+
+  .q__option-text {
+    display: block;
+  }
+
+  .q__option-label {
+    display: block;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .q__option-help {
+    display: block;
+    margin-block-start: var(--space-1);
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .guide__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-block: var(--space-12) 0;
+    max-width: none;
+  }
+
+  .guide__error {
+    margin: var(--space-8) 0 0;
+    padding: var(--space-3) var(--space-4);
+    border-inline-start: 3px solid var(--ink);
+    background: var(--paper-2);
+    font-size: 0.95rem;
+  }
+
+  .guide__nojs {
+    margin-block-start: var(--space-12);
+    font-size: 0.92rem;
+    color: var(--muted);
+  }
+
+  [data-guide][data-enhanced='true'] .guide__nojs {
+    display: none;
+  }
+
+  .guide__restart {
+    margin-block: var(--space-12) 0;
+  }
+
+  /* ---- Le verdict ------------------------------------------------------ */
+
+  .guide__verdict {
+    padding-block-start: var(--space-4);
+  }
+
+  .guide :global(.gv__answer) {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin: 0;
+    max-width: 20ch;
+    color: var(--ans-0);
+  }
+
+  .guide :global(.gv__answer--n1) { color: var(--ans-1); }
+  .guide :global(.gv__answer--n2) { color: var(--ans-2); }
+  .guide :global(.gv__answer--n3) { color: var(--ans-3); }
+
+  /* Le message honnête n'est pas une réponse de niveau : il ne prend pas la
+     teinte d'un niveau. */
+  .guide :global(.gv__gap-title) {
+    color: var(--ink);
+  }
+
+  .guide :global(.gv__approach) {
+    margin: var(--space-5) 0 0;
+    font-size: var(--size-h3);
+    line-height: 1.4;
+  }
+
+  .guide :global(.gv__section) {
+    margin-block-start: var(--space-12);
+  }
+
+  .guide :global(.gv__title) {
+    font-family: var(--font-text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 var(--space-3);
+  }
+
+  .guide :global(.gv__why) {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    max-width: 58ch;
+  }
+
+  .guide :global(.gv__notes) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .guide :global(.gv__note) {
+    display: flex;
+    gap: var(--space-3);
+    max-width: 64ch;
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .guide :global(.gv__note)::before {
+    content: '';
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-block-start: 0.6em;
+    border-radius: 2px;
+    background: var(--ink);
+  }
+
+  .guide :global(.gv__note--warn)::before {
+    background: transparent;
+    border: 1.5px solid var(--ink);
+  }
+
+  .guide :global(.gv__routes) {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+    margin-block-start: var(--space-6);
+  }
+
+  .guide :global(.gv__route) {
+    padding: var(--space-6);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+  }
+
+  .guide :global(.gv__route-help) {
+    margin: var(--space-3) 0 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .guide__cards,
+  .guide :global(.guide__cards) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+  }
+</style>

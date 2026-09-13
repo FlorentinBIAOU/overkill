@@ -16,6 +16,7 @@ export const SEGMENTS = {
   families: 'familles',
   entries: 'fiches',
   methodology: 'methodologie',
+  guide: 'par-ou-commencer',
   about: 'a-propos',
   contribute: 'contribuer',
   help: 'accompagnement',

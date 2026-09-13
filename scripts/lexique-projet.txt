@@ -12,6 +12,7 @@ afnor
 ai
 algorithms
 allowed
+always
 ancrable
 ancrables
 and
@@ -79,6 +80,7 @@ core
 cormack
 cost
 count
+counts
 Covina
 cpu
 creative
@@ -122,6 +124,7 @@ escalate
 estimating
 executed
 expected
+explanatory
 external
 extract
 factor
@@ -131,6 +134,7 @@ fasttext
 feature
 fetch
 fields
+fieldset
 filter
 fixture
 fixtures
@@ -194,6 +198,7 @@ json
 kebab
 kernel
 knn
+know
 label
 lang
 langdetect
@@ -350,6 +355,7 @@ scenario
 sci
 science
 scikit
+screens
 search
 selected
 sentence

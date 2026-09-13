@@ -41,7 +41,7 @@ test('les segments de premier niveau sont tous déclarés', () => {
    * restent un document de travail du dépôt, pas une page.
    */
   const attendus = [
-    '', 'catalogue', 'familles', 'fiches', 'methodologie',
+    '', 'catalogue', 'familles', 'fiches', 'methodologie', 'par-ou-commencer',
     'a-propos', 'contribuer', 'accompagnement', 'mentions-legales',
     'confidentialite', 'credits',
   ];

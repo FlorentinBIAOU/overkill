@@ -20,8 +20,11 @@ export interface Props {
 const { lang, strings, path } = Astro.props;
 const autre = otherLocale(lang);
 
+/* Cinq entrées depuis le lot 14 : le questionnaire s'adresse à qui connaît sa
+   finalité mais pas la solution, et il n'existait nulle part. */
 const liens = [
   ['catalogue', strings.nav.catalogue],
+  ['guide', strings.nav.guide],
   ['methodology', strings.nav.methodology],
   ['contribute', strings.nav.contribute],
   ['about', strings.nav.about],
