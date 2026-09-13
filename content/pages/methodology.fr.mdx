@@ -2,7 +2,7 @@
 page: methodology
 lang: fr
 title: "Comment ça marche"
-description: "Les quatre niveaux, la condition qui fait passer de l'un à l'autre, comment un verdict est déterminé et comment l'empreinte est estimée."
+description: "Les quatre niveaux, la condition qui fait passer de l’un à l’autre, comment un verdict est déterminé et comment l’empreinte est estimée."
 updated: 2026-09-13
 ---
 
@@ -12,43 +12,43 @@ import Levels from '../../src/components/Levels.astro';
 
 Toute tâche admet plusieurs solutions, et elles ne pèsent pas le même poids. Masquer un
 numéro de téléphone dans un message peut se faire avec trois expressions régulières ou avec
-un appel de modèle généraliste sur chaque message entrant. Les deux marchent. L'une coûte
-zéro et rend la main avant la ligne de code suivante, l'autre coûte à chaque appel, prend
+un appel de modèle généraliste sur chaque message entrant. Les deux marchent. L’une coûte
+zéro et rend la main avant la ligne de code suivante, l’autre coûte à chaque appel, prend
 environ une seconde, et envoie le message chez un tiers.
 
-Le réflexe, aujourd'hui, est de prendre la plus puissante. Elle marchera sûrement, elle
-demande moins de réflexion en amont, et c'est ce que tout le monde montre. Le prix se
+Le réflexe, aujourd’hui, est de prendre la plus puissante. Elle marchera sûrement, elle
+demande moins de réflexion en amont, et c’est ce que tout le monde montre. Le prix se
 découvre ensuite, sur la facture, dans un audit, ou le jour où le fournisseur déprécie le
 modèle.
 
-L'échelle sert à rendre ce choix visible au lieu de l'écraser. Elle est fixe et identique sur
-toutes les fiches, et elle ne mesure pas la qualité d'une solution : elle mesure **son
-poids**, c'est-à-dire ce qu'il faut mettre en marche, faire tourner, surveiller et payer pour
+L’échelle sert à rendre ce choix visible au lieu de l’écraser. Elle est fixe et identique sur
+toutes les fiches, et elle ne mesure pas la qualité d’une solution : elle mesure **son
+poids**, c’est-à-dire ce qu’il faut mettre en marche, faire tourner, surveiller et payer pour
 obtenir le résultat.
 
 ## Les quatre niveaux
 
 Chaque fiche présente ces quatre niveaux, toujours dans le même ordre, du plus léger au plus
-lourd. Entre deux niveaux, la condition qui fait passer de l'un à l'autre : pas « quand c'est
+lourd. Entre deux niveaux, la condition qui fait passer de l’un à l’autre : pas « quand c’est
 mieux », mais ce qui rend le niveau du dessous insuffisant.
 
 <Levels lang="fr" />
 
 Tous les niveaux ne sont pas présents sur toutes les fiches. Un niveau absent est marqué
-absent, avec une raison courte et réelle. Il n'est jamais laissé vide : une case vide se lit
+absent, avec une raison courte et réelle. Il n’est jamais laissé vide : une case vide se lit
 comme un oubli, pas comme une décision.
 
-**Le niveau le plus lourd n'est pas le mauvais choix. Il est le mauvais choix par défaut.**
+**Le niveau le plus lourd n’est pas le mauvais choix. Il est le mauvais choix par défaut.**
 
 ## La méthode, pour qui creuse
 
 Ce qui suit explique comment les verdicts sont établis, comment les chiffres sont exprimés,
-et ce que ce site refuse de faire. Rien n'y est nécessaire pour lire une fiche.
+et ce que ce site refuse de faire. Rien n’y est nécessaire pour lire une fiche.
 
 ### Comment un verdict est déterminé
 
 Le verdict est **le niveau le plus léger qui fait le travail correctement**, pour le cas
-d'usage le plus courant du besoin.
+d’usage le plus courant du besoin.
 
 Trois questions, dans cet ordre :
 
@@ -60,16 +60,16 @@ Trois questions, dans cet ordre :
 3. **Est-ce que ce que ça coûte en retour est acceptable ?** Sortie de données, perte de
    déterminisme, dépendance à un fournisseur, périmètre réglementaire.
 
-Le badge « recommandé » peut se poser sur n'importe quel niveau, **y compris N3**. Certaines
-fiches recommandent franchement un modèle généraliste, parce que c'est la bonne réponse. Ce
-sont elles qui rendent crédibles celles qui recommandent l'inverse.
+Le badge « recommandé » peut se poser sur n’importe quel niveau, **y compris N3**. Certaines
+fiches recommandent franchement un modèle généraliste, parce que c’est la bonne réponse. Ce
+sont elles qui rendent crédibles celles qui recommandent l’inverse.
 
-Quand un verdict dépend d'une condition, la fiche le dit dans sa justification. Un verdict
-n'est pas une prescription universelle, c'est un point de départ argumenté.
+Quand un verdict dépend d’une condition, la fiche le dit dans sa justification. Un verdict
+n’est pas une prescription universelle, c’est un point de départ argumenté.
 
 ### Comment le code est vérifié
 
-**Aucune fiche n'est publiée si son code n'a pas été exécuté.** C'est la règle la plus
+**Aucune fiche n’est publiée si son code n’a pas été exécuté.** C’est la règle la plus
 importante du projet.
 
 Chaque extrait vit dans un fichier réel du dépôt, avec un test à côté de lui. La fiche
@@ -79,117 +79,117 @@ construit pas.
 Deux niveaux de preuve sont possibles, et **chaque extrait déclare le sien**, dans la barre
 du bloc de code :
 
-**Testé tel quel.** L'extrait tourne avec ses vraies dépendances, et son test tourne à chaque
-construction du site. C'est le cas de tous les niveaux N0 et N1.
+**Testé tel quel.** L’extrait tourne avec ses vraies dépendances, et son test tourne à chaque
+construction du site. C’est le cas de tous les niveaux N0 et N1.
 
-**Testé, service simulé.** L'extrait tourne, mais son test remplace le service externe par un
-double local. C'est le cas des niveaux N2 et N3 : télécharger un modèle de
-plusieurs centaines de mégaoctets à chaque construction, ou appeler une API payante, n'est
+**Testé, service simulé.** L’extrait tourne, mais son test remplace le service externe par un
+double local. C’est le cas des niveaux N2 et N3 : télécharger un modèle de
+plusieurs centaines de mégaoctets à chaque construction, ou appeler une API payante, n’est
 pas tenable. Ce que le test vérifie alors : la requête construite, la réponse décodée, les
-cas d'erreur. Ce qu'il ne vérifie pas : la qualité de la réponse du modèle. C'est dit sur la
-page, au plus près de l'extrait concerné.
+cas d’erreur. Ce qu’il ne vérifie pas : la qualité de la réponse du modèle. C’est dit sur la
+page, au plus près de l’extrait concerné.
 
 Nous préférons une preuve partielle affichée comme telle à une preuve complète affirmée sans
-l'être.
+l’être.
 
-### Pourquoi il n'y a pas de prix
+### Pourquoi il n’y a pas de prix
 
-Les tarifs des fournisseurs changent tous les trimestres, et pas toujours dans le sens qu'on
-croit. Une valeur absolue écrite aujourd'hui serait fausse dans six mois, et une fiche
+Les tarifs des fournisseurs changent tous les trimestres, et pas toujours dans le sens qu’on
+croit. Une valeur absolue écrite aujourd’hui serait fausse dans six mois, et une fiche
 fausse jette le doute sur toutes les autres.
 
 Les coûts sont donc exprimés en ordres de grandeur, avec un vocabulaire fixe :
 
-| Terme | Ce qu'il veut dire |
+| Terme | Ce qu’il veut dire |
 |---|---|
 | **nul** | aucun coût marginal |
-| **négligeable** | moins d'un euro par million d'opérations |
-| **faible** | de l'ordre de l'euro par million d'opérations |
-| **modéré** | de l'ordre de la dizaine d'euros par million d'opérations |
-| **élevé** | de l'ordre de la centaine d'euros par million d'opérations, ou plus |
+| **négligeable** | moins d’un euro par million d’opérations |
+| **faible** | de l’ordre de l’euro par million d’opérations |
+| **modéré** | de l’ordre de la dizaine d’euros par million d’opérations |
+| **élevé** | de l’ordre de la centaine d’euros par million d’opérations, ou plus |
 
 Les latences suivent le même principe, avec cinq classes : `<1 ms`, `~10 ms`, `~100 ms`,
 `~1 s`, `>1 s`.
 
 **Ce que la latence annoncée mesure**, et il fallait le dire une fois pour toutes : le temps
-d'une décision sur une entrée, sur une machine ordinaire. Pas celui de l'entraînement, qui
-n'a lieu qu'une fois. Pas celui du premier chargement d'un modèle en mémoire. Quand
-l'entraînement ou le chargement pèsent dans la décision d'adopter un niveau — et sur les
-niveaux N1 et N2, c'est souvent le cas — la fiche le dit dans son texte, pas dans sa classe
+d’une décision sur une entrée, sur une machine ordinaire. Pas celui de l’entraînement, qui
+n’a lieu qu’une fois. Pas celui du premier chargement d’un modèle en mémoire. Quand
+l’entraînement ou le chargement pèsent dans la décision d’adopter un niveau — et sur les
+niveaux N1 et N2, c’est souvent le cas — la fiche le dit dans son texte, pas dans sa classe
 de latence.
 
 Ce vocabulaire est volontairement grossier. Il suffit pour décider, et il ne périme pas.
 
-### Comment l'empreinte est estimée
+### Comment l’empreinte est estimée
 
-**Ce sont des estimations, et une mesure exacte est impossible côté client d'une API.**
+**Ce sont des estimations, et une mesure exacte est impossible côté client d’une API.**
 
 Quand vous appelez un modèle chez un fournisseur, vous ne connaissez ni le matériel employé,
-ni le taux de remplissage du serveur, ni la part de l'entraînement à amortir sur votre
+ni le taux de remplissage du serveur, ni la part de l’entraînement à amortir sur votre
 requête, ni le mix électrique du centre de données à cet instant. Le fournisseur, lui, les
 connaît, et ne les publie pas. Toute personne qui vous annonce des grammes de CO₂ par requête
-d'API vous donne le résultat d'un modèle d'estimation, pas une mesure.
+d’API vous donne le résultat d’un modèle d’estimation, pas une mesure.
 
-Overkill n'annonce donc **aucun chiffre d'empreinte**. Les fiches emploient des ordres de
+Overkill n’annonce donc **aucun chiffre d’empreinte**. Les fiches emploient des ordres de
 grandeur relatifs : négligeable, faible, modérée, élevée. Ils comparent les niveaux entre
 eux sur une même tâche, ce qui est la seule comparaison que nous puissions faire honnêtement.
 
-Ces ordres de grandeur s'appuient sur les travaux publiés suivants, cités nommément :
+Ces ordres de grandeur s’appuient sur les travaux publiés suivants, cités nommément :
 
 - **Green Algorithms**, Lannelongue, Grealey et Inouye, *Advanced Science*, 2021 — une
-  méthodologie et un calculateur pour estimer l'empreinte d'un calcul à partir du matériel,
+  méthodologie et un calculateur pour estimer l’empreinte d’un calcul à partir du matériel,
   de la durée et du lieu. [green-algorithms.org](https://www.green-algorithms.org/)
 - **Estimating the Carbon Footprint of BLOOM, a 176B Parameter Language Model**, Luccioni,
-  Viguier et Ligozat, 2022 — l'une des rares études publiées qui décompose entraînement,
+  Viguier et Ligozat, 2022 — l’une des rares études publiées qui décompose entraînement,
   fabrication du matériel et inférence pour un grand modèle de langue.
   [arxiv.org/abs/2211.02001](https://arxiv.org/abs/2211.02001)
 - **Software Carbon Intensity**, Green Software Foundation — une spécification pour calculer
-  l'intensité carbone d'un logiciel, devenue la norme ISO/IEC 21031.
+  l’intensité carbone d’un logiciel, devenue la norme ISO/IEC 21031.
   [sci.greensoftware.foundation](https://sci.greensoftware.foundation/)
-- **AFNOR SPEC 2314, Référentiel général pour l'IA frugale**, 2024 — un cadre français pour
-  évaluer et réduire l'impact environnemental d'un système d'intelligence artificielle.
+- **AFNOR SPEC 2314, Référentiel général pour l’IA frugale**, 2024 — un cadre français pour
+  évaluer et réduire l’impact environnemental d’un système d’intelligence artificielle.
   [normalisation.afnor.org](https://normalisation.afnor.org/nos-solutions/afnor-spec/intelligence-artificielle-frugale/)
-- **Boavizta** — des données et des outils ouverts sur l'impact environnemental du numérique,
+- **Boavizta** — des données et des outils ouverts sur l’impact environnemental du numérique,
   matériel compris. [boavizta.org](https://boavizta.org/)
 
-Si vous constatez qu'un ordre de grandeur d'une fiche contredit l'une de ces sources, c'est
+Si vous constatez qu’un ordre de grandeur d’une fiche contredit l’une de ces sources, c’est
 une erreur de notre part et nous voulons le savoir.
 
-### Pourquoi la couleur des niveaux n'exprime pas de jugement
+### Pourquoi la couleur des niveaux n’exprime pas de jugement
 
-L'échelle des niveaux est une rampe de neutres chauds, du plus clair au plus foncé. Ce n'est
+L’échelle des niveaux est une rampe de neutres chauds, du plus clair au plus foncé. Ce n’est
 pas un dégradé du vert au rouge, et ce ne le sera jamais.
 
-Un dégradé vert-rouge dirait « N0 c'est bien, N3 c'est mal ». C'est faux, et ce serait le
+Un dégradé vert-rouge dirait « N0 c’est bien, N3 c’est mal ». C’est faux, et ce serait le
 contraire du propos de ce site. Un modèle généraliste appelé sur la bonne tâche est un bon
-choix d'ingénierie. Une expression régulière employée là où elle ne peut pas tenir est un
+choix d’ingénierie. Une expression régulière employée là où elle ne peut pas tenir est un
 mauvais choix, quelle que soit sa légèreté.
 
-La rampe mesure **le poids**, c'est-à-dire une quantité, pas une valeur. La seule couleur qui
+La rampe mesure **le poids**, c’est-à-dire une quantité, pas une valeur. La seule couleur qui
 porte un jugement sur ce site est le vert du badge « recommandé », et ce badge se pose sur le
-niveau qui convient au besoin, quel qu'il soit.
+niveau qui convient au besoin, quel qu’il soit.
 
 ### Ce que nous ne faisons pas
 
-**Nous n'écrivons pas de conseil juridique.** Le bloc réglementaire de chaque niveau décrit, de façon factuelle et datée, ce que l'approche vous fait entrer dans le
-périmètre de, et ce dont elle ne vous dispense pas. Aucune fiche ne dit à personne qu'il est
-conforme ou non. C'est une information générale ; faites valider votre situation par un
+**Nous n’écrivons pas de conseil juridique.** Le bloc réglementaire de chaque niveau décrit, de façon factuelle et datée, ce que l’approche vous fait entrer dans le
+périmètre de, et ce dont elle ne vous dispense pas. Aucune fiche ne dit à personne qu’il est
+conforme ou non. C’est une information générale ; faites valider votre situation par un
 professionnel.
 
-**Nous ne comparons pas les fournisseurs.** Le site n'a ni publicité, ni partenariat, ni
-programme d'affiliation, et il n'en aura pas. Quand une fiche nomme un outil, c'est parce
-que le code en a besoin pour tourner, pas parce qu'on le recommande.
+**Nous ne comparons pas les fournisseurs.** Le site n’a ni publicité, ni partenariat, ni
+programme d’affiliation, et il n’en aura pas. Quand une fiche nomme un outil, c’est parce
+que le code en a besoin pour tourner, pas parce qu’on le recommande.
 
 **Nous ne mesurons pas notre audience.** Aucun cookie, aucun traceur, aucune ressource
 tierce. Le poids de chaque page est affiché en pied de page, calculé à la construction du
 site.
 
-**Nous n'appelons aucune API de modèle depuis le site.** Le site ne contient pas d'IA. Ce
-n'est pas une contrainte technique, c'est un argument.
+**Nous n’appelons aucune API de modèle depuis le site.** Le site ne contient pas d’IA. Ce
+n’est pas une contrainte technique, c’est un argument.
 
 ### Comment signaler une erreur
 
-Une fiche fausse est plus nuisible qu'une fiche absente. Si vous en trouvez une :
+Une fiche fausse est plus nuisible qu’une fiche absente. Si vous en trouvez une :
 
 - ouvrez une **issue** sur le dépôt, en citant la fiche et le point contesté
 - ou écrivez directement, si vous préférez ne pas passer par le dépôt

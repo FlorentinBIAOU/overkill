@@ -15,7 +15,7 @@ need:
   en: "Fill a database or a mock-up with believable data, without ever pouring real customer records into it."
 
 scenario:
-  fr: "Remplir une base de recette en demandant à un modèle généraliste d'inventer les lignes est devenu un réflexe : c'est rapide à écrire, et le résultat se lit bien. La première qualité d'un jeu de test n'est pourtant pas d'être crédible, c'est d'être rejouable — quand une suite échoue, il faut pouvoir reconstruire à l'identique la donnée qui l'a fait échouer. Un modèle appelé deux fois renvoie deux jeux différents, et il ne garantit ni les clés demandées, ni le nombre de lignes, ni l'unicité d'un identifiant."
+  fr: "Remplir une base de recette en demandant à un modèle généraliste d’inventer les lignes est devenu un réflexe : c’est rapide à écrire, et le résultat se lit bien. La première qualité d’un jeu de test n’est pourtant pas d’être crédible, c’est d’être rejouable — quand une suite échoue, il faut pouvoir reconstruire à l’identique la donnée qui l’a fait échouer. Un modèle appelé deux fois renvoie deux jeux différents, et il ne garantit ni les clés demandées, ni le nombre de lignes, ni l’unicité d’un identifiant."
   en: "Filling a staging database by asking a general-purpose model to invent the rows has become a reflex: it is quick to write, and the result reads well. The first quality of a test data set is not that it is believable, though, it is that it can be replayed — when a suite fails, you have to rebuild the exact data that made it fail. Call a model twice and you get two different data sets, and it guarantees neither the keys you asked for, nor the row count, nor the uniqueness of an identifier."
 
 rungs:
@@ -33,14 +33,14 @@ rungs:
       vendor_lock: none
       footprint: negligible
       regulatory:
-        fr: ["Aucun périmètre spécifique ajouté : aucune donnée réelle n'entre dans le générateur, chaque cellule est dérivée de la graine"]
+        fr: ["Aucun périmètre spécifique ajouté : aucune donnée réelle n’entre dans le générateur, chaque cellule est dérivée de la graine"]
         en: ["No specific scope added: no real data enters the generator, every cell is derived from the seed"]
     code:
       python: snippets/generate-test-data/n0.py
       javascript: snippets/generate-test-data/n0.js
       verification: executed
     breaking_point:
-      fr: "Les lignes restent visiblement synthétiques. Le test le montre sur une fonction de production qui oublie l'étiquette après un plus dans une adresse : le générateur n'émet qu'une seule forme d'adresse, sans plus, sans majuscule et sans apostrophe, donc la suite reste verte quelle que soit la graine et quel que soit le nombre de lignes, et le doublon de compte n'apparaît qu'en production."
+      fr: "Les lignes restent visiblement synthétiques. Le test le montre sur une fonction de production qui oublie l’étiquette après un plus dans une adresse : le générateur n’émet qu’une seule forme d’adresse, sans plus, sans majuscule et sans apostrophe, donc la suite reste verte quelle que soit la graine et quel que soit le nombre de lignes, et le doublon de compte n’apparaît qu’en production."
       en: "The rows stay visibly synthetic. The test shows it on a production function that forgets the plus tag in an address: the generator only ever emits one shape of address, with no plus tag, no capital and no apostrophe, so the suite stays green whatever the seed and whatever the row count, and the duplicate account only shows up in production."
     escalate_when:
       fr: "Un bug atteint la production alors que votre suite le couvrait en apparence, parce que la donnée réelle avait une forme que le générateur ne produit jamais."
@@ -62,7 +62,7 @@ rungs:
       regulatory:
         fr:
           - "Agrégation de données de production sur votre infrastructure, pour obtenir les effectifs observés"
-          - "Une catégorie observée une seule fois désigne une personne aussi sûrement que son nom : l'effectif se lit avant de sortir de production"
+          - "Une catégorie observée une seule fois désigne une personne aussi sûrement que son nom : l’effectif se lit avant de sortir de production"
         en:
           - "Aggregation of production data on your own infrastructure, to obtain the observed counts"
           - "A category observed once points to one person as surely as their name does: read the counts before they leave production"
@@ -71,16 +71,16 @@ rungs:
       javascript: snippets/generate-test-data/n1.js
       verification: executed
     breaking_point:
-      fr: "Chaque colonne est tirée seule, donc la distribution conjointe disparaît. Le test tire une ville et un code postal depuis leurs effectifs respectifs : les parts par ville sont justes, et près d'une ligne sur deux associe une ville à un code postal qui n'est pas le sien — une sur vingt annonce Nantes avec un code postal parisien. Le jeu ne démontre plus rien sur un code qui lit deux colonnes à la fois, et le fait que les marges soient exactes est exactement ce qui rend l'erreur facile à manquer."
+      fr: "Chaque colonne est tirée seule, donc la distribution conjointe disparaît. Le test tire une ville et un code postal depuis leurs effectifs respectifs : les parts par ville sont justes, et près d’une ligne sur deux associe une ville à un code postal qui n’est pas le sien — une sur vingt annonce Nantes avec un code postal parisien. Le jeu ne démontre plus rien sur un code qui lit deux colonnes à la fois, et le fait que les marges soient exactes est exactement ce qui rend l’erreur facile à manquer."
       en: "Each column is drawn on its own, so the joint distribution is gone. The test draws a city and a postcode from their own observed counts: the per-city shares come out right, and close to one row in two pairs a city with a postcode that is not its own — one row in twenty claims Nantes with a Paris postcode. The set proves nothing any more about code that reads two columns at once, and the marginals being exact is precisely what makes that easy to miss."
     escalate_when:
-      fr: "Vous écrivez un test qui croise deux colonnes — une règle de zone de livraison, un taux de taxe, une règle de fraude — et il faut d'abord écarter à la main les lignes impossibles."
+      fr: "Vous écrivez un test qui croise deux colonnes — une règle de zone de livraison, un taux de taxe, une règle de fraude — et il faut d’abord écarter à la main les lignes impossibles."
       en: "You write a test that crosses two columns — a delivery-zone rule, a tax rate, a fraud rule — and you first have to weed out the impossible rows by hand."
 
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Sans intérêt ici : héberger en permanence un modèle génératif pour remplir des colonnes dont les contraintes sont déjà écrites dans le schéma coûte un service à exploiter, pour une sortie qu'une fonction de hachage produit à la demande."
+      fr: "Sans intérêt ici : héberger en permanence un modèle génératif pour remplir des colonnes dont les contraintes sont déjà écrites dans le schéma coûte un service à exploiter, pour une sortie qu’une fonction de hachage produit à la demande."
       en: "Not useful here: permanently hosting a generative model to fill columns whose constraints are already written down in the schema costs a service to operate, for output a hash function produces on demand."
 
   - level: N3
@@ -98,9 +98,9 @@ rungs:
       footprint: high
       regulatory:
         fr:
-          - "Envoi de la structure de vos données à un sous-traitant : l'extrait ne transmet que des noms de champs, aucune valeur réelle"
-          - "Rien ne garantit qu'un nom, une adresse ou une entreprise inventés par le modèle ne coïncident pas avec une personne existante"
-          - "Ne vous dispense pas de traiter le jeu produit comme une donnée à conserver, puisqu'il n'est pas reconstructible depuis une graine"
+          - "Envoi de la structure de vos données à un sous-traitant : l’extrait ne transmet que des noms de champs, aucune valeur réelle"
+          - "Rien ne garantit qu’un nom, une adresse ou une entreprise inventés par le modèle ne coïncident pas avec une personne existante"
+          - "Ne vous dispense pas de traiter le jeu produit comme une donnée à conserver, puisqu’il n’est pas reconstructible depuis une graine"
         en:
           - "The structure of your data goes to a processor: the snippet sends field names only, never a real value"
           - "Nothing guarantees that a name, an address or a company invented by the model does not coincide with a real one"
@@ -110,14 +110,14 @@ rungs:
       javascript: snippets/generate-test-data/n3.js
       verification: stubbed
     breaking_point:
-      fr: "La réponse est plausible et fausse, et c'est du JSON valide dans les deux cas que le test rejoue : le modèle a renommé `display_name` en `name` et rendu une ligne de moins, puis a donné le même nom à deux lignes. Un décodeur qui se contente d'analyser le JSON les accepte, et le second transforme un test sur les comptes en double en un test qui passe toujours. L'extrait vérifie lui-même ce qu'il a demandé, réessaie, puis échoue plutôt que de rendre ça — et sans exigence d'unicité, la même réponse est acceptée."
+      fr: "La réponse est plausible et fausse, et c’est du JSON valide dans les deux cas que le test rejoue : le modèle a renommé `display_name` en `name` et rendu une ligne de moins, puis a donné le même nom à deux lignes. Un décodeur qui se contente d’analyser le JSON les accepte, et le second transforme un test sur les comptes en double en un test qui passe toujours. L’extrait vérifie lui-même ce qu’il a demandé, réessaie, puis échoue plutôt que de rendre ça — et sans exigence d’unicité, la même réponse est acceptée."
       en: "The answer is plausible and wrong, and it is valid JSON in both cases the test replays: the model renamed `display_name` to `name` and returned one row short, then gave two rows the same name. A decoder that merely parses the JSON accepts both, and the second turns a test about duplicate accounts into a test that always passes. The snippet checks what it asked for, retries, then fails rather than hand that back — and with no uniqueness requirement, the very same answer goes through."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus."
+      fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0 donne la propriété dont un jeu de test vit : la même graine reconstruit exactement les mêmes lignes, dans les deux langages, sur n'importe quelle machine, et une graine imprimée à côté d'un échec suffit à le rejouer. Il coûte une fonction de hachage, rien ne sort de votre infrastructure, et un identifiant de séquence est unique par construction plutôt que par chance. Montez à N1 le jour où vous mesurez quelque chose sur ce jeu, en sachant ce que vous échangez : chaque colonne tirée seule donne des lignes réalistes une par une et impossibles deux colonnes à la fois."
+  fr: "N0 donne la propriété dont un jeu de test vit : la même graine reconstruit exactement les mêmes lignes, dans les deux langages, sur n’importe quelle machine, et une graine imprimée à côté d’un échec suffit à le rejouer. Il coûte une fonction de hachage, rien ne sort de votre infrastructure, et un identifiant de séquence est unique par construction plutôt que par chance. Montez à N1 le jour où vous mesurez quelque chose sur ce jeu, en sachant ce que vous échangez : chaque colonne tirée seule donne des lignes réalistes une par une et impossibles deux colonnes à la fois."
   en: "N0 gives the one property a test data set lives on: the same seed rebuilds exactly the same rows, in both languages, on any machine, and a seed printed next to a failure is enough to replay it. It costs a hash function, nothing leaves your infrastructure, and a sequence identifier is unique by construction rather than by luck. Move up to N1 the day you start measuring something on that data, knowing what you trade for it: each column drawn on its own gives rows that are realistic one at a time and impossible two columns at a time."
 
 further_reading:

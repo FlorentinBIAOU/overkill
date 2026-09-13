@@ -11,11 +11,11 @@ title:
   en: "Write product descriptions"
 
 need:
-  fr: "Écrire le texte de présentation de chaque article d'un catalogue à partir de ses caractéristiques."
+  fr: "Écrire le texte de présentation de chaque article d’un catalogue à partir de ses caractéristiques."
   en: "Write the sales text for every item in a catalogue, starting from its characteristics."
 
 scenario:
-  fr: "Deux réflexes se croisent sur ce besoin. Le premier remplit un gabarit à trous et publie deux cents pages qui se lisent comme deux cents tirages du même formulaire ; le second envoie le catalogue entier chez un modèle et met en ligne ce qui revient, sans jamais le relire contre le dossier produit. Ce qu'une description vend, c'est la variété : deux articles voisins doivent se lire différemment. Ce que le vendeur engage, c'est ce que la phrase affirme, et c'est là que le niveau du haut, qui gagne ici, ne vous aide pas."
+  fr: "Deux réflexes se croisent sur ce besoin. Le premier remplit un gabarit à trous et publie deux cents pages qui se lisent comme deux cents tirages du même formulaire ; le second envoie le catalogue entier chez un modèle et met en ligne ce qui revient, sans jamais le relire contre le dossier produit. Ce qu’une description vend, c’est la variété : deux articles voisins doivent se lire différemment. Ce que le vendeur engage, c’est ce que la phrase affirme, et c’est là que le niveau du haut, qui gagne ici, ne vous aide pas."
   en: "Two reflexes meet on this need. One fills a slot template and ships two hundred pages that read like two hundred printings of the same form; the other sends the whole catalogue to a model and publishes whatever comes back, never reading it against the product record. What a description sells is variety: two neighbouring items have to read differently. What the shop is held to is what the sentence claims, and that is where the top level — which does win here — is no help at all."
 
 rungs:
@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/write-product-descriptions/n0.js
       verification: executed
     breaking_point:
-      fr: "La répétition, et elle se compte. Le test rend deux cents fiches complètes, efface de chaque description les valeurs propres au produit, et dénombre les motifs de phrase qui restent : douze, pour deux cents articles, le moins fréquent revenant seize fois. Sur le catalogue écrit à la main, dont les enregistrements ne portent pas tous les mêmes attributs, les phrases d'ouverture tombent dans neuf motifs pour vingt produits et le plus courant en couvre six — et cette variété-là vient des trous du catalogue, pas du gabarit."
-      en: "Repetition, and it is counted. The test renders two hundred complete records, blanks each product's own values out of its description, and tallies the sentence frames left behind: twelve, across two hundred items, the rarest of them used sixteen times. On the hand-written catalogue, whose records do not all carry the same attributes, the opening sentences fall into nine frames for twenty products and the commonest covers six of them — and that much variety comes from the holes in the data, not from the template."
+      fr: "La répétition, et elle se compte. Le test rend deux cents fiches complètes, efface de chaque description les valeurs propres au produit, et dénombre les motifs de phrase qui restent : douze, pour deux cents articles, le moins fréquent revenant seize fois. Sur le catalogue écrit à la main, dont les enregistrements ne portent pas tous les mêmes attributs, les phrases d’ouverture tombent dans neuf motifs pour vingt produits et le plus courant en couvre six — et cette variété-là vient des trous du catalogue, pas du gabarit."
+      en: "Repetition, and it is counted. The test renders two hundred complete records, blanks each product’s own values out of its description, and tallies the sentence frames left behind: twelve, across two hundred items, the rarest of them used sixteen times. On the hand-written catalogue, whose records do not all carry the same attributes, the opening sentences fall into nine frames for twenty products and the commonest covers six of them — and that much variety comes from the holes in the data, not from the template."
     escalate_when:
       fr: "Vous ouvrez deux pages de votre boutique à la suite et vous reconnaissez la phrase avant de reconnaître le produit."
       en: "You open two pages of your shop in a row and recognise the sentence before you recognise the product."
@@ -53,7 +53,7 @@ rungs:
   - level: N1
     available: false
     unavailable_reason:
-      fr: "Un modèle classique léger classe, note ou étiquette : écrire n'est pas ce pour quoi il est fait. Aucun ne produit de la prose qu'une boutique puisse publier, et pour un texte fabriqué en recombinant des morceaux de phrases, le gabarit de N0 fait mieux — ses phrases, au moins, ont été écrites par quelqu'un."
+      fr: "Un modèle classique léger classe, note ou étiquette : écrire n’est pas ce pour quoi il est fait. Aucun ne produit de la prose qu’une boutique puisse publier, et pour un texte fabriqué en recombinant des morceaux de phrases, le gabarit de N0 fait mieux — ses phrases, au moins, ont été écrites par quelqu’un."
       en: "A lightweight classic model classifies, scores or tags: writing is not what it is for. None of them produces prose a shop can publish, and for text assembled by recombining fragments of sentences, the N0 template does better — its sentences were at least written by somebody."
 
   - level: N2
@@ -71,10 +71,10 @@ rungs:
       footprint: moderate
       regulatory:
         fr:
-          - "Traitement sur votre infrastructure : ni le dossier produit ni le texte n'en sortent"
-          - "Le corpus d'affinage est fait de vos descriptions déjà publiées, avec la titularité des droits sur ces textes que cela suppose"
+          - "Traitement sur votre infrastructure : ni le dossier produit ni le texte n’en sortent"
+          - "Le corpus d’affinage est fait de vos descriptions déjà publiées, avec la titularité des droits sur ces textes que cela suppose"
           - "Licence et provenance du point de contrôle à établir avant mise en production"
-          - "Ne vous dispense pas de répondre des allégations que vous publiez : le contrôle d'ancrage ne couvre que les termes de la liste que vous tenez"
+          - "Ne vous dispense pas de répondre des allégations que vous publiez : le contrôle d’ancrage ne couvre que les termes de la liste que vous tenez"
         en:
           - "Processing on your own infrastructure: neither the product record nor the copy leaves it"
           - "The fine-tuning corpus is made of the descriptions you have already published, with the ownership of those texts that implies"
@@ -85,16 +85,16 @@ rungs:
       javascript: snippets/write-product-descriptions/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle affirme ce que le dossier ne dit pas. Le test fait rendre au double local une phrase juste de ton et de grammaire — la toile recyclée du sac y est « entièrement étanche » — pour un article dont aucun attribut ne parle d'étanchéité : rien, dans le modèle, ne sépare un attribut de ce produit d'un attribut qui va bien dans une phrase de cette forme. L'extrait refuse la copie au lieu de la publier, mais seulement pour les termes que vous avez listés : le test suivant montre la même phrase passant intacte avec un vocabulaire vide."
-      en: "The model asserts what the record does not say. The test has the local double hand back a sentence that is right in tone and in grammar — the bag's recycled canvas is « entièrement étanche », fully waterproof — for an item whose attributes never mention water: nothing inside the model separates an attribute of this product from an attribute that sits well in a sentence of that shape. The snippet refuses the copy instead of publishing it, but only for the terms you listed: the next test shows the same sentence going through untouched on an empty vocabulary."
+      fr: "Le modèle affirme ce que le dossier ne dit pas. Le test fait rendre au double local une phrase juste de ton et de grammaire — la toile recyclée du sac y est « entièrement étanche » — pour un article dont aucun attribut ne parle d’étanchéité : rien, dans le modèle, ne sépare un attribut de ce produit d’un attribut qui va bien dans une phrase de cette forme. L’extrait refuse la copie au lieu de la publier, mais seulement pour les termes que vous avez listés : le test suivant montre la même phrase passant intacte avec un vocabulaire vide."
+      en: "The model asserts what the record does not say. The test has the local double hand back a sentence that is right in tone and in grammar — the bag’s recycled canvas is « entièrement étanche », fully waterproof — for an item whose attributes never mention water: nothing inside the model separates an attribute of this product from an attribute that sits well in a sentence of that shape. The snippet refuses the copy instead of publishing it, but only for the terms you listed: the next test shows the same sentence going through untouched on an empty vocabulary."
     escalate_when:
-      fr: "Une gamme nouvelle arrive, et le corpus de descriptions publiées qu'un nouvel affinage réclamerait n'existe pas encore."
+      fr: "Une gamme nouvelle arrive, et le corpus de descriptions publiées qu’un nouvel affinage réclamerait n’existe pas encore."
       en: "A new range arrives, and the corpus of published descriptions a fresh fine-tune would call for does not exist yet."
 
   - level: N3
     available: true
     name:
-      fr: "Rédaction par appel à un modèle généraliste, avec contrôle d'ancrage sur le dossier produit"
+      fr: "Rédaction par appel à un modèle généraliste, avec contrôle d’ancrage sur le dossier produit"
       en: "Copywriting through a general-purpose model, with a grounding check against the product record"
     cost: élevé
     latency: "~1 s"
@@ -106,7 +106,7 @@ rungs:
       footprint: high
       regulatory:
         fr:
-          - "Transfert de vos dossiers produit à un sous-traitant, nouveautés non encore publiées comprises, avec l'encadrement contractuel que cela suppose"
+          - "Transfert de vos dossiers produit à un sous-traitant, nouveautés non encore publiées comprises, avec l’encadrement contractuel que cela suppose"
           - "Localisation du traitement à vérifier auprès du fournisseur"
           - "Ne vous dispense pas de répondre des allégations que vous publiez : une phrase écrite par le modèle vous engage comme une phrase écrite par vous"
         en:
@@ -118,24 +118,24 @@ rungs:
       javascript: snippets/write-product-descriptions/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle promet ce que la boutique ne vend pas, avec l'aplomb de la phrase vraie qui le précède. Le test fait écrire au double local que le sac est « garanti à vie » quand le dossier dit deux ans : aucune consigne, aucune température ne retire ce risque, puisque rien dans le modèle ne sépare un attribut de ce produit d'un attribut qui va bien dans une phrase de cette forme. Ce qui l'attrape est le contrôle du niveau du dessous, terme à terme contre le dossier, et il ne vaut que ce que vaut votre liste. S'y ajoute ce qu'on achète ici : l'extrait demande une température non nulle, donc deux appels sur le même produit ne rendent pas le même texte, et ce que vous avez relu hier n'est pas ce que le client lit aujourd'hui."
+      fr: "Le modèle promet ce que la boutique ne vend pas, avec l’aplomb de la phrase vraie qui le précède. Le test fait écrire au double local que le sac est « garanti à vie » quand le dossier dit deux ans : aucune consigne, aucune température ne retire ce risque, puisque rien dans le modèle ne sépare un attribut de ce produit d’un attribut qui va bien dans une phrase de cette forme. Ce qui l’attrape est le contrôle du niveau du dessous, terme à terme contre le dossier, et il ne vaut que ce que vaut votre liste. S’y ajoute ce qu’on achète ici : l’extrait demande une température non nulle, donc deux appels sur le même produit ne rendent pas le même texte, et ce que vous avez relu hier n’est pas ce que le client lit aujourd’hui."
       en: "The model promises what the shop does not sell, with the same confidence as the true sentence before it. The test has the local double write that the bag is « garanti à vie », guaranteed for life, where the record says two years: no instruction and no temperature removes that risk, because nothing in the model separates an attribute of this product from an attribute that sits well in a sentence of that shape. What catches it is the check from the level below, term by term against the record, and it is worth exactly what your list is worth. On top of that comes the thing you are buying: the snippet asks for a non-zero temperature, so two calls on the same product do not return the same text, and what you reviewed yesterday is not what the customer reads today."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus."
+      fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N3, sans détour : ce qu'on achète ici est la variété, et c'est précisément ce que le niveau du bas ne fabrique pas — douze motifs de phrase pour deux cents produits, mesurés par le test de N0, et le vingt-et-unième gabarit s'écrit à la main par quelqu'un qui en a déjà écrit vingt. N2 écrit bien pour les gammes qu'il a vues, mais il réclame d'avoir déjà publié le catalogue qu'on lui demande d'écrire, et il tombe sur le même défaut que N3 : il affirme ce que le dossier ne dit pas. Le prix est réel, un texte facturé au jeton par article, vos dossiers produit chez un tiers, et une copie qui change à chaque appel donc jamais relue une bonne fois ; ce qu'il achète, c'est une boutique qui ne se lit pas comme un formulaire. Si votre catalogue tient sur trente références qu'un rédacteur écrit une fois pour toutes, aucun niveau de cette fiche n'est la réponse."
-  en: "N3, and no apology for it: variety is what you are buying here, and variety is exactly what the bottom level cannot manufacture — twelve sentence frames for two hundred products, measured by the N0 test, and the twenty-first template is written by hand by somebody who has already written twenty. N2 writes well for the ranges it has seen, but it demands that you already published the catalogue you are asking it to write, and it fails the same way N3 does: it asserts what the record does not say. The price is real — copy metered by the token, one item at a time, your product records in a third party's hands, and text that changes on every call and is therefore never reviewed once and for all — and what it buys is a shop that does not read like a form. If your catalogue is thirty items a copywriter can write once, no level on this entry is the answer."
+  fr: "N3, sans détour : ce qu’on achète ici est la variété, et c’est précisément ce que le niveau du bas ne fabrique pas — douze motifs de phrase pour deux cents produits, mesurés par le test de N0, et le vingt-et-unième gabarit s’écrit à la main par quelqu’un qui en a déjà écrit vingt. N2 écrit bien pour les gammes qu’il a vues, mais il réclame d’avoir déjà publié le catalogue qu’on lui demande d’écrire, et il tombe sur le même défaut que N3 : il affirme ce que le dossier ne dit pas. Le prix est réel, un texte facturé au jeton par article, vos dossiers produit chez un tiers, et une copie qui change à chaque appel donc jamais relue une bonne fois ; ce qu’il achète, c’est une boutique qui ne se lit pas comme un formulaire. Si votre catalogue tient sur trente références qu’un rédacteur écrit une fois pour toutes, aucun niveau de cette fiche n’est la réponse."
+  en: "N3, and no apology for it: variety is what you are buying here, and variety is exactly what the bottom level cannot manufacture — twelve sentence frames for two hundred products, measured by the N0 test, and the twenty-first template is written by hand by somebody who has already written twenty. N2 writes well for the ranges it has seen, but it demands that you already published the catalogue you are asking it to write, and it fails the same way N3 does: it asserts what the record does not say. The price is real — copy metered by the token, one item at a time, your product records in a third party’s hands, and text that changes on every call and is therefore never reviewed once and for all — and what it buys is a shop that does not read like a form. If your catalogue is thirty items a copywriter can write once, no level on this entry is the answer."
 
 further_reading:
-  - label: "The E2E Dataset: New Challenges For End-to-End Generation — écrire une description à partir d'attributs, posé comme tâche"
+  - label: "The E2E Dataset: New Challenges For End-to-End Generation — écrire une description à partir d’attributs, posé comme tâche"
     url: "https://arxiv.org/abs/1706.09254"
-  - label: "Findings of the E2E NLG Challenge — ce que les systèmes évalués font des attributs qu'on leur donne"
+  - label: "Findings of the E2E NLG Challenge — ce que les systèmes évalués font des attributs qu’on leur donne"
     url: "https://aclanthology.org/W18-6539/"
-  - label: "Hugging Face — les pipelines de transformers, dont text2text-generation employé par l'extrait N2"
+  - label: "Hugging Face — les pipelines de transformers, dont text2text-generation employé par l’extrait N2"
     url: "https://huggingface.co/docs/transformers/main_classes/pipelines"
-  - label: "OpenAI — Structured Outputs, sur la réponse JSON que l'extrait N3 doit décoder"
+  - label: "OpenAI — Structured Outputs, sur la réponse JSON que l’extrait N3 doit décoder"
     url: "https://platform.openai.com/docs/guides/structured-outputs"
 
 sources: []

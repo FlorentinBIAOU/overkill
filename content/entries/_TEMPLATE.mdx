@@ -3,14 +3,14 @@
 # Gabarit de fiche Overkill.
 #
 # Copier ce fichier sous content/entries/<id>.mdx et remplir chaque champ.
-# Le nom du fichier doit être exactement l'identifiant suivi de .mdx.
+# Le nom du fichier doit être exactement l’identifiant suivi de .mdx.
 #
-# Avant d'ouvrir une pull request :
+# Avant d’ouvrir une pull request :
 #   npm run check:content     valide ce fichier
 #   npm run test:snippets     exécute le code des extraits
 #
-# La règle la plus importante du projet : aucune fiche n'est publiée si son
-# code n'a pas été exécuté et vérifié. En cas de doute, status: draft.
+# La règle la plus importante du projet : aucune fiche n’est publiée si son
+# code n’a pas été exécuté et vérifié. En cas de doute, status: draft.
 # ============================================================================
 
 # Identifiant en anglais, en kebab-case, stable et définitif.
@@ -25,7 +25,7 @@ family: detect-filter
 status: draft
 
 # Le niveau recommandé. Il doit désigner un niveau dont available vaut true.
-# Il peut valoir N3 : le badge « recommandé » se pose sur n'importe quel niveau.
+# Il peut valoir N3 : le badge « recommandé » se pose sur n’importe quel niveau.
 verdict: N0
 
 updated: 2026-01-01
@@ -35,18 +35,18 @@ title:
   fr: "Le besoin, formulé comme un titre"
   en: "The need, phrased as a title"
 
-# Ce que l'utilisateur veut faire, formulé comme il le dirait. Une phrase.
+# Ce que l’utilisateur veut faire, formulé comme il le dirait. Une phrase.
 need:
   fr: ""
   en: ""
 
-# Deux à quatre phrases : ce qu'on voit faire, et pourquoi c'est discutable.
+# Deux à quatre phrases : ce qu’on voit faire, et pourquoi c’est discutable.
 scenario:
   fr: ""
   en: ""
 
 # ----------------------------------------------------------------------------
-# Les quatre niveaux, toujours dans l'ordre N0, N1, N2, N3.
+# Les quatre niveaux, toujours dans l’ordre N0, N1, N2, N3.
 #
 #   N0  règle et algorithme classique
 #   N1  modèle classique léger
@@ -67,10 +67,10 @@ rungs:
 
     # Ordre de grandeur uniquement, jamais de prix absolu. Vocabulaire imposé :
     #   nul          aucun coût marginal
-    #   négligeable  moins d'un euro par million d'opérations
-    #   faible       de l'ordre de l'euro par million d'opérations
-    #   modéré       de l'ordre de la dizaine d'euros par million d'opérations
-    #   élevé        de l'ordre de la centaine d'euros par million, ou plus
+    #   négligeable  moins d’un euro par million d’opérations
+    #   faible       de l’ordre de l’euro par million d’opérations
+    #   modéré       de l’ordre de la dizaine d’euros par million d’opérations
+    #   élevé        de l’ordre de la centaine d’euros par million, ou plus
     cost: nul
 
     # Classes fixes : "<1 ms", "~10 ms", "~100 ms", "~1 s", ">1 s"
@@ -100,7 +100,7 @@ rungs:
     code:
       python: snippets/mon-besoin-en-anglais/n0.py
       javascript: snippets/mon-besoin-en-anglais/n0.js
-      # executed : l'extrait tourne tel quel, avec ses vraies dépendances.
+      # executed : l’extrait tourne tel quel, avec ses vraies dépendances.
       # stubbed  : il tourne, un service ou un modèle externe étant remplacé
       #            par un double local dans le test.
       verification: executed
@@ -110,7 +110,7 @@ rungs:
       fr: ""
       en: ""
 
-    # La condition précise qui justifie de monter d'un niveau.
+    # La condition précise qui justifie de monter d’un niveau.
     escalate_when:
       fr: ""
       en: ""
@@ -144,7 +144,7 @@ further_reading:
     url: "https://"
 
 # La source des chiffres avancés. Une affirmation chiffrée sans source
-# n'a pas sa place dans une fiche.
+# n’a pas sa place dans une fiche.
 sources: []
 ---
 

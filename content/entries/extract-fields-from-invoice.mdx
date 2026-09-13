@@ -7,15 +7,15 @@ updated: 2026-09-14
 contributors: [florentin-biaou]
 
 title:
-  fr: "Extraire les champs d'une facture"
+  fr: "Extraire les champs d’une facture"
   en: "Extract the fields of an invoice"
 
 need:
-  fr: "Récupérer le numéro, la date et le montant dû d'une facture, quelle que soit la mise en page du fournisseur."
-  en: "Pull the number, the date and the amount due out of an invoice, whatever the supplier's layout."
+  fr: "Récupérer le numéro, la date et le montant dû d’une facture, quelle que soit la mise en page du fournisseur."
+  en: "Pull the number, the date and the amount due out of an invoice, whatever the supplier’s layout."
 
 scenario:
-  fr: "On voit régulièrement chaque page de facture partir en image chez un modèle multimodal, alors que le PDF a déjà rendu son texte et que trois champs suffisent : le numéro, la date, le montant dû. Ce qui rend le besoin difficile n'est pourtant pas la lecture, c'est que chaque fournisseur range sa page à sa façon et rebaptise ses libellés sans prévenir. La question à trancher est donc celle du rattrapage : qu'est-ce qui se passe quand la lecture revient fausse, et surtout, comment le voyez-vous ?"
+  fr: "On voit régulièrement chaque page de facture partir en image chez un modèle multimodal, alors que le PDF a déjà rendu son texte et que trois champs suffisent : le numéro, la date, le montant dû. Ce qui rend le besoin difficile n’est pourtant pas la lecture, c’est que chaque fournisseur range sa page à sa façon et rebaptise ses libellés sans prévenir. La question à trancher est donc celle du rattrapage : qu’est-ce qui se passe quand la lecture revient fausse, et surtout, comment le voyez-vous ?"
   en: "A common reflex is to ship every invoice page off to a multimodal model as an image, when the PDF has already given up its text and only three fields are wanted: the number, the date, the amount due. What makes the job hard is not the reading, it is that every supplier arranges the page its own way and renames its labels without warning. So the question to settle is recovery: what happens when a reading comes back wrong, and above all, how do you find out?"
 
 rungs:
@@ -35,7 +35,7 @@ rungs:
       regulatory:
         fr:
           - "Aucun périmètre spécifique ajouté : la facture ne quitte pas votre infrastructure"
-          - "Une facture d'entrepreneur individuel porte des données personnelles, traitées ici sur votre seule infrastructure"
+          - "Une facture d’entrepreneur individuel porte des données personnelles, traitées ici sur votre seule infrastructure"
         en:
           - "No specific scope added: the invoice never leaves your infrastructure"
           - "An invoice from a sole trader carries personal data, processed here on your own infrastructure alone"
@@ -47,7 +47,7 @@ rungs:
       fr: "Le fournisseur suivant ne range pas sa page comme celui pour lequel les règles ont été écrites. Il écrit « N° » là où le premier écrivait « Facture n° », date en toutes lettres, et appelle le montant dû « NET A PAYER » : les trois champs tombent. Deux tombent à vide, et cela se voit. Le troisième est le pire : le total revient bien formé et faux, parce que « Sous-total » contient « total »."
       en: "The next supplier does not lay its page out like the one the rules were written for. It writes « N° » where the first wrote « Facture n° », spells the date out in words, and calls the amount due « NET A PAYER »: all three fields fall over. Two come back empty, and that shows. The third is the bad one: the total comes back well-formed and wrong, because « Sous-total » contains « total »."
     escalate_when:
-      fr: "Une facture arrive d'un fournisseur que vous n'aviez pas prévu, et vous rouvrez la liste des libellés pour lui."
+      fr: "Une facture arrive d’un fournisseur que vous n’aviez pas prévu, et vous rouvrez la liste des libellés pour lui."
       en: "An invoice arrives from a supplier you had not planned for, and you open the label list back up for it."
 
   - level: N1
@@ -66,7 +66,7 @@ rungs:
       regulatory:
         fr:
           - "Traitement de factures sur votre infrastructure"
-          - "Le jeu d'entraînement contient des factures réelles : il entre dans votre registre des traitements si vous en tenez un"
+          - "Le jeu d’entraînement contient des factures réelles : il entre dans votre registre des traitements si vous en tenez un"
         en:
           - "Processing of invoices on your own infrastructure"
           - "The training set holds real invoices: it belongs in your record of processing activities, where you keep one"
@@ -75,7 +75,7 @@ rungs:
       javascript: snippets/extract-fields-from-invoice/n1.js
       verification: executed
     breaking_point:
-      fr: "L'indemnité forfaitaire de recouvrement, que toute facture entre professionnels porte en bas de page. C'est un montant, seul sur sa ligne, en bas et à droite : au regard des traits, elle ressemble davantage à un total que le total lui-même, et le classifieur la retient. Rien dans le jeu d'entraînement ne disait le contraire."
+      fr: "L’indemnité forfaitaire de recouvrement, que toute facture entre professionnels porte en bas de page. C’est un montant, seul sur sa ligne, en bas et à droite : au regard des traits, elle ressemble davantage à un total que le total lui-même, et le classifieur la retient. Rien dans le jeu d’entraînement ne disait le contraire."
       en: "The fixed recovery indemnity that every business-to-business invoice carries in its footer. It is an amount, alone on its line, at the bottom and on the right: to the features, it looks more like a total than the total does, and the classifier keeps it. Nothing in the training set said otherwise."
     escalate_when:
       fr: "Vous recevez plus de mises en page différentes que vous ne pouvez en annoter, et un montant de bas de page passe pour le montant dû."
@@ -97,7 +97,7 @@ rungs:
       regulatory:
         fr:
           - "Traitement de factures sur votre infrastructure, poids du modèle compris"
-          - "Le corpus d'affinage contient des factures réelles : il entre dans votre registre des traitements si vous en tenez un"
+          - "Le corpus d’affinage contient des factures réelles : il entre dans votre registre des traitements si vous en tenez un"
           - "Licence et provenance du point de contrôle à établir avant mise en production"
         en:
           - "Processing of invoices on your own infrastructure, model weights included"
@@ -108,7 +108,7 @@ rungs:
       javascript: snippets/extract-fields-from-invoice/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Une erreur sûre d'elle passe tous les seuils. Sur une facture portant un acompte, mise en page que l'affinage n'a jamais vue, le modèle désigne la ligne de l'acompte comme montant dû et lui donne un score haut : le champ revient avec un nombre, un bon score, et aucun drapeau de relecture. Relever le seuil n'y change rien, l'erreur score au-dessus de la bonne réponse."
+      fr: "Une erreur sûre d’elle passe tous les seuils. Sur une facture portant un acompte, mise en page que l’affinage n’a jamais vue, le modèle désigne la ligne de l’acompte comme montant dû et lui donne un score haut : le champ revient avec un nombre, un bon score, et aucun drapeau de relecture. Relever le seuil n’y change rien, l’erreur score au-dessus de la bonne réponse."
       en: "A confident mistake clears every threshold. On an invoice carrying a deposit, a layout the fine-tuning never saw, the model points at the deposit line as the amount due and scores it high: the field comes back with a number, a good score, and no review flag. Raising the threshold does not help, because the mistake outscores the right answer."
     escalate_when:
       fr: "Vos factures arrivent en image, sans couche de texte exploitable : il ne reste plus de géométrie à donner au modèle."
@@ -129,9 +129,9 @@ rungs:
       footprint: high
       regulatory:
         fr:
-          - "Transfert de factures à un sous-traitant, avec l'encadrement contractuel que cela suppose"
+          - "Transfert de factures à un sous-traitant, avec l’encadrement contractuel que cela suppose"
           - "Localisation du traitement à vérifier auprès du fournisseur"
-          - "Ne vous dispense pas de vos obligations de conservation et de piste d'audit sur les pièces comptables"
+          - "Ne vous dispense pas de vos obligations de conservation et de piste d’audit sur les pièces comptables"
         en:
           - "Transfer of invoices to a processor, with the contractual framing that implies"
           - "Processing location to be confirmed with the provider"
@@ -141,14 +141,14 @@ rungs:
       javascript: snippets/extract-fields-from-invoice/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Toutes les vérifications portent sur la forme de la réponse, aucune sur sa véracité. Le modèle renvoie un objet parfaitement valide dont le montant n'apparaît nulle part sur la facture, et le code ne peut pas s'en apercevoir : s'en apercevoir supposerait de retrouver le montant dans la page, c'est-à-dire de refaire le travail que ce niveau devait éviter."
+      fr: "Toutes les vérifications portent sur la forme de la réponse, aucune sur sa véracité. Le modèle renvoie un objet parfaitement valide dont le montant n’apparaît nulle part sur la facture, et le code ne peut pas s’en apercevoir : s’en apercevoir supposerait de retrouver le montant dans la page, c’est-à-dire de refaire le travail que ce niveau devait éviter."
       en: "Every check here is a check on the shape of the answer, none on its truth. The model returns a perfectly valid object whose total appears nowhere on the invoice, and the code cannot tell: telling would mean finding the total in the page itself, which is the work this level was picked to avoid."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus."
+      fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2, parce que la mise en page est le signal et que c'est le seul niveau qui la lise sans qu'on la lui décrive : N0 tient pour un fournisseur et tombe au suivant, N1 prend pour le montant dû une mention légale que toute facture entre professionnels porte en bas de page, et N3 rend une réponse dont la forme se vérifie mais pas la véracité. Le prix est réel, un corpus de factures annotées et un service d'inférence à exploiter, et ce niveau ne vous met pas à l'abri d'une erreur sûre d'elle ; ce qu'il vous donne, c'est un score par champ, donc une file de relecture. Si vous recevez de trois fournisseurs qui ne changent jamais de gabarit, N0 reste la réponse honnête, et vous le saurez le jour où la liste des libellés s'allonge."
+  fr: "N2, parce que la mise en page est le signal et que c’est le seul niveau qui la lise sans qu’on la lui décrive : N0 tient pour un fournisseur et tombe au suivant, N1 prend pour le montant dû une mention légale que toute facture entre professionnels porte en bas de page, et N3 rend une réponse dont la forme se vérifie mais pas la véracité. Le prix est réel, un corpus de factures annotées et un service d’inférence à exploiter, et ce niveau ne vous met pas à l’abri d’une erreur sûre d’elle ; ce qu’il vous donne, c’est un score par champ, donc une file de relecture. Si vous recevez de trois fournisseurs qui ne changent jamais de gabarit, N0 reste la réponse honnête, et vous le saurez le jour où la liste des libellés s’allonge."
   en: "N2, because layout is the signal and this is the only level that reads it without being told how: N0 holds for one supplier and falls over on the next, N1 mistakes a legal footer that every business-to-business invoice carries for the amount due, and N3 returns an answer whose shape you can check but whose truth you cannot. The price is real — an annotated corpus of invoices, and an inference service to run — and the level does not save you from a confident mistake; what it gives you is a score per field, and therefore a review queue. If you receive from three suppliers who never change their template, N0 stays the honest answer, and you will know it the day the label list starts growing."
 
 further_reading:
@@ -156,9 +156,9 @@ further_reading:
     url: "https://entreprendre.service-public.fr/vosdroits/F31808"
   - label: "LayoutLMv3 — Pre-training for Document AI with Unified Text and Image Masking"
     url: "https://arxiv.org/abs/2204.08387"
-  - label: "microsoft/layoutlmv3-base — le point de contrôle nommé par l'extrait N2"
+  - label: "microsoft/layoutlmv3-base — le point de contrôle nommé par l’extrait N2"
     url: "https://huggingface.co/microsoft/layoutlmv3-base"
-  - label: "Factur-X — la facture hybride PDF et XML, quand il n'y a plus rien à extraire"
+  - label: "Factur-X — la facture hybride PDF et XML, quand il n’y a plus rien à extraire"
     url: "https://fnfe-mpe.org/factur-x/"
 
 sources: []

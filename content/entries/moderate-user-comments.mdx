@@ -11,12 +11,12 @@ title:
   en: "Moderate user comments"
 
 need:
-  fr: "Empêcher qu'un commentaire injurieux soit publié, ou le faire remonter à un modérateur avant qu'il le soit."
+  fr: "Empêcher qu’un commentaire injurieux soit publié, ou le faire remonter à un modérateur avant qu’il le soit."
   en: "Keep an abusive comment from being published, or put it in front of a moderator before it is."
 
 scenario:
-  fr: "Deux réflexes se croisent : une liste de gros mots recopiée d'un dépôt public, ou un appel de modèle généraliste sur chaque commentaire soumis. Les deux passent à côté de la difficulté réelle, qui n'est pas de reconnaître le mot mais de savoir ce qu'il fait là : la même insulte est tantôt l'attaque, tantôt la citation de cette attaque par la personne qui la signale, tantôt une plaisanterie entre habitués. Et ce qui sort de la chaîne n'est pas un score, c'est une décision prise sur le texte de quelqu'un, qu'il faudra un jour lui expliquer."
-  en: "Two reflexes meet here: a swear-word list copied from a public repository, or a general-purpose model called on every submitted comment. Both miss the real difficulty, which is not recognising the word but working out what it is doing there: the same insult is the attack in one comment, a quotation of that attack by the person reporting it in the next, and banter between regulars in the one after. What comes out of the pipeline is not a score either, it is a decision taken about somebody's writing, and sooner or later it has to be explained to them."
+  fr: "Deux réflexes se croisent : une liste de gros mots recopiée d’un dépôt public, ou un appel de modèle généraliste sur chaque commentaire soumis. Les deux passent à côté de la difficulté réelle, qui n’est pas de reconnaître le mot mais de savoir ce qu’il fait là : la même insulte est tantôt l’attaque, tantôt la citation de cette attaque par la personne qui la signale, tantôt une plaisanterie entre habitués. Et ce qui sort de la chaîne n’est pas un score, c’est une décision prise sur le texte de quelqu’un, qu’il faudra un jour lui expliquer."
+  en: "Two reflexes meet here: a swear-word list copied from a public repository, or a general-purpose model called on every submitted comment. Both miss the real difficulty, which is not recognising the word but working out what it is doing there: the same insult is the attack in one comment, a quotation of that attack by the person reporting it in the next, and banter between regulars in the one after. What comes out of the pipeline is not a score either, it is a decision taken about somebody’s writing, and sooner or later it has to be explained to them."
 
 rungs:
   - level: N0
@@ -33,17 +33,17 @@ rungs:
       vendor_lock: none
       footprint: negligible
       regulatory:
-        fr: ["Aucun périmètre spécifique ajouté : le commentaire ne quitte pas votre infrastructure, et l'extrait signale sans trancher"]
+        fr: ["Aucun périmètre spécifique ajouté : le commentaire ne quitte pas votre infrastructure, et l’extrait signale sans trancher"]
         en: ["No specific scope added: the comment never leaves your infrastructure, and the snippet flags without deciding"]
     code:
       python: snippets/moderate-user-comments/n0.py
       javascript: snippets/moderate-user-comments/n0.js
       verification: executed
     breaking_point:
-      fr: "Deux moitiés, toutes deux dans le test. Une graphie absente de la liste passe intacte : « bl0rptard », « blorp-tard », les lettres espacées une à une. Et la liste voit le mot, jamais son emploi : le message « he called me a blorptard, please remove his comment » est signalé exactement comme l'insulte qu'il rapporte, et rien dans le résultat ne les distingue."
+      fr: "Deux moitiés, toutes deux dans le test. Une graphie absente de la liste passe intacte : « bl0rptard », « blorp-tard », les lettres espacées une à une. Et la liste voit le mot, jamais son emploi : le message « he called me a blorptard, please remove his comment » est signalé exactement comme l’insulte qu’il rapporte, et rien dans le résultat ne les distingue."
       en: "Two halves, both in the test. A spelling the list does not hold walks straight past: bl0rptard, blorp-tard, letters spaced one by one. And the list sees the word, never its use: “he called me a blorptard, please remove his comment” is flagged exactly like the insult it reports, and nothing in the result tells them apart."
     escalate_when:
-      fr: "Vos modérateurs passent leur journée à classer sans suite des signalements qui n'en sont pas, ou vous ajoutez une graphie de plus à la liste chaque semaine."
+      fr: "Vos modérateurs passent leur journée à classer sans suite des signalements qui n’en sont pas, ou vous ajoutez une graphie de plus à la liste chaque semaine."
       en: "Your moderators spend the day closing flags that were never abuse, or you are adding one more spelling to the list every week."
 
   - level: N1
@@ -62,7 +62,7 @@ rungs:
       regulatory:
         fr:
           - "Traitement sur votre infrastructure de contenus écrits par vos utilisateurs"
-          - "Le corpus d'entraînement conserve des commentaires réels, et les décisions d'étiquetage qui les accompagnent"
+          - "Le corpus d’entraînement conserve des commentaires réels, et les décisions d’étiquetage qui les accompagnent"
         en:
           - "Processing of user-written content on your own infrastructure"
           - "The training corpus keeps real comments, and the labelling decisions that go with them"
@@ -71,10 +71,10 @@ rungs:
       javascript: snippets/moderate-user-comments/n1.js
       verification: executed
     breaking_point:
-      fr: "Le modèle apprend un vocabulaire, pas une intention. Le test le montre des deux côtés : « people like you should not be allowed to have an account here » ne réemploie aucune forme vue à l'entraînement et reste sous le seuil, tandis que le signalement « he called me a blorptard, please remove his comment » repasse au-dessus. Un corpus plus fourni déplace la frontière sans changer ce que le modèle regarde, qui reste la surface du texte."
+      fr: "Le modèle apprend un vocabulaire, pas une intention. Le test le montre des deux côtés : « people like you should not be allowed to have an account here » ne réemploie aucune forme vue à l’entraînement et reste sous le seuil, tandis que le signalement « he called me a blorptard, please remove his comment » repasse au-dessus. Un corpus plus fourni déplace la frontière sans changer ce que le modèle regarde, qui reste la surface du texte."
       en: "The model learns a vocabulary, not an intent. The test shows both sides: “people like you should not be allowed to have an account here” reuses no shape it was trained on and stays under the threshold, while the report “he called me a blorptard, please remove his comment” lands above it. A larger corpus moves the boundary without changing what the model looks at, which is still the surface of the text."
     escalate_when:
-      fr: "L'hostilité qui vous échappe est écrite en langue ordinaire, sans un seul terme que vous puissiez lister ou étiqueter."
+      fr: "L’hostilité qui vous échappe est écrite en langue ordinaire, sans un seul terme que vous puissiez lister ou étiqueter."
       en: "The hostility you are missing is written in plain words, without a single term you could list or label."
 
   - level: N2
@@ -93,21 +93,21 @@ rungs:
       regulatory:
         fr:
           - "Traitement sur votre infrastructure de contenus écrits par vos utilisateurs"
-          - "Décision de modération prise sans intervention humaine dès qu'un commentaire franchit le seuil de blocage"
-          - "La taxonomie du modèle est celle de son auteur : ce qu'elle ne nomme pas ne vous dispense pas d'avoir à le traiter"
+          - "Décision de modération prise sans intervention humaine dès qu’un commentaire franchit le seuil de blocage"
+          - "La taxonomie du modèle est celle de son auteur : ce qu’elle ne nomme pas ne vous dispense pas d’avoir à le traiter"
         en:
           - "Processing of user-written content on your own infrastructure"
           - "Moderation decision taken with no human involved as soon as a comment crosses the blocking threshold"
-          - "The taxonomy is the model author's: what it does not name does not excuse you from having to handle it"
+          - "The taxonomy is the model author’s: what it does not name does not excuse you from having to handle it"
     code:
       python: snippets/moderate-user-comments/n2.py
       javascript: snippets/moderate-user-comments/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Vous héritez de la taxonomie de quelqu'un d'autre. Le modèle note la toxicité, l'insulte et la menace ; le test lui soumet « he lives at the corner of rue des Lilas by the way, go and say hello », qui n'est aucune des trois, ressort bas partout et part en publication. Le code est juste, le préjudice n'a simplement pas d'étiquette."
-      en: "You inherit somebody else's taxonomy. The model scores toxicity, insult and threat; the test hands it “he lives at the corner of rue des Lilas by the way, go and say hello”, which is none of the three, scores low everywhere and goes out. The code is right; the harm just has no label."
+      fr: "Vous héritez de la taxonomie de quelqu’un d’autre. Le modèle note la toxicité, l’insulte et la menace ; le test lui soumet « he lives at the corner of rue des Lilas by the way, go and say hello », qui n’est aucune des trois, ressort bas partout et part en publication. Le code est juste, le préjudice n’a simplement pas d’étiquette."
+      en: "You inherit somebody else’s taxonomy. The model scores toxicity, insult and threat; the test hands it “he lives at the corner of rue des Lilas by the way, go and say hello”, which is none of the three, scores low everywhere and goes out. The code is right; the harm just has no label."
     escalate_when:
-      fr: "Le préjudice qui vous occupe n'a d'étiquette dans aucun modèle disponible, et vous n'avez pas de corpus étiqueté pour la lui apprendre."
+      fr: "Le préjudice qui vous occupe n’a d’étiquette dans aucun modèle disponible, et vous n’avez pas de corpus étiqueté pour la lui apprendre."
       en: "The harm you care about has no label in any available model, and you have no labelled corpus to teach it one."
 
   - level: N3
@@ -125,9 +125,9 @@ rungs:
       footprint: high
       regulatory:
         fr:
-          - "Transfert à un sous-traitant du texte de vos utilisateurs, y compris celui des personnes qui signalent l'abus qu'elles viennent de subir"
+          - "Transfert à un sous-traitant du texte de vos utilisateurs, y compris celui des personnes qui signalent l’abus qu’elles viennent de subir"
           - "Localisation du traitement à vérifier auprès du fournisseur"
-          - "Ne vous dispense pas d'être en mesure de motiver une décision que le fournisseur a prise à votre place"
+          - "Ne vous dispense pas d’être en mesure de motiver une décision que le fournisseur a prise à votre place"
         en:
           - "Transfer of your users' text to a processor, including the text of people reporting the abuse they have just received"
           - "Processing location to be confirmed with the provider"
@@ -137,20 +137,20 @@ rungs:
       javascript: snippets/moderate-user-comments/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le score est une opinion, pas une mesure, et le code n'a rien pour la confronter. Dans le test, « the diagram is much clearer than the text » revient noté en harcèlement au-delà du seuil de blocage, et la fonction bloque, correctement selon sa propre logique. Aucun trait à inspecter, aucun poids à imprimer, et rien à répondre à l'auteur du commentaire hormis le nombre du fournisseur, qui change au calendrier du fournisseur."
-      en: "The score is an opinion, not a measurement, and the code has nothing to hold it against. In the test, “the diagram is much clearer than the text” comes back scored for harassment past the blocking threshold, and the function blocks it, correctly by its own logic. No feature to inspect, no weight to print, and nothing to tell the commenter but the provider's number, which changes on the provider's schedule."
+      fr: "Le score est une opinion, pas une mesure, et le code n’a rien pour la confronter. Dans le test, « the diagram is much clearer than the text » revient noté en harcèlement au-delà du seuil de blocage, et la fonction bloque, correctement selon sa propre logique. Aucun trait à inspecter, aucun poids à imprimer, et rien à répondre à l’auteur du commentaire hormis le nombre du fournisseur, qui change au calendrier du fournisseur."
+      en: "The score is an opinion, not a measurement, and the code has nothing to hold it against. In the test, “the diagram is much clearer than the text” comes back scored for harassment past the blocking threshold, and the function blocks it, correctly by its own logic. No feature to inspect, no weight to print, and nothing to tell the commenter but the provider’s number, which changes on the provider’s schedule."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus."
+      fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2 est recommandé parce que la difficulté de ce besoin n'est pas lexicale. N0 et N1 tombent sur le même exemple du test, le signalement d'une insulte marqué comme l'insulte elle-même, et ni une liste plus longue ni un corpus plus fourni ne les en sortent : ils regardent la surface du texte. Le classifieur auto-hébergé lit ce contexte, garde chez vous des messages qui sont souvent le préjudice subi par quelqu'un, et vous laisse les deux seuils, dont celui qui envoie un commentaire à un humain au lieu de trancher. N3 rendrait au fournisseur le sens de chaque catégorie, l'étalonnage et la seule explication que vous pourriez donner à l'auteur d'un commentaire masqué ; l'échange ne se défend que si le préjudice qui vous occupe n'a d'étiquette nulle part."
-  en: "N2 is the recommendation because the difficulty here is not lexical. N0 and N1 fall on the same test example, a report of an insult flagged as the insult itself, and neither a longer list nor a larger corpus gets them out of it: they read the surface of the text. The self-hosted classifier reads the context around it, keeps on your premises messages that are often somebody's account of what was done to them, and leaves you both thresholds, including the one that sends a comment to a human instead of ruling on it. N3 would hand the provider the meaning of each category, the calibration, and the only explanation you could offer the author of a hidden comment; that trade only holds up when the harm you care about has a label nowhere else."
+  fr: "N2 est recommandé parce que la difficulté de ce besoin n’est pas lexicale. N0 et N1 tombent sur le même exemple du test, le signalement d’une insulte marqué comme l’insulte elle-même, et ni une liste plus longue ni un corpus plus fourni ne les en sortent : ils regardent la surface du texte. Le classifieur auto-hébergé lit ce contexte, garde chez vous des messages qui sont souvent le préjudice subi par quelqu’un, et vous laisse les deux seuils, dont celui qui envoie un commentaire à un humain au lieu de trancher. N3 rendrait au fournisseur le sens de chaque catégorie, l’étalonnage et la seule explication que vous pourriez donner à l’auteur d’un commentaire masqué ; l’échange ne se défend que si le préjudice qui vous occupe n’a d’étiquette nulle part."
+  en: "N2 is the recommendation because the difficulty here is not lexical. N0 and N1 fall on the same test example, a report of an insult flagged as the insult itself, and neither a longer list nor a larger corpus gets them out of it: they read the surface of the text. The self-hosted classifier reads the context around it, keeps on your premises messages that are often somebody’s account of what was done to them, and leaves you both thresholds, including the one that sends a comment to a human instead of ruling on it. N3 would hand the provider the meaning of each category, the calibration, and the only explanation you could offer the author of a hidden comment; that trade only holds up when the harm you care about has a label nowhere else."
 
 further_reading:
   - label: "unitary/unbiased-toxic-roberta — la fiche du modèle N2 et la liste de ses étiquettes"
     url: "https://huggingface.co/unitary/unbiased-toxic-roberta"
-  - label: "Perspective API — les attributs disponibles, exemple d'une taxonomie de modération figée"
+  - label: "Perspective API — les attributs disponibles, exemple d’une taxonomie de modération figée"
     url: "https://developers.perspectiveapi.com/s/about-the-api-attributes-and-languages"
   - label: "Santa Clara Principles on Transparency and Accountability in Content Moderation"
     url: "https://santaclaraprinciples.org/"

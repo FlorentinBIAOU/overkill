@@ -8,43 +8,43 @@ updated: 2026-09-10
 
 ## La règle qui prime sur tout
 
-**Aucune fiche n'est publiée si son code n'a pas été exécuté et vérifié.**
+**Aucune fiche n’est publiée si son code n’a pas été exécuté et vérifié.**
 
-Si vous ne retenez qu'une chose de cette page, retenez celle-là. Un catalogue dont le code ne
-tourne pas n'a aucune valeur, et une seule fiche fausse jette le doute sur toutes les autres.
+Si vous ne retenez qu’une chose de cette page, retenez celle-là. Un catalogue dont le code ne
+tourne pas n’a aucune valeur, et une seule fiche fausse jette le doute sur toutes les autres.
 
 Concrètement : chaque extrait vit dans un fichier réel du dépôt, avec un test à côté de lui.
 La fiche importe le fichier, elle ne contient pas de code recopié. Si un test échoue, la
 construction du site échoue.
 
 En cas de doute sur un point, proposez la fiche en `status: draft`. Un brouillon assumé est
-utile ; une fiche plausible mais fausse ne l'est pas.
+utile ; une fiche plausible mais fausse ne l’est pas.
 
 ## Ce qui fait une bonne fiche
 
-**Un besoin, formulé comme l'utilisateur le dirait.** « Repérer les doublons dans une base
+**Un besoin, formulé comme l’utilisateur le dirait.** « Repérer les doublons dans une base
 clients », pas « Déduplication par similarité vectorielle ».
 
 **Tous les barreaux, y compris ceux qui ne conviennent pas.** Un barreau absent est marqué
 absent avec une raison courte et réelle. Une case vide se lit comme un oubli.
 
 **Un point de rupture démontré, pas affirmé.** Chaque barreau annonce ce qui le fait échouer.
-Le test doit contenir un cas qui démontre cet échec. C'est le test le plus important de la
-fiche : sans lui, ce que la page raconte sur les limites de l'approche n'est qu'une opinion.
+Le test doit contenir un cas qui démontre cet échec. C’est le test le plus important de la
+fiche : sans lui, ce que la page raconte sur les limites de l’approche n’est qu’une opinion.
 
 **Un verdict assumé.** Deux à trois phrases qui disent pourquoi ce barreau et pas le suivant.
-Le badge « recommandé » peut se poser sur n'importe quel barreau, N3 compris.
+Le badge « recommandé » peut se poser sur n’importe quel barreau, N3 compris.
 
 **Des ordres de grandeur, jamais des chiffres.** Le vocabulaire de coût et les classes de
 latence sont fixes, et documentés sur la page [méthodologie](/fr/methodologie).
 
-**Les deux langues.** Le français et l'anglais, chacun écrit dans sa langue, pas traduit
-mot à mot depuis l'autre. Une fiche dont une langue est incomplète ne se publie pas.
+**Les deux langues.** Le français et l’anglais, chacun écrit dans sa langue, pas traduit
+mot à mot depuis l’autre. Une fiche dont une langue est incomplète ne se publie pas.
 
 ## La structure imposée
 
 Une fiche est un fichier `content/entries/<identifiant>.mdx`. Son contenu est entièrement dans
-l'en-tête du fichier, validé par un schéma qui refuse ce qui ne s'y conforme pas.
+l’en-tête du fichier, validé par un schéma qui refuse ce qui ne s’y conforme pas.
 
 Le gabarit commenté est dans le dépôt : `content/entries/_TEMPLATE.mdx`. Copiez-le, remplissez
 chaque champ, et lancez les contrôles.
@@ -57,49 +57,49 @@ content/snippets/mon-besoin/
     n1.py   n1.test.py   n1.js   n1.test.js
 ```
 
-Les deux langages sont systématiques : Python et JavaScript, jamais l'un sans l'autre.
+Les deux langages sont systématiques : Python et JavaScript, jamais l’un sans l’autre.
 La charte complète est dans `docs/sprints/CHARTE-EXTRAITS.md`.
 
 ## Le processus
 
-1. **Ouvrez une issue** avant d'écrire, et vérifiez d'abord dans le
-   [catalogue](/fr/catalogue) que le besoin n'y est pas déjà. Les deux cents intitulés
+1. **Ouvrez une issue** avant d’écrire, et vérifiez d’abord dans le
+   [catalogue](/fr/catalogue) que le besoin n’y est pas déjà. Les deux cents intitulés
    visés vivent dans `content/roadmap.yaml`, où vous pouvez vous servir. Cela évite
-   d'écrire quelque chose qui sera refusé pour une raison qu'on aurait pu dire plus tôt.
+   d’écrire quelque chose qui sera refusé pour une raison qu’on aurait pu dire plus tôt.
 2. **Forkez le dépôt** et travaillez sur une branche.
 3. **Lancez les contrôles en local** : `npm run check` reproduit exactement ce que fait
-   l'intégration continue.
+   l’intégration continue.
 4. **Ouvrez une pull request.** Le gabarit vous demandera de confirmer que le code a été
-   exécuté, avec quelle commande, que les deux langues sont renseignées, et d'où viennent les
+   exécuté, avec quelle commande, que les deux langues sont renseignées, et d’où viennent les
    chiffres.
-5. **Relecture.** Elle porte d'abord sur l'exactitude technique, ensuite sur le ton. Attendez-
-   vous à des questions sur les points de rupture : c'est là que se cache le contenu creux.
+5. **Relecture.** Elle porte d’abord sur l’exactitude technique, ensuite sur le ton. Attendez-
+   vous à des questions sur les points de rupture : c’est là que se cache le contenu creux.
 6. **Fusion.** La fiche se publie à la construction suivante.
 
 ## Proposer une fiche sans écrire de code
 
-Vous n'avez pas besoin d'être développeur pour rendre le catalogue meilleur. Si vous avez vu
-quelqu'un employer un modèle généraliste là où une règle aurait suffi, dites-le.
+Vous n’avez pas besoin d’être développeur pour rendre le catalogue meilleur. Si vous avez vu
+quelqu’un employer un modèle généraliste là où une règle aurait suffi, dites-le.
 
 Le formulaire demande quatre choses : le besoin en une phrase, la famille qui vous semble la
-bonne, ce que vous avez vu faire, et ce qui vous semble suffire. Rien d'autre.
+bonne, ce que vous avez vu faire, et ce qui vous semble suffire. Rien d’autre.
 
 ## Ce qui est refusé
 
-**Du contenu non vérifié.** Un extrait qui n'a pas été exécuté, un point de rupture affirmé
-sans test, une affirmation dont vous n'êtes pas sûr.
+**Du contenu non vérifié.** Un extrait qui n’a pas été exécuté, un point de rupture affirmé
+sans test, une affirmation dont vous n’êtes pas sûr.
 
-**La promotion d'un outil.** Si votre fiche existe pour faire connaître un produit, elle sera
-refusée, même si le produit est bon. Le site n'a aucun partenariat et n'en aura pas.
+**La promotion d’un outil.** Si votre fiche existe pour faire connaître un produit, elle sera
+refusée, même si le produit est bon. Le site n’a aucun partenariat et n’en aura pas.
 
 **Des chiffres sans source.** Pas de prix absolu, pas de gramme de CO₂, pas de pourcentage de
-performance qui ne vient pas d'un banc d'essai que vous avez réellement fait tourner.
+performance qui ne vient pas d’un banc d’essai que vous avez réellement fait tourner.
 
 **Du conseil juridique.** Le bloc réglementaire est factuel et daté. Aucune fiche ne dit à
-personne qu'il est conforme ou non.
+personne qu’il est conforme ou non.
 
-**Un jugement de valeur sur l'IA.** Ni dans le texte, ni dans la couleur. Le site compare des
+**Un jugement de valeur sur l’IA.** Ni dans le texte, ni dans la couleur. Le site compare des
 outils sur des tâches ; il ne milite pas.
 
-**Du texte de remplissage.** Un paragraphe creux qui tient lieu de contenu est pire qu'un
+**Du texte de remplissage.** Un paragraphe creux qui tient lieu de contenu est pire qu’un
 champ marqué brouillon.

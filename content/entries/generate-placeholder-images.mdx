@@ -15,14 +15,14 @@ need:
   en: "Show a stand-in image wherever the real one is still missing, in a mock-up or an unfinished catalogue."
 
 scenario:
-  fr: "On voit des maquettes et des catalogues incomplets remplir leurs vignettes vides par un appel à un générateur d'images, une image par fiche manquante. Ce qu'on demande pourtant à ces vignettes est d'occuper la place, de se distinguer les unes des autres, et de ne plus bouger : personne ne les regarde. Une fonction de hachage satisfait ces trois exigences sans réseau et sans fichier écrit sur le disque, et elle apporte la propriété qui manque au générateur : deux rendus de la même page donnent la même image."
+  fr: "On voit des maquettes et des catalogues incomplets remplir leurs vignettes vides par un appel à un générateur d’images, une image par fiche manquante. Ce qu’on demande pourtant à ces vignettes est d’occuper la place, de se distinguer les unes des autres, et de ne plus bouger : personne ne les regarde. Une fonction de hachage satisfait ces trois exigences sans réseau et sans fichier écrit sur le disque, et elle apporte la propriété qui manque au générateur : deux rendus de la même page donnent la même image."
   en: "Mock-ups and unfinished catalogues routinely fill their empty tiles by calling an image generator, one picture per missing record. What those tiles are actually asked to do is hold the space, look different from one another, and then stop changing: nobody studies them. A hash function meets all three demands with no network call and no file written to disk, and it brings the property the generator lacks: render the same page twice and you get the same image."
 
 rungs:
   - level: N0
     available: true
     name:
-      fr: "SVG déterministe dérivé d'un hachage de l'identifiant"
+      fr: "SVG déterministe dérivé d’un hachage de l’identifiant"
       en: "Deterministic SVG derived from a hash of the identifier"
     cost: nul
     latency: "<1 ms"
@@ -34,8 +34,8 @@ rungs:
       footprint: negligible
       regulatory:
         fr:
-          - "Aucun périmètre spécifique ajouté : l'image est calculée dans votre processus, rien n'est téléchargé et rien n'est transmis"
-          - "L'identifiant reçu est recopié dans l'attribut aria-label du balisage servi : ce qu'il contient est publié avec la page"
+          - "Aucun périmètre spécifique ajouté : l’image est calculée dans votre processus, rien n’est téléchargé et rien n’est transmis"
+          - "L’identifiant reçu est recopié dans l’attribut aria-label du balisage servi : ce qu’il contient est publié avec la page"
         en:
           - "No specific scope added: the image is computed inside your own process, nothing is fetched and nothing is sent"
           - "The identifier you pass is copied into the aria-label of the markup served: whatever it holds is published with the page"
@@ -44,32 +44,32 @@ rungs:
       javascript: snippets/generate-placeholder-images/n0.js
       verification: executed
     breaking_point:
-      fr: "L'image ne dit rien de ce qu'elle remplace : le hachage décide de tout, le sens de l'identifiant de rien. Le test le montre sur trois points — « red velvet sofa » ne tombe pas dans les rouges, sofa-1 et sofa-2 reçoivent des teintes éloignées alors qu'il s'agit du même canapé, et la sortie n'est jamais que des rectangles pleins en deux couleurs."
+      fr: "L’image ne dit rien de ce qu’elle remplace : le hachage décide de tout, le sens de l’identifiant de rien. Le test le montre sur trois points — « red velvet sofa » ne tombe pas dans les rouges, sofa-1 et sofa-2 reçoivent des teintes éloignées alors qu’il s’agit du même canapé, et la sortie n’est jamais que des rectangles pleins en deux couleurs."
       en: "The image says nothing about what it stands in for: the hash decides everything, the meaning of the identifier decides nothing. The test pins this on three counts — “red velvet sofa” does not land in the reds, sofa-1 and sofa-2 get hues far apart although they are the same couch, and the output is never anything but flat rectangles in two colours."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus. Le jour où il vous faut une vraie photographie de l'objet, ce n'est plus un remplaçant qu'on vous demande, et aucune approche de cette fiche n'y répond."
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où il vous faut une vraie photographie de l’objet, ce n’est plus un remplaçant qu’on vous demande, et aucune approche de cette fiche n’y répond."
       en: "There is no level above this one. The day you need an actual photograph of the thing, what is being asked of you is no longer a stand-in, and no approach on this page answers it."
 
   - level: N1
     available: false
     unavailable_reason:
-      fr: "Il n'y a rien à apprendre. Un modèle classique s'entraîne à prédire une bonne réponse à partir d'exemples ; ici aucune image n'est plus juste qu'une autre pour un identifiant donné, la sortie voulue étant décorative et arbitraire. Il n'existe donc pas de jeu étiqueté possible, et un modèle appris n'ajouterait qu'un fichier de poids à transporter là où une fonction de hachage donne déjà une réponse stable."
+      fr: "Il n’y a rien à apprendre. Un modèle classique s’entraîne à prédire une bonne réponse à partir d’exemples ; ici aucune image n’est plus juste qu’une autre pour un identifiant donné, la sortie voulue étant décorative et arbitraire. Il n’existe donc pas de jeu étiqueté possible, et un modèle appris n’ajouterait qu’un fichier de poids à transporter là où une fonction de hachage donne déjà une réponse stable."
       en: "There is nothing to learn. A classic model is trained to predict a right answer from examples; here no image is more correct than another for a given identifier, the wanted output being decorative and arbitrary. No labelled set can exist, and a trained model would only add a weights file to carry around where a hash function already gives a stable answer."
 
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Un modèle de diffusion auto-hébergé pour produire quelques rectangles colorés est l'exemple même du sur-dimensionnement : un service permanent, un accélérateur graphique, et une image dont on ne retrouve pas l'exacte réplique en changeant de version de bibliothèque ou de pilote. Il produit en plus ce qu'un remplaçant ne doit pas être — une image vraisemblable de l'objet absent, que le lecteur prendra pour la vraie."
+      fr: "Un modèle de diffusion auto-hébergé pour produire quelques rectangles colorés est l’exemple même du sur-dimensionnement : un service permanent, un accélérateur graphique, et une image dont on ne retrouve pas l’exacte réplique en changeant de version de bibliothèque ou de pilote. Il produit en plus ce qu’un remplaçant ne doit pas être — une image vraisemblable de l’objet absent, que le lecteur prendra pour la vraie."
       en: "A self-hosted diffusion model to draw a few coloured rectangles is oversizing in its purest form: a permanent service, a graphics accelerator, and an image you cannot reproduce byte for byte after a library or driver upgrade. It also produces exactly what a stand-in must not be — a plausible picture of the missing object, which readers will take for the real one."
 
   - level: N3
     available: false
     unavailable_reason:
-      fr: "Même disproportion, et deux défauts de plus : chaque vignette manquante devient un appel facturé chez un tiers, et rien ne garantit que le même identifiant redonnera la même image, le modèle du fournisseur changeant sous vos pieds. Un catalogue rendu de nouveau le mois suivant n'aurait plus les mêmes remplaçants."
-      en: "The same disproportion, with two extra faults: every missing tile becomes a billed call to a third party, and nothing guarantees the same identifier gives back the same image, the provider's model shifting under your feet. Re-render the catalogue a month later and its stand-ins have all changed."
+      fr: "Même disproportion, et deux défauts de plus : chaque vignette manquante devient un appel facturé chez un tiers, et rien ne garantit que le même identifiant redonnera la même image, le modèle du fournisseur changeant sous vos pieds. Un catalogue rendu de nouveau le mois suivant n’aurait plus les mêmes remplaçants."
+      en: "The same disproportion, with two extra faults: every missing tile becomes a billed call to a third party, and nothing guarantees the same identifier gives back the same image, the provider’s model shifting under your feet. Re-render the catalogue a month later and its stand-ins have all changed."
 
 verdict_rationale:
-  fr: "L'échelle de cette fiche n'a qu'un seul niveau, et c'est son intérêt : le besoin est décoratif et arbitraire, ce qui est précisément le cas où une fonction de hachage donne la réponse exacte plutôt qu'une approximation. Rien ne sort du processus, le coût marginal est nul, et le résultat se teste unitairement au caractère près — le même balisage attendu figure en toutes lettres dans le test Python et dans le test JavaScript, ce qui épingle les deux implémentations l'une à l'autre. La sortie de cette fiche ne se fait pas par le haut : elle se fait en obtenant la vraie image."
+  fr: "L’échelle de cette fiche n’a qu’un seul niveau, et c’est son intérêt : le besoin est décoratif et arbitraire, ce qui est précisément le cas où une fonction de hachage donne la réponse exacte plutôt qu’une approximation. Rien ne sort du processus, le coût marginal est nul, et le résultat se teste unitairement au caractère près — le même balisage attendu figure en toutes lettres dans le test Python et dans le test JavaScript, ce qui épingle les deux implémentations l’une à l’autre. La sortie de cette fiche ne se fait pas par le haut : elle se fait en obtenant la vraie image."
   en: "This ladder has a single level, and that is the point: the need is decorative and arbitrary, which is exactly the case where a hash function gives the exact answer rather than an approximation. Nothing leaves the process, the marginal cost is nil, and the result is unit testable down to the character — the same expected markup is spelled out in both the Python and the JavaScript test, which pins the two implementations to each other. The way out of this entry is not upwards: it is getting hold of the real picture."
 
 further_reading:
@@ -79,7 +79,7 @@ further_reading:
     url: "http://www.isthe.com/chongo/tech/comp/fnv/index.html"
   - label: "W3C — SVG Accessibility API Mappings, le rôle img et le nom accessible"
     url: "https://www.w3.org/TR/svg-aam-1.0/"
-  - label: "Wikipédia — Identicon, l'image dérivée d'un hachage"
+  - label: "Wikipédia — Identicon, l’image dérivée d’un hachage"
     url: "https://en.wikipedia.org/wiki/Identicon"
 
 sources: []

@@ -11,11 +11,11 @@ title:
   en: "Rank products by relevance"
 
 need:
-  fr: "Ordonner les produits d'une page de catalogue pour que les plus pertinents apparaissent en premier."
+  fr: "Ordonner les produits d’une page de catalogue pour que les plus pertinents apparaissent en premier."
   en: "Order the products on a catalogue page so the most relevant ones come first."
 
 scenario:
-  fr: "On voit passer la liste des produits et la requête à un modèle généraliste, en lui demandant de remettre le tout dans le bon ordre. Or l'ordre juste n'existe pas indépendamment de la boutique : il arbitre entre la pertinence, le stock, la marge et ce qui se vend, et cet arbitrage appartient à la personne qui tient le rayon. Ce qu'il faut livrer n'est donc pas un classement, c'est un classement dont chaque place s'explique et se rejoue à l'identique le lendemain."
+  fr: "On voit passer la liste des produits et la requête à un modèle généraliste, en lui demandant de remettre le tout dans le bon ordre. Or l’ordre juste n’existe pas indépendamment de la boutique : il arbitre entre la pertinence, le stock, la marge et ce qui se vend, et cet arbitrage appartient à la personne qui tient le rayon. Ce qu’il faut livrer n’est donc pas un classement, c’est un classement dont chaque place s’explique et se rejoue à l’identique le lendemain."
   en: "A common reflex is to hand the candidate products and the query to a general-purpose model and ask it to put them in the right order. But there is no right order independent of the shop: ranking arbitrates between relevance, stock, margin and what actually sells, and that arbitration belongs to whoever runs the aisle. What has to be delivered is therefore not an order, it is an order whose every position can be explained and replayed unchanged the next day."
 
 rungs:
@@ -34,8 +34,8 @@ rungs:
       footprint: negligible
       regulatory:
         fr:
-          - "Aucun périmètre spécifique ajouté : aucune donnée personnelle n'entre dans le score, et le catalogue ne quitte pas votre infrastructure"
-          - "La marge est un paramètre de classement explicite : l'information due sur les principaux paramètres de classement est à vérifier selon votre statut d'intermédiaire"
+          - "Aucun périmètre spécifique ajouté : aucune donnée personnelle n’entre dans le score, et le catalogue ne quitte pas votre infrastructure"
+          - "La marge est un paramètre de classement explicite : l’information due sur les principaux paramètres de classement est à vérifier selon votre statut d’intermédiaire"
         en:
           - "No specific scope added: no personal data enters the score, and the catalogue never leaves your infrastructure"
           - "Margin is an explicit ranking parameter: what has to be disclosed about the main ranking parameters depends on your status as an intermediary, and is worth checking"
@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/rank-products-by-relevance/n0.js
       verification: executed
     breaking_point:
-      fr: "Les pondérations sont réglées à la main sur le catalogue du moment, et elles vieillissent en silence. Le test les règle sur le catalogue d'automne, où les produits populaires étaient aussi les pertinents ; au printemps, une gamme qui n'a presque rien vendu perd sur sa propre requête, « sandales randonnée », contre le succès de la saison précédente — mêmes poids, même code. Rien ne le signale : ni exception, ni test rouge, ni ligne de journal. Il faut que quelqu'un s'en aperçoive et déplace un nombre."
-      en: "The weights are set by hand on the catalogue of the day, and they go stale in silence. The test tunes them on the autumn catalogue, where the popular products were also the relevant ones; come spring, a range that has barely sold anything yet loses on its own query, “sandales randonnée”, to last season's bestseller — same weights, same code. Nothing flags it: no exception, no failing test, no log line. Somebody has to notice, and move a number."
+      fr: "Les pondérations sont réglées à la main sur le catalogue du moment, et elles vieillissent en silence. Le test les règle sur le catalogue d’automne, où les produits populaires étaient aussi les pertinents ; au printemps, une gamme qui n’a presque rien vendu perd sur sa propre requête, « sandales randonnée », contre le succès de la saison précédente — mêmes poids, même code. Rien ne le signale : ni exception, ni test rouge, ni ligne de journal. Il faut que quelqu’un s’en aperçoive et déplace un nombre."
+      en: "The weights are set by hand on the catalogue of the day, and they go stale in silence. The test tunes them on the autumn catalogue, where the popular products were also the relevant ones; come spring, a range that has barely sold anything yet loses on its own query, “sandales randonnée”, to last season’s bestseller — same weights, same code. Nothing flags it: no exception, no failing test, no log line. Somebody has to notice, and move a number."
     escalate_when:
       fr: "Vous rejouez le même arbitrage entre pertinence, marge et popularité à chaque changement de saison, et votre journal de clics est assez fourni pour dire ce que les acheteurs choisissent réellement."
       en: "You are replaying the same arbitration between relevance, margin and popularity every time the season turns, and your click log is thick enough to say what shoppers actually pick."
@@ -67,7 +67,7 @@ rungs:
         fr:
           - "Le journal de clics est une donnée de comportement : rattaché à un identifiant de session ou de compte, il entre dans le périmètre du traitement de données personnelles sur votre infrastructure"
           - "Sa conservation entre dans le périmètre de votre registre des traitements, si vous en tenez un, et de votre durée de conservation"
-          - "Les poids appris restent des paramètres de classement, avec le même périmètre d'information que les poids réglés à la main"
+          - "Les poids appris restent des paramètres de classement, avec le même périmètre d’information que les poids réglés à la main"
         en:
           - "The click log is behavioural data: tied to a session or account identifier, it falls within processing of personal data on your own infrastructure"
           - "Keeping it falls within the scope of your record of processing activities, where you keep one, and of your retention period"
@@ -77,32 +77,32 @@ rungs:
       javascript: snippets/rank-products-by-relevance/n1.js
       verification: executed
     breaking_point:
-      fr: "Le journal n'enseigne que ce que le classement précédent a fait varier. Le test donne la même marge à tous les produits de toutes les pages : la colonne correspondante ne contient plus que des zéros, le poids appris vaut exactement zéro, et une page où la marge est la seule différence entre deux produits ressort avec deux scores identiques. Le modèle n'est pas faux, il est aveugle, et aucun surcroît de trafic n'y changera rien : seul un changement de ce qu'on montre le peut."
+      fr: "Le journal n’enseigne que ce que le classement précédent a fait varier. Le test donne la même marge à tous les produits de toutes les pages : la colonne correspondante ne contient plus que des zéros, le poids appris vaut exactement zéro, et une page où la marge est la seule différence entre deux produits ressort avec deux scores identiques. Le modèle n’est pas faux, il est aveugle, et aucun surcroît de trafic n’y changera rien : seul un changement de ce qu’on montre le peut."
       en: "The log only teaches what the previous ranking varied. The test gives every product on every page the same margin: that column holds nothing but zeroes, the learned weight comes out exactly nought, and a page where margin is the only difference between two products comes back with two identical scores. The model is not wrong, it is blind, and no amount of extra traffic will change that: only a change in what gets shown will."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus dans cette fiche : au-delà, on ne change plus de modèle, on change ce qu'on montre, pour que le journal enseigne autre chose que le classement de la veille."
-      en: "There is no level above this one here: past it you do not change model, you change what you show, so that the log teaches something other than yesterday's ranking."
+      fr: "Il n’y a pas de niveau au-dessus dans cette fiche : au-delà, on ne change plus de modèle, on change ce qu’on montre, pour que le journal enseigne autre chose que le classement de la veille."
+      en: "There is no level above this one here: past it you do not change model, you change what you show, so that the log teaches something other than yesterday’s ranking."
 
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Le classement se joue sur quatre signaux dont trois sont des chiffres de gestion — stock, marge, ventes — qu'aucun encodeur sémantique ne connaît. Un modèle auto-hébergé n'améliorerait que la correspondance textuelle, sur des titres de produits de quelques mots, et il faudrait tenir un service en permanence pour cela."
+      fr: "Le classement se joue sur quatre signaux dont trois sont des chiffres de gestion — stock, marge, ventes — qu’aucun encodeur sémantique ne connaît. Un modèle auto-hébergé n’améliorerait que la correspondance textuelle, sur des titres de produits de quelques mots, et il faudrait tenir un service en permanence pour cela."
       en: "Ranking here turns on four signals, three of which are business figures — stock, margin, sales — that no semantic encoder knows anything about. A self-hosted model would improve the text match alone, over product titles a few words long, and a permanent service would have to be kept running for it."
 
   - level: N3
     available: false
     unavailable_reason:
-      fr: "Un classement se réclame : le rayon veut savoir pourquoi son produit est troisième, et la même requête doit rendre le même ordre le lendemain. Un modèle généraliste ne donne ni l'un ni l'autre, et il faudrait l'appeler sur chaque page de résultats pour un arbitrage entre marge, stock et pertinence qui, lui, tient dans quatre nombres."
+      fr: "Un classement se réclame : le rayon veut savoir pourquoi son produit est troisième, et la même requête doit rendre le même ordre le lendemain. Un modèle généraliste ne donne ni l’un ni l’autre, et il faudrait l’appeler sur chaque page de résultats pour un arbitrage entre marge, stock et pertinence qui, lui, tient dans quatre nombres."
       en: "Rankings get challenged: the shop floor wants to know why its product came third, and the same query has to give the same order the next day. A general-purpose model provides neither, and it would have to be called on every result page for an arbitration between margin, stock and relevance that fits in four numbers."
 
 verdict_rationale:
-  fr: "N0 l'emporte parce que le seul livrable qui compte ici est un ordre qu'on peut défendre : les quatre poids sont des arguments d'appel, la fonction rend les signaux à côté du score, et une réclamation du rayon se règle en déplaçant un nombre l'après-midi même. N1 ne coûte rien de plus au service — la même somme pondérée, la même explication — mais il échange un test unitaire contre un journal de clics à collecter, à conserver et à croire, et son propre test montre qu'il n'apprend rien d'un signal que le classement précédent n'a pas fait varier. Montez à N1 le jour où votre trafic dit quelque chose que vos poids ne disent pas, et gardez la même fonction de service."
+  fr: "N0 l’emporte parce que le seul livrable qui compte ici est un ordre qu’on peut défendre : les quatre poids sont des arguments d’appel, la fonction rend les signaux à côté du score, et une réclamation du rayon se règle en déplaçant un nombre l’après-midi même. N1 ne coûte rien de plus au service — la même somme pondérée, la même explication — mais il échange un test unitaire contre un journal de clics à collecter, à conserver et à croire, et son propre test montre qu’il n’apprend rien d’un signal que le classement précédent n’a pas fait varier. Montez à N1 le jour où votre trafic dit quelque chose que vos poids ne disent pas, et gardez la même fonction de service."
   en: "N0 wins because the only deliverable that matters here is an order you can defend: the four weights are call arguments, the function hands back the signals next to the score, and a complaint from the shop floor is settled by moving a number that same afternoon. N1 costs nothing more at serving time — the same weighted sum, the same explanation — but it trades a unit test for a click log to collect, keep and trust, and its own test shows it learns nothing about a signal the previous ranking never varied. Move up to N1 the day your traffic says something your weights do not, and keep the same serving function."
 
 further_reading:
-  - label: "Joachims — Optimizing Search Engines using Clickthrough Data, l'apprentissage du classement par paires"
+  - label: "Joachims — Optimizing Search Engines using Clickthrough Data, l’apprentissage du classement par paires"
     url: "https://www.cs.cornell.edu/people/tj/publications/joachims_02c.pdf"
-  - label: "Joachims et al. — Accurately Interpreting Clickthrough Data as Implicit Feedback, sur ce qu'un clic dit et ne dit pas"
+  - label: "Joachims et al. — Accurately Interpreting Clickthrough Data as Implicit Feedback, sur ce qu’un clic dit et ne dit pas"
     url: "https://www.cs.cornell.edu/people/tj/publications/joachims_etal_05a.pdf"
   - label: "Python — Sorting HOW TO, et la stabilité garantie du tri"
     url: "https://docs.python.org/3/howto/sorting.html"

@@ -11,11 +11,11 @@ title:
   en: "Mask personal data in a chat thread"
 
 need:
-  fr: "Empêcher qu'un numéro de téléphone ou une adresse électronique soit visible dans un message envoyé."
+  fr: "Empêcher qu’un numéro de téléphone ou une adresse électronique soit visible dans un message envoyé."
   en: "Prevent phone numbers and email addresses from appearing in a sent message."
 
 scenario:
-  fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, pour repérer les coordonnées avant publication. Le besoin est pourtant déterministe : le motif d'une adresse électronique n'a pas changé depuis vingt ans, et celui d'un numéro français non plus. La question n'est pas de savoir si un modèle sait le faire, c'est de savoir ce qu'on paie pour un travail qu'une expression régulière fait en une fraction de milliseconde."
+  fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, pour repérer les coordonnées avant publication. Le besoin est pourtant déterministe : le motif d’une adresse électronique n’a pas changé depuis vingt ans, et celui d’un numéro français non plus. La question n’est pas de savoir si un modèle sait le faire, c’est de savoir ce qu’on paie pour un travail qu’une expression régulière fait en une fraction de milliseconde."
   en: "A common pattern is calling a general-purpose model on every inbound message to spot contact details before publication. The need is deterministic, though: the shape of an email address has not changed in twenty years, and neither has the shape of a French phone number. The question is not whether a model can do it, it is what you are paying for work a regular expression does in a fraction of a millisecond."
 
 rungs:
@@ -40,7 +40,7 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n0.js
       verification: executed
     breaking_point:
-      fr: "L'obfuscation volontaire. « zéro six douze », « O6 I2 34 » avec des lettres à la place des chiffres, ou des emojis intercalés : rien de tout cela ne ressemble à un numéro pour un motif. Dans l'autre sens, le motif d'IBAN n'a pas de somme de contrôle : une référence de commande écrite « DE 12 3456 7890 1234 » est masquée à tort."
+      fr: "L’obfuscation volontaire. « zéro six douze », « O6 I2 34 » avec des lettres à la place des chiffres, ou des emojis intercalés : rien de tout cela ne ressemble à un numéro pour un motif. Dans l’autre sens, le motif d’IBAN n’a pas de somme de contrôle : une référence de commande écrite « DE 12 3456 7890 1234 » est masquée à tort."
       en: "Deliberate obfuscation. Spelled-out digits, lookalike characters such as O6 I2 34, or interspersed emoji: none of it looks like a number to a pattern. The other way round, the IBAN pattern carries no checksum: an order reference written DE 12 3456 7890 1234 is masked when it should not be."
     escalate_when:
       fr: "Vos utilisateurs contournent activement le filtre, et vous le voyez dans les messages signalés."
@@ -62,7 +62,7 @@ rungs:
       regulatory:
         fr:
           - "Traitement de données personnelles sur votre infrastructure"
-          - "Le corpus d'entraînement contient des messages réels : il entre dans votre registre des traitements si vous en tenez un"
+          - "Le corpus d’entraînement contient des messages réels : il entre dans votre registre des traitements si vous en tenez un"
         en:
           - "Processing of personal data on your own infrastructure"
           - "The training corpus holds real messages: it belongs in your record of processing activities, where you keep one"
@@ -71,7 +71,7 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n1.js
       verification: executed
     breaking_point:
-      fr: "Le modèle ne connaît que les contournements qu'on lui a montrés. Des homoglyphes venus d'un autre alphabet, ou des chiffres romains, ne portent ni chiffre ni mot connu : rien ne survit à la mise en forme, et le message passe."
+      fr: "Le modèle ne connaît que les contournements qu’on lui a montrés. Des homoglyphes venus d’un autre alphabet, ou des chiffres romains, ne portent ni chiffre ni mot connu : rien ne survit à la mise en forme, et le message passe."
       en: "The model only knows the evasions it was shown. Homoglyphs from another script, or Roman numerals, carry neither a digit nor a known word: nothing survives the shaping, and the message goes through."
     escalate_when:
       fr: "Les contournements changent plus vite que vous ne pouvez étiqueter de nouveaux exemples."
@@ -80,7 +80,7 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Sans intérêt ici : un modèle de reconnaissance d'entités auto-hébergé coûte un service permanent à exploiter, pour un gain nul sur des motifs aussi structurés qu'un numéro ou une adresse, que N1 traite déjà."
+      fr: "Sans intérêt ici : un modèle de reconnaissance d’entités auto-hébergé coûte un service permanent à exploiter, pour un gain nul sur des motifs aussi structurés qu’un numéro ou une adresse, que N1 traite déjà."
       en: "Not useful here: a self-hosted entity recogniser costs a permanent service to operate, for no gain on shapes as structured as a phone number or an address, which N1 already handles."
 
   - level: N3
@@ -98,9 +98,9 @@ rungs:
       footprint: high
       regulatory:
         fr:
-          - "Transfert de données personnelles à un sous-traitant, avec l'encadrement contractuel que cela suppose"
+          - "Transfert de données personnelles à un sous-traitant, avec l’encadrement contractuel que cela suppose"
           - "Localisation du traitement à vérifier auprès du fournisseur"
-          - "Ne vous dispense pas de vos propres obligations d'information et de minimisation"
+          - "Ne vous dispense pas de vos propres obligations d’information et de minimisation"
         en:
           - "Transfer of personal data to a processor, with the contractual framing that implies"
           - "Processing location to be confirmed with the provider"
@@ -110,15 +110,15 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle peut répondre n'importe quoi, y compris de la prose là où du JSON était demandé. Le comportement dangereux serait de hausser les épaules et de renvoyer le message intact, ce qui laisserait fuir exactement ce qu'on voulait retirer. L'extrait lève une erreur, et c'est à l'appelant de décider."
+      fr: "Le modèle peut répondre n’importe quoi, y compris de la prose là où du JSON était demandé. Le comportement dangereux serait de hausser les épaules et de renvoyer le message intact, ce qui laisserait fuir exactement ce qu’on voulait retirer. L’extrait lève une erreur, et c’est à l’appelant de décider."
       en: "The model can answer anything, including prose where JSON was asked for. The dangerous behaviour would be to shrug and return the message unmasked, leaking precisely what you meant to remove. The snippet raises instead, and the caller decides."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus."
+      fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0 suffit dans l'immense majorité des intégrations. Le besoin est déterministe, le coût marginal est nul, rien ne sort de votre infrastructure, et le résultat se teste unitairement, ce qui compte quand un faux négatif publie le numéro de quelqu'un. Montez à N1 le jour où vous constatez des contournements délibérés, pas avant : vous échangeriez un test unitaire contre un jeu d'entraînement à maintenir."
-  en: "N0 is enough for the vast majority of integrations. The need is deterministic, the marginal cost is nil, nothing leaves your infrastructure, and the result is unit testable, which matters when a false negative publishes somebody's phone number. Move up to N1 the day you actually see deliberate evasion, not before: you would be trading a unit test for a training set to maintain."
+  fr: "N0 suffit dans l’immense majorité des intégrations. Le besoin est déterministe, le coût marginal est nul, rien ne sort de votre infrastructure, et le résultat se teste unitairement, ce qui compte quand un faux négatif publie le numéro de quelqu’un. Montez à N1 le jour où vous constatez des contournements délibérés, pas avant : vous échangeriez un test unitaire contre un jeu d’entraînement à maintenir."
+  en: "N0 is enough for the vast majority of integrations. The need is deterministic, the marginal cost is nil, nothing leaves your infrastructure, and the result is unit testable, which matters when a false negative publishes somebody’s phone number. Move up to N1 the day you actually see deliberate evasion, not before: you would be trading a unit test for a training set to maintain."
 
 further_reading:
   - label: "Python — module re, expressions régulières"

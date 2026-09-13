@@ -15,7 +15,7 @@ need:
   en: "Get paged when a production metric leaves its usual behaviour, and not the rest of the time."
 
 scenario:
-  fr: "On voit passer la dernière heure de points dans un modèle généraliste, chaque minute, avec la question « est-ce que quelque chose cloche ». On voit plus souvent encore la moyenne et l'écart type, et c'est le même piège sous une autre forme : un pic assez gros élargit la bande même qui devait l'attraper. Ce qu'une astreinte demande à une alerte, c'est de se rejouer à l'identique et de porter ses chiffres. La médiane et l'écart absolu médian donnent les deux, en arithmétique de bibliothèque standard."
+  fr: "On voit passer la dernière heure de points dans un modèle généraliste, chaque minute, avec la question « est-ce que quelque chose cloche ». On voit plus souvent encore la moyenne et l’écart type, et c’est le même piège sous une autre forme : un pic assez gros élargit la bande même qui devait l’attraper. Ce qu’une astreinte demande à une alerte, c’est de se rejouer à l’identique et de porter ses chiffres. La médiane et l’écart absolu médian donnent les deux, en arithmétique de bibliothèque standard."
   en: "A common sight is the last hour of points going through a general-purpose model, once a minute, with the question “does anything look wrong”. More common still is the mean and the standard deviation, which is the same trap in another shape: a large enough spike widens the very band that was meant to catch it. What an on-call rota wants from an alert is that it replay identically and carry its numbers. The median and the median absolute deviation give both, in standard-library arithmetic."
 
 rungs:
@@ -35,7 +35,7 @@ rungs:
       regulatory:
         fr:
           - "Aucun périmètre spécifique ajouté : les points restent sur votre infrastructure"
-          - "Ne vous dispense pas de regarder ce que contiennent vos séries : une métrique indexée par utilisateur est une donnée personnelle avant d'être une courbe"
+          - "Ne vous dispense pas de regarder ce que contiennent vos séries : une métrique indexée par utilisateur est une donnée personnelle avant d’être une courbe"
         en:
           - "No specific scope added: the points never leave your infrastructure"
           - "Does not stand in for looking at what your series hold: a metric indexed per user is personal data before it is a curve"
@@ -44,16 +44,16 @@ rungs:
       javascript: snippets/detect-anomalies-in-metrics/n0.js
       verification: executed
     breaking_point:
-      fr: "Une dérive lente entre dans la fenêtre et devient la nouvelle normale. Le test fait grimper la métrique de quarante points par minute pendant plus d'une heure : chaque pas reste loin en deçà de l'écart toléré, et la fenêtre a déjà avalé les précédents. Pas un seul point n'est signalé, et la série finit à plus du triple de son niveau de repos. La même hausse totale livrée d'un coup est signalée dès sa première minute, et pour une douzaine de minutes seulement : elle aussi devient la nouvelle normale."
+      fr: "Une dérive lente entre dans la fenêtre et devient la nouvelle normale. Le test fait grimper la métrique de quarante points par minute pendant plus d’une heure : chaque pas reste loin en deçà de l’écart toléré, et la fenêtre a déjà avalé les précédents. Pas un seul point n’est signalé, et la série finit à plus du triple de son niveau de repos. La même hausse totale livrée d’un coup est signalée dès sa première minute, et pour une douzaine de minutes seulement : elle aussi devient la nouvelle normale."
       en: "A slow drift walks into the window and becomes the new normal. The test lifts the metric by forty a minute for over an hour: every step sits well inside the tolerated gap, and the window has already swallowed the ones before it. Not one point is ever flagged, and the series ends at more than three times its resting level. The same total rise delivered in a single step is caught on its first minute, and for a dozen minutes only: it too becomes the new normal."
     escalate_when:
-      fr: "Vos post-mortem se terminent sur le même constat : chaque métrique était dans sa plage habituelle, seule leur combinaison ne l'était pas."
+      fr: "Vos post-mortem se terminent sur le même constat : chaque métrique était dans sa plage habituelle, seule leur combinaison ne l’était pas."
       en: "Your post-mortems keep ending the same way: every metric was inside its usual range, and only the combination was not."
 
   - level: N1
     available: true
     name:
-      fr: "Forêt d'isolement sur plusieurs métriques conjointes"
+      fr: "Forêt d’isolement sur plusieurs métriques conjointes"
       en: "Isolation forest over several metrics at once"
     cost: négligeable
     latency: "~10 ms"
@@ -66,7 +66,7 @@ rungs:
       regulatory:
         fr:
           - "Traitement sur votre infrastructure : aucune métrique ne part chez un tiers"
-          - "Le modèle est dérivé de vos données d'exploitation : ses coupes sont tirées entre la plus petite et la plus grande valeur observée de chaque métrique, et en gardent la trace"
+          - "Le modèle est dérivé de vos données d’exploitation : ses coupes sont tirées entre la plus petite et la plus grande valeur observée de chaque métrique, et en gardent la trace"
         en:
           - "Processing on your own infrastructure: no metric goes to a third party"
           - "The model is derived from your operational data: its cuts are drawn between the smallest and the largest observed value of each metric, and keep a trace of them"
@@ -75,36 +75,36 @@ rungs:
       javascript: snippets/detect-anomalies-in-metrics/n1.js
       verification: executed
     breaking_point:
-      fr: "L'habituation. Quinze minutes de trafic de nuit portant un nombre d'erreurs de plein jour, glissées dans les données d'entraînement, suffisent pour que la forêt en fasse un troisième régime ordinaire. La minute que le test signalait juste avant ne l'est plus, et rien dans la sortie ne dit que quoi que ce soit a changé. C'est le point de rupture de N0, monté d'un étage : ré-entraîner sur le mois écoulé, c'est décider de ce qui compte comme normal."
+      fr: "L’habituation. Quinze minutes de trafic de nuit portant un nombre d’erreurs de plein jour, glissées dans les données d’entraînement, suffisent pour que la forêt en fasse un troisième régime ordinaire. La minute que le test signalait juste avant ne l’est plus, et rien dans la sortie ne dit que quoi que ce soit a changé. C’est le point de rupture de N0, monté d’un étage : ré-entraîner sur le mois écoulé, c’est décider de ce qui compte comme normal."
       en: "Habituation. Fifteen minutes of night traffic carrying a broad-daylight error count, slipped into the training data, are enough for the forest to treat that combination as a third ordinary regime. The minute the test flagged just before is flagged no longer, and nothing in the output says anything changed. It is N0's breaking point one floor up: retraining on last month is the act of deciding what counts as normal."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus dans cette fiche. Ce qui manque ensuite n'est pas un modèle plus gros, c'est quelqu'un pour décider quels régimes ont le droit d'exister."
+      fr: "Il n’y a pas de niveau au-dessus dans cette fiche. Ce qui manque ensuite n’est pas un modèle plus gros, c’est quelqu’un pour décider quels régimes ont le droit d’exister."
       en: "There is no level above this one here. What comes next is not a bigger model but somebody deciding which regimes are allowed to exist."
 
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Un modèle de séries temporelles auto-hébergé est un service de plus à faire tourner, et un service qui décide des alertes est un service qu'il faut surveiller à son tour. À trois heures du matin, la question n'est pas de savoir si le score est meilleur : c'est de savoir pourquoi le téléphone a sonné. N0 répond en trois nombres, celui-là ne répond pas."
+      fr: "Un modèle de séries temporelles auto-hébergé est un service de plus à faire tourner, et un service qui décide des alertes est un service qu’il faut surveiller à son tour. À trois heures du matin, la question n’est pas de savoir si le score est meilleur : c’est de savoir pourquoi le téléphone a sonné. N0 répond en trois nombres, celui-là ne répond pas."
       en: "A self-hosted time-series model is one more service to run, and a service that decides your alerts is a service that has to be watched in turn. At three in the morning the question is not whether the score is better, it is why the phone rang. N0 answers in three numbers; this does not answer at all."
 
   - level: N3
     available: false
     unavailable_reason:
-      fr: "Deux appels sur la même fenêtre peuvent rendre deux verdicts, et une alerte qu'on ne peut pas rejouer est une alerte que l'astreinte apprend à ignorer. S'y ajoute un appel par minute et par métrique, pour une décision que la comparaison de deux nombres tranche déjà."
+      fr: "Deux appels sur la même fenêtre peuvent rendre deux verdicts, et une alerte qu’on ne peut pas rejouer est une alerte que l’astreinte apprend à ignorer. S’y ajoute un appel par minute et par métrique, pour une décision que la comparaison de deux nombres tranche déjà."
       en: "Two calls on the same window can return two different verdicts, and an alert nobody can replay is an alert the on-call rota learns to ignore. On top of that it is one call a minute per metric, for a decision the comparison of two numbers already settles."
 
 verdict_rationale:
-  fr: "N0 est le seul niveau dont la sortie est le raisonnement : la valeur mesurée, ce que la fenêtre appelait habituel, l'écart, et l'écart qui était toléré. C'est la moitié du diagnostic livrée avec l'alerte, sans coût marginal, et le test la vérifie nombre par nombre. N1 voit ce que N0 ne verra jamais — la minute où chaque métrique reste dans sa plage et où seule la combinaison est impossible — et le paie en rendant un rang entre zéro et un : on apprend que la minute était inhabituelle, pas en quoi."
+  fr: "N0 est le seul niveau dont la sortie est le raisonnement : la valeur mesurée, ce que la fenêtre appelait habituel, l’écart, et l’écart qui était toléré. C’est la moitié du diagnostic livrée avec l’alerte, sans coût marginal, et le test la vérifie nombre par nombre. N1 voit ce que N0 ne verra jamais — la minute où chaque métrique reste dans sa plage et où seule la combinaison est impossible — et le paie en rendant un rang entre zéro et un : on apprend que la minute était inhabituelle, pas en quoi."
   en: "N0 is the only level whose output is the reasoning: the measured value, what the window called usual, the gap, and the gap that was allowed. That is half the diagnosis delivered with the alert, at no marginal cost, and the test checks it number by number. N1 sees what N0 never will — the minute where every metric stays inside its range and only the combination is impossible — and pays for it by returning a rank between zero and one: you learn that the minute was unusual, not how."
 
 further_reading:
-  - label: "Wikipedia — Median absolute deviation, et le facteur qui la met à l'échelle d'un écart type"
+  - label: "Wikipedia — Median absolute deviation, et le facteur qui la met à l’échelle d’un écart type"
     url: "https://en.wikipedia.org/wiki/Median_absolute_deviation"
-  - label: "Liu, Ting et Zhou — Isolation Forest, l'article d'origine (ICDM 2008)"
+  - label: "Liu, Ting et Zhou — Isolation Forest, l’article d’origine (ICDM 2008)"
     url: "https://cs.nju.edu.cn/zhouzh/zhouzh.files/publication/icdm08b.pdf"
   - label: "scikit-learn — IsolationForest, la mise en œuvre employée côté Python"
     url: "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html"
-  - label: "Google SRE Book — Monitoring Distributed Systems, sur ce qui mérite de réveiller quelqu'un"
+  - label: "Google SRE Book — Monitoring Distributed Systems, sur ce qui mérite de réveiller quelqu’un"
     url: "https://sre.google/sre-book/monitoring-distributed-systems/"
 
 sources: []

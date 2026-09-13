@@ -7,15 +7,15 @@ updated: 2026-09-14
 contributors: [florentin-biaou]
 
 title:
-  fr: "Détecter la langue d'un texte"
+  fr: "Détecter la langue d’un texte"
   en: "Detect the language of a text"
 
 need:
-  fr: "Savoir dans quelle langue un message est écrit avant de le traiter ou de l'envoyer au bon interlocuteur."
+  fr: "Savoir dans quelle langue un message est écrit avant de le traiter ou de l’envoyer au bon interlocuteur."
   en: "Work out which language a message is written in before processing it or passing it to the right person."
 
 scenario:
-  fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, dans le seul but de distinguer le français de l'anglais. L'identification de la langue par n-grammes de caractères est pourtant un problème réglé depuis les années quatre-vingt-dix, et le modèle entier tient dans quelques centaines de chaînes de trois lettres. La difficulté n'a jamais été de nommer la langue d'un paragraphe : elle est de savoir se taire sur un message de deux mots, ou sur un message qui en contient deux."
+  fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, dans le seul but de distinguer le français de l’anglais. L’identification de la langue par n-grammes de caractères est pourtant un problème réglé depuis les années quatre-vingt-dix, et le modèle entier tient dans quelques centaines de chaînes de trois lettres. La difficulté n’a jamais été de nommer la langue d’un paragraphe : elle est de savoir se taire sur un message de deux mots, ou sur un message qui en contient deux."
   en: "A general-purpose model gets called on every inbound message for the sole purpose of telling French from English. Language identification from character n-grams was settled in the nineties, though, and the whole model fits in a few hundred three-letter strings. The hard part was never naming the language of a paragraph: it is knowing when to keep quiet, on a two-word message, or on a message that holds two languages."
 
 rungs:
@@ -40,10 +40,10 @@ rungs:
       javascript: snippets/detect-language-of-text/n0.js
       verification: executed
     breaking_point:
-      fr: "Les textes très courts, et ceux qui contiennent deux langues. « chat » ressort en anglais, ses quatre trigrammes étant ceux que l'anglais emploie dans « that » et « what » ; sur « ça va », les trois langues sont à la distance maximale et c'est l'ordre alphabétique qui répond ; sur une phrase française suivie d'une phrase anglaise, l'espagnol arrive deuxième alors qu'il n'est nulle part dans le texte."
+      fr: "Les textes très courts, et ceux qui contiennent deux langues. « chat » ressort en anglais, ses quatre trigrammes étant ceux que l’anglais emploie dans « that » et « what » ; sur « ça va », les trois langues sont à la distance maximale et c’est l’ordre alphabétique qui répond ; sur une phrase française suivie d’une phrase anglaise, l’espagnol arrive deuxième alors qu’il n’est nulle part dans le texte."
       en: "Very short texts, and texts that hold two languages. The word chat, French for cat, comes back as English, its four trigrams being the ones English uses in that and what; on ça va the three languages all sit at the maximum distance and the alphabetical tie-break answers; and on a French sentence followed by an English one, Spanish comes second although it is nowhere in the text."
     escalate_when:
-      fr: "Vos textes tiennent en deux ou trois mots, un objet de message ou un champ de recherche, et vous voyez l'écart entre les deux premières langues tomber à zéro."
+      fr: "Vos textes tiennent en deux ou trois mots, un objet de message ou un champ de recherche, et vous voyez l’écart entre les deux premières langues tomber à zéro."
       en: "Your texts are two or three words long, a subject line or a search box, and you can see the gap between the top two languages fall to zero."
 
   - level: N1
@@ -61,7 +61,7 @@ rungs:
       footprint: low
       regulatory:
         fr:
-          - "Aucun périmètre spécifique ajouté : l'échantillon d'entraînement est un texte de langue, pas les messages de vos utilisateurs"
+          - "Aucun périmètre spécifique ajouté : l’échantillon d’entraînement est un texte de langue, pas les messages de vos utilisateurs"
           - "Le texte identifié reste sur votre infrastructure"
         en:
           - "No specific scope added: the training sample is a piece of language, not your users' messages"
@@ -71,17 +71,17 @@ rungs:
       javascript: snippets/detect-language-of-text/n1.js
       verification: executed
     breaking_point:
-      fr: "La probabilité est un produit sur tous les n-grammes du texte : elle sature bien avant que les indices ne le justifient. Sur la phrase française suivie d'une phrase anglaise, le modèle n'a plus l'hésitation de N0, il répond français avec une quasi-certitude et le seuil qui s'abstenait sur « ça va » ne se déclenche pas ; et comme les probabilités somment à un sur les seules langues apprises, un texte portugais ressort en espagnol et un texte allemand en anglais, tous deux au-dessus du seuil."
+      fr: "La probabilité est un produit sur tous les n-grammes du texte : elle sature bien avant que les indices ne le justifient. Sur la phrase française suivie d’une phrase anglaise, le modèle n’a plus l’hésitation de N0, il répond français avec une quasi-certitude et le seuil qui s’abstenait sur « ça va » ne se déclenche pas ; et comme les probabilités somment à un sur les seules langues apprises, un texte portugais ressort en espagnol et un texte allemand en anglais, tous deux au-dessus du seuil."
       en: "The probability is a product over every n-gram of the text, so it saturates long before the evidence justifies it. On the French sentence followed by an English one the model has none of N0's hesitation: it answers French with near-certainty, and the threshold that abstained on ça va never fires. And since the probabilities sum to one over the trained languages alone, Portuguese comes back as Spanish and German as English, both above the threshold."
     escalate_when:
-      fr: "Vous devez reconnaître une langue dont vous n'avez aucun échantillon, et réentraîner à chaque nouvelle langue n'est pas envisageable."
+      fr: "Vous devez reconnaître une langue dont vous n’avez aucun échantillon, et réentraîner à chaque nouvelle langue n’est pas envisageable."
       en: "You have to recognise a language you hold no sample of, and retraining for every new one is not on the table."
 
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Un modèle d'identification dédié, chargé et servi en permanence, ne se distingue de N1 qu'en dessous de quelques dizaines de caractères. Dans ce régime, la langue d'interface de l'utilisateur, l'en-tête Accept-Language ou les messages précédents du fil tranchent mieux que n'importe quel modèle, et sans rien coûter."
-      en: "A dedicated identification model, loaded and served permanently, only pulls ahead of N1 below a few dozen characters. In that regime the user's interface language, the Accept-Language header, or the earlier messages in the thread settle the question better than any model, and for nothing."
+      fr: "Un modèle d’identification dédié, chargé et servi en permanence, ne se distingue de N1 qu’en dessous de quelques dizaines de caractères. Dans ce régime, la langue d’interface de l’utilisateur, l’en-tête Accept-Language ou les messages précédents du fil tranchent mieux que n’importe quel modèle, et sans rien coûter."
+      en: "A dedicated identification model, loaded and served permanently, only pulls ahead of N1 below a few dozen characters. In that regime the user’s interface language, the Accept-Language header, or the earlier messages in the thread settle the question better than any model, and for nothing."
 
   - level: N3
     available: true
@@ -98,13 +98,13 @@ rungs:
       footprint: high
       regulatory:
         fr:
-          - "Transfert du texte à un sous-traitant, avec l'encadrement contractuel que cela suppose"
-          - "Le texte envoyé est un message d'utilisateur : il peut porter des données personnelles que rien dans l'appel ne retire"
+          - "Transfert du texte à un sous-traitant, avec l’encadrement contractuel que cela suppose"
+          - "Le texte envoyé est un message d’utilisateur : il peut porter des données personnelles que rien dans l’appel ne retire"
           - "Localisation du traitement à vérifier auprès du fournisseur"
-          - "Ne vous dispense pas de vos propres obligations d'information et de minimisation"
+          - "Ne vous dispense pas de vos propres obligations d’information et de minimisation"
         en:
           - "Transfer of the text to a processor, with the contractual framing that implies"
-          - "What you send is a user's message: it can carry personal data that nothing in the call strips out"
+          - "What you send is a user’s message: it can carry personal data that nothing in the call strips out"
           - "Processing location to be confirmed with the provider"
           - "Does not excuse you from your own duties of transparency and minimisation"
     code:
@@ -112,24 +112,24 @@ rungs:
       javascript: snippets/detect-language-of-text/n3.js
       verification: stubbed
     breaking_point:
-      fr: "La confiance est écrite par le modèle, pas mesurée. Le test lui fait répondre « es », assorti d'une confiance de son cru, sur une phrase manifestement française : l'extrait valide la forme, la trouve parfaite, et rend le mauvais code. Il ne lève une erreur que sur ce qu'il peut voir, de la prose là où du JSON était demandé, ou une langue absente de la liste qu'il avait fournie."
+      fr: "La confiance est écrite par le modèle, pas mesurée. Le test lui fait répondre « es », assorti d’une confiance de son cru, sur une phrase manifestement française : l’extrait valide la forme, la trouve parfaite, et rend le mauvais code. Il ne lève une erreur que sur ce qu’il peut voir, de la prose là où du JSON était demandé, ou une langue absente de la liste qu’il avait fournie."
       en: "The confidence is written by the model, not measured. In the test it answers es, with a self-reported confidence, on a plainly French sentence: the snippet validates the shape, finds it perfect, and hands back the wrong code. It only raises on what it can actually see, prose where JSON was asked for, or a language outside the list it supplied."
     escalate_when:
-      fr: "Il n'y a pas de niveau au-dessus."
+      fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0 l'emporte sur le point qui décide de tout ici : savoir quand se taire. Son seul signal est l'écart entre les deux premières langues, et cet écart s'effondre exactement là où il le faut, sur le message bilingue ; la probabilité de N1 fait l'inverse et monte à la quasi-certitude sur ce même message. Montez à N1 le jour où vous devez répondre sur un ou deux mots, en sachant que son seuil vous protège des textes courts et de rien d'autre."
+  fr: "N0 l’emporte sur le point qui décide de tout ici : savoir quand se taire. Son seul signal est l’écart entre les deux premières langues, et cet écart s’effondre exactement là où il le faut, sur le message bilingue ; la probabilité de N1 fait l’inverse et monte à la quasi-certitude sur ce même message. Montez à N1 le jour où vous devez répondre sur un ou deux mots, en sachant que son seuil vous protège des textes courts et de rien d’autre."
   en: "N0 wins on the point that decides everything here: knowing when to keep quiet. Its only signal is the gap between the top two languages, and that gap collapses exactly where it should, on the bilingual message; N1's probability does the opposite and climbs to near-certainty on that same message. Move up to N1 the day you have to answer on one or two words, knowing that its threshold protects you against short texts and nothing else."
 
 further_reading:
-  - label: "Cavnar & Trenkle — N-Gram-Based Text Categorization, l'article dont vient la distance de rang"
+  - label: "Cavnar & Trenkle — N-Gram-Based Text Categorization, l’article dont vient la distance de rang"
     url: "https://www.let.rug.nl/vannoord/TextCat/textcat.pdf"
   - label: "RFC 5646 (BCP 47) — Tags for Identifying Languages, sur les codes et leurs sous-étiquettes"
     url: "https://www.rfc-editor.org/rfc/rfc5646.html"
   - label: "scikit-learn — Naive Bayes"
     url: "https://scikit-learn.org/stable/modules/naive_bayes.html"
-  - label: "fastText — Language identification, un modèle d'identification dédié"
+  - label: "fastText — Language identification, un modèle d’identification dédié"
     url: "https://fasttext.cc/docs/en/language-identification.html"
 
 sources: []
