@@ -234,6 +234,7 @@ low
 luccioni
 luhn
 manifest
+map
 marian
 maynez
 mdx
@@ -424,6 +425,7 @@ trenkle
 triay
 trigramme
 trigrammes
+trim
 true
 tryout
 tryouts
