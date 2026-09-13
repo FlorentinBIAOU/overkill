@@ -1,0 +1,21 @@
+---
+/**
+ * Les données structurées d'une page (lot 14, 9.1).
+ *
+ * Construites depuis les gabarits, à partir des données de la page : rien n'est
+ * écrit à la main, donc rien ne peut contredire ce que la page affiche. Un
+ * balisage qui annonce autre chose que le contenu est pire qu'un balisage
+ * absent.
+ */
+export interface Props {
+  schema: Record<string, unknown>;
+}
+
+const { schema } = Astro.props;
+---
+
+<script
+  type="application/ld+json"
+  set:html={JSON.stringify({ '@context': 'https://schema.org', ...schema })}
+  is:inline
+/>

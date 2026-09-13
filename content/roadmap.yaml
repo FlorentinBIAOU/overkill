@@ -701,8 +701,8 @@
 - id: suggest-visually-similar-images
   family: recommend
   title:
-    fr: "Retrouver des images visuellement proches"
-    en: "Find visually similar images"
+    fr: "Proposer des images proches de celle qu'on regarde"
+    en: "Suggest images close to the one on screen"
   need:
     fr: "Proposer, dans une photothèque, les visuels qui ressemblent à celui qu'on regarde."
     en: "Offer, inside a picture library, the images that look like the one on screen."

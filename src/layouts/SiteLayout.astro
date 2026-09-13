@@ -54,6 +54,7 @@ const pageTitle = title === strings.site.name ? title : `${title} — ${strings.
   <Fragment slot="head">
     <link rel="canonical" href={canonical} />
     {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
+    <slot name="schema" />
   </Fragment>
 
   <SiteHeader slot="header" lang={lang} strings={strings} path={path} />

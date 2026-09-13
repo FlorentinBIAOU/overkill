@@ -10,6 +10,8 @@ import RungExplainer from '../../components/home/RungExplainer.astro';
 import Doors from '../../components/home/Doors.astro';
 import Featured from '../../components/home/Featured.astro';
 import HelpBlock from '../../components/HelpBlock.astro';
+import StructuredData from '../../components/StructuredData.astro';
+import { webSite } from '../../lib/seo';
 import { allFamilies, publishedEntries, familyTitles } from '../../lib/content';
 import { LOCALES, t, type Locale } from '../../i18n';
 import { route } from '../../i18n/routes';
@@ -52,6 +54,15 @@ const textes = {
     contribute: 'How to contribute',
   },
 }[lang];
+
+const site = (Astro.site ?? new URL('https://isitoverkill.dev')).origin;
+const schema = webSite({
+  site,
+  url: `${site}${route(lang, 'home')}`,
+  name: strings.site.name,
+  description: textes.lead,
+  lang,
+});
 ---
 
 <SiteLayout
@@ -60,6 +71,8 @@ const textes = {
   lang={lang}
   register="editorial"
 >
+  <StructuredData slot="schema" schema={schema} />
+
   {/* Hero : un aplat de marque pleine largeur, la phrase de mission en très
       grosse typographie. Pas d'illustration décorative : la typographie est
       l'objet visuel (CDC 7.2). */}

@@ -27,6 +27,7 @@ export default {
     privacy: 'Confidentialité',
     credits: 'Crédits',
     main: 'Navigation principale',
+    breadcrumb: 'Fil d’Ariane',
     footer: 'Navigation de pied de page',
     language: 'Langue',
     theme: 'Basculer le thème',

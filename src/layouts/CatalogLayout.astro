@@ -10,6 +10,8 @@
 import SiteLayout from './SiteLayout.astro';
 import EntryCard from '../components/EntryCard.astro';
 import CtaBand from '../components/CtaBand.astro';
+import StructuredData from '../components/StructuredData.astro';
+import { collectionPage } from '../lib/seo';
 import EmptyState from '../components/EmptyState.astro';
 import { t, type Locale } from '../i18n';
 import { route } from '../i18n/routes';
@@ -53,6 +55,39 @@ const strings = t(lang);
  */
 const surCettePage = new Set((page?.data ?? entries).map((e: any) => e.id));
 
+const site = (Astro.site ?? new URL('https://isitoverkill.dev')).origin;
+
+/*
+ * Le titre d'une page paginée ne peut pas être celui de la première : deux
+ * pages qui portent le même titre sont un doublon, et `check-seo` le refuse.
+ */
+const titrePage =
+  page && page.currentPage > 1
+    ? `${title} — ${strings.catalogue.pageOf
+        .replace('{n}', String(page.currentPage))
+        .replace('{total}', String(page.lastPage))}`
+    : title;
+
+/* Deux pages du catalogue ne peuvent pas porter la même description : la page
+   le dit, comme son titre. */
+const descriptionPage =
+  page && page.currentPage > 1
+    ? `${strings.catalogue.pageOf
+        .replace('{n}', String(page.currentPage))
+        .replace('{total}', String(page.lastPage))} — ${lead ?? title}`
+    : (lead ?? title);
+
+const schema = collectionPage({
+  url: `${site}${page?.url.current ?? route(lang, 'catalogue')}`,
+  title: titrePage,
+  description: descriptionPage,
+  lang,
+  items: (page?.data ?? entries).map((e: any) => ({
+    name: e.title[lang],
+    url: `${site}${route(lang, 'entries', e.id)}`,
+  })),
+});
+
 /** Les numéros de page à montrer : toutes, tant qu'elles tiennent sur une ligne. */
 const numeros = page
   ? Array.from({ length: page.lastPage }, (_, i) => i + 1)
@@ -89,7 +124,9 @@ const filtres = [
 ];
 ---
 
-<SiteLayout title={title} description={lead} lang={lang} register="documentary">
+<SiteLayout title={titrePage} description={descriptionPage} lang={lang} register="documentary">
+  <StructuredData slot="schema" schema={schema} />
+
   <div class="wrap catalogue">
     <header class="catalogue__head">
       <h1 class="display-l">{title}</h1>

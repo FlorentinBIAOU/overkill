@@ -8,7 +8,10 @@
  * pour les proposer.
  */
 import SiteLayout from './SiteLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import CtaBand from '../components/CtaBand.astro';
+import StructuredData from '../components/StructuredData.astro';
+import { collectionPage } from '../lib/seo';
 import EntryCard from '../components/EntryCard.astro';
 import FamilyIllustration from '../components/FamilyIllustration.astro';
 import { t, type Locale } from '../i18n';
@@ -24,6 +27,26 @@ export interface Props {
 
 const { lang, family, entries, familyTitles, issueUrl } = Astro.props;
 const strings = t(lang);
+
+const site = (Astro.site ?? new URL('https://isitoverkill.dev')).origin;
+const url = `${site}${route(lang, 'families', family.id)}`;
+
+const fil = [
+  { label: strings.site.name, href: route(lang, 'home') },
+  { label: strings.nav.families, href: route(lang, 'families') },
+  { label: family.title[lang] },
+];
+
+const schema = collectionPage({
+  url,
+  title: family.title[lang],
+  description: family.description[lang],
+  lang,
+  items: entries.map((e: any) => ({
+    name: e.title[lang],
+    url: `${site}${route(lang, 'entries', e.id)}`,
+  })),
+});
 ---
 
 <SiteLayout
@@ -32,10 +55,14 @@ const strings = t(lang);
   lang={lang}
   register="editorial"
 >
+  <StructuredData slot="schema" schema={schema} />
+
   <div class="band band-paper-2 family__band">
     <div class="wrap family__band-inner">
       <div class="family__intro">
-        <p class="family__eyebrow">{strings.nav.families}</p>
+        <div class="family__eyebrow">
+          <Breadcrumb items={fil} site={site} label={strings.nav.breadcrumb} />
+        </div>
         <h1 class="display-l">{family.title[lang]}</h1>
         <p class="family__description">{family.description[lang]}</p>
       </div>

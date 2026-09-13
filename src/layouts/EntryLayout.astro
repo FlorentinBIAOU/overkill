@@ -21,6 +21,9 @@ import LegalNotice from '../components/LegalNotice.astro';
 import LinkList from '../components/LinkList.astro';
 import RungSection from '../components/RungSection.astro';
 import ShareBlock from '../components/ShareBlock.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import StructuredData from '../components/StructuredData.astro';
+import { techArticle } from '../lib/seo';
 import TocSticky from '../components/TocSticky.astro';
 import { tryoutFor } from '../lib/tryouts.mjs';
 import { t, type Locale } from '../i18n';
@@ -67,6 +70,26 @@ const nextLevel = above
 const site = (Astro.site ?? new URL('https://isitoverkill.dev')).origin;
 const url = `${site}${route(lang, 'entries', entry.id)}`;
 
+/* Le fil d'Ariane : une seule source pour ce qu'on lit et ce qui est balisé. */
+const fil = [
+  { label: strings.site.name, href: route(lang, 'home') },
+  { label: strings.catalogue.title, href: route(lang, 'catalogue') },
+  { label: familyTitle, href: route(lang, 'families', entry.family) },
+  { label: entry.title[lang] },
+];
+
+const schema = techArticle({
+  url,
+  title: entry.title[lang],
+  description: entry.need[lang],
+  updated,
+  lang,
+  site,
+  image: `/og/${lang}/${entry.id}.png`,
+  section: familyTitle,
+  author: entry.contributors[0] ?? 'florentin-biaou',
+});
+
 const toc = [
   { href: '#verdict', label: strings.verdict.heading },
   { href: `#${String(entry.verdict).toLowerCase()}`, label: `${entry.verdict} — ${vr.name[lang]}` },
@@ -97,14 +120,14 @@ const hasRegulatory = entry.rungs.some(
   register="documentary"
   image={`/og/${lang}/${entry.id}.png`}
 >
+  <StructuredData slot="schema" schema={schema} />
+
   <article class="entry">
     <header class="band band-brand entry__head">
       <div class="wrap">
-        <p class="entry__breadcrumb">
-          <a href={route(lang, 'catalogue')}>{strings.catalogue.title}</a>
-          <span aria-hidden="true">/</span>
-          <a href={route(lang, 'families', entry.family)}>{familyTitle}</a>
-        </p>
+        <div class="entry__breadcrumb">
+          <Breadcrumb items={fil} site={site} label={strings.nav.breadcrumb} />
+        </div>
 
         <h1 class="entry__title display-l">{entry.title[lang]}</h1>
         <p class="entry__need">{entry.need[lang]}</p>

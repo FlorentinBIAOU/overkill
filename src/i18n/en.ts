@@ -25,6 +25,7 @@ export default {
     privacy: 'Privacy',
     credits: 'Credits',
     main: 'Main navigation',
+    breadcrumb: 'Breadcrumb',
     footer: 'Footer navigation',
     language: 'Language',
     theme: 'Switch theme',

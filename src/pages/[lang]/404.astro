@@ -24,7 +24,13 @@ const textes = {
 }[lang];
 ---
 
-<SiteLayout title={strings.error.notFoundTitle} lang={lang} register="editorial" noindex>
+<SiteLayout
+  title={strings.error.notFoundTitle}
+  description={strings.error.notFoundBody}
+  lang={lang}
+  register="editorial"
+  noindex
+>
   <div class="wrap notfound">
     {
       illustration && (

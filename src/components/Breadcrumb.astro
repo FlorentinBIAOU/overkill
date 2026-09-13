@@ -1,0 +1,77 @@
+---
+/**
+ * Le fil d'Ariane, visible et balisé, depuis une seule source (lot 14, 9.1).
+ *
+ * Le même tableau d'étapes rend la navigation qu'on lit et le balisage que les
+ * moteurs lisent : les deux ne peuvent donc pas se contredire, ce que le lot
+ * demande explicitement. Il n'apparaît qu'au-delà du premier niveau — une page
+ * qui n'a qu'un parent n'a pas de fil à montrer.
+ */
+export interface Props {
+  /** De la racine à la page courante. La dernière étape n'est pas un lien. */
+  items: { label: string; href?: string }[];
+  /** Adresse absolue du site, pour que le balisage porte des URL complètes. */
+  site: string;
+  label: string;
+}
+
+const { items, site, label } = Astro.props;
+
+const jsonld = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((item, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: item.label,
+    ...(item.href ? { item: `${site}${item.href}` } : {}),
+  })),
+};
+---
+
+<nav class="fil" aria-label={label}>
+  <ol class="fil__list">
+    {
+      items.map((item, i) => (
+        <li class="fil__item">
+          {item.href ? (
+            <a href={item.href}>{item.label}</a>
+          ) : (
+            <span aria-current="page">{item.label}</span>
+          )}
+          {i < items.length - 1 && <span class="fil__sep" aria-hidden="true">/</span>}
+        </li>
+      ))
+    }
+  </ol>
+</nav>
+
+<script type="application/ld+json" set:html={JSON.stringify(jsonld)} is:inline />
+
+<style>
+  .fil__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: var(--size-small);
+  }
+
+  .fil__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: none;
+  }
+
+  .fil__sep {
+    opacity: 0.5;
+  }
+
+  .fil__item span[aria-current] {
+    color: var(--muted);
+  }
+</style>
