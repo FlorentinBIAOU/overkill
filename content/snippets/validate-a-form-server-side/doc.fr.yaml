@@ -1,0 +1,51 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Valider un formulaire sur le serveur : un schéma déclaratif, une erreur par
+  champ.
+
+  Niveau N0. Déterministe, bibliothèque standard seule. Tout l'enjeu de cette
+  fiche est qu'un validateur qui vaille la peine tient en quarante lignes : les
+  règles restent lisibles, et chaque refus peut être expliqué à la personne qui
+  a tapé le formulaire.
+
+  Trois décisions portent la conception.
+
+  D'abord, le schéma est une donnée, pas du code. Il peut être écrit à côté du
+  formulaire, lu par quelqu'un qui n'écrit pas de Python, et comparé au schéma
+  JavaScript qui garde le même formulaire dans le navigateur.
+
+  Ensuite, la réponse associe un nom de champ à un message, jamais un booléen.
+  Un formulaire qui répond « non » sans dire quel champ est en faute envoie
+  l'utilisateur à la chasse, et le développeur dans les journaux.
+
+  Enfin, un message par champ : les vérifications s'arrêtent à la première
+  règle enfreinte. Dire à quelqu'un que son mot de passe est à la fois trop
+  court *et* mal formé, c'est du bruit ; qu'il corrige la première chose,
+  renvoie le formulaire, et voie la suivante.
+
+n0.js: |
+  Valider un formulaire sur le serveur : un schéma déclaratif, une erreur par
+  champ.
+
+  Niveau N0. Déterministe, aucune dépendance. Tout l'enjeu de cette fiche est
+  qu'un validateur qui vaille la peine tient en quarante lignes : les règles
+  restent lisibles, et chaque refus peut être expliqué à la personne qui a tapé
+  le formulaire.
+
+  Trois décisions portent la conception.
+
+  D'abord, le schéma est une donnée, pas du code. Il peut être écrit à côté du
+  formulaire, lu par quelqu'un qui n'écrit pas de JavaScript, et comparé au
+  schéma Python qui garde le même formulaire de l'autre côté.
+
+  Ensuite, la réponse associe un nom de champ à un message, jamais un booléen.
+  Un formulaire qui répond « non » sans dire quel champ est en faute envoie
+  l'utilisateur à la chasse, et le développeur dans les journaux.
+
+  Enfin, un message par champ : les vérifications s'arrêtent à la première
+  règle enfreinte. Dire à quelqu'un que son mot de passe est à la fois trop
+  court *et* mal formé, c'est du bruit ; qu'il corrige la première chose,
+  renvoie le formulaire, et voie la suivante.
