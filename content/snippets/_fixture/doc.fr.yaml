@@ -1,0 +1,6 @@
+# Traduction de la docstring d'en-tête de l'extrait de fixture. Elle existe
+# pour que la fiche valide des fixtures reste valide : depuis le lot 14, une
+# fiche publiée dont la docstring n'est pas traduite est refusée.
+
+n0: |
+  Extrait de test, référencé par la fiche valide des fixtures de schéma.
