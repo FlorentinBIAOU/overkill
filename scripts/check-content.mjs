@@ -160,8 +160,11 @@ for (const f of fiches) {
       const source = readFileSync(chemin, 'utf8');
       const traduite = docTraduite(rel, 'fr');
       if (!traduite) {
+        /* Les vingt-cinq fiches sont traduites depuis le lot 14 : une
+           docstring non traduite est désormais une fiche qui n'est pas prête,
+           et non un travail en cours. */
         if (e.status === 'published') {
-          avertir(ou, `docstring d'en-tête non traduite : ${rel}`);
+          echec(ou, `docstring d'en-tête non traduite : ${rel}`);
         }
       } else {
         const rendu = replaceHeaderDoc(source, langage, traduite);
