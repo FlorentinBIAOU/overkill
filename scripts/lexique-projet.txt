@@ -144,6 +144,7 @@ fork
 forms
 found
 foundation
+from
 frontmatter
 fts
 further
@@ -450,6 +451,7 @@ webp
 weight
 what
 when
+wide
 width
 winkler
 with
