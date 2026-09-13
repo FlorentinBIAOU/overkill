@@ -1,0 +1,95 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Lire un CSV mal formé : détecter son dialecte, normaliser son encodage,
+  convertir ses types, et consigner chaque ligne qu'il refuse.
+
+  Niveau N0. Bibliothèque standard seule.
+
+  Trois tâches, dans cet ordre, parce que chacune a besoin que la précédente
+  soit faite. Les octets doivent devenir du texte avant qu'un séparateur puisse
+  être compté, et le séparateur doit être connu avant qu'une colonne puisse
+  être typée.
+
+  La troisième tâche est tout l'intérêt de l'extrait. Un nettoyeur qui écarte
+  en silence les lignes qu'il ne comprend pas est pire que pas de nettoyeur du
+  tout : il rend un fichier bien rangé et cache la part qu'il fallait
+  regarder. Chaque refus dit ici quelle ligne, quelle colonne, et pourquoi.
+
+n0.js: |
+  Lire un CSV mal formé : détecter son dialecte, normaliser son encodage,
+  convertir ses types, et consigner chaque ligne qu'il refuse.
+
+  Niveau N0. La bibliothèque standard de Node seule, analyseur compris.
+
+  Trois tâches, dans cet ordre, parce que chacune a besoin que la précédente
+  soit faite. Les octets doivent devenir du texte avant qu'un séparateur puisse
+  être compté, et le séparateur doit être connu avant qu'une colonne puisse
+  être typée.
+
+  La troisième tâche est tout l'intérêt de l'extrait. Un nettoyeur qui écarte
+  en silence les lignes qu'il ne comprend pas est pire que pas de nettoyeur du
+  tout : il rend un fichier bien rangé et cache la part qu'il fallait
+  regarder. Chaque refus dit ici quelle ligne, quelle colonne, et pourquoi.
+
+n1.py: |
+  Deviner ce que contient chaque colonne, au lieu d'écrire le schéma à la main.
+
+  Niveau N1. Le niveau N0 réclame un schéma : quelqu'un doit déclarer que
+  `joined` contient des dates et `amount` des nombres. Sur un fichier de trois
+  colonnes, cela prend une minute. Sur les deux cents colonnes d'un export que
+  personne n'a documenté, cela n'arrive pas, et le fichier est chargé comme du
+  texte.
+
+  Le classifieur ne regarde jamais une valeur seule. Il regarde huit traits
+  d'une colonne prise dans son ensemble — la fréquence à laquelle une valeur
+  est faite de chiffres seuls, celle à laquelle elle porte une marque
+  décimale, le nombre de valeurs distinctes — et apprend quelle combinaison va
+  avec quel type. Le jeu d'entraînement, c'est quelques dizaines de colonnes
+  étiquetées à la main : un après-midi plutôt qu'un projet.
+
+  La sortie est exactement le schéma que `clean_csv` du niveau N0 prend en
+  second argument. Ce niveau remplace le typage, pas le nettoyage.
+
+n1.js: |
+  Deviner ce que contient chaque colonne, au lieu d'écrire le schéma à la main.
+
+  Niveau N1. Le niveau N0 réclame un schéma : quelqu'un doit déclarer que
+  `joined` contient des dates et `amount` des nombres. Sur un fichier de trois
+  colonnes, cela prend une minute. Sur les deux cents colonnes d'un export que
+  personne n'a documenté, cela n'arrive pas, et le fichier est chargé comme du
+  texte.
+
+  Le classifieur ne regarde jamais une valeur seule. Il regarde huit traits
+  d'une colonne prise dans son ensemble — la fréquence à laquelle une valeur
+  est faite de chiffres seuls, celle à laquelle elle porte une marque
+  décimale, le nombre de valeurs distinctes — et apprend quelle combinaison va
+  avec quel type. Le jeu d'entraînement, c'est quelques dizaines de colonnes
+  étiquetées à la main : un après-midi plutôt qu'un projet.
+
+  Écrit en entier plutôt que tiré d'une bibliothèque, parce qu'une régression
+  logistique sur huit traits, c'est trente lignes. C'est l'argument de ce
+  niveau : l'outil classique est assez petit pour être lu.
+
+  La sortie est exactement le schéma que `cleanCsv` du niveau N0 prend en
+  second argument. Ce niveau remplace le typage, pas le nettoyage.
+
+n3: |
+  Réparer les lignes que le niveau N0 a refusées, et celles-là seulement, en
+  interrogeant un modèle.
+
+  Niveau N3. Le mot qui rend ce niveau défendable sur cette fiche, c'est
+  « seulement ». Le fichier peut compter cent mille lignes ; le journal du
+  niveau N0 en contient la poignée qui ne rentrait pas. Un appel par ligne
+  refusée, et aucun pour le reste. Confiez le fichier entier à un modèle et
+  vous avez payé pour les quatre-vingt-dix-neuf pour cent dont une expression
+  régulière s'était déjà chargée.
+
+  Voyez ce que ce code doit faire et que le niveau N0 n'avait pas à faire :
+  construire une invite, réessayer après un appel échoué, analyser une réponse
+  qui n'est que probablement du JSON valide, et repasser cette réponse par la
+  conversion de N0 avant d'en croire un mot. Cette plomberie est le vrai coût
+  de ce niveau, et c'est la part que les tests doivent couvrir, puisque le
+  modèle lui-même n'est pas testable.
