@@ -1,0 +1,103 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n1.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Résumer un document long en choisissant ses meilleures phrases.
+
+  Niveau N0. Extractif : chaque phrase du résumé figure mot pour mot dans la
+  source, parce que ce code n'écrit jamais un mot, il ne fait que choisir.
+
+  Deux signaux classiques, et rien d'autre.
+
+  La fréquence des termes. Un mot sur lequel le document revient sans cesse est
+  ce dont le document parle, et une phrase dense en mots de ce genre porte donc
+  davantage du sujet qu'une phrase faite de mots de liaison. Diviser par la
+  longueur de la phrase mesure une densité plutôt qu'un volume, ce qui empêche
+  une phrase longue de gagner par sa taille.
+
+  La position. Un auteur énonce son sujet tôt. Un petit bonus qui décroît avec
+  le rang de la phrase encode cette habitude, sans livrer pour autant le résumé
+  au premier paragraphe.
+
+n1.py: |
+  Noter les phrases avec un classifieur entraîné sur des traits de surface.
+
+  Niveau N1. Même forme extractive qu'en N0 — le résumé est toujours fait des
+  phrases du document — mais les poids sont appris au lieu d'être devinés.
+
+  N0 fixe à la main, une fois pour tous les documents du monde, l'arbitrage
+  entre la position et la densité des termes. Cette constante est une
+  supposition. Ici, ce sont quelques dizaines de documents dont quelqu'un a
+  coché les phrases de résumé qui en décident : si, dans votre corpus, la
+  phrase de conclusion compte plus que l'ouverture, le modèle le découvrira, et
+  N0 ne le découvrira jamais.
+
+  Les traits sont délibérément de surface. Ils décrivent où une phrase se
+  trouve et à quoi elle ressemble, pas ce qu'elle veut dire. C'est le plafond
+  de ce niveau, et la raison pour laquelle la fiche ne s'arrête pas là.
+
+n1.js: |
+  Noter les phrases avec un classifieur entraîné sur des traits de surface.
+
+  Niveau N1. Même forme extractive qu'en N0 — le résumé est toujours fait des
+  phrases du document — mais les poids sont appris au lieu d'être devinés.
+
+  N0 fixe à la main, une fois pour tous les documents du monde, l'arbitrage
+  entre la position et la densité des termes. Cette constante est une
+  supposition. Ici, ce sont quelques dizaines de documents dont quelqu'un a
+  coché les phrases de résumé qui en décident : si, dans votre corpus, la
+  phrase de conclusion compte plus que l'ouverture, le modèle le découvrira, et
+  N0 ne le découvrira jamais.
+
+  Les traits sont délibérément de surface. Ils décrivent où une phrase se
+  trouve et à quoi elle ressemble, pas ce qu'elle veut dire. C'est le plafond
+  de ce niveau, et la raison pour laquelle la fiche ne s'arrête pas là.
+
+  La régression logistique est écrite en entier plutôt que tirée d'une
+  bibliothèque, parce que sur cinq traits c'est une douzaine de lignes. La
+  version Python de cet extrait appelle scikit-learn ; l'objectif minimisé
+  ci-dessous est le même, si bien que les deux classent les phrases d'un
+  document de la même façon.
+
+n2: |
+  Résumer un document long avec un modèle abstractif auto-hébergé.
+
+  Niveau N2. Le premier niveau qui écrive. N0 et N1 choisissent des phrases et
+  ne peuvent jamais rendre que ce que l'auteur a déjà écrit ; celui-ci produit
+  une phrase qui n'était pas dans le document, ce qui est la seule façon
+  d'énoncer une conclusion tirée de deux passages éloignés de dix pages.
+
+  Ce gain a un prix, et le prix est dans ce fichier plutôt que dans le modèle.
+  Un modèle de séquence à séquence lit une fenêtre de taille fixe. Un document
+  long n'y entre pas : il faut donc le découper aux frontières de phrase, le
+  résumer morceau par morceau, puis résumer les morceaux. Chacun de ces appels
+  peut échouer ou revenir vide, et un résumé qui ne porte silencieusement que
+  sur la moitié d'un document est pire que pas de résumé du tout.
+
+  Ce que ce fichier ne sait pas faire, à aucun prix : vérifier que ce que le
+  modèle a écrit est ce que le document disait. Rien dans cette plomberie ne le
+  peut. Voyez le test.
+
+n3: |
+  Résumer un document long en interrogeant un modèle généraliste.
+
+  Niveau N3. C'est l'option vers laquelle on se tourne d'abord. Elle est ici
+  pour qu'on voie ce qu'elle coûte, pas parce que cette fiche la recommande.
+
+  Ce qu'elle apporte sur N2 est réel : aucun poids à héberger, aucune machine à
+  garder chaude, et une réponse qui suit une instruction — trois phrases, ou
+  une liste de points, ou les deux — sans que personne ne réaffine quoi que ce
+  soit.
+
+  Ce qu'elle coûte est dans ce fichier. Plafonner l'entrée, parce que le
+  fournisseur facture au jeton et qu'un document que personne ne voulait
+  envoyer est de l'argent perdu. Réessayer, parce que l'appel passe par le
+  réseau. Analyser une réponse qui n'est que probablement le JSON demandé.
+  Refuser une réponse de la mauvaise forme plutôt que d'en passer la moitié à
+  l'appelant. Cette plomberie est ce que vos tests peuvent couvrir.
+
+  Ce qu'aucun test d'ici ne peut couvrir : si le résumé est vrai du document.
+  Le modèle écrira une phrase fluide et plausible que le document n'a jamais
+  soutenue, et rien de ce qui suit ne saura la distinguer d'une bonne. Voyez le
+  test.
