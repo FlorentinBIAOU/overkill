@@ -511,3 +511,125 @@ Lots 06 et 08 en cours par sous-agents. Lot 09 pendant ce temps.
 - **Le poids affiché en pied de page n'apparaît que s'il a été mesuré.** La ligne reste
   masquée sinon. Une ligne visible et vide dirait au lecteur que la page ne pèse rien :
   l'interdit numéro 2 vaut aussi pour le site lui-même.
+
+---
+
+## Lot 14 — Refonte de l'expérience et préparation au lancement
+
+**En cours.** Branche `lot14-experience`, créée depuis `main` à jour plus le commit
+de cadrage de la fiche. Rapport détaillé dans `RAPPORT-LOT14.md` à la racine.
+
+### Partie 1 — La fiche
+
+**Terminée.** `npm run check` au vert, captures regardées en clair et en sombre, à
+360 et 1440 px.
+
+**Fait**
+
+Les blocs de code passent sur un fond sombre **fixe** : il ne suit pas le thème de la
+page, parce qu'un éditeur ne change pas de couleur quand la page change de thème, et
+parce que c'est le seul contraste fort de la fiche. La bande d'onglets se lit comme
+celle d'un éditeur, l'onglet actif prenant la couleur du fond du code.
+
+La **zone d'essai** est l'élément neuf du lot. Vingt essais interactifs, où l'extrait
+du niveau recommandé est chargé dans le navigateur — le vrai fichier, pas une copie —
+et s'exécute à chaque frappe, avec surlignage de part et d'autre de ce qui a été
+attrapé. Cinq essais figés, dont les sorties sont calculées à la construction du site
+en exécutant le vrai code avec le double local des tests. Aucune sortie n'est écrite à
+la main. Chaque essai porte au moins un cas qui échoue, celui du point de rupture de
+la fiche.
+
+Le bloc risques parle : « Sortie de données : rien ne sort » est devenu « Vos données
+ne sortent pas ». Les liens disent où ils mènent, avec la nature du document déduite
+de son adresse. Les fiches voisines reprennent le format carte du catalogue. L'appel à
+l'action de fin reprend l'aplat jaune des autres pages.
+
+**Décisions prises**
+
+- **La forme interactive exécute l'extrait lui-même**, ce qui renverse la section 5
+  des décisions de clarté. Celle-ci visait un bac à sable WebAssembly de plusieurs
+  mégaoctets ; elle ne tient plus dès lors qu'on exécute quelques kilooctets de
+  JavaScript sans dépendance, qui sont précisément ce que la fiche recommande.
+- **Sur les niveaux N2 et N3, ce qui est calculé est la plomberie** : ce que le code
+  envoie, ce qu'il refuse avant de dépenser, ce qu'il réessaie, ce qu'il accepte. La
+  réponse du modèle est simulée, et chaque essai le dit une fois.
+- **La preuve d'exécution devient une pastille dans la barre du bloc de code**, au
+  plus près de l'extrait qu'elle qualifie.
+
+**Défauts trouvés en regardant l'écran, et corrigés**
+
+- **L'adresse de contact s'affichait à l'envers** sur toutes les fiches et sur
+  l'accueil. Le CSS de portée automatique d'Astro ne marque pas le balisage injecté
+  par `set:html`, donc la règle qui remettait l'adresse à l'endroit ne s'appliquait
+  jamais.
+- **Un niveau sans objet était atténué à 0,55 d'opacité**, ce qui faisait passer son
+  texte sous le seuil AA.
+- **`check-weight` ne voyait pas le module d'essai**, chargé à la demande donc absent
+  des balises `script` : il mesurait 3,8 Ko de JavaScript sur une fiche qui en
+  télécharge 8,1.
+
+### Partie 2 — Le design appliqué partout
+
+**Terminée.** Onze pages publiques revues, captures regardées une par une.
+
+Un seul traitement de bouton et de lien d'action pour tout le site, un seul composant
+d'appel à l'action, un aplat d'en-tête sur chacune des onze pages, les blocs de code
+des pages éditoriales sur le même fond sombre que les fiches.
+
+**Décision principale : la feuille de route publique est retirée.** Le document de lot
+la compte parmi les décisions périmées, la nouvelle navigation ne la porte plus, et la
+partie 8.4 lui substitue une page des dernières fiches et le flux RSS. Une page qui
+annonce cent soixante-quinze fiches inexistantes est une promesse ; ce site n'en fait
+pas. Les deux cents intitulés restent dans `content/roadmap.yaml`, où ils servent au
+jeu de test à deux cents fiches et aux contributeurs.
+
+**Défaut trouvé** : la page contribuer décrivait depuis le lot 09 le bouton « proposer
+une fiche sans coder » que la section 7.8 du CDC demande, sans jamais le poser. Il est
+là.
+
+### Partie 3 — Le questionnaire
+
+**Terminée.** Nouvelle page « Par où commencer », cinquième entrée de la navigation.
+
+Huit questions, quatre écrans, deux par écran, le nombre de questions restantes
+affiché. L'arbre est déterministe, aucun modèle n'est appelé, et rien ne sort de la
+page. Il est piloté par les données des fiches : une fiche nouvelle devient
+atteignable sans qu'on y touche.
+
+Les contraintes ne filtrent pas les fiches — elles choisissent le niveau à l'intérieur
+de la fiche et expliquent pourquoi. « Vos données ne peuvent pas sortir » sur une
+fiche qui recommande un modèle généraliste renvoie au niveau du dessous, en le
+nommant.
+
+**Vérification** : 32 400 verdicts par langue, toutes les combinaisons de réponses pour
+chacune des vingt-cinq fiches, calculés sur la charge utile réellement livrée par la
+page construite. Huit contrôles au navigateur, dont le parcours sans JavaScript.
+
+### Partie 4 — L'accueil
+
+**Terminée.** Trois portes nommées par ce que le visiteur sait déjà, un chiffre compté
+et non écrit — vingt-cinq fiches, dont treize sans aucune IA —, la démonstration
+raccourcie à douze lignes contre huit avec le reste derrière un dépli, et un bloc sur
+l'essai.
+
+### Partie 5 — La page « Comment ça marche »
+
+**Terminée.** La méthodologie et l'explication des quatre niveaux fusionnent. Pour
+chaque niveau : ce que c'est, ce que ça coûte, ce que ça garantit, ce qui le fait
+céder, et une fiche publiée qui le recommande, tirée des données. Entre deux niveaux,
+la condition qui fait passer de l'un à l'autre — la valeur propre du site, qui
+n'était écrite nulle part.
+
+« Barreau » disparaît de cette page, ce qui révise la section 2 des décisions de
+clarté.
+
+### Partie 6 — Le catalogue
+
+**Terminée.** Pagination à vingt-quatre cartes par page, en chemin et non en paramètre
+de requête, avec l'appel à l'action jaune sur chaque page. Toutes les cartes restent
+dans le HTML, celles des autres pages masquées, pour qu'un filtre porte sur le
+catalogue entier et non sur la page sous les yeux.
+
+**Défaut trouvé en passant** : deux contrôles de recherche étaient périmés depuis la
+refonte des cartes du catalogue. Ils n'échouaient pas parce que `test:search` n'est pas
+dans la chaîne de `npm run check`, faute de construction du jeu de deux cents fiches.
