@@ -111,11 +111,12 @@ test('breaking point: a confident misreading passes every threshold', async () =
   // The breaking point of this rung: the confidence catches a page the engine
   // struggled with, and the engine did not struggle here.
   //
-  // This scan is clean, the glyphs are sharp, and the engine is sure. It has
-  // simply read the letter O where the invoice printed a zero, which is the
-  // one mistake it makes on every reference number in the file. The reading
-  // comes back with a high score and no review flag: nothing in this code, and
-  // nothing in the engine, can tell that the number is wrong.
+  // The double below is told to answer the way an engine does on a clean scan
+  // it read wrong without hesitating: the letter O where the invoice printed a
+  // zero, and a high score. No test can order a real engine to misread, so the
+  // reading is written here. What is asserted is what the code does with it —
+  // the score is high, so the review flag stays down, and nothing in this code
+  // can tell that the number is wrong.
   //
   // Raising the threshold does not help, because the mistake is confident.
   // What helps is knowing the shape of your references and checking the

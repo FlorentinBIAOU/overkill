@@ -104,10 +104,10 @@ test('breaking point: the model can write a page it never read', async () => {
   // writes.
   //
   // The image handed over here carries a PNG header and nothing to read. The
-  // model answers with a complete, well-formatted, entirely plausible invoice:
-  // a supplier, a reference in the right shape, a total with two decimals, and
-  // an empty `unreadable` list — it is not in doubt, because it is not
-  // reading.
+  // answer is written into the double below, since no test can order an
+  // invention from a provider: a complete, well-formatted, entirely plausible
+  // invoice — a supplier, a reference in the right shape, a total with two
+  // decimals, and an empty `unreadable` list, so no doubt reported at all.
   //
   // Every assertion below passes, and that is the point. The transcription is
   // well-formed JSON, the plumbing is correct, the review flag is false, and
