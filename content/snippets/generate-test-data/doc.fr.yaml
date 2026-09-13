@@ -1,0 +1,123 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Construire un jeu de données de test à partir d'un schéma et d'une graine.
+
+  Niveau N0. Bibliothèque standard seule, aucun fichier écrit : la fonction
+  renvoie une liste de lignes qu'un test peut passer telle quelle au code qu'il
+  éprouve.
+
+  Le déterminisme est tout l'enjeu. La même graine et le même schéma donnent
+  exactement les mêmes lignes, sur chaque machine, dans les deux langages, pour
+  toujours. C'est ce qui rend un test en échec rejouable et une régression
+  reproductible : la graine imprimée à côté d'un échec suffit à reconstruire la
+  donnée qui l'a causé.
+
+  C'est pourquoi le générateur est écrit ici au lieu d'être pris à la
+  plateforme. Les générateurs standard de Python et de JavaScript produisent des
+  suites différentes depuis la même graine : un jeu de données bâti sur eux ne
+  peut donc pas être passé d'un langage à l'autre, ni comparé entre un serveur
+  et une interface.
+
+  Chaque cellule est tirée d'un hachage de (graine, champ, ligne) plutôt que
+  d'un flux qui se déroule. Ajouter un champ au schéma laisse par conséquent
+  toutes les autres colonnes intactes, au lieu de décaler le jeu entier d'un
+  tirage.
+
+n0.js: |
+  Construire un jeu de données de test à partir d'un schéma et d'une graine.
+
+  Niveau N0. Aucune dépendance, aucun fichier écrit : la fonction renvoie un
+  tableau de lignes qu'un test peut passer tel quel au code qu'il éprouve.
+
+  Le déterminisme est tout l'enjeu. La même graine et le même schéma donnent
+  exactement les mêmes lignes, sur chaque machine, dans les deux langages, pour
+  toujours. C'est ce qui rend un test en échec rejouable et une régression
+  reproductible : la graine imprimée à côté d'un échec suffit à reconstruire la
+  donnée qui l'a causé.
+
+  C'est pourquoi le générateur est écrit ici au lieu d'être pris à la
+  plateforme. `Math.random` ne peut pas recevoir de graine du tout, et les
+  générateurs standard de Python et de JavaScript produisent des suites
+  différentes depuis la même graine : un jeu de données bâti sur eux ne peut
+  donc pas être passé d'un langage à l'autre, ni comparé entre un serveur et
+  une interface.
+
+  Chaque cellule est tirée d'un hachage de (graine, champ, ligne) plutôt que
+  d'un flux qui se déroule. Ajouter un champ au schéma laisse par conséquent
+  toutes les autres colonnes intactes, au lieu de décaler le jeu entier d'un
+  tirage.
+
+n1.py: |
+  Tirer un jeu de données de test dans les distributions observées en
+  production.
+
+  Niveau N1. Bibliothèque standard seule, aucun fichier écrit, et toujours
+  aucun réseau : les distributions viennent de l'appelant, telles qu'un
+  `GROUP BY` les renverrait.
+
+  Ce que cela apporte sur N0. Un schéma dit qu'une quantité est entre un et
+  neuf ; il ne dit pas que la plupart des commandes portent sur un article et
+  presque aucune sur neuf. Une donnée tirée uniformément à l'intérieur des
+  bornes donne à chaque cas rare le même poids qu'au cas courant : un taux de
+  succès de cache mesuré dessus ne veut rien dire, une page dessinée pour elle
+  ne ressemble en rien à la vraie, et la requête lente reste rapide.
+
+  Ce qui est tiré ici, c'est la distribution marginale de chaque colonne, une
+  colonne à la fois : l'effectif observé par catégorie, et l'effectif observé
+  par tranche d'une colonne numérique. Rien n'est ajusté et rien n'est appris —
+  la table observée est le modèle. Ce qui veut dire aussi que la distribution
+  conjointe est perdue, et les tests à côté de ce fichier montrent ce que cela
+  coûte.
+
+  Le déterminisme fonctionne exactement comme en N0, et pour la même raison :
+  un jeu de données qui n'est reproductible qu'en moyenne n'est pas
+  reproductible.
+
+n1.js: |
+  Tirer un jeu de données de test dans les distributions observées en
+  production.
+
+  Niveau N1. Aucune dépendance, aucun fichier écrit, et toujours aucun réseau :
+  les distributions viennent de l'appelant, telles qu'un `GROUP BY` les
+  renverrait.
+
+  Ce que cela apporte sur N0. Un schéma dit qu'une quantité est entre un et
+  neuf ; il ne dit pas que la plupart des commandes portent sur un article et
+  presque aucune sur neuf. Une donnée tirée uniformément à l'intérieur des
+  bornes donne à chaque cas rare le même poids qu'au cas courant : un taux de
+  succès de cache mesuré dessus ne veut rien dire, une page dessinée pour elle
+  ne ressemble en rien à la vraie, et la requête lente reste rapide.
+
+  Ce qui est tiré ici, c'est la distribution marginale de chaque colonne, une
+  colonne à la fois : l'effectif observé par catégorie, et l'effectif observé
+  par tranche d'une colonne numérique. Rien n'est ajusté et rien n'est appris —
+  la table observée est le modèle. Ce qui veut dire aussi que la distribution
+  conjointe est perdue, et les tests à côté de ce fichier montrent ce que cela
+  coûte.
+
+  Le déterminisme fonctionne exactement comme en N0, et pour la même raison :
+  un jeu de données qui n'est reproductible qu'en moyenne n'est pas
+  reproductible.
+
+n3: |
+  Rédiger les champs textuels d'un jeu de données de test en interrogeant un
+  modèle généraliste.
+
+  Niveau N3. C'est l'option vers laquelle on se tourne d'abord, et elle apporte
+  bien quelque chose de réel : un ticket de support qui se lit comme un ticket
+  de support, avec les fautes de frappe, les majuscules et les deux questions
+  dans une même phrase qu'aucun gabarit ne produit.
+
+  Elle abandonne aussi la propriété sur laquelle les niveaux du dessous étaient
+  bâtis. Il n'y a pas de graine ici. Deux appels avec la même consigne
+  renvoient des lignes différentes : le jeu de données doit donc être produit
+  une fois puis conservé, comme une fixture, et non reconstruit à la demande.
+
+  Et le modèle ne garantit rien : ni les clés demandées, ni le nombre de
+  lignes, ni l'unicité d'un identifiant. Voyez quelle part de ce fichier
+  vérifie au lieu de demander. Cette plomberie est le vrai coût du niveau, et
+  c'est la part que les tests peuvent couvrir, parce que le modèle lui-même
+  n'est pas testable.
