@@ -90,6 +90,7 @@ customer
 data
 decide
 deep
+docstrings
 délégable
 description
 dépli
@@ -104,10 +105,12 @@ distilbert
 docstring
 doublonz
 draft
+earns
 echa
 echarpe
 egress
 eight
+elsewhere
 email
 embedding
 embeddings
@@ -157,6 +160,7 @@ further
 generate
 git
 github
+gives
 google
 gpu
 grealey
@@ -182,6 +186,7 @@ hui
 hunspell
 idf
 illustration
+inbound
 Inc
 infra
 ink
@@ -236,6 +241,7 @@ luhn
 manifest
 map
 marian
+markdown
 maynez
 mdx
 merge
@@ -288,12 +294,14 @@ outline
 overall
 overkill
 own
+padding
 page
 pagefind
 paper
 parameter
 paramétrable
 party
+paste
 pip
 playwright
 please
@@ -336,6 +344,7 @@ regulatory
 rejouable
 rejouables
 remove
+réexécutés
 réordonnancement
 repository
 request
@@ -365,6 +374,7 @@ selected
 sentence
 seo
 serif
+share
 shiki
 should
 shown
