@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/rank-products-by-relevance/n0.js
       verification: executed
     breaking_point:
-      fr: "Les pondérations sont réglées à la main sur le catalogue du moment, et elles vieillissent en silence. Le test les règle sur le catalogue d'automne, où les produits populaires étaient aussi les pertinents ; au printemps, une gamme qui n'a encore rien vendu perd sur sa propre requête, « sandales randonnée », contre le succès de la saison précédente — mêmes poids, même code. Rien ne le signale : ni exception, ni test rouge, ni ligne de journal. Il faut que quelqu'un s'en aperçoive et déplace un nombre."
-      en: "The weights are set by hand on the catalogue of the day, and they go stale in silence. The test tunes them on the autumn catalogue, where the popular products were also the relevant ones; come spring, a range that has sold nothing yet loses on its own query, “sandales randonnée”, to last season's bestseller — same weights, same code. Nothing flags it: no exception, no failing test, no log line. Somebody has to notice, and move a number."
+      fr: "Les pondérations sont réglées à la main sur le catalogue du moment, et elles vieillissent en silence. Le test les règle sur le catalogue d'automne, où les produits populaires étaient aussi les pertinents ; au printemps, une gamme qui n'a presque rien vendu perd sur sa propre requête, « sandales randonnée », contre le succès de la saison précédente — mêmes poids, même code. Rien ne le signale : ni exception, ni test rouge, ni ligne de journal. Il faut que quelqu'un s'en aperçoive et déplace un nombre."
+      en: "The weights are set by hand on the catalogue of the day, and they go stale in silence. The test tunes them on the autumn catalogue, where the popular products were also the relevant ones; come spring, a range that has barely sold anything yet loses on its own query, “sandales randonnée”, to last season's bestseller — same weights, same code. Nothing flags it: no exception, no failing test, no log line. Somebody has to notice, and move a number."
     escalate_when:
       fr: "Vous rejouez le même arbitrage entre pertinence, marge et popularité à chaque changement de saison, et votre journal de clics est assez fourni pour dire ce que les acheteurs choisissent réellement."
       en: "You are replaying the same arbitration between relevance, margin and popularity every time the season turns, and your click log is thick enough to say what shoppers actually pick."
@@ -80,8 +80,8 @@ rungs:
       fr: "Le journal n'enseigne que ce que le classement précédent a fait varier. Le test donne la même marge à tous les produits de toutes les pages : la colonne correspondante ne contient plus que des zéros, le poids appris vaut exactement zéro, et une page où la marge est la seule différence entre deux produits ressort avec deux scores identiques. Le modèle n'est pas faux, il est aveugle, et aucun surcroît de trafic n'y changera rien : seul un changement de ce qu'on montre le peut."
       en: "The log only teaches what the previous ranking varied. The test gives every product on every page the same margin: that column holds nothing but zeroes, the learned weight comes out exactly nought, and a page where margin is the only difference between two products comes back with two identical scores. The model is not wrong, it is blind, and no amount of extra traffic will change that: only a change in what gets shown will."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus dans cette fiche : au-delà, on ne change plus de modèle, on change ce qu'on montre, pour que le journal enseigne autre chose que le classement de la veille."
-      en: "There is no rung above this one here: past it you do not change model, you change what you show, so that the log teaches something other than yesterday's ranking."
+      fr: "Il n'y a pas de niveau au-dessus dans cette fiche : au-delà, on ne change plus de modèle, on change ce qu'on montre, pour que le journal enseigne autre chose que le classement de la veille."
+      en: "There is no level above this one here: past it you do not change model, you change what you show, so that the log teaches something other than yesterday's ranking."
 
   - level: N2
     available: false

@@ -78,8 +78,8 @@ rungs:
       fr: "L'habituation. Quinze minutes de trafic de nuit portant un nombre d'erreurs de plein jour, glissées dans les données d'entraînement, suffisent pour que la forêt en fasse un troisième régime ordinaire. La minute que le test signalait juste avant ne l'est plus, et rien dans la sortie ne dit que quoi que ce soit a changé. C'est le point de rupture de N0, monté d'un étage : ré-entraîner sur le mois écoulé, c'est décider de ce qui compte comme normal."
       en: "Habituation. Fifteen minutes of night traffic carrying a broad-daylight error count, slipped into the training data, are enough for the forest to treat that combination as a third ordinary regime. The minute the test flagged just before is flagged no longer, and nothing in the output says anything changed. It is N0's breaking point one floor up: retraining on last month is the act of deciding what counts as normal."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus dans cette fiche. Ce qui manque ensuite n'est pas un modèle plus gros, c'est quelqu'un pour décider quels régimes ont le droit d'exister."
-      en: "There is no rung above this one here. What comes next is not a bigger model but somebody deciding which regimes are allowed to exist."
+      fr: "Il n'y a pas de niveau au-dessus dans cette fiche. Ce qui manque ensuite n'est pas un modèle plus gros, c'est quelqu'un pour décider quels régimes ont le droit d'exister."
+      en: "There is no level above this one here. What comes next is not a bigger model but somebody deciding which regimes are allowed to exist."
 
   - level: N2
     available: false
@@ -94,8 +94,8 @@ rungs:
       en: "Two calls on the same window can return two different verdicts, and an alert nobody can replay is an alert the on-call rota learns to ignore. On top of that it is one call a minute per metric, for a decision the comparison of two numbers already settles."
 
 verdict_rationale:
-  fr: "N0 est le seul barreau dont la sortie est le raisonnement : la valeur mesurée, ce que la fenêtre appelait habituel, l'écart, et l'écart qui était toléré. C'est la moitié du diagnostic livrée avec l'alerte, sans coût marginal, et le test la vérifie nombre par nombre. N1 voit ce que N0 ne verra jamais — la minute où chaque métrique reste dans sa plage et où seule la combinaison est impossible — et le paie en rendant un rang entre zéro et un : on apprend que la minute était inhabituelle, pas en quoi."
-  en: "N0 is the only rung whose output is the reasoning: the measured value, what the window called usual, the gap, and the gap that was allowed. That is half the diagnosis delivered with the alert, at no marginal cost, and the test checks it number by number. N1 sees what N0 never will — the minute where every metric stays inside its range and only the combination is impossible — and pays for it by returning a rank between zero and one: you learn that the minute was unusual, not how."
+  fr: "N0 est le seul niveau dont la sortie est le raisonnement : la valeur mesurée, ce que la fenêtre appelait habituel, l'écart, et l'écart qui était toléré. C'est la moitié du diagnostic livrée avec l'alerte, sans coût marginal, et le test la vérifie nombre par nombre. N1 voit ce que N0 ne verra jamais — la minute où chaque métrique reste dans sa plage et où seule la combinaison est impossible — et le paie en rendant un rang entre zéro et un : on apprend que la minute était inhabituelle, pas en quoi."
+  en: "N0 is the only level whose output is the reasoning: the measured value, what the window called usual, the gap, and the gap that was allowed. That is half the diagnosis delivered with the alert, at no marginal cost, and the test checks it number by number. N1 sees what N0 never will — the minute where every metric stays inside its range and only the combination is impossible — and pays for it by returning a rank between zero and one: you learn that the minute was unusual, not how."
 
 further_reading:
   - label: "Wikipedia — Median absolute deviation, et le facteur qui la met à l'échelle d'un écart type"

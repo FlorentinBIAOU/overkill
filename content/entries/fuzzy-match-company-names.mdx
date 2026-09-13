@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/fuzzy-match-company-names/n0.js
       verification: executed
     breaking_point:
-      fr: "Un sigle contre la raison sociale qu'il abrège. Le test compare « SNCF » à « Société Nationale des Chemins de fer Français » : la vraie paire passe sous le seuil, et — plus embarrassant — sous le score de « SNCF » contre « Sanofi », qui n'a en commun qu'une première lettre. Aucun seuil ne retient la première en écartant la seconde."
-      en: "An acronym against the name it stands for. The test scores SNCF against its spelled-out name below the cut a deduplication run would use, and — worse — below SNCF against Sanofi, which shares nothing but a first letter. No threshold keeps the true pair and rejects that one."
+      fr: "Un sigle contre la raison sociale qu'il abrège. Le test compare « SNCF » à « Société Nationale des Chemins de fer Français » : la vraie paire passe sous le seuil, et — plus embarrassant — sous le score de « SNCF » contre « Sanofi », société sans rapport dont la graphie ne partage avec le sigle que trois lettres sur quatre. Aucun seuil ne retient la première en écartant la seconde."
+      en: "An acronym against the name it stands for. The test scores SNCF against its spelled-out name below the cut a deduplication run would use, and — worse — below SNCF against Sanofi, an unrelated company whose spelling shares only three of the acronym's four letters. No threshold keeps the true pair and rejects that one."
     escalate_when:
       fr: "Vous ne comparez plus deux noms mais un nom contre un registre entier, ou vos deux sources n'écrivent pas les mots dans le même ordre : « Menuiserie Dubois » ici, « Dubois Menuiserie » là."
       en: "You are no longer comparing two names but one name against a whole register, or your two sources do not write the words in the same order: Menuiserie Dubois here, Dubois Menuiserie there."
@@ -98,27 +98,27 @@ rungs:
         fr:
           - "Traitement sur votre infrastructure : le registre ne part pas chez un tiers"
           - "Les poids du modèle viennent d'un tiers, avec la licence et la provenance que cela suppose de vérifier"
-          - "Un rapprochement fondé sur un score d'encodeur ne s'explique pas fragment par fragment, contrairement aux deux barreaux du dessous"
+          - "Un rapprochement fondé sur un score d'encodeur ne s'explique pas fragment par fragment, contrairement aux deux niveaux du dessous"
         en:
           - "Processing on your own infrastructure: the register goes to no third party"
           - "The model weights come from a third party, with the licence and provenance that implies checking"
-          - "A match founded on an encoder score cannot be explained fragment by fragment, unlike the two rungs below"
+          - "A match founded on an encoder score cannot be explained fragment by fragment, unlike the two levels below"
     code:
       python: snippets/fuzzy-match-company-names/n2.py
       javascript: snippets/fuzzy-match-company-names/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Des mots ordinaires partagés l'emportent sur l'identité. Dans le test, « Boulangerie du Vieux Port », qui est une autre société, passe devant « Le Vieux Moulin », qui est la même société sous son nom court, et aucun seuil ne démêle les deux. L'extrait est vérifié contre un double local, qui score à zéro la paire de sigles pour laquelle ce barreau existe : ce que l'encodeur réel y gagne, rien ici ne le mesure."
-      en: "Shared ordinary words beat identity. In the test, « Boulangerie du Vieux Port », which is a different company, outranks « Le Vieux Moulin », which is the same company under its short name, and no threshold separates them. The snippet is verified against a local double that scores the acronym pair — the very pair this rung exists for — at zero: what a real encoder gains there, nothing here measures."
+      fr: "Des mots ordinaires partagés l'emportent sur l'identité. Dans le test, « Boulangerie du Vieux Port », qui est une autre société, passe devant « Le Vieux Moulin », qui est la même société sous son nom court, et aucun seuil ne démêle les deux. L'extrait est vérifié contre un double local, qui score à zéro la paire de sigles pour laquelle ce niveau existe : ce que l'encodeur réel y gagne, rien ici ne le mesure."
+      en: "Shared ordinary words beat identity. In the test, « Boulangerie du Vieux Port », which is a different company, outranks « Le Vieux Moulin », which is the same company under its short name, and no threshold separates them. The snippet is verified against a local double that scores the acronym pair — the very pair this level exists for — at zero: what a real encoder gains there, nothing here measures."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus dans cette fiche. Ce qui vient ensuite n'est pas un autre algorithme, c'est quelqu'un qui tranche les paires que le score laisse en suspens."
-      en: "There is no rung above this one in this entry. What comes next is not another algorithm, it is somebody deciding on the pairs the score leaves undecided."
+      fr: "Il n'y a pas de niveau au-dessus dans cette fiche. Ce qui vient ensuite n'est pas un autre algorithme, c'est quelqu'un qui tranche les paires que le score laisse en suspens."
+      en: "There is no level above this one in this entry. What comes next is not another algorithm, it is somebody deciding on the pairs the score leaves undecided."
 
   - level: N3
     available: false
     unavailable_reason:
-      fr: "Le rapprochement est quadratique : sur dix mille noms, cela fait cinquante millions de paires, et un appel par paire n'existe pas. Un barreau du dessous doit de toute façon présélectionner les paires, et il ne reste alors au modèle que la question facile. S'y ajoute qu'un rapprochement doit pouvoir être rejoué : les extraits de cette fiche qui parcourent un registre fixent leur tri pour que deux exécutions rendent les mêmes paires, et un modèle généraliste ne se fixe pas ainsi."
-      en: "Matching is quadratic: ten thousand names make fifty million pairs, and one call per pair does not exist. A lower rung has to shortlist the pairs anyway, leaving the model only the easy question. Replayability settles it: the snippets in this entry that walk a register pin their sort so that two runs return the same pairs, and a general-purpose model pins nothing."
+      fr: "Le rapprochement est quadratique : sur dix mille noms, cela fait cinquante millions de paires, et un appel par paire n'existe pas. Un niveau du dessous doit de toute façon présélectionner les paires, et il ne reste alors au modèle que la question facile. S'y ajoute qu'un rapprochement doit pouvoir être rejoué : les extraits de cette fiche qui parcourent un registre fixent leur tri pour que deux exécutions rendent les mêmes paires, et un modèle généraliste ne se fixe pas ainsi."
+      en: "Matching is quadratic: ten thousand names make fifty million pairs, and one call per pair does not exist. A lower level has to shortlist the pairs anyway, leaving the model only the easy question. Replayability settles it: the snippets in this entry that walk a register pin their sort so that two runs return the same pairs, and a general-purpose model pins nothing."
 
 verdict_rationale:
   fr: "N0 ne coûte rien à exécuter, ne dépend de rien, et chacune de ses affirmations est un test unitaire — ce qui compte quand un faux rapprochement fusionne les dossiers de deux sociétés. N1 achète l'ordre des mots, la pondération des fragments rares et la recherche dans un registre entier ; son propre test dit ce qu'il n'achète pas, à savoir la paire sigle contre raison sociale, toujours manquée et toujours doublée par deux entreprises sans rapport. Montez à N1 quand vous cherchez un nom dans un registre au lieu de juger une paire, pas en espérant avoir plus souvent raison."

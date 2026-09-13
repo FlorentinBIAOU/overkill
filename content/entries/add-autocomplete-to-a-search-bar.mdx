@@ -71,11 +71,11 @@ rungs:
       javascript: snippets/add-autocomplete-to-a-search-bar/n1.js
       verification: executed
     breaking_point:
-      fr: "Ce barreau réordonne une liste, il ne l'allonge pas. Son test le montre sur la faute de frappe qui vide déjà l'arbre : « écharpe en laine » a un clic à son actif sous le préfixe « echa », et « rcharpe » ne lui donne toujours rien à classer."
-      en: "This rung reorders a list, it does not lengthen one. Its own test shows it on the typo that already empties the tree: écharpe en laine has a click on record under the prefix echa, and rcharpe still hands it nothing to rank."
+      fr: "Ce niveau réordonne une liste, il ne l'allonge pas. Son test le montre sur la faute de frappe qui vide déjà l'arbre : « écharpe en laine » a un clic à son actif sous le préfixe « echa », et « rcharpe » ne lui donne toujours rien à classer."
+      en: "This level reorders a list, it does not lengthen one. Its own test shows it on the typo that already empties the tree: écharpe en laine has a click on record under the prefix echa, and rcharpe still hands it nothing to rank."
     escalate_when:
-      fr: "Il n'y a pas de barreau au-dessus. Ce qui manque encore, la tolérance à la faute de frappe, se corrige dans la récupération et non dans le classement."
-      en: "There is no rung above this one. What is still missing, tolerance to typos, is fixed in retrieval rather than in ranking."
+      fr: "Il n'y a pas de niveau au-dessus. Ce qui manque encore, la tolérance à la faute de frappe, se corrige dans la récupération et non dans le classement."
+      en: "There is no level above this one. What is still missing, tolerance to typos, is fixed in retrieval rather than in ranking."
 
   - level: N2
     available: false
@@ -90,13 +90,13 @@ rungs:
       en: "One network call per character typed. The latency alone exceeds the gap between two keys, and the bill multiplies by the length of the query: the same search is paid for as many times as it has letters."
 
 verdict_rationale:
-  fr: "N0 répond, N1 ne fait que remettre en ordre ce que N0 a trouvé, et les deux barreaux échouent sur la même faute de frappe : le test de N1 le démontre. Prenez N0, et ajoutez N1 le jour où votre journal de clics est assez fourni pour montrer que le terme choisi n'est plus celui du haut de la liste. Vous n'y perdez pas de latence, le réordonnancement étant une lecture de dictionnaire, mais vous prenez en charge un journal de comportement à conserver."
-  en: "N0 answers, N1 only puts back in order what N0 found, and both rungs fail on the same typo, as N1's own test demonstrates. Take N0, and add N1 the day your click log is thick enough to show that the term people pick is no longer the one at the top. You lose no latency, the reranking being a dictionary lookup, but you take on a behavioural log to keep."
+  fr: "N0 répond, N1 ne fait que remettre en ordre ce que N0 a trouvé, et les deux niveaux échouent sur la même faute de frappe : le test de N1 le démontre. Prenez N0, et ajoutez N1 le jour où votre journal de clics est assez fourni pour montrer que le terme choisi n'est plus celui du haut de la liste. Vous n'y perdez pas de latence, le réordonnancement étant une lecture de dictionnaire, mais vous prenez en charge un journal de comportement à conserver."
+  en: "N0 answers, N1 only puts back in order what N0 found, and both levels fail on the same typo, as N1's own test demonstrates. Take N0, and add N1 the day your click log is thick enough to show that the term people pick is no longer the one at the top. You lose no latency, the reranking being a dictionary lookup, but you take on a behavioural log to keep."
 
 further_reading:
   - label: "Introduction to Information Retrieval, chapitre 3 — Dictionnaires et récupération tolérante aux fautes"
     url: "https://nlp.stanford.edu/IR-book/html/htmledition/dictionaries-and-tolerant-retrieval-1.html"
-  - label: "Unicode Standard Annex #15 — Normalization Forms, la décomposition employée par les deux barreaux"
+  - label: "Unicode Standard Annex #15 — Normalization Forms, la décomposition employée par les deux niveaux"
     url: "https://www.unicode.org/reports/tr15/"
   - label: "W3C ARIA Authoring Practices — le motif combobox, pour la liste déroulante de suggestions"
     url: "https://www.w3.org/WAI/ARIA/apg/patterns/combobox/"

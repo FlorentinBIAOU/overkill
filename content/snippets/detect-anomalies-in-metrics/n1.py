@@ -3,9 +3,9 @@ Spot anomalies in several metrics at once with an isolation forest.
 
 Rung N1. The robust threshold of N0 watches one metric at a time, and some
 incidents are invisible that way: every metric stays inside its usual range,
-and only the combination is impossible. Errors at their normal ceiling while
-traffic sits at its normal middle is one such minute, and no single-series
-threshold will ever ring for it.
+and only the combination is impossible. Night-time traffic with daytime
+errors is one such minute, and no single-series threshold will ever ring for
+it.
 
 An isolation forest cuts the space at random and measures how few cuts it
 takes to leave a point on its own. A point in the middle of the crowd needs

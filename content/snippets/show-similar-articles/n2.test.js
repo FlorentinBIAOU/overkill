@@ -129,8 +129,8 @@ test('a truncated batch throws rather than shifting every neighbour', async () =
 });
 
 test('limit of this rung: one vector per article dilutes a long one', async () => {
-  // Not the breaking point of the entry, which is N0's, but the wall this
-  // rung hits in production.
+  // The breaking point the entry claims for this rung, and the wall it hits in
+  // production.
   //
   // An article gets one vector however long it is, so a piece that covers
   // eight subjects has each of them at one eighth strength. Adding a rambling

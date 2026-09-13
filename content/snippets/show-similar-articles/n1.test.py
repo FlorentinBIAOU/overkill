@@ -158,8 +158,8 @@ def test_k_caps_the_length_of_each_row():
 
 def test_limit_of_this_rung_the_same_subject_in_two_languages_scores_zero():
     """
-    Not the breaking point of the entry, which is N0's, but the wall this rung
-    hits and the reason the entry goes on to N2.
+    The breaking point the entry claims for this rung, and the reason it goes on
+    to N2.
 
     TF-IDF compares strings. Two articles that say the same thing in two
     languages, or with two vocabularies, share no term at all, so their cosine

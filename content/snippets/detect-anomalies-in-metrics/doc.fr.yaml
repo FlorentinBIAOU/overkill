@@ -1,0 +1,59 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n1.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Signaler les anomalies d'une métrique par un seuil robuste sur une fenêtre
+  glissante.
+
+  Niveau N0. Médiane et écart absolu médian, sans dépendance, et un verdict
+  qui se lit à trois heures du matin.
+
+  La moyenne et l'écart type sont les mauvais outils ici. Un seul incident
+  entraîne les deux : un pic assez gros élargit donc la bande même qui devait
+  l'attraper. La médiane et l'écart absolu médian ignorent jusqu'à la moitié de
+  la fenêtre, et c'est exactement la propriété qu'il faut à une alerte.
+
+  Chaque verdict porte les nombres dont il est fait. « Anomalie à 03:12 »
+  oblige la personne réveillée à reconstruire le raisonnement avant d'agir ;
+  « mesuré 4800, habituel 1200, toléré jusqu'à 1511 » est déjà la moitié du
+  diagnostic, et ce sont les trois mêmes nombres que le seuil a employés.
+
+n1.py: |
+  Repérer des anomalies sur plusieurs métriques à la fois avec une forêt
+  d'isolement.
+
+  Niveau N1. Le seuil robuste de N0 surveille une métrique à la fois, et
+  certains incidents sont invisibles ainsi : chaque métrique reste dans sa
+  plage habituelle, et seule la combinaison est impossible. Un trafic de nuit
+  portant des erreurs de plein jour est une de ces minutes, et aucun seuil sur
+  une série unique ne sonnera jamais pour elle.
+
+  Une forêt d'isolement coupe l'espace au hasard et mesure en combien de coupes
+  un point se retrouve seul. Un point au milieu de la foule en demande
+  beaucoup ; un point à l'écart en demande trois ou quatre. Il n'y a rien à
+  étiqueter, et la seule véritable molette est la taille de la forêt.
+
+  Ce que ce niveau coûte, c'est ce en quoi N0 était bon. La sortie est un rang
+  entre zéro et un, pas un écart mesuré face à une limite annoncée. On dit à la
+  personne réveillée que la minute était inhabituelle, pas en quoi.
+
+n1.js: |
+  Repérer des anomalies sur plusieurs métriques à la fois avec une forêt
+  d'isolement.
+
+  Niveau N1. Le seuil robuste de N0 surveille une métrique à la fois, et
+  certains incidents sont invisibles ainsi : chaque métrique reste dans sa
+  plage habituelle, et seule la combinaison est impossible. Un trafic de nuit
+  portant des erreurs de plein jour est une de ces minutes, et aucun seuil sur
+  une série unique ne sonnera jamais pour elle.
+
+  La forêt coupe l'espace au hasard et mesure en combien de coupes un point se
+  retrouve seul. Un point au milieu de la foule en demande beaucoup ; un point
+  à l'écart en demande trois ou quatre. Il n'y a rien à étiqueter, et la seule
+  véritable molette est la taille de la forêt.
+
+  Écrit en entier plutôt que tiré d'une bibliothèque, parce que c'est tout
+  l'argument de ce niveau : l'outil classique est assez petit pour être lu. Ce
+  qu'il coûte, c'est ce en quoi N0 était bon — la sortie est un rang entre zéro
+  et un, pas un écart mesuré face à une limite annoncée.

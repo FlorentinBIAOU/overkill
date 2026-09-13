@@ -11,7 +11,7 @@ window, which is exactly the property an alert needs.
 
 Every verdict carries the numbers it was made of. "Anomaly at 03:12" leaves
 whoever was woken up to reconstruct the reasoning before they can act;
-"measured 4800, usual 1200, allowed up to 2100" is already half the
+"measured 4800, usual 1200, allowed up to 1511" is already half the
 diagnosis, and it is the same three numbers the threshold itself used.
 """
 

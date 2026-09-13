@@ -1,0 +1,73 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n1.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Trier des produits par un score pondéré : correspondance textuelle,
+  disponibilité, marge, popularité.
+
+  Niveau N0. Déterministe, sans dépendance, et surtout discutable : les quatre
+  pondérations sont des arguments, pas des constantes enfouies dans le code.
+  C'est tout l'intérêt de l'approche. Quand le commerce dit que le premier
+  résultat est mauvais, la discussion porte sur un nombre qu'un responsable de
+  rayon peut lire, et la réponse arrive dans l'après-midi plutôt que dans un
+  cycle de réentraînement.
+
+  Deux décisions la rendent utilisable.
+
+  Chaque signal est ramené à la même échelle de zéro à un avant que les
+  pondérations ne le touchent : un poids de deux compte donc vraiment deux
+  fois plus, et le score lui-même reste dans cette échelle quelles que soient
+  les pondérations.
+
+  Le tri est stable : deux produits que le score ne sait pas séparer restent
+  dans l'ordre où le catalogue les a donnés. Un tri instable rebattrait les
+  résultats à égalité d'un affichage à l'autre, et plus personne ne saurait
+  reproduire une réclamation.
+
+n1.py: |
+  Apprendre les pondérations de classement des interactions passées au lieu de
+  les régler à la main.
+
+  Niveau N1. Le score est celui de N0, une somme pondérée des mêmes quatre
+  signaux. Ce qui change, c'est l'origine des quatre nombres : le jugement d'un
+  responsable de rayon en N0, le journal de clics ici.
+
+  La méthode est par paires. Ce qu'un journal dit réellement n'est jamais
+  « ce produit mérite 0,8 », c'est « montrés côte à côte, un acheteur a pris
+  celui-là ». Chaque paire devient une ligne d'entraînement, la différence
+  entre les deux vecteurs de signaux, et une régression logistique sur ces
+  différences redonne les pondérations du score d'origine. Rien d'autre ne
+  change : le code de service, l'explication montrée au rayon, l'échelle du
+  score, tout reste en place.
+
+  Chaque paire est ajoutée dans les deux sens, l'une étiquetée gagnante et
+  l'autre perdante. Cela maintient les deux classes équilibrées, et c'est
+  pourquoi le modèle ne porte pas d'ordonnée à l'origine : une constante
+  décalerait les deux sens d'une même paire de la même façon, ce qui n'a pas
+  de sens quand on compare deux produits d'une même page de résultats.
+
+n1.js: |
+  Apprendre les pondérations de classement des interactions passées au lieu de
+  les régler à la main.
+
+  Niveau N1. Le score est celui de N0, une somme pondérée des mêmes quatre
+  signaux. Ce qui change, c'est l'origine des quatre nombres : le jugement d'un
+  responsable de rayon en N0, le journal de clics ici.
+
+  La méthode est par paires. Ce qu'un journal dit réellement n'est jamais
+  « ce produit mérite 0,8 », c'est « montrés côte à côte, un acheteur a pris
+  celui-là ». Chaque paire devient une ligne d'entraînement, la différence
+  entre les deux vecteurs de signaux, et une régression logistique sur ces
+  différences redonne les pondérations du score d'origine. Rien d'autre ne
+  change : le code de service, l'explication montrée au rayon, l'échelle du
+  score, tout reste en place.
+
+  Chaque paire est ajoutée dans les deux sens, l'une étiquetée gagnante et
+  l'autre perdante. Cela maintient les deux classes équilibrées, et c'est
+  pourquoi le modèle ne porte pas d'ordonnée à l'origine : une constante
+  décalerait les deux sens d'une même paire de la même façon, ce qui n'a pas
+  de sens quand on compare deux produits d'une même page de résultats.
+
+  L'ajustement tient en trente lignes de descente de gradient plutôt qu'en une
+  dépendance, et c'est l'argument de ce niveau tout entier.

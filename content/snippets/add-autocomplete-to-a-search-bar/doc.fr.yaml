@@ -1,0 +1,39 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Suggérer à mesure que l'utilisateur tape : un arbre de préfixes, ordonné par
+  la fréquence à laquelle un terme est cherché.
+
+  Niveau N0. Sans dépendance, et l'index entier est un emboîtement de
+  dictionnaires qui tient dans la mémoire du processus qui sert la barre de
+  recherche.
+
+  Deux décisions portent l'approche.
+
+  D'abord, l'arbre est indexé sur une orthographe normalisée, accents repliés
+  et casse abandonnée, tandis que chaque feuille conserve l'orthographe
+  d'origine. Qui tape « ec » trouve « écharpe », et le lit tout de même
+  correctement écrit dans la liste déroulante.
+
+  Ensuite, l'ordre est un tri ordinaire sur le compte d'usage. Suggérer n'est
+  pas retrouver : dix candidats sous un préfixe est le cas courant, et trier
+  dix éléments à chaque frappe ne coûte rien qui vaille d'être optimisé.
+
+n1: |
+  Réordonner les suggestions avec ce sur quoi les gens ont réellement cliqué.
+
+  Niveau N1. L'arbre de préfixes de N0 classe les candidats par la fréquence à
+  laquelle un terme est cherché. Ce compte dit ce que les gens ont cherché, pas
+  ce qu'ils ont pris une fois la liste ouverte. Les clics disent la seconde
+  chose, et ils sont déjà dans les journaux.
+
+  Le modèle est un comptage, pas un gradient : pour chaque préfixe qui a été
+  frappé un jour, combien de fois chaque suggestion a été choisie. Il
+  s'entraîne en une passe sur le journal et se relit par une lecture de
+  dictionnaire, ce qu'autorise le budget d'une suggestion, qui est
+  l'intervalle entre deux touches.
+
+  Les candidats arrivent en argument : ce niveau réordonne une liste, il ne la
+  retrouve pas.

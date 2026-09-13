@@ -130,8 +130,8 @@ def test_a_truncated_batch_raises_rather_than_shifting_every_neighbour():
 
 def test_limit_of_this_rung_one_vector_per_article_dilutes_a_long_one():
     """
-    Not the breaking point of the entry, which is N0's, but the wall this rung
-    hits in production.
+    The breaking point the entry claims for this rung, and the wall it hits in
+    production.
 
     An article gets one vector however long it is, so a piece that covers
     eight subjects has each of them at one eighth strength. Adding a rambling

@@ -1,0 +1,67 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n1.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Articles liés par chevauchement d'étiquettes, pondéré par la rareté de
+  chaque étiquette.
+
+  Niveau N0. Sans dépendance, déterministe, et calculé une fois pour le fonds
+  entier au lieu de l'être à chaque affichage de page : les voisins d'un
+  article ne dépendent pas de qui le lit, donc aucun lecteur ne devrait jamais
+  attendre ce calcul.
+
+  Compter les étiquettes partagées est la version évidente, et c'est la
+  mauvaise. Une étiquette que tous les articles portent ne dit rien d'aucun
+  d'eux ; une étiquette que trois articles portent dit presque tout de ces
+  trois-là. Pondérer chaque étiquette par sa rareté fait toute la différence
+  entre un bloc utile et un bloc qui range l'annonce du site à côté de chaque
+  article du site.
+
+n1.py: |
+  Articles liés par le texte lui-même : TF-IDF, puis similarité cosinus.
+
+  Niveau N1. N0 ne voit que ce que quelqu'un a pensé à étiqueter. Celui-ci lit
+  l'article, et laisse le corpus décider quels mots comptent : un mot qui
+  figure dans tous les articles ne pèse presque rien, ce qui est l'idée de N0
+  appliquée au vocabulaire plutôt qu'aux libellés. Personne n'a rien à
+  entretenir.
+
+  Toujours calculé hors ligne, une fois par modification du fonds, et il rend
+  la même table de voisins que N0. Le code qui affiche la page ne change pas
+  quand on passe d'un niveau au suivant : c'est ce qui rend le passage bon
+  marché.
+
+n1.js: |
+  Articles liés par le texte lui-même : TF-IDF, puis similarité cosinus.
+
+  Niveau N1. N0 ne voit que ce que quelqu'un a pensé à étiqueter. Celui-ci lit
+  l'article, et laisse le corpus décider quels mots comptent : un mot qui
+  figure dans tous les articles ne pèse presque rien, ce qui est l'idée de N0
+  appliquée au vocabulaire plutôt qu'aux libellés. Personne n'a rien à
+  entretenir.
+
+  Écrit en entier plutôt que tiré d'une bibliothèque, parce que TF-IDF est un
+  comptage, un logarithme et une division. La pondération ci-dessous est la
+  pondération lissée usuelle : ce fichier classe donc un corpus exactement
+  comme le fait la version Python.
+
+n2: |
+  Articles liés par des embeddings de documents auto-hébergés.
+
+  Niveau N2. N1 compare des mots. Deux articles qui traitent du même sujet
+  avec deux vocabulaires, ou dans deux langues, ne partagent aucun terme et
+  obtiennent exactement zéro. Un encodeur projette chaque article dans un
+  vecteur où c'est le sens, et non l'orthographe, qui décide de la distance :
+  l'article français et l'article anglais sur le levain peuvent alors se
+  retrouver ensemble.
+
+  La table est toujours construite hors ligne, une fois par modification du
+  fonds, et elle a la même forme que celle que rendent N0 et N1 : le code qui
+  affiche la page ne change jamais. Ce qui change, c'est ce que vous faites
+  tourner désormais — quelques centaines de mégaoctets de poids, un processus à
+  tenir chaud, et un index vectoriel dès que le fonds ne tient plus dans une
+  simple liste.
+
+  L'encodeur est un paramètre doté d'une valeur par défaut réelle : le lecteur
+  voit ainsi le code de chargement, tandis que le test injecte un double local.

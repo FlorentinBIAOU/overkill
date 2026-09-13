@@ -1,0 +1,108 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Rapprocher deux noms d'entreprises : normaliser, retirer la forme juridique,
+  puis Jaro-Winkler.
+
+  Niveau N0. Déterministe, bibliothèque standard seule, et assez court pour se
+  lire d'une traite. Deux décisions portent tout le résultat.
+
+  D'abord, la forme juridique est retirée plutôt que comparée.
+  « Boulangerie Martin SARL » et « Boulangerie Martin SAS » sont un seul nom
+  commercial sous deux statuts ; laisser SARL et SAS dans les chaînes les
+  éloignerait pour une raison dont personne n'a à se soucier.
+
+  Ensuite, Jaro-Winkler plutôt qu'une distance d'édition ordinaire. Il
+  récompense un début commun, et c'est bien ainsi que varient les noms
+  d'entreprises : la tête est la marque, la queue est une forme, une ville ou
+  un reste de ponctuation.
+
+n0.js: |
+  Rapprocher deux noms d'entreprises : normaliser, retirer la forme juridique,
+  puis Jaro-Winkler.
+
+  Niveau N0. Déterministe, sans dépendance, et assez court pour se lire d'une
+  traite. Deux décisions portent tout le résultat.
+
+  D'abord, la forme juridique est retirée plutôt que comparée.
+  « Boulangerie Martin SARL » et « Boulangerie Martin SAS » sont un seul nom
+  commercial sous deux statuts ; laisser SARL et SAS dans les chaînes les
+  éloignerait pour une raison dont personne n'a à se soucier.
+
+  Ensuite, Jaro-Winkler plutôt qu'une distance d'édition ordinaire. Il
+  récompense un début commun, et c'est bien ainsi que varient les noms
+  d'entreprises : la tête est la marque, la queue est une forme, une ville ou
+  un reste de ponctuation.
+
+  Écrit en entier plutôt que tiré d'un paquet : l'algorithme tient en trente
+  lignes, et c'est l'argument de cette fiche.
+
+n1.py: |
+  Rapprocher des noms d'entreprises sur des n-grammes de caractères pondérés
+  par TF-IDF.
+
+  Niveau N1. N0 compare deux chaînes. Celui-ci compare un nom à un registre
+  entier, et il le fait en regardant les fragments dont un nom est fait.
+
+  Deux changements comptent.
+
+  Un fragment rare pèse désormais plus qu'un fragment courant.
+  « boulangerie » figure dans la moitié du registre et n'apprend presque rien ;
+  « quiquengrogne » y figure une fois et tranche la question. TF-IDF est
+  exactement cette arithmétique, et N0 n'en a pas d'équivalent : Jaro-Winkler
+  traite tous les caractères de la même façon.
+
+  Et comme un nom devient un vecteur, la recherche est un produit de matrices
+  plutôt qu'une boucle sur toutes les paires possibles : c'est ce qui rend un
+  registre entier consultable.
+
+  `char_wb` garde les n-grammes à l'intérieur des frontières de mots, si bien
+  qu'un fragment n'enjambe jamais deux mots. « Martin Dubois » et
+  « Dubois Martin » se rencontrent donc, parce que l'ordre des mots ne coûte
+  rien ici — au contraire de N0, où il coûte presque tout.
+
+n1.js: |
+  Rapprocher des noms d'entreprises sur des n-grammes de caractères pondérés
+  par TF-IDF.
+
+  Niveau N1. N0 compare deux chaînes. Celui-ci compare un nom à un registre
+  entier, et il le fait en regardant les fragments dont un nom est fait.
+
+  Un fragment rare pèse désormais plus qu'un fragment courant.
+  « boulangerie » figure dans la moitié du registre et n'apprend presque rien ;
+  « quiquengrogne » y figure une fois et tranche la question. TF-IDF est
+  exactement cette arithmétique, et N0 n'en a pas d'équivalent : Jaro-Winkler
+  traite tous les caractères de la même façon.
+
+  Les n-grammes sont pris à l'intérieur des frontières de mots, si bien qu'un
+  fragment n'enjambe jamais deux mots. « Martin Dubois » et « Dubois Martin »
+  se rencontrent donc, parce que l'ordre des mots ne coûte rien ici — au
+  contraire de N0, où il coûte presque tout.
+
+  C'est la même arithmétique que celle de scikit-learn, écrite en entier :
+  comptes bruts, fréquence inverse de document lissée des deux côtés, puis
+  lignes ramenées à la longueur un pour qu'un cosinus soit un produit
+  scalaire.
+
+n2: |
+  Rapprocher des noms d'entreprises par le sens, avec un encodeur
+  auto-hébergé.
+
+  Niveau N2. N0 et N1 comparent tous deux des caractères, et tous deux
+  manquent donc la paire sur laquelle cette fiche revient sans cesse : un sigle
+  et la raison sociale qu'il abrège n'ont presque aucune lettre en commun. Un
+  encodeur projette chaque nom dans un vecteur selon le sens plutôt que selon
+  l'orthographe, seule façon pour cette paire de se rencontrer un jour.
+
+  Ce que cela coûte : un fichier de modèle à livrer et à tenir à jour, un
+  processus chaud pour le porter, et un score que vous ne saurez pas expliquer
+  au collègue qui demande pourquoi deux noms ont été fusionnés. Le registre
+  doit en outre être réencodé à chaque montée de version du modèle, et les
+  anciens scores ne sont pas comparables aux nouveaux.
+
+  Voyez ce qui n'est pas là : aucune forme juridique n'est retirée et rien
+  n'est mis en minuscules. L'encodeur est censé s'en charger lui-même. Savoir
+  s'il le fait est précisément la part qu'un double local ne peut pas
+  prouver — voyez le test.

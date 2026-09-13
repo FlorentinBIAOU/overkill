@@ -96,8 +96,8 @@ def test_breaking_point_hand_set_weights_age_with_the_catalogue():
 
     These weights were tuned on the autumn catalogue, where the popular
     products were also the relevant ones. They are right there. Spring brings
-    in a range that has sold nothing yet, and the very same weights, on the
-    very same unchanged code, bury it under last season's bestseller.
+    in a range that has barely sold anything yet, and the very same weights, on
+    the very same unchanged code, bury it under last season's bestseller.
 
     Nothing raises an alarm: no exception, no failing test, no error in a log.
     Only the sales figures of a range nobody sees, three months later.

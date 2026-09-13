@@ -48,8 +48,9 @@ test('breaking point: an acronym against the name it stands for', () => {
   // The breaking point claimed on the entry: two names of one company with no
   // characters in common. Jaro-Winkler compares characters. It has no idea
   // that SNCF is built from the initials below it, so the true pair scores
-  // low — and, worse, lower than an unrelated company that merely starts with
-  // the same letter. No threshold keeps the first and rejects the second.
+  // low — and, worse, lower than an unrelated company whose spelling happens
+  // to share three of the acronym's four letters. No threshold keeps the first
+  // and rejects the second.
   const expanded = 'Société Nationale des Chemins de fer Français';
   assert.ok(similarity('SNCF', expanded) < THRESHOLD);
   assert.ok(similarity('SNCF', 'Sanofi') > similarity('SNCF', expanded));
