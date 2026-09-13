@@ -19,9 +19,13 @@ export interface Props {
   lang: Locale;
   register?: 'editorial' | 'documentary';
   noindex?: boolean;
+  /** L'image de partage de la page, si elle en a une à elle. */
+  image?: string;
 }
 
-const { title, description, lang, register = 'editorial', noindex = false } = Astro.props;
+const {
+  title, description, lang, register = 'editorial', noindex = false, image,
+} = Astro.props;
 const strings = t(lang);
 
 // Chemin courant, sans barre oblique finale, pour comparer et pour construire
@@ -39,7 +43,14 @@ const canonical = new URL(path, site).href;
 const pageTitle = title === strings.site.name ? title : `${title} — ${strings.site.name}`;
 ---
 
-<Base title={pageTitle} description={description} lang={lang} register={register} noindex={noindex}>
+<Base
+  title={pageTitle}
+  description={description}
+  lang={lang}
+  register={register}
+  noindex={noindex}
+  image={image}
+>
   <Fragment slot="head">
     <link rel="canonical" href={canonical} />
     {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}

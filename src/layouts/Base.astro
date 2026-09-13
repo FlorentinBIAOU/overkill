@@ -8,6 +8,12 @@ export interface Props {
   /** Registre visuel de la page (CDC 8.1). */
   register?: 'editorial' | 'documentary';
   noindex?: boolean;
+  /**
+   * L'image de partage, servie depuis ce domaine. Les fiches ont la leur,
+   * produite à la construction du site par scripts/build-og-images.mjs ; les
+   * autres pages emploient celle du site.
+   */
+  image?: string;
 }
 
 const {
@@ -16,6 +22,7 @@ const {
   lang = 'en',
   register = 'editorial',
   noindex = false,
+  image = '/og.png',
 } = Astro.props;
 ---
 
@@ -57,7 +64,7 @@ const {
     {description && <meta property="og:description" content={description} />}
     <meta property="og:url" content={Astro.url.href} />
     <meta property="og:locale" content={lang === 'fr' ? 'fr_FR' : 'en_US'} />
-    <meta property="og:image" content={new URL('/og.png', Astro.site).href} />
+    <meta property="og:image" content={new URL(image, Astro.site).href} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
