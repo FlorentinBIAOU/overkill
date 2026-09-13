@@ -6,6 +6,15 @@ import tailwindcss from '@tailwindcss/vite';
 
 export const SITE = 'https://isitoverkill.dev';
 
+/** Fournisseurs chargés en import dynamique par les extraits N2 et N3. */
+const PROVIDERS = [
+  'openai',
+  '@xenova/transformers',
+  '@huggingface/transformers',
+  'tesseract.js',
+  'node-postal',
+];
+
 export default defineConfig({
   site: SITE,
   output: 'static',
@@ -34,6 +43,16 @@ export default defineConfig({
   ],
   vite: {
     plugins: [tailwindcss()],
+    /*
+     * Les extraits N2 et N3 chargent leur fournisseur en import dynamique, et
+     * seulement quand aucun client ne leur est passé — ce qui n'arrive jamais
+     * ici : les essais et les tests injectent tous un double local. Ces
+     * paquets ne sont donc pas installés, et n'ont pas à l'être. Sans cette
+     * liste, l'analyseur de Rollup les réclame à la construction alors que la
+     * ligne qui les mentionne ne s'exécute pas.
+     */
+    ssr: { external: PROVIDERS },
+    build: { rollupOptions: { external: PROVIDERS } },
   },
   markdown: {
     shikiConfig: {

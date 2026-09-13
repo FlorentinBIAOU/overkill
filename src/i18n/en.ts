@@ -139,6 +139,24 @@ export default {
     draftNote: 'This entry is a draft. Its content has not been verified yet.',
   },
 
+  /* The try zone. Two shapes: interactive when the snippet runs in a browser,
+     frozen when it cannot. */
+  tryout: {
+    heading: 'Try it',
+    leadLive: 'The code above runs in your browser. Change the text and the result follows.',
+    leadFrozen: 'This code cannot run in a browser. The outputs below are computed when the site is built, by running the real code.',
+    inputLabel: 'Your text',
+    caught: 'What the code picked up',
+    output: 'What it returns',
+    empty: 'nothing',
+    examples: 'Or start from an example',
+    given: 'Given',
+    noJs: 'Free typing and the other examples need JavaScript. The example shown below was computed when the site was built.',
+    failed: 'The try did not complete on this text.',
+    failsHere: 'Here it breaks',
+    nextLevel: 'See the level above',
+  },
+
   code: {
     python: 'Python',
     javascript: 'JavaScript',

@@ -14,6 +14,7 @@ import RungSection from '../components/RungSection.astro';
 import RungTable from '../components/RungTable.astro';
 import TocSticky from '../components/TocSticky.astro';
 import VerdictBadge from '../components/VerdictBadge.astro';
+import { tryoutFor } from '../lib/tryouts.mjs';
 import { t, type Locale } from '../i18n';
 import { route } from '../i18n/routes';
 import type { Level } from '../content/schema/enums';
@@ -44,6 +45,17 @@ const toc = [
   { href: '#verdict', label: strings.verdict.heading },
   { href: '#sources', label: strings.entry.sources },
 ];
+
+/* L'essai de la fiche, s'il en a un, et le niveau vers lequel renvoie un cas
+   qui échoue : le suivant qui soit documenté, pas le suivant en numéro. */
+const tryout = tryoutFor(entry.id);
+const verdictRank = Number(String(entry.verdict).slice(1));
+const above = entry.rungs.find(
+  (r: any) => r.available && Number(String(r.level).slice(1)) > verdictRank,
+);
+const nextLevel = above
+  ? { href: `#${String(above.level).toLowerCase()}`, label: above.name[lang] }
+  : undefined;
 
 /** Le périmètre réglementaire n'est affiché que s'il dit quelque chose. */
 const hasRegulatory = entry.rungs.some(
@@ -108,7 +120,14 @@ const hasRegulatory = entry.rungs.some(
             entry.rungs
               .filter((r: any) => r.level === entry.verdict)
               .map((rung: any) => (
-                <RungSection rung={rung} isVerdict={true} lang={lang} strings={strings} />
+                <RungSection
+                  rung={rung}
+                  isVerdict={true}
+                  lang={lang}
+                  strings={strings}
+                  tryout={tryout}
+                  nextLevel={nextLevel}
+                />
               ))
           }
 

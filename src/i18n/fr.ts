@@ -145,6 +145,24 @@ export default {
     draftNote: 'Cette fiche est un brouillon. Son contenu n’est pas encore vérifié.',
   },
 
+  /* La zone d'essai (partie 1.2 du lot 14). Deux formes : interactive quand
+     l'extrait tourne dans un navigateur, figée quand il ne peut pas. */
+  tryout: {
+    heading: 'Essayer',
+    leadLive: 'Le code ci-dessus tourne dans votre navigateur. Changez le texte, le résultat suit.',
+    leadFrozen: 'Ce code ne peut pas tourner dans un navigateur. Les sorties ci-dessous sont calculées à la construction du site, en exécutant le vrai code.',
+    inputLabel: 'Votre texte',
+    caught: 'Ce que le code a repéré',
+    output: 'Ce qu’il renvoie',
+    empty: 'rien',
+    examples: 'Ou partez d’un exemple',
+    given: 'Donné',
+    noJs: 'La saisie libre et les autres exemples ont besoin de JavaScript. L’exemple affiché ci-dessous, lui, a été calculé à la construction du site.',
+    failed: 'L’essai n’a pas abouti sur ce texte.',
+    failsHere: 'Là, ça casse',
+    nextLevel: 'Voir le niveau au-dessus',
+  },
+
   code: {
     python: 'Python',
     javascript: 'JavaScript',

@@ -1,0 +1,436 @@
+---
+/**
+ * La zone d'essai (partie 1.2 du lot 14).
+ *
+ * Elle donne vie au code statique : on tape son propre texte, le code de la
+ * fiche s'exécute, le résultat s'affiche, et ce qui a été attrapé est
+ * surligné. Deux formes selon ce que le code permet :
+ *
+ *   interactive  l'extrait du niveau recommandé existe en JavaScript et tourne
+ *                sans dépendance : il est chargé dans le navigateur et
+ *                s'exécute à chaque frappe
+ *   figée        l'exécution en navigateur est impossible (modèle, API) :
+ *                cinq à six cas dont les sorties sont calculées ici, au build,
+ *                en exécutant le vrai code. Jamais écrites à la main.
+ *
+ * Le rendu du résultat passe par le même module que le navigateur
+ * (src/lib/tryout-render.mjs) : la page affiche la même chose avec et sans
+ * JavaScript, et il n'y a qu'un endroit à corriger.
+ */
+import { renderResult } from '../lib/tryout-render.mjs';
+import { runAll, runFirst, caseList } from '../lib/tryouts.mjs';
+import { bilingual } from '../lib/tryout-case.mjs';
+import type { Strings } from '../i18n';
+
+export interface Props {
+  /** L'essai résolu par src/lib/tryouts.mjs. */
+  tryout: { id: string; mode: 'live' | 'frozen'; spec: any };
+  lang: 'en' | 'fr';
+  strings: Strings;
+  /** Le niveau au-dessus, vers lequel renvoie un cas qui échoue. */
+  nextLevel?: { href: string; label: string };
+  /** Profondeur du titre dans la page. */
+  headingLevel?: 3 | 4;
+}
+
+const { tryout, lang, strings, nextLevel, headingLevel = 4 } = Astro.props;
+const Heading = `h${headingLevel}` as 'h3' | 'h4';
+const s = strings.tryout;
+const labels = {
+  caught: s.caught, output: s.output, empty: s.empty, given: s.given, failed: s.failed,
+};
+
+const live = tryout.mode === 'live';
+const cas = caseList(tryout.spec, lang);
+const premier = live ? await runFirst(tryout.spec, lang) : null;
+const tous = live ? null : await runAll(tryout.spec, lang);
+const id = `try-${tryout.id}`;
+const note = bilingual(tryout.spec.note, lang);
+---
+
+<section
+  class:list={['tryout', live && 'tryout--live']}
+  aria-labelledby={`${id}-title`}
+  data-tryout={live ? tryout.id : undefined}
+  data-tryout-labels={live ? JSON.stringify(labels) : undefined}
+>
+  <Heading id={`${id}-title`} class="tryout__title">{s.heading}</Heading>
+  <p class="tryout__lead">{live ? s.leadLive : s.leadFrozen}</p>
+  {/* Le mot que l'essai lui-même ajoute, une fois, plutôt que répété sous
+      chacun de ses cas. */}
+  {note && <p class="tryout__lead">{note}</p>}
+
+  {
+    live && premier && (
+      <>
+        <label class="tryout__label" for={`${id}-input`}>{s.inputLabel}</label>
+        <textarea
+          class="tryout__input"
+          id={`${id}-input`}
+          rows="2"
+          spellcheck="false"
+          data-tryout-input>{premier.input}</textarea>
+
+        <div class="tryout__cases">
+          <p class="tryout__cases-label" id={`${id}-cases`}>{s.examples}</p>
+          <ul class="tryout__case-list" aria-labelledby={`${id}-cases`}>
+            {cas.map((c, i) => (
+              <li>
+                <button
+                  type="button"
+                  class:list={['tryout__case', c.fails && 'tryout__case--fails']}
+                  data-tryout-case={i}
+                  aria-pressed={i === 0 ? 'true' : 'false'}
+                  disabled
+                >
+                  {c.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p class="tryout__nojs">{s.noJs}</p>
+
+        {/* Le résultat du premier cas est calculé à la construction du site :
+            la zone dit donc quelque chose de vrai avant que le moindre octet
+            de JavaScript n'arrive, et le champ n'est pas un décor. */}
+        <div class="tryout__result" data-tryout-result aria-live="polite" set:html={
+          renderResult(premier.result, premier.input, labels)
+        } />
+
+        <p class="tryout__breaks" data-tryout-why hidden={!premier.fails}>
+          <span class="tryout__breaks-tag">{s.failsHere}</span>
+          <span data-tryout-why-text>{premier.why}</span>
+          {nextLevel && (
+            <a class="tryout__breaks-link" href={nextLevel.href}>{s.nextLevel}</a>
+          )}
+        </p>
+      </>
+    )
+  }
+
+  {
+    tous && (
+      <ol class="tryout__frozen">
+        {tous.map((c) => (
+          <li class:list={['tryout__frozen-case', c.fails && 'tryout__frozen-case--fails']}>
+            <p class="tryout__frozen-label">{c.label}</p>
+            <div class="tryout__panes" set:html={
+              renderResult(c.result, c.input, labels, {
+                alwaysShowInput: true,
+                displayInput: c.shown,
+              })
+            } />
+            {c.fails && (
+              <p class="tryout__breaks">
+                <span class="tryout__breaks-tag">{s.failsHere}</span>
+                <span>{c.why}</span>
+                {nextLevel && (
+                  <a class="tryout__breaks-link" href={nextLevel.href}>{s.nextLevel}</a>
+                )}
+              </p>
+            )}
+          </li>
+        ))}
+      </ol>
+    )
+  }
+</section>
+
+{/* Le module sort immédiatement s'il n'y a pas de zone interactive dans la
+    page : la forme figée ne pose pas l'attribut qu'il cherche. */}
+<script>
+  import '../scripts/tryout.js';
+</script>
+
+<style>
+  .tryout {
+    border: 1px solid var(--rule-strong);
+    border-radius: 14px;
+    padding: var(--space-6) var(--space-6) var(--space-8);
+    background: var(--paper);
+  }
+
+  .tryout__title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .tryout__lead {
+    margin: var(--space-2) 0 var(--space-6);
+    font-size: 0.95rem;
+    color: var(--muted);
+  }
+
+  .tryout__label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-block-end: var(--space-2);
+  }
+
+  .tryout__input {
+    font: inherit;
+    font-family: var(--font-code);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 1.5px solid var(--rule-strong);
+    border-radius: 10px;
+    background: var(--paper-2);
+    color: var(--ink);
+    resize: vertical;
+    field-sizing: content;
+    min-height: 3.2rem;
+  }
+
+  .tryout__input:focus-visible {
+    border-color: var(--ink);
+  }
+
+  .tryout__cases {
+    margin-block-start: var(--space-5);
+  }
+
+  .tryout__cases-label {
+    margin: 0 0 var(--space-2);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .tryout__case-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+  }
+
+  .tryout__case-list li {
+    max-width: none;
+  }
+
+  .tryout__case {
+    font: inherit;
+    font-size: 0.83rem;
+    line-height: 1.3;
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: start;
+  }
+
+  .tryout__case:hover {
+    border-color: var(--ink);
+  }
+
+  .tryout__case[aria-pressed='true'] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+
+  /* Le cas qui échoue se signale avant d'être ouvert : c'est le plus utile
+     des quatre, et le lecteur doit savoir qu'il va voir une limite. */
+  .tryout__case--fails {
+    border-style: dashed;
+  }
+
+  .tryout__case:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  .tryout__nojs {
+    margin: var(--space-4) 0 0;
+    font-size: 0.83rem;
+    color: var(--muted);
+  }
+
+  .tryout[data-enhanced='true'] .tryout__nojs {
+    display: none;
+  }
+
+  .tryout__result,
+  .tryout__panes {
+    display: grid;
+    gap: var(--space-4);
+    margin-block-start: var(--space-6);
+  }
+
+  .tryout :global(.tryout__pane) {
+    min-width: 0;
+  }
+
+  .tryout :global(.tryout__pane-label) {
+    margin: 0 0 var(--space-1);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .tryout :global(.tryout__text) {
+    margin: 0;
+    font-family: var(--font-code);
+    font-size: 0.88rem;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-width: none;
+  }
+
+  .tryout :global(.tryout__text--out) {
+    padding: var(--space-3) var(--space-4);
+    border-radius: 10px;
+    background: var(--paper-2);
+  }
+
+  /* Le surlignage : le jaune de marque en aplat, sous de l'encre. C'est
+     exactement son emploi (CDC 8.3), et il ne dit pas « attention », il dit
+     « voilà ce qui a été touché ». */
+  .tryout :global(.tryout__mark) {
+    background: var(--brand);
+    color: var(--on-brand);
+    padding: 1px 3px;
+    border-radius: 3px;
+  }
+
+  .tryout :global(.tryout__void) {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .tryout :global(.tryout__verdict) {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    line-height: 1.25;
+  }
+
+  .tryout :global(.tryout__detail) {
+    margin: var(--space-1) 0 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .tryout :global(.tryout__note) {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .tryout :global(.tryout__error) {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .tryout :global(.tryout__image) {
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+  }
+
+  .tryout :global(table) {
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 100%;
+  }
+
+  .tryout :global(th),
+  .tryout :global(td) {
+    text-align: start;
+    padding: var(--space-2) var(--space-3);
+    border-block-end: 1px solid var(--rule);
+    vertical-align: top;
+    white-space: nowrap;
+  }
+
+  .tryout :global(th) {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .tryout__breaks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-3);
+    margin: var(--space-5) 0 0;
+    padding-block-start: var(--space-4);
+    border-block-start: 1px solid var(--rule);
+    font-size: 0.9rem;
+    max-width: none;
+  }
+
+  .tryout__breaks-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border: 1px dashed var(--rule-strong);
+    border-radius: var(--radius-pill);
+    flex: none;
+  }
+
+  .tryout__breaks span[data-tryout-why-text],
+  .tryout__breaks span:not(.tryout__breaks-tag) {
+    flex: 1 1 18rem;
+  }
+
+  .tryout__breaks-link {
+    white-space: nowrap;
+  }
+
+  /* La forme figée : une liste de cas, entrée et sortie côte à côte. */
+  .tryout__frozen {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-8);
+  }
+
+  .tryout__frozen-case {
+    max-width: none;
+    padding-block-start: var(--space-6);
+    border-block-start: 1px solid var(--rule);
+  }
+
+  .tryout__frozen-case:first-child {
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
+
+  .tryout__frozen-label {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .tryout__panes {
+    margin-block-start: var(--space-3);
+  }
+
+  @media (min-width: 900px) {
+    .tryout__result,
+    .tryout__panes {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+
+    .tryout__result > :global(.tryout__note),
+    .tryout__panes > :global(.tryout__note) {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

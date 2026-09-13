@@ -6,6 +6,7 @@
  * latence, bloc risques, point de rupture, déclencheur de montée.
  */
 import CodeTabs from './CodeTabs.astro';
+import TryZone from './TryZone.astro';
 import RiskBlock from './RiskBlock.astro';
 import RungBadge from './RungBadge.astro';
 import VerdictBadge from './VerdictBadge.astro';
@@ -17,9 +18,13 @@ export interface Props {
   isVerdict: boolean;
   lang: 'en' | 'fr';
   strings: Strings;
+  /** L'essai de la fiche, s'il en a un. Posé sous le code du niveau recommandé. */
+  tryout?: { id: string; mode: 'live' | 'frozen'; spec: any } | null;
+  /** Le niveau au-dessus, vers lequel renvoie un cas d'essai qui échoue. */
+  nextLevel?: { href: string; label: string };
 }
 
-const { rung, isVerdict, lang, strings } = Astro.props;
+const { rung, isVerdict, lang, strings, tryout = null, nextLevel } = Astro.props;
 const anchor = rung.level.toLowerCase();
 const levelName = strings.rung[rung.level as Level];
 ---
@@ -55,6 +60,12 @@ const levelName = strings.rung[rung.level as Level];
           strings={strings}
           id={`${anchor}-code`}
         />
+
+        {/* L'essai juste sous le code : c'est lui qui donne vie à l'extrait,
+            et il se lit avant les risques. */}
+        {tryout && (
+          <TryZone tryout={tryout} lang={lang} strings={strings} nextLevel={nextLevel} />
+        )}
 
         <RiskBlock risks={rung.risks} lang={lang} strings={strings} />
 
