@@ -72,8 +72,9 @@ function ratio(a, b) {
 }
 
 /**
- * Couples texte-fond vérifiés. `large` marque les couples réservés au texte de
- * plus de 24 px en gras, pour lesquels le seuil AA est 3:1.
+ * Couples vérifiés. `large` marque ceux dont le seuil AA est 3:1 plutôt que
+ * 4,5:1 : le texte de plus de 24 px en gras, et les éléments non textuels
+ * porteurs d'information — un anneau de focus, une bordure de contrôle.
  *
  * Deux couleurs du système ne sont jamais des couleurs de texte et n'ont donc
  * pas de couple ici :
@@ -93,6 +94,33 @@ const PAIRS = [
   ['--on-rung-2', '--rung-2', false, 'texte sur N2'],
   ['--on-rung-3', '--rung-3', false, 'texte sur N3'],
   ['--ink', '--brand', true, 'display sur aplat de marque'],
+
+  /* Les couleurs de réponse. Le verdict en grand titre relève du seuil des
+     gros textes ; le titre d'un point de rupture, en 0,95 rem gras, relève du
+     seuil courant. */
+  ['--ans-0', '--paper-2', true, 'réponse N0 sur la carte de verdict'],
+  ['--ans-1', '--paper-2', true, 'réponse N1 sur la carte de verdict'],
+  ['--ans-2', '--paper-2', true, 'réponse N2 sur la carte de verdict'],
+  ['--ans-3', '--paper-2', true, 'réponse N3 sur la carte de verdict'],
+  ['--ans-0', '--paper', true, 'réponse N0 du questionnaire'],
+  ['--ans-2', '--paper', true, 'réponse N2 du questionnaire'],
+  ['--ans-1', '--paper', false, 'titre « quand passer au niveau suivant »'],
+  ['--ans-3', '--paper', false, 'titre « point de rupture »'],
+
+  /* Le vert de recommandation, en texte puis en aplat. */
+  ['--go', '--paper', false, 'badge « recommandé »'],
+  ['--go', '--paper-2', false, 'badge « recommandé » sur fond secondaire'],
+  ['--paper', '--recommended', false, 'étiquette sur l\'aplat de recommandation'],
+
+  /* L'aplat de marque : le texte courant, puis le bouton sombre qui s'y pose. */
+  ['--on-brand', '--brand', false, 'texte courant sur aplat de marque'],
+  ['--on-brand-text', '--on-brand', false, 'bouton sombre sur aplat de marque'],
+
+  /* L'anneau de focus : information non textuelle, seuil 3:1 (WCAG 1.4.11).
+     Les filets --rule et --rule-strong sont des color-mix, que ce contrôle ne
+     sait pas calculer ; ils sont mesurés dans le navigateur par check-a11y. */
+  ['--focus', '--paper', true, 'anneau de focus'],
+  ['--focus', '--paper-2', true, 'anneau de focus sur fond secondaire'],
 
   /* Le fond des blocs de code est fixe : les trois couples ci-dessous sont
      donc mesurés à l'identique dans les deux modes. */

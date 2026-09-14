@@ -1,4 +1,22 @@
-
+# --- Modèles et méthodes citées
+# --- Mots français techniques absents du dictionnaire
+# --- Mots étrangers et fragments d'adresse cités littéralement.
+# --- Nom du projet et personnes
+# --- Noms propres cités dans les crédits et la méthodologie
+# --- Outils et technologies
+# --- Réglementaire
+# --- Titres anglais cités littéralement
+# --- Typographie et design
+# --- Valeurs contractuelles du schéma (CDC 4.2, 4.5, 5.1)
+# --- Vocabulaire contractuel du CDC (sections 3, 4, 5)
+# --- Vocabulaire technique français admis
+# adresse. Ces occurrences sont voulues : les traduire romprait le lien
+# entre ce que la fiche affirme et ce que le test démontre.
+# la page méthodologie cite des travaux publiés par leur titre et leur
+# Lexique du projet Overkill.
+# Termes légitimes que le dictionnaire français ne connaît pas.
+# Une entrée par ligne, insensible à la casse. Le # ouvre un commentaire.
+# Une fiche cite les entrées exactes de ses tests, qui sont en anglais, et
 above
 abs
 accept
@@ -6,7 +24,6 @@ account
 act
 address
 administrators
-# adresse. Ces occurrences sont voulues : les traduire romprait le lien
 advanced
 afnor
 ai
@@ -68,6 +85,7 @@ cli
 cloudflare
 cnil
 code
+color
 colour
 commit
 commits
@@ -90,11 +108,7 @@ customer
 data
 decide
 deep
-docstrings
-délégable
 description
-dépli
-désuffixation
 detect
 deterministic
 dev
@@ -103,8 +117,12 @@ display
 dist
 distilbert
 docstring
+docstrings
 doublonz
 draft
+délégable
+dépli
+désuffixation
 earns
 echa
 echarpe
@@ -118,11 +136,10 @@ emoji
 emojis
 engineer
 ensemblage
+ensembler
 ensemblé
 ensemblées
-ensembler
 ensemblés
-# entre ce que la fiche affirme et ce que le test démontre.
 entries
 entry
 escalate
@@ -213,7 +230,6 @@ lang
 langdetect
 language
 lannelongue
-# la page méthodologie cite des travaux publiés par leur titre et leur
 latency
 latest
 layout
@@ -226,7 +242,6 @@ lemmatisation
 level
 levels
 levenshtein
-# Lexique du projet Overkill.
 lib
 libpostal
 library
@@ -255,26 +270,21 @@ minilm
 mit
 mjs
 model
-# --- Modèles et méthodes citées
 moderate
 mono
-# --- Mots étrangers et fragments d'adresse cités littéralement.
-# --- Mots français techniques absents du dictionnaire
 much
 multinomial
 muted
+n-gramme
+n-grammes
 name
 named
 need
 negligible
 neumaier
-n-gramme
-n-grammes
 nks
 nobody
 node
-# --- Nom du projet et personnes
-# --- Noms propres cités dans les crédits et la méthodologie
 noindex
 none
 normalization
@@ -294,7 +304,6 @@ ocr
 offer
 opus
 order
-# --- Outils et technologies
 outline
 overall
 overkill
@@ -307,15 +316,16 @@ parameter
 paramétrable
 party
 paste
+picture
 pip
 playwright
 please
 png
 poetry
 point
-préchargeable
 predict
 provider
+préchargeable
 published
 pull
 push
@@ -333,24 +343,17 @@ ratcliff
 rationale
 rcharpe
 reading
-recommended
-render
-réaffinage
-réaffiner
 reason
 recognize
 recommend
+recommended
 red
-réentraînement
-réentraîner
 regex
-# --- Réglementaire
 regulatory
 rejouable
 rejouables
 remove
-réexécutés
-réordonnancement
+render
 repository
 request
 required
@@ -363,9 +366,16 @@ route
 rowan
 rptard
 rss
+rule
 run
 rung
 rungs
+réaffinage
+réaffiner
+réentraînement
+réentraîner
+réexécutés
+réordonnancement
 sans
 save
 say
@@ -404,6 +414,7 @@ status
 stemming
 string
 strip
+strong
 stub
 stubbed
 stubs
@@ -413,7 +424,6 @@ tailwind
 template
 templates
 ten
-# Termes légitimes que le dictionnaire français ne connaît pas.
 tesseract
 testability
 text
@@ -428,7 +438,6 @@ this
 ticketing
 ting
 title
-# --- Titres anglais cités littéralement
 token
 tokenisation
 tokenizer
@@ -446,32 +455,26 @@ tryout
 tryouts
 tsvector
 two
-# --- Typographie et design
 unavailable
 undefined
-# Une entrée par ligne, insensible à la casse. Le # ouvre un commentaire.
-# Une fiche cite les entrées exactes de ses tests, qui sont en anglais, et
 unit
 updated
 url
 urls
 usr
 utf
-# --- Valeurs contractuelles du schéma (CDC 4.2, 4.5, 5.1)
 valid
 validate
 velvet
 vendor
 venv
-vercel
 Vercel
+vercel
 verdict
 verification
 viewbox
 viguier
 vite
-# --- Vocabulaire contractuel du CDC (sections 3, 4, 5)
-# --- Vocabulaire technique français admis
 way
 webp
 weight

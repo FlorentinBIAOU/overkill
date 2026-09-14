@@ -41,7 +41,7 @@
     "check:links": "node scripts/check-links.mjs",
     "check:seo": "node scripts/check-seo.mjs",
     "check:links:external": "node scripts/check-links.mjs --external",
-    "check:a11y": "node scripts/check-a11y.mjs /fr /en /fr/familles/detect-filter /en/familles/detect-filter /fr/fiches/mask-personal-data-in-chat /fr/catalogue",
+    "check:a11y": "node scripts/check-a11y.mjs /fr /en /fr/catalogue /en/catalogue /fr/familles/detect-filter /en/familles/detect-filter /fr/fiches/mask-personal-data-in-chat /en/fiches/mask-personal-data-in-chat /fr/methodologie /en/methodologie /fr/par-ou-commencer /en/par-ou-commencer /fr/fiches/generate-placeholder-images",
     "check:illustrations": "node scripts/check-illustrations.mjs",
     "check:third-party": "node scripts/check-third-party.mjs /fr /en /fr/catalogue /fr/fiches/mask-personal-data-in-chat /fr/familles/detect-filter /fr/methodologie /fr/contribuer /fr/credits"
   },
