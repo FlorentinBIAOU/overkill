@@ -25,6 +25,14 @@ const KO = 1024;
 
 const BUDGETS = {
   entryPage: 120,
+  /*
+   * Aucune autre page publique ne pèse plus qu'une fiche. La fiche est la page
+   * la plus riche du site — code des quatre niveaux, zone d'essai, images de
+   * partage : si une page de liste la dépasse, c'est qu'elle porte quelque
+   * chose qu'elle n'a pas à porter. Aujourd'hui la plus lourde de ces pages
+   * est le questionnaire, qui embarque les données des 25 fiches.
+   */
+  otherPage: 120,
   home: 250,
   fonts: 90,
   entryJs: 15,
@@ -178,6 +186,29 @@ if (fiches.length) {
     `JavaScript, fiche la plus chargée (${pireJs.chemin.replace(`${DIST}/`, '')})`,
     pireJs.js / KO,
     BUDGETS.entryJs,
+  );
+}
+
+/*
+ * Les autres pages publiques : catalogue et ses pages suivantes, familles,
+ * dernières fiches, questionnaire, pages éditoriales. Les pages de contrôle
+ * interne sont hors sujet, et l'accueil comme les fiches ont leur propre
+ * budget. On mesure la pire, comme pour les fiches : un budget vaut pour
+ * toutes.
+ */
+const autres = toutes.filter(
+  (f) => !estFiche(f) && !estAccueil(f) && !f.includes(`${DIST}/dev/`),
+);
+if (autres.length) {
+  let pire = { chemin: '', total: 0 };
+  for (const f of autres) {
+    const m = await poidsPage(f, { sansIllustrations: true });
+    if (m.total > pire.total) pire = { chemin: f, ...m };
+  }
+  verifier(
+    `page la plus lourde hors fiche et accueil (${pire.chemin.replace(`${DIST}/`, '')})`,
+    pire.total / KO,
+    BUDGETS.otherPage,
   );
 }
 
