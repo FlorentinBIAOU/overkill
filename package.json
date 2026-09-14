@@ -30,7 +30,7 @@
     "manifest": "node scripts/build-snippet-manifest.mjs",
     "test:components": "node --test tests/components.spec.mjs",
     "test:harness": "node --test tests/harness.test.mjs",
-    "check:overflow": "node scripts/check-overflow.mjs /fr /en /fr/catalogue /fr/catalogue/2 /en/catalogue /fr/familles /fr/familles/detect-filter /fr/fiches/mask-personal-data-in-chat /en/fiches/mask-personal-data-in-chat /fr/fiches/summarise-a-long-document /fr/par-ou-commencer /en/par-ou-commencer /fr/dernieres-fiches /fr/methodologie /en/methodologie /fr/contribuer /fr/credits /fr/confidentialite /fr/mentions-legales /fr/a-propos /fr/accompagnement /fr/404 /dev/entry /dev/entry-draft /dev/catalogue /dev/famille /dev/editorial /dev/components /dev/tokens",
+    "check:overflow": "node scripts/check-overflow.mjs /fr /en /fr/catalogue /fr/catalogue/2 /en/catalogue /fr/familles /fr/familles/detect-filter /fr/fiches/mask-personal-data-in-chat /en/fiches/mask-personal-data-in-chat /fr/fiches/summarise-a-long-document /fr/fiches/extract-fields-from-invoice /fr/fiches/parse-address-into-fields /fr/par-ou-commencer /en/par-ou-commencer /fr/dernieres-fiches /fr/methodologie /en/methodologie /fr/contribuer /fr/credits /fr/confidentialite /fr/mentions-legales /fr/a-propos /fr/accompagnement /fr/404 /dev/entry /dev/entry-draft /dev/catalogue /dev/famille /dev/editorial /dev/components /dev/tokens",
     "test:pages": "node --test tests/pages.spec.mjs",
     "test:tryout": "node --test tests/tryout.spec.mjs",
     "test:guide": "node --test tests/guide.test.mjs tests/guide.spec.mjs",

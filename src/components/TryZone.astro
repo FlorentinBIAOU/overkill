@@ -725,6 +725,10 @@ const note = bilingual(tryout.spec.note, lang);
      interactive. */
   .tryout__frozen-case {
     max-width: none;
+    /* Un élément de grille vaut par défaut sa largeur minimale de contenu :
+       le relevé de facture, qui garde ses espaces, poussait le cas à 491 px
+       dans une colonne de 244 et faisait défiler la page entière à 360 px. */
+    min-width: 0;
     border: 1px solid var(--rule-strong);
     border-radius: 10px;
     padding: var(--space-4) var(--space-5) var(--space-5);
