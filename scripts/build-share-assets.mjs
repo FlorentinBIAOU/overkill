@@ -13,8 +13,8 @@
  * sert de ses propres polices, de ses propres tokens, et aucune dépendance de
  * production n'entre au dépôt.
  *
- * Les fichiers sont écrits dans `dist/og/<langue>/<id>.png` et
- * `dist/badge/<langue>/<id>.png`, chemins que les pages annoncent. Aucun nom
+ * Les fichiers sont écrits dans `public/og/<langue>/<id>.png` et
+ * `public/badge/<langue>/<id>.png`, chemins que les pages annoncent. Aucun nom
  * haché : l'adresse doit rester prévisible pour que la page puisse la nommer
  * avant que l'image existe, et pour qu'un badge collé dans un README d'il y a
  * deux ans continue de s'afficher.
@@ -159,8 +159,8 @@ const pageBadge = await navigateur.newPage({
 });
 
 for (const langue of ['fr', 'en']) {
-  const dossierOg = join('dist', 'og', langue);
-  const dossierBadge = join('dist', 'badge', langue);
+  const dossierOg = join('public', 'og', langue);
+  const dossierBadge = join('public', 'badge', langue);
   await mkdir(dossierOg, { recursive: true });
   await mkdir(dossierBadge, { recursive: true });
 
