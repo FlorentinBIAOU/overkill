@@ -94,6 +94,64 @@ for (const id of LIVE) {
 
     await page.fill('[data-tryout-input]', await page.inputValue('[data-tryout-input]') + ' ');
     await page.waitForTimeout(250);
+
+    /* Le champ se donne pour un champ : une étiquette qui lui est liée, un
+       texte d'invite, et la mention qu'on peut y écrire. Sans ces trois-là,
+       personne ne comprenait qu'il y avait quelque chose à taper. */
+    const champ = page.locator('[data-tryout-input]');
+    assert.ok(
+      (await page.locator(`label[for="${await champ.getAttribute('id')}"]`).count()) === 1,
+      'le champ doit porter une étiquette qui lui est liée',
+    );
+    assert.ok(
+      ((await champ.getAttribute('placeholder')) ?? '').length > 10,
+      'le champ doit porter un texte d’invite',
+    );
+
+    /* Le bouton : il ne déclenche rien que la frappe ne fasse déjà, mais il
+       dit qu'il y a quelque chose à lancer, et la ligne d'état dit que ça a
+       eu lieu. */
+    const lanceur = page.locator('[data-tryout-run]');
+    assert.equal(await lanceur.count(), 1, 'la zone doit porter un bouton de lancement');
+    assert.ok(await lanceur.isEnabled(), 'le bouton doit être actif une fois le module chargé');
+    // La frappe précédente vient de faire dire « recalculé » à la ligne
+    // d'état : on attend qu'elle soit retombée pour mesurer ce que le bouton
+    // fait, et non ce que la frappe a laissé.
+    const etat = page.locator('[data-tryout-status]');
+    await page.waitForFunction(
+      () => document.querySelector('[data-tryout-status]')?.dataset.justRan !== 'true',
+      null,
+      { timeout: 5000 },
+    );
+    const avantClic = await etat.innerText();
+    await lanceur.click();
+    await page.waitForTimeout(120);
+    assert.notEqual(
+      await etat.innerText(),
+      avantClic,
+      'le bouton doit dire que le code vient de tourner',
+    );
+
+    /* Le champ vidé n'est pas une erreur : la zone revient à l'exemple de
+       départ, et le dit. Elle rendait un message d'échec sur les essais dont
+       l'extrait n'a rien à lire dans une chaîne vide. */
+    await page.fill('[data-tryout-input]', '');
+    await page.waitForTimeout(300);
+    assert.equal(
+      await page.locator('[data-tryout-result] .tryout__error').count(),
+      0,
+      `${id} : un champ vidé ne peut pas rendre un message d’erreur`,
+    );
+    assert.equal(
+      await page.locator('[data-tryout-result] .tryout__notice').count(),
+      1,
+      `${id} : un champ vidé doit dire qu’on revoit l’exemple de départ`,
+    );
+    assert.ok(
+      (await page.locator('[data-tryout-result]').innerText()).trim().length > 0,
+      `${id} : un champ vidé doit continuer à montrer un résultat`,
+    );
+
     assert.deepEqual(erreurs, [], `erreurs de console sur /fr/fiches/${id}`);
     await page.close();
   });
