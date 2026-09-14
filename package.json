@@ -6,7 +6,7 @@
   "description": "Le bon outil pour la bonne tache. Catalogue d'alternatives frugales a l'IA generative.",
   "license": "MIT",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   },
   "scripts": {
     "dev": "astro dev",
@@ -46,14 +46,15 @@
     "check:third-party": "node scripts/check-third-party.mjs /fr /en /fr/catalogue /fr/fiches/mask-personal-data-in-chat /fr/familles/detect-filter /fr/methodologie /fr/contribuer /fr/credits"
   },
   "dependencies": {
-    "@astrojs/mdx": "^4.3.14",
-    "@astrojs/rss": "4.0.12",
+    "@astrojs/markdown-remark": "^7.3.1",
+    "@astrojs/mdx": "^8.0.1",
+    "@astrojs/rss": "4.0.19",
     "@astrojs/sitemap": "^3.6.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^5.18.2",
-    "shiki": "3.13.0",
+    "astro": "^7.3.2",
+    "shiki": "4.4.3",
     "tailwindcss": "^4.3.3",
-    "zod": "3.25.76"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
