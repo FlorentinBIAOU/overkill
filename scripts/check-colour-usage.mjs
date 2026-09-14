@@ -11,6 +11,11 @@
  *     classe évoquant bon ou mauvais.
  *  4. La rampe --rung-* ne sert jamais a exprimer un jugement : aucun token de
  *     rampe ne peut cohabiter avec un nom de classe évoquant bon ou mauvais.
+ *  5. Tout token employé existe. Une propriété personnalisée non définie ne
+ *     provoque aucune erreur : la déclaration est simplement ignorée, et la
+ *     marge ou la couleur tombe silencieusement à zéro. C'est arrivé — douze
+ *     `var(--space-5)` et `var(--space-7)` absents de l'échelle — et seule une
+ *     mesure à l'écran l'a révélé. Le contrôle le dit maintenant tout seul.
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
@@ -78,6 +83,38 @@ for (const root of ROOTS) {
         problems.push(`${at}  la rampe mesure le poids, jamais la qualite (CDC 8.3, interdit 4)`);
       }
     });
+  }
+}
+
+/*
+ * 5. Tout token employé existe.
+ *
+ * Les définitions sont ramassées dans l'ensemble des sources — tokens.css pour
+ * l'essentiel, mais un composant a le droit de se donner une variable locale.
+ * `var(--x, valeur)` est admis même si --x n'existe pas : la valeur de repli
+ * est précisément ce qui rend la référence sûre.
+ */
+const definis = new Set();
+const references = [];
+
+for (const root of ROOTS) {
+  for await (const file of walk(root)) {
+    const src = await readFile(file, 'utf8');
+    for (const m of src.matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)) definis.add(m[1]);
+    /* Les variables posées depuis le script, par setProperty. */
+    for (const m of src.matchAll(/setProperty\(\s*['"`](--[a-zA-Z0-9-]+)/g)) definis.add(m[1]);
+    src.split('\n').forEach((line, i) => {
+      for (const m of line.matchAll(/var\(\s*(--[a-zA-Z0-9-]+)\s*([,)])/g)) {
+        if (m[2] === ',') continue; // valeur de repli présente
+        references.push({ at: `${file}:${i + 1}`, nom: m[1], line });
+      }
+    });
+  }
+}
+
+for (const r of references) {
+  if (!definis.has(r.nom)) {
+    problems.push(`${r.at}  token inexistant : ${r.nom} — la déclaration est ignorée en silence`);
   }
 }
 
