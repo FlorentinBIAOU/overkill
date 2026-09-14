@@ -36,6 +36,11 @@ function renderRows(table) {
     .join('');
   const body = table.rows
     .map((row) => {
+      /* Une ligne dont une cellule est attrapée se voit entière : le petit
+         aplat jaune d'une cellule perdue au milieu d'un tableau de six
+         colonnes ne se remarque pas, et c'est précisément ce qu'on vient
+         voir. */
+      const retenue = row.some((cell) => cell && typeof cell === 'object' && cell.caught);
       const cells = row
         .map((cell) => {
           const value = cell && typeof cell === 'object' ? cell.v : cell;
@@ -46,10 +51,32 @@ function renderRows(table) {
           return `<td>${contenu}</td>`;
         })
         .join('');
-      return `<tr>${cells}</tr>`;
+      return `<tr${retenue ? ' class="tryout__row--caught"' : ''}>${cells}</tr>`;
     })
     .join('');
   return `<div class="tryout__table scroll-x"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/**
+ * Le compte des passages surlignés, tel que regex101 l'affiche au-dessus de
+ * son champ. Il ne se dit que lorsque le texte donné est rendu surligné :
+ * là, « attrapé » se compte sans interprétation — c'est le nombre de morceaux
+ * du texte que le code a touchés. Ailleurs — un verdict, une image, un
+ * tableau dont une cellule porte le signal décisif — le mot n'aurait pas le
+ * même sens, et on ne le dit pas.
+ */
+function renderSummary(entree, labels) {
+  const n = entree ? entree.filter((p) => p.changed).length : 0;
+  const texte =
+    n === 0
+      ? labels.matchNone
+      : n === 1
+        ? labels.matchOne
+        : String(labels.matchMany ?? '').replace('{n}', String(n));
+  return (
+    `<p class="tryout__summary" data-caught="${n > 0}">` +
+    `<span class="tryout__summary-dot" aria-hidden="true"></span>${escape(texte)}</p>`
+  );
 }
 
 /**
@@ -62,19 +89,28 @@ function renderRows(table) {
  *   `displayInput` remplace le texte affiché quand l'entrée réelle ne
  *   s'affiche pas : un document de quarante mille caractères se décrit, il ne
  *   se lit pas.
+ *   `notice` pose une phrase au-dessus du résultat : elle sert à dire que ce
+ *   qui est montré n'est pas ce qui est dans le champ — le champ vidé, qui
+ *   remontre l'exemple de départ.
  */
 export function renderResult(result, input, labels, options = {}) {
+  const avis = options.notice
+    ? `<p class="tryout__notice">${escape(options.notice)}</p>`
+    : '';
+
   if (result?.error) {
-    return `<p class="tryout__error">${escape(result.error)}</p>`;
+    return `${avis}<p class="tryout__error">${escape(result.error)}</p>`;
   }
 
   const morceaux = [];
 
-  /* L'entrée annotée : ce que le code a repéré dans le texte donné. Elle
-     n'apparaît que s'il y a quelque chose à montrer, jamais pour répéter la
-     saisie telle quelle. */
+  /* L'entrée annotée : ce que le code a repéré dans le texte donné, et ce
+     qu'il a laissé. Un essai qui déclare des positions montre son texte même
+     quand il n'en a retenu aucune — « rien attrapé » est un résultat, et
+     c'est le plus instructif des deux. */
+  const declare = Array.isArray(result?.spans);
   let entree = null;
-  if (Array.isArray(result?.spans) && result.spans.length > 0) {
+  if (declare) {
     entree = fromSpans(input, result.spans);
   } else if (result?.diff && typeof result.output === 'string') {
     entree = segments(input, result.output).before;
@@ -85,7 +121,7 @@ export function renderResult(result, input, labels, options = {}) {
       `<div class="tryout__pane"><p class="tryout__pane-label">${escape(labels.caught)}</p>` +
         `<p class="tryout__text">${renderSegments(entree)}</p></div>`,
     );
-  } else if (options.alwaysShowInput) {
+  } else if (declare || options.alwaysShowInput) {
     morceaux.push(
       `<div class="tryout__pane"><p class="tryout__pane-label">${escape(labels.given)}</p>` +
         `<p class="tryout__text">${escape(options.displayInput ?? input)}</p></div>`,
@@ -151,5 +187,9 @@ export function renderResult(result, input, labels, options = {}) {
     morceaux.push(`<p class="tryout__note">${escape(result.note)}</p>`);
   }
 
-  return morceaux.join('');
+  /* Le compte ne s'affiche que là où il se compte : quand le texte donné est
+     rendu surligné, c'est-à-dire quand l'essai sait dire ce qu'il a touché. */
+  const compte = entree ? renderSummary(entree, labels) : '';
+
+  return `${avis}${compte}<div class="tryout__panes">${morceaux.join('')}</div>`;
 }
