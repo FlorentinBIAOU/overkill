@@ -6,6 +6,6 @@
 # Aucune de ces dépendances ne télécharge de modèle : les barreaux N2 et N3
 # sont testés avec les doubles locaux de content/snippets/_harness/.
 
-pytest==8.4.2
+pytest==9.0.3
 numpy==2.3.4
 scikit-learn==1.7.2
