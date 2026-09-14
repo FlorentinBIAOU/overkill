@@ -1,16 +1,26 @@
 # Intégration continue (CDC 11.2).
 #
-# Les six contrôles, dans l'ordre imposé. Un échec bloque le déploiement.
+# La chaîne n'est pas décrite ici : elle est décrite une seule fois, dans
+# package.json, et ce fichier l'appelle en deux étapes.
 #
-#   1. check-content   validation du schéma de toutes les fiches
-#   2. test-snippets   exécution de tous les extraits Python et JavaScript
-#   3. build           construction du site
-#   4. check-links     aucun lien interne mort, externes en avertissement
-#   5. check-weight    budgets de poids de la section 12
-#   6. check-a11y      audit sur l'accueil, une famille et une fiche
+#   npm run check:fast   une vingtaine de secondes, aucun navigateur : schéma
+#                        des fiches, suites unitaires, système de design,
+#                        français, construction, liens, référencement, poids
+#   npm run check:slow   quelques minutes : exécution des 148 extraits,
+#                        contrôles dans un vrai navigateur, gabarits,
+#                        accessibilité, débordements et cibles tactiles,
+#                        composants interactifs, puis la même chaîne de
+#                        recherche et de filtres sur deux cents fiches
 #
-# Chaque contrôle est une étape distincte, pour que l'échec soit lisible sans
-# lire le journal en entier.
+# Les six contrôles contractuels de la section 11.2 sont dedans, dans l'ordre
+# imposé. Ils l'étaient déjà, mais cette liste d'étapes avait divergé de la
+# chaîne locale : elle ne lançait ni check-seo, ni les suites de la zone
+# d'essai, du questionnaire et du catalogue. Une chaîne décrite à deux endroits
+# finit par différer ; `check-chain` vérifie désormais qu'aucun contrôle ne
+# reste orphelin.
+#
+# Un échec reste lisible : chaque étape de la chaîne annonce son nom avant de
+# s'exécuter.
 
 name: CI
 
@@ -70,68 +80,16 @@ jobs:
       - name: Installer le navigateur des contrôles
         run: npx playwright install --with-deps chromium
 
-      # --- Les six contrôles de la section 11.2, dans l'ordre ---------------
-
-      - name: 1 · check-content — schéma des fiches
-        run: npm run check:content
-
-      - name: 2 · test-snippets — exécution de tous les extraits
-        run: npm run test:snippets
-
-      - name: 3 · build — construction du site
-        run: npm run build
-
-      - name: 4 · check-links — liens internes
-        run: npm run check:links
-
-      - name: 5 · check-weight — budgets de poids
-        run: npm run check:weight
-
-      - name: 6 · check-a11y — accessibilité
-        run: npm run check:a11y
-
-      # --- Contrôles complémentaires, non exigés par le CDC -----------------
+      # --- La chaîne, en deux passes -------------------------------------
       #
-      # Ils tournent après les six, pour que l'échec d'un contrôle contractuel
-      # reste identifiable au premier coup d'œil.
+      # Le jeu de test à deux cents fiches est dérivé de la feuille de route et
+      # n'est jamais commité : la passe longue le régénère elle-même.
 
-      - name: Contrôles du système de design et du contenu
-        run: |
-          npm run check:fonts
-          npm run check:contrast
-          npm run check:colour
-          npm run check:illustrations
-          npm run check:figures
-          npm run check:french
+      - name: Passe rapide — schéma, unitaires, design, construction, poids
+        run: npm run check:fast
 
-      - name: Suites de tests unitaires
-        run: |
-          npm run test:schema
-          npm run test:harness
-          npm run test:routes
-
-      # Les contrôles de composants et de gabarits visitent les pages de
-      # contrôle interne, que la construction de production retire. On
-      # reconstruit donc en les gardant, on teste, et on remet la sortie en
-      # état de production.
-      - name: Contrôles de rendu, composants et gabarits
-        run: |
-          npm run build:dev
-          npm run test:components
-          npm run test:pages
-          npm run check:overflow
-
-      # La section 6.2 du CDC demande de vérifier que la navigation, la
-      # recherche et les filtres tiennent à deux cents fiches. Le jeu de test
-      # est dérivé de la feuille de route et n'est jamais commité.
-      - name: Recherche et filtres, sur deux cents fiches
-        run: |
-          npm run fixtures
-          npm run build:fixtures
-          npm run test:search
-
-      - name: Remettre la sortie en état de production
-        run: npm run build
+      - name: Passe longue — extraits, navigateur, gabarits, deux cents fiches
+        run: npm run check:slow
 
       - name: Liens externes, en avertissement
         continue-on-error: true
