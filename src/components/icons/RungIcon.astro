@@ -8,6 +8,12 @@
  *
  * Formes géométriques simples, traits épais, aucun détail fin, lisibles à
  * 24 px comme à 80 px (CDC 8.6).
+ *
+ * Le pictogramme est masqué aux technologies d'assistance : aux deux endroits
+ * où il paraît, le nom du niveau est écrit à côté — dans la pastille du
+ * tableau, dans le titre de l'explication. Annoncé, il redisait ce nom une
+ * seconde fois. Le `<title>` reste dans le balisage, pour qui ouvre le SVG
+ * seul ou le survole.
  */
 import type { Level } from '../../content/schema/enums';
 
@@ -29,7 +35,8 @@ const { level, title, size = 24 } = Astro.props;
   stroke="currentColor"
   stroke-width="3"
   stroke-linecap="square"
-  role="img"
+  aria-hidden="true"
+  focusable="false"
 >
   <title>{title}</title>
 

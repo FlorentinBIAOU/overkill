@@ -31,6 +31,8 @@ export default {
     footer: 'Navigation de pied de page',
     language: 'Langue',
     theme: 'Basculer le thème',
+    themeToDark: 'Passer au thème sombre',
+    themeToLight: 'Passer au thème clair',
   },
 
   /** Les quatre niveaux (CDC 4.1). */
@@ -440,6 +442,7 @@ export default {
     emptyAction: 'Proposer cette fiche',
     pages: 'Pagination du catalogue',
     pageOf: 'Page {n} sur {total}',
+    pageNumber: 'Page {n}',
     previous: 'Précédentes',
     next: 'Suivantes',
     allResults: 'sur tout le catalogue',

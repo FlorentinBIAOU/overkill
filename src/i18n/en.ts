@@ -29,6 +29,8 @@ export default {
     footer: 'Footer navigation',
     language: 'Language',
     theme: 'Switch theme',
+    themeToDark: 'Switch to the dark theme',
+    themeToLight: 'Switch to the light theme',
   },
 
   rung: {
@@ -430,6 +432,7 @@ export default {
     emptyAction: 'Propose this entry',
     pages: 'Catalogue pagination',
     pageOf: 'Page {n} of {total}',
+    pageNumber: 'Page {n}',
     previous: 'Previous',
     next: 'Next',
     allResults: 'across the whole catalogue',

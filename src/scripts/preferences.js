@@ -16,9 +16,27 @@ function themeCourant() {
   );
 }
 
-document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
+const bascule = document.querySelector('[data-theme-toggle]');
+
+/**
+ * Le libellé annonce l'action à venir, pas l'état courant : « passer au thème
+ * sombre » se comprend seul, « thème clair, activé » demande de deviner ce que
+ * fait le clic.
+ */
+function majEtiquette() {
+  const etiquette = bascule?.querySelector('[data-theme-label]');
+  if (!etiquette) return;
+  const { labelToDark, labelToLight } = bascule.dataset;
+  etiquette.textContent = themeCourant() === 'dark' ? labelToLight : labelToDark;
+}
+
+majEtiquette();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', majEtiquette);
+
+bascule?.addEventListener('click', () => {
   const suivant = themeCourant() === 'dark' ? 'light' : 'dark';
   document.documentElement.dataset.theme = suivant;
+  majEtiquette();
   try {
     localStorage.setItem(CLE_THEME, suivant);
   } catch {

@@ -15,9 +15,13 @@ export interface Props {
 const { strings } = Astro.props;
 ---
 
-<aside class="legal-notice">
+{/* `role="note"` et non `<aside>` : cet encadré est une remarque, pas une
+    région de navigation. Deux repères complémentaires sans nom sur la même
+    page — celui-ci et l'appel à l'action — et le lecteur d'écran annonce deux
+    fois « complémentaire » sans rien dire de plus. */}
+<div class="legal-notice" role="note">
   <p>{strings.legal.notice}</p>
-</aside>
+</div>
 
 <style>
   .legal-notice {

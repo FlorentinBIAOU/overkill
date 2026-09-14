@@ -26,7 +26,14 @@ export interface Props {
 const { lang, strings } = Astro.props;
 
 const chemin = resolve(process.cwd(), 'src/assets/illustrations/hero.svg');
-const hero = existsSync(chemin) ? readFileSync(chemin, 'utf8') : null;
+/* L'enveloppe porte le rôle et le texte alternatif localisé ; le SVG lui-même
+   est masqué, pour qu'un lecteur d'écran n'annonce pas deux images imbriquées
+   dont la seconde redit la première en anglais de fichier. */
+const hero = existsSync(chemin)
+  ? readFileSync(chemin, 'utf8')
+      .replace(/<svg\b/, '<svg aria-hidden="true" focusable="false"')
+      .replace(/\srole="img"/, '')
+  : null;
 
 const textes = {
   fr: {

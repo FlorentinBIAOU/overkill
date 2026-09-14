@@ -3,10 +3,19 @@
  * Affiche une illustration de famille.
  *
  * Les SVG vivent dans `src/assets/illustrations/`. Ils portent un `<title>`
- * neutre ; le texte alternatif localisé est fourni ici, par la page, à partir
- * des chaînes d'interface. Un SVG ne peut pas porter deux `<title>`, et
- * dupliquer le fichier par langue coûterait le double du budget d'image pour
- * un mot de différence.
+ * neutre ; le titre localisé est posé ici, par la page, à partir des chaînes
+ * d'interface. Un SVG ne peut pas porter deux `<title>`, et dupliquer le
+ * fichier par langue coûterait le double du budget d'image pour un mot de
+ * différence.
+ *
+ * **L'illustration est masquée aux technologies d'assistance.** Aux trois
+ * endroits où elle paraît — la grille de l'accueil, l'index des familles,
+ * l'en-tête d'une famille — le nom de la famille est écrit juste à côté, et
+ * sur l'accueil il est même dans le même lien. Annoncée, l'illustration
+ * faisait bégayer ce lien : « Détecter et filtrer, image, Détecter et
+ * filtrer, comment repérer… ». Le `<title>` reste dans le fichier, pour
+ * l'ouvrir seul et pour le contrôle des illustrations ; il n'est simplement
+ * plus annoncé deux fois.
  *
  * Tant qu'une illustration n'existe pas, un cadre neutre tient sa place et le
  * dit. On ne met pas de fausse image.
@@ -28,7 +37,10 @@ const svg = existsSync(chemin) ? readFileSync(chemin, 'utf8') : null;
 
 /** On remplace le titre neutre du fichier par le titre localisé. */
 const rendu = svg
-  ? svg.replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`)
+  ? svg
+      .replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`)
+      .replace(/<svg\b/, '<svg aria-hidden="true" focusable="false"')
+      .replace(/\srole="img"/, '')
   : null;
 ---
 
@@ -36,8 +48,8 @@ const rendu = svg
   rendu ? (
     <div class="family-illustration" set:html={rendu} />
   ) : (
-    <div class="family-illustration family-illustration--missing" role="img" aria-label={title}>
-      <span aria-hidden="true">{id}</span>
+    <div class="family-illustration family-illustration--missing" aria-hidden="true">
+      <span>{id}</span>
     </div>
   )
 }

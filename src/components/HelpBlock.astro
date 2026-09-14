@@ -65,13 +65,13 @@ const bouton =
 
 {
   compact ? (
-    <aside class="help help--compact">
+    <aside class="help help--compact" aria-label={strings.help.heading}>
       <h2 class="help__title-compact">{strings.help.heading}</h2>
       <p class="help__body">{strings.help.body}</p>
       <p class="help__actions" set:html={bouton} />
     </aside>
   ) : (
-    <aside class="help band band-brand">
+    <aside class="help band band-brand" aria-label={strings.help.heading}>
       <div class="wrap">
         <h2 class="display-l help__title">{strings.help.heading}</h2>
         <p class="help__body">{strings.help.body}</p>

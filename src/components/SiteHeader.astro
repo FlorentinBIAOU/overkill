@@ -69,8 +69,20 @@ const liens = [
         {LOCALE_NAMES[autre]}
       </a>
 
-      <button type="button" class="site-header__theme" data-theme-toggle>
-        <span class="visually-hidden">{strings.nav.theme}</span>
+      {/* Le libellé dit ce que le clic va faire, pas seulement qu'il bascule
+          quelque chose. Il ne peut pas être décidé ici : le thème initial
+          dépend de la préférence du système, que le site construit ne connaît
+          pas. Les deux formulations descendent donc en attributs, et le
+          script pose la bonne au chargement. Sans JavaScript le bouton ne
+          sert à rien de toute façon, et garde son libellé neutre. */}
+      <button
+        type="button"
+        class="site-header__theme"
+        data-theme-toggle
+        data-label-to-dark={strings.nav.themeToDark}
+        data-label-to-light={strings.nav.themeToLight}
+      >
+        <span class="visually-hidden" data-theme-label>{strings.nav.theme}</span>
         <span aria-hidden="true">◐</span>
       </button>
     </div>

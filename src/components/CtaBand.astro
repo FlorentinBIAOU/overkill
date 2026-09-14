@@ -29,7 +29,9 @@ export interface Props {
 const { heading, body, action, secondary, tone = 'brand', reading = false } = Astro.props;
 ---
 
-<aside class:list={['band', `band-${tone}`, 'cta']}>
+{/* Le repère porte le nom de son titre : sans lui, le lecteur d'écran
+    annonce « complémentaire » et s'arrête là. */}
+<aside class:list={['band', `band-${tone}`, 'cta']} aria-label={heading}>
   <div class={reading ? 'wrap-reading' : 'wrap'}>
     <h2 class="display-l cta__heading">{heading}</h2>
     {body && <p class="cta__body">{body}</p>}

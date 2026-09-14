@@ -231,20 +231,34 @@ const filtres = [
                 <span class="pages__link pages__link--off">{strings.catalogue.previous}</span>
               )}
             </li>
-            {numeros.map((n) => (
-              <li>
-                {n === page.currentPage ? (
-                  <span class="pages__link pages__link--current" aria-current="page">{n}</span>
-                ) : (
-                  <a
-                    class="pages__link"
-                    href={n === 1 ? route(lang, 'catalogue') : `${route(lang, 'catalogue')}/${n}`}
-                  >
-                    {n}
-                  </a>
-                )}
-              </li>
-            ))}
+            {numeros.map((n) => {
+              /* Un lien dont le libellé est « 2 » ne dit rien à qui parcourt
+                 la liste des liens d'une page. Le nom accessible porte donc
+                 « Page 2 », et contient le libellé visible comme la norme
+                 l'exige. */
+              const nomPage = strings.catalogue.pageNumber.replace('{n}', String(n));
+              return (
+                <li>
+                  {n === page.currentPage ? (
+                    <span
+                      class="pages__link pages__link--current"
+                      aria-current="page"
+                      aria-label={nomPage}
+                    >
+                      {n}
+                    </span>
+                  ) : (
+                    <a
+                      class="pages__link"
+                      href={n === 1 ? route(lang, 'catalogue') : `${route(lang, 'catalogue')}/${n}`}
+                      aria-label={nomPage}
+                    >
+                      {n}
+                    </a>
+                  )}
+                </li>
+              );
+            })}
             <li>
               {page.url.next ? (
                 <a class="pages__link" href={page.url.next} rel="next">
