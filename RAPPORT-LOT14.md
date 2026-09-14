@@ -463,6 +463,24 @@ vocabulaire du document. Le fait tient, l'explication était incomplète.
    comme la norme l'exige.
 
 
+
+### Partie 10 — La dette technique
+
+| Fait | Preuve |
+|---|---|
+| Astro 7 installé, zéro vulnérabilité | `npm audit` passe de 15 avis — dont un critique — à 0 |
+| Une seule rupture, réparée en une ligne | Astro 7 ne pose plus le processeur Markdown unifié par défaut ; la configuration qui déclare un greffon rehype doit l'installer |
+| Rien n'a changé à l'écran | captures du tableau de méthodologie et de la carte de verdict, avant et après, identiques |
+| Le site a maigri | fiche la plus lourde 83,2 → 82,3 Ko, JavaScript de fiche 8,2 → 7,4 Ko, moyenne 58,4 → 58,0 Ko |
+| Le serveur de développement répond | `astro dev` interrogé en HTTP : 200, et les onglets de code rendus |
+| `npm run check` séparé en deux passes | 21 s sans navigateur, 4 min 6 s au complet |
+| `test:search` rejoint la chaîne | elle vivait dehors depuis six lots ; deux de ses assertions avaient pourri en silence |
+| Un contrôle interdit qu'un contrôle reste orphelin | `check-chain` échoue si un script `check:*` ou `test:*` n'est dans aucune passe ; éprouvé en ajoutant un script factice |
+| L'intégration continue appelle les deux passes | sa liste d'étapes avait divergé : ni `check-seo`, ni les suites de la zone d'essai, du questionnaire et du catalogue n'y étaient |
+| Les pages qui ne sont ni fiche ni accueil ont un budget | la plus lourde est le questionnaire, 63,4 Ko sur 120 |
+| `npm run check` au vert | de bout en bout, y compris la construction à deux cents fiches |
+
+
 ### Défauts trouvés en regardant l'écran, et corrigés — parties 1 et 2
 
 1. **L'adresse de contact s'affichait à l'envers** (`moc.liamg@olfuoaib`) sur
@@ -828,32 +846,292 @@ tabulation arrière depuis le champ. *Écarté :* retirer le focus, qui aurait
 contredit une décision antérieure sans qu'aucun critère ne l'exige.
 
 
+
+### Partie 10
+
+**Astro 7 plutôt que l'abandon.** Le lot autorisait à renoncer si la réparation
+dépassait un correctif simple. Elle tenait en une ligne : installer
+`@astrojs/markdown-remark`, que les versions précédentes posaient d'office et
+qu'Astro 7 rend optionnel depuis qu'il a changé de processeur Markdown par
+défaut. *Écarté :* réécrire le greffon des tableaux défilants pour le nouveau
+processeur, dont la migration dépasse ce lot — et dont la documentation ne
+m'était pas accessible.
+
+**Une dépendance ajoutée, et c'est un retrait déguisé.**
+`@astrojs/markdown-remark` n'est pas une bibliothèque nouvelle : c'est celle
+qu'Astro 5 installait sans le dire. Elle ne descend pas chez le lecteur, elle
+transforme le Markdown à la construction. Le site n'a toujours aucune
+dépendance de production qui s'exécute chez qui lit.
+
+**Les épinglages exacts sont conservés.** `shiki` et `zod` restent figés à une
+version précise. Le contrôle de contraste mesure les couleurs que Shiki émet
+réellement sur les 148 extraits : une teinte qui bouge doit être une décision,
+pas une surprise de mise à jour. *Écarté :* passer tout le monde en `^`, qui
+aurait rendu le contrôle de contraste non reproductible.
+
+**Le plancher de Node passe à 22.12**, celui qu'Astro 7 exige. Un paquet
+transitif, `undici`, en réclame 22.19 : il émet un avertissement à
+l'installation sur 22.12 et rien n'échoue, ni la construction, ni la chaîne
+complète, ni le serveur de développement. Le plancher déclaré reste celui de
+l'outil principal, pas celui du plus exigeant des paquets transitifs.
+
+**La passe rapide comprend la construction.** Dix des vingt et une secondes y
+passent, et c'est ce qui permet à `check-links`, `check-seo` et `check-weight`
+de tenir dans la même passe pour huit dixièmes de seconde de plus. Une passe
+rapide qui ne construit pas laisse passer une erreur de gabarit.
+*Écarté :* une passe rapide purement statique, de six secondes, qui n'aurait
+rien dit du site produit.
+
+**La chaîne est décrite à un seul endroit.** L'intégration continue appelle les
+deux passes au lieu de relister les contrôles. Le fichier d'intégration
+continue soignait la lisibilité de ses étapes, et c'est une vraie qualité
+perdue ici ; en échange, la liste ne peut plus diverger — et elle avait
+divergé, sur quatre contrôles. *Écarté :* garder les étapes nommées et
+rejouer les contrôles contractuels, qui aurait coûté une minute et demie de
+calcul par exécution pour du confort d'affichage.
+
+**`check-chain` ouvre la passe rapide.** Un contrôle que personne ne lance ne
+contrôle rien : `test:search` l'a prouvé pendant six lots. Toute exemption
+s'écrit dans le fichier avec sa raison ; il n'y en a que deux, dont le contrôle
+lui-même.
+
+**Un budget pour les pages qui ne sont ni fiche ni accueil.** La règle est
+lisible : aucune page publique ne pèse plus qu'une fiche, qui est la page la
+plus riche du site. Le questionnaire est aujourd'hui la plus lourde de ces
+pages, et c'est ce budget qui dira quand sa conception devra changer.
+
+
 ---
 
 ## Ce que j'ai volontairement laissé de côté
 
-*Section à compléter au fil du lot.*
+**La charge utile du questionnaire n'est pas découpée par famille.** Elle est
+rendue en entier dans la page : 19,5 Ko compressés à vingt-cinq fiches, 48,9 à
+deux cents. Le découpage par famille supposerait de charger un fragment au
+premier choix, donc de faire dépendre le questionnaire du réseau alors qu'il
+tient aujourd'hui entièrement dans la page servie. Le budget ajouté en partie 10
+dira quand ce choix devra être revu, avec un chiffre plutôt qu'une impression.
+
+**`check-overflow` n'est pas parallélisé.** Soixante-six secondes sur les
+quatre minutes de la passe longue, pour 116 chargements de page. Quatre
+travailleurs ramèneraient cela à une vingtaine de secondes, au prix de quatre
+navigateurs simultanés en intégration continue et d'une sortie à réordonner.
+Le contrôle vit dans la passe longue, que personne ne lance à la main : le gain
+est réel, le risque aussi, et il n'était pas demandé.
+
+**Le bouton copier garde un libellé court.** « Copier » plutôt que « Copier le
+code » : le libellé visible devient « Copié » après le clic, et c'est ainsi que
+la réussite est annoncée. Un nom accessible fixe entrerait en conflit avec lui.
+
+**Le focus au chargement du catalogue n'a pas été retiré.** Il est demandé par
+la section 7.3 du cahier des charges, et le catalogue est un outil de recherche.
+Son coût est écrit dans les décisions de la partie 9 : l'en-tête n'est
+atteignable qu'en tabulation arrière depuis le champ.
+
+**Les galeries internes `/dev/` n'ont pas été traduites.** Elles sont l'outil de
+qui développe, pas une page publique ; la construction de production les retire.
+Seul leur vocabulaire a été aligné sur celui du site.
+
+**Le vocabulaire des commentaires de code dit encore « barreau ».** Le mot a
+disparu de tout ce que lit un visiteur — fiches, pages, titres d'illustrations,
+galeries internes. Il reste dans les commentaires et les noms de classes
+(`rung-section`, `RungBadge`), où le renommer toucherait deux cents fichiers
+pour un gain nul à l'écran.
 
 ---
 
 ## Les mesures
 
-*Section à compléter à la fin du lot.*
+Prises sur cette machine, sur la construction de production à vingt-cinq fiches,
+sauf mention contraire.
+
+### Les deux passes de contrôle
+
+| Passe | Durée | Ce qu'elle couvre |
+|---|---|---|
+| `check:fast` | 21,2 s | chaîne des contrôles, schéma des 25 fiches, 4 suites unitaires, système de design, contraste, français sur 369 fichiers, construction, liens, référencement, poids |
+| `check:slow` | 3 min 45 s | 148 extraits exécutés, 13 pages auditées en clair et en sombre, 29 pages à quatre largeurs, 5 gabarits, 4 suites de navigateur, puis la construction à 200 fiches et la recherche |
+| `check` | 4 min 6 s | les deux |
+
+Les étapes les plus coûteuses, en secondes : `check-overflow` 66,
+`check-a11y` 31,8, `test-tryout` 26,4, `test-snippets` 16,0, `test-pages` 11,5,
+`test-search` 11,1, `build` 10,4, `check-third-party` 8,9, `test-guide` 6,9,
+`check-french` 5,5, `test-components` 4,3, `test-catalogue` 3,6. Les quinze
+autres tiennent ensemble en moins de six secondes.
+
+### Ce que les contrôles couvrent
+
+| Contrôle | Étendue |
+|---|---|
+| `test-snippets` | 148 extraits, 25 fiches, Python et JavaScript |
+| `check-seo` | 99 pages, 146 blocs de données structurées, 51 ms |
+| `check-a11y` | 13 pages, 26 analyses axe, clair et sombre, plus 5 contrôles structurels |
+| `check-overflow` | 29 pages × 4 largeurs, et les cibles tactiles à 360 px |
+| `check-contrast` | 27 couples de couleurs dans les deux thèmes, plus les couleurs émises par Shiki sur les 148 extraits |
+| `check-french` | 369 fichiers |
+| `check-chain` | 28 étapes enchaînées, 2 exemptions écrites |
+
+### Les poids
+
+| Mesure | Valeur | Budget |
+|---|---|---|
+| Accueil, français | 54,2 Ko | 250 Ko |
+| Fiche la plus lourde, hors illustrations | 82,3 Ko | 120 Ko |
+| JavaScript de la fiche la plus chargée | 7,4 Ko | 15 Ko |
+| Page la plus lourde hors fiche et accueil — le questionnaire | 63,4 Ko | 120 Ko |
+| JavaScript du catalogue | 2,6 Ko | 25 Ko |
+| Polices, total sur le site | 64,1 Ko | 90 Ko |
+| Page moyenne, sur les 103 pages construites | 58,0 Ko | — |
+
+### Ce que la vérification à l'écran a demandé
+
+Captures regardées en clair et en sombre, à 360 et 1440 px, plus aux points de
+rupture 599, 600, 899 et 900 px pour l'en-tête et le sommaire. Parcours au
+clavier de trois pages : 55 arrêts sur une fiche, 43 sur le catalogue, 16 sur le
+questionnaire, aucun retour en arrière dans la page hors colonnes de pied de
+page. Cent trente libellés de liens et de boutons relus hors contexte.
 
 ---
 
 ## Astro 7
 
-*Partie 10. Section à compléter.*
+**Fait, et sans séquelle.** Quinze avis de sécurité étaient ouverts sur la
+branche principale, dont un critique : dix sur Astro lui-même — injections dans
+`define:vars`, dans les attributs étalés, dans les noms de tranches, exécution
+de code à distance par l'optimisation d'images AVIF, contournement
+d'autorisation sur le retrait du préfixe de base —, une injection XML dans le
+flux RSS, une lecture de fichier arbitraire par le serveur de développement
+d'esbuild, quatre CVE de libvips héritées par sharp. `npm audit` en compte
+désormais zéro.
+
+| Paquet | Avant | Après |
+|---|---|---|
+| `astro` | 5.18.2 | 7.3.2 |
+| `vite` (transitif) | 6 | 8.2.2 |
+| `zod` | 3.25.76 | 4.6.5 |
+| `shiki` | 3.13.0 | 4.4.3 |
+| `@astrojs/mdx` | 4.3.14 | 8.0.1 |
+| `@astrojs/rss` | 4.0.12 | 4.0.19 |
+| `@astrojs/markdown-remark` | — | 7.3.1, ajouté |
+
+**Une seule rupture.** Astro 7 ne pose plus le processeur Markdown unifié par
+défaut ; une configuration qui déclare un greffon rehype — ici celui qui fait
+défiler les tableaux larges dans leur conteneur — doit l'installer
+explicitement. Le message d'erreur le dit et donne la commande. C'est le
+correctif simple que le lot autorisait, et il est préférable à réécrire le
+greffon pour un processeur dont je ne pouvais pas lire la documentation.
+
+**Rien d'autre n'a bougé.** Les 148 extraits s'exécutent, les 25 fiches
+valident sous Zod 4 sans une ligne de schéma modifiée, la coloration
+syntaxique de Shiki 4 rend les mêmes couleurs — le contrôle de contraste les
+mesure une par une —, les tableaux de méthodologie défilent toujours dans leur
+conteneur, et la chaîne complète est au vert. Deux captures comparées avant et
+après : le tableau des coûts de la page méthodologie à 360 px, la carte de
+verdict d'une fiche à 1440 px en sombre. Identiques.
+
+**Le site a maigri.** La fiche la plus lourde passe de 83,2 à 82,3 Ko, le
+JavaScript de la fiche la plus chargée de 8,2 à 7,4 Ko, la page moyenne de 58,4
+à 58,0 Ko.
+
+**Un avertissement subsiste, sans conséquence.** Le paquet transitif `undici`
+réclame Node 22.19 ; cette machine tourne en 22.12, le plancher d'Astro 7.
+L'installation le signale, et rien n'échoue : ni la construction, ni la chaîne
+complète, ni le serveur de développement. Le plancher déclaré du projet passe de
+22 à 22.12.
 
 ---
 
 ## Les documents mis à jour
 
-*Section à compléter au fil du lot.*
+**`docs/CDC.md`**, au fil des dix parties. Les révisions sont marquées dans le
+texte, barrées puis expliquées, jamais effacées : le tableau récapitulatif à
+sept colonnes remplacé par quatre cartes, la feuille de route publique retirée,
+la page de famille qui se termine sur l'appel à proposer un besoin, le plancher
+des cibles tactiles à 44 px ajouté à la section 8.7, et la liste des contrôles
+de la section 11.2 élargie à `check-seo` et à la nouvelle étendue de
+`check-a11y` et de `check-overflow`.
+
+**`docs/DECISIONS-CLARTE.md`**, dont trois décisions étaient contredites par ce
+lot : le catalogue rangé par famille, le tableau récapitulatif, la mesure
+d'audience interdite. Chacune porte désormais la décision qui la remplace et la
+raison.
+
+**`docs/sprints/JOURNAL.md`**, une entrée par partie, écrite au moment où la
+partie se termine.
+
+**`.github/workflows/ci.yml`**, qui n'a plus de liste de contrôles à tenir à
+jour : il appelle les deux passes.
+
+**`README.md`**, sur trois points. Les deux passes de contrôle et la règle de
+`check-chain` y sont décrites. Le plancher de Node passe à 22.12. Et surtout la
+section « Déployer » était fausse : elle annonçait Cloudflare Pages et deux
+fichiers servis depuis `public/` — `_redirects` et `_headers` — qui n'existent
+plus depuis le lot 13, où l'hébergeur a changé. Les mentions légales disent
+Vercel, le cahier des charges disait Cloudflare, le README décrivait des
+fichiers absents. C'est réglé, et les deux conséquences du retrait sont
+maintenant écrites : la racine sert la page de repli bilingue au lieu de
+négocier `Accept-Language`, et aucun en-tête de sécurité n'est plus posé par le
+dépôt.
+
+### Une contradiction trouvée en écrivant ce rapport
+
+La partie 8 a activé la mesure d'audience en s'appuyant sur un fait : le chemin
+`/_vercel/insights/` est servi par l'hébergeur, donc aucune requête ne part
+vers un tiers. Ce fait tient — les mentions légales nomment Vercel depuis le
+12 septembre. Mais le README et le cahier des charges annonçaient tous deux
+Cloudflare Pages, et si le site y était réellement hébergé, le script de mesure
+serait introuvable en production et la partie 8 ne tiendrait pas. La
+vérification valait la peine ; les deux documents sont corrigés.
+
+**La politique de sécurité du contenu a disparu avec cette configuration, et
+n'a pas été reposée.** Elle vivait dans le fichier `_headers` de Cloudflare,
+retiré au lot 13 par le commanditaire. Reposer des en-têtes dans un
+`vercel.json` écrit à l'aveugle, sans pouvoir observer la réponse de
+production, risquerait de casser les scripts en ligne du site — la bascule de
+thème, le repli du sommaire — pour un gain que je ne pourrais pas vérifier.
+C'est une décision d'hébergement, elle revient au commanditaire, et elle est
+écrite dans le README à l'endroit où on la cherchera.
+
+### Ce qui reste contradictoire, et pourquoi
+
+Le cahier des charges parle de « barreaux » dans ses sections 4, 7 et 8, et le
+site dit « niveaux » depuis ce lot. Les mentions barrées sont corrigées là où
+le lot les révise ; ailleurs le mot reste, comme il reste dans les noms de
+classes et de composants. Renommer le vocabulaire interne du dépôt est un
+chantier à part, sans effet à l'écran, et il aurait noyé les révisions qui
+comptent.
 
 ---
 
 ## Ce qui cassera en premier à 200 fiches
 
-*Section à compléter à la fin du lot.*
+Mesuré sur la construction à deux cents fiches, dérivée de la feuille de route.
+
+**Le questionnaire, vers trois cent soixante fiches.** Il embarque dans sa page
+les données de toutes les fiches : identifiant, famille, verdict, motif, niveaux.
+La page passe de 103,6 Ko à 444,2 Ko de source, de 19,5 à 48,9 Ko compressés, et
+de 63,4 à 92,6 Ko de poids transféré complet. La progression est linéaire, à
+167 octets par fiche : le budget de 120 Ko tombe vers trois cent soixante
+fiches. C'est le seul chiffre de ce rapport obtenu par extrapolation, et il
+repose sur deux mesures réelles. La réponse est écrite d'avance : découper la
+charge utile par famille, et ne charger que celle de la famille choisie.
+
+**Le catalogue, déjà.** Chaque page du catalogue porte les cartes de toutes les
+fiches, pas seulement les vingt-quatre qu'elle montre : c'est ce qui permet aux
+filtres de porter sur tout le catalogue sans JavaScript et sans reconstruire des
+cartes côté client. À deux cents fiches, cela fait 25,5 Ko compressés par page,
+répétés sur les neuf pages. Le coût est assumé aujourd'hui ; il double à quatre
+cents fiches. La sortie, le jour où il faudra : rendre les cartes de la page
+seule, et faire porter les filtres par des pages d'index — une par famille, une
+par verdict — plutôt que par du masquage.
+
+**L'index de recherche, ensuite.** Il est exclu du budget par le cahier des
+charges et n'est chargé qu'au premier caractère tapé. Il grossit linéairement
+lui aussi ; c'est le premier endroit où une segmentation par langue, déjà
+présente, devra devenir une segmentation par famille.
+
+**Ce qui ne cassera pas.** L'accueil ne montre ni la liste des fiches ni leurs
+données : 54,2 Ko à vingt-cinq fiches comme à deux cents. Les fiches ne se
+connaissent qu'à trois voisines près. Les dix familles sont un nombre fixe, posé
+par le cahier des charges. Et la construction reste rapide : quatre cent
+soixante-dix pages en quelques secondes.

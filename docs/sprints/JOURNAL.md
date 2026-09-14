@@ -733,3 +733,43 @@ treize avant : les quatre couleurs de réponse sur les deux fonds, le vert de
 recommandation en texte et en aplat, le texte et le bouton de l'aplat de marque,
 l'anneau de focus au seuil non textuel. Tous dépassent 4,5:1, y compris les onze
 auxquels 3:1 suffirait.
+
+### Partie 10 — La dette technique
+
+**Astro 7 est installé, et il n'y a plus de vulnérabilité.** Quinze avis
+étaient ouverts, dont un critique, tous dans la chaîne d'Astro 5 : dix sur Astro
+lui-même, une injection XML dans le flux, une lecture de fichier arbitraire par
+esbuild, quatre CVE de libvips héritées par sharp. `npm audit` en compte zéro.
+La seule rupture rencontrée tient en une ligne : Astro 7 ne pose plus le
+processeur Markdown unifié par défaut, et une configuration qui déclare un
+greffon rehype doit l'installer. Vite passe en 8, Zod en 4, Shiki en 4, sans une
+ligne de schéma ni de composant à changer. Le site a même maigri : la fiche la
+plus lourde perd 0,9 Ko, le JavaScript de la fiche la plus chargée 0,8 Ko.
+
+**`npm run check` durait quatre minutes et construisait le site trois fois.**
+Deux passes désormais : `check:fast`, vingt et une secondes sans navigateur, et
+`check:slow`, le reste. La chaîne est décrite une seule fois, dans
+package.json ; l'intégration continue appelle les deux passes au lieu de
+relister les contrôles, et sa liste avait divergé — elle ne lançait ni
+`check-seo`, ni les suites de la zone d'essai, du questionnaire et du catalogue.
+
+**`test:search` rejoint la chaîne.** Elle vivait dehors depuis six lots, et deux
+de ses assertions avaient pourri en silence : elles visaient un balisage que la
+refonte avait remplacé. `check-chain` interdit que cela recommence — tout script
+`check:*` ou `test:*` doit figurer dans une passe, ou porter une exemption
+écrite avec sa raison.
+
+**Un budget pour les pages qui ne sont ni fiche ni accueil.** Aucune page
+publique n'a de raison de peser plus qu'une fiche. La plus lourde est le
+questionnaire, qui embarque les données de toutes les fiches : 63,4 Ko sur 120 à
+vingt-cinq fiches, 92,6 Ko à deux cents. Le budget dira quand sa conception
+devra changer, vers trois cent soixante fiches.
+
+**Trois documents disaient faux sur l'hébergement.** Les mentions légales
+nomment Vercel depuis le lot 13 ; le cahier des charges annonçait Cloudflare
+Pages et le README décrivait deux fichiers de configuration retirés depuis.
+C'était vérifiable et important : la mesure d'audience de la partie 8 ne tient
+que parce que l'hébergeur sert `/_vercel/insights/` sur ce domaine. Les deux
+documents sont corrigés, et les conséquences du retrait sont écrites — la racine
+sert la page de repli bilingue, et aucun en-tête de sécurité n'est plus posé par
+le dépôt.

@@ -18,7 +18,7 @@ et c'est ce qui rend crédibles celles qui recommandent l'inverse.
 
 | Outil | Version |
 |---|---|
-| Node | 22 ou plus |
+| Node | 22.12 ou plus |
 | npm | 10 ou plus |
 | Python | 3.13 ou plus, pour les tests des extraits |
 
@@ -46,17 +46,33 @@ npm run dev            # serveur de developpement
 
 ## Vérifier
 
+Deux passes. La rapide avant chaque commit, la complète avant de pousser — et
+c'est celle que lance l'intégration continue.
+
 ```bash
-npm run check          # enchaine les controles, dans le meme ordre que la CI
+npm run check:fast     # une vingtaine de secondes, aucun navigateur
+npm run check          # les deux passes, quatre minutes
 ```
 
-Les contrôles individuels :
+| Passe | Ce qu'elle couvre |
+|---|---|
+| `check:fast` | schéma des fiches, suites unitaires, système de design, contraste, français, construction, liens, référencement, budgets de poids |
+| `check:slow` | exécution des 148 extraits, contrôles dans un vrai navigateur, gabarits, accessibilité, débordements et cibles tactiles, composants interactifs, puis recherche et filtres sur deux cents fiches |
+
+La chaîne est décrite une seule fois, dans `package.json`. `check:chain` refuse
+qu'un contrôle reste orphelin : tout script `check:*` ou `test:*` doit figurer
+dans l'une des deux passes, ou porter une exemption écrite avec sa raison.
+
+Quelques contrôles individuels, pour travailler sur un sujet précis :
 
 | Commande | Ce qu'elle vérifie |
 |---|---|
 | `npm run check:fonts` | budget de poids des polices, 90 Ko au total |
 | `npm run check:contrast` | tous les couples texte-fond atteignent AA |
-| `npm run check:colour` | règles d'emploi de la couleur, aucune valeur en dur |
+| `npm run check:colour` | règles d'emploi de la couleur, aucun token inexistant |
+| `npm run check:overflow` | aucun débordement horizontal, aucune cible tactile sous 44 px |
+| `npm run check:a11y` | axe sur les six gabarits, dans les deux langues et les deux thèmes |
+| `npm run check:seo` | titres et descriptions uniques, canoniques, hreflang, données structurées |
 
 ## Pages de contrôle interne
 
@@ -108,32 +124,38 @@ docs/        le cahier des charges et les plans de lot
 
 ## Déployer
 
-Le site est statique. N'importe quel hébergeur de fichiers convient ; la
-configuration fournie vise Cloudflare Pages, comme le prévoit le cahier des
-charges.
+Le site est statique. N'importe quel hébergeur de fichiers convient ;
+`isitoverkill.dev` est servi par Vercel, comme l'indiquent les mentions
+légales. Le dépôt ne porte aucun fichier de configuration d'hébergement :
+la configuration Cloudflare a été retirée avec le changement d'hébergeur.
 
 | Réglage | Valeur |
 |---|---|
 | Commande de construction | `npm run build` |
 | Répertoire de sortie | `dist` |
-| Version de Node | 22 |
+| Version de Node | 22.12 ou plus |
 | Variables d'environnement | aucune |
 
-Deux fichiers sont servis tels quels depuis `public/` :
+Deux conséquences de ce retrait, à connaître :
 
-- `_redirects` — la racine négocie la langue sur l'en-tête `Accept-Language`,
-  avec l'anglais par défaut, qui est la version canonique.
-- `_headers` — politique de sécurité du contenu, en-têtes de cache immuables
-  sur les polices et les ressources versionnées.
+- **La racine `/` ne négocie plus la langue côté serveur.** Elle sert la page
+  de repli bilingue, qui fonctionne sans JavaScript et bascule vers l'anglais,
+  version canonique. C'est le comportement décrit au lot 10 comme repli ; il
+  est devenu le comportement normal.
+- **Aucun en-tête de sécurité n'est posé par le dépôt.** La politique de
+  sécurité du contenu vivait dans le fichier `_headers` de Cloudflare. Ce que
+  la page confidentialité affirme reste vérifié à la construction par
+  `check-third-party`, qui échoue si une seule requête part vers un autre
+  domaine ; mais plus rien ne le rend opposable à l'exécution. Reposer ces
+  en-têtes relève de la configuration de l'hébergeur.
 
-La politique de sécurité du contenu n'autorise que l'origine du site. Elle rend
-opposable ce que la page confidentialité affirme : aucune ressource tierce
-n'est chargée à l'exécution.
+Pour mémoire, ce que la politique retirée garantissait : aucune ressource tierce
+n'est chargée à l'exécution. C'est toujours vrai du site produit, et
+`check-third-party` le vérifie page par page dans un vrai navigateur.
 
-**Avant la première mise en ligne**, voir la section « ce qu'il reste à faire »
-de [`RAPPORT.md`](RAPPORT.md) : le nom de domaine, le statut juridique de
-l'éditeur et les coordonnées de l'hébergeur ne sont pas encore arrêtés, et les
-pages concernées le disent au lieu de les inventer.
+Le nom de domaine, le statut juridique de l'éditeur et l'hébergeur sont
+désormais arrêtés et écrits sur la page des mentions légales, qui ne comporte
+plus de mention provisoire.
 
 ## Licences
 

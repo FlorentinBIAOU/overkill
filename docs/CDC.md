@@ -682,7 +682,7 @@ Combinables, reflétés dans l'URL en paramètres de requête pour que l'état s
 | Coloration syntaxique | Shiki, au build | Évite le flash de code non colorisé |
 | Recherche | Pagefind | Index statique, pas de serveur |
 | Tests de code | pytest pour Python, node:test pour JavaScript | Exécution réelle des extraits |
-| Hébergement | Cloudflare Pages | Statique, gratuit à cette échelle, build sur push |
+| Hébergement | ~~Cloudflare Pages~~ **Vercel** | Changé au lot 13 : la configuration Cloudflare — `_headers`, `_redirects`, `wrangler.toml` — a été retirée avec elle. Conséquences écrites dans `README.md` : la racine sert la page de repli bilingue au lieu de négocier `Accept-Language`, et aucun en-tête de sécurité n'est plus posé par le dépôt |
 
 Aucun framework d'interface côté client. Les rares comportements interactifs (onglets de code, copie, filtres, recherche) sont écrits en JavaScript natif, en modules, chargés uniquement sur les pages qui en ont besoin.
 
