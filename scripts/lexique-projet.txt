@@ -142,6 +142,7 @@ ensemblées
 ensemblés
 entries
 entry
+esbuild
 escalate
 estimating
 executed
@@ -245,6 +246,7 @@ levenshtein
 lib
 libpostal
 library
+libvips
 license
 lighthouse
 ligozat
@@ -350,6 +352,7 @@ recommended
 red
 regex
 regulatory
+rehype
 rejouable
 rejouables
 remove
@@ -390,6 +393,7 @@ sentence
 seo
 serif
 share
+sharp
 shiki
 should
 shown

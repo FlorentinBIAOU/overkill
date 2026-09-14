@@ -883,7 +883,7 @@ rapide qui ne construit pas laisse passer une erreur de gabarit.
 rien dit du site produit.
 
 **La chaîne est décrite à un seul endroit.** L'intégration continue appelle les
-deux passes au lieu de relister les contrôles. Le fichier d'intégration
+deux passes au lieu de redonner la liste des contrôles. Le fichier d'intégration
 continue soignait la lisibilité de ses étapes, et c'est une vraie qualité
 perdue ici ; en échange, la liste ne peut plus diverger — et elle avait
 divergé, sur quatre contrôles. *Écarté :* garder les étapes nommées et

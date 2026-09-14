@@ -750,7 +750,7 @@ plus lourde perd 0,9 Ko, le JavaScript de la fiche la plus chargée 0,8 Ko.
 Deux passes désormais : `check:fast`, vingt et une secondes sans navigateur, et
 `check:slow`, le reste. La chaîne est décrite une seule fois, dans
 package.json ; l'intégration continue appelle les deux passes au lieu de
-relister les contrôles, et sa liste avait divergé — elle ne lançait ni
+redonner la liste des contrôles, et sa liste avait divergé — elle ne lançait ni
 `check-seo`, ni les suites de la zone d'essai, du questionnaire et du catalogue.
 
 **`test:search` rejoint la chaîne.** Elle vivait dehors depuis six lots, et deux
