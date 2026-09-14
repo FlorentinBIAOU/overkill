@@ -192,9 +192,23 @@ export default {
      navigateur, figée quand il ne peut pas. */
   tryout: {
     heading: 'Try it',
-    leadLive: 'The code above runs in your browser. Change the text and the result follows.',
+    /* Le mot qui dit, avant tout le reste, que cette zone se manipule. */
+    interactive: 'interactive',
+    leadLive: 'The code above runs in your browser. Type in the box: the result is redone in front of you.',
     leadFrozen: 'This code cannot run in a browser. The outputs below are computed when the site is built, by running the real code.',
     inputLabel: 'Your text',
+    /* L'étiquette du champ dit qu'on peut y écrire, et le champ vide le redit. */
+    editable: 'yours to edit',
+    placeholder: 'Type or paste your text here, or pick an example below.',
+    run: 'Run the code',
+    ran: 'Recomputed',
+    liveHint: 'Recomputed on every keystroke.',
+    resultTitle: 'What the code makes of it',
+    /* Le compte des passages surlignés, à la manière de regex101. */
+    matchOne: '1 match',
+    matchMany: '{n} matches',
+    matchNone: 'nothing matched in this text',
+    emptyReset: 'Field empty: here is the starting example again.',
     caught: 'What the code picked up',
     output: 'What it returns',
     conclusion: 'What it concludes',

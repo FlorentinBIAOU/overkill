@@ -198,9 +198,25 @@ export default {
      l'extrait tourne dans un navigateur, figée quand il ne peut pas. */
   tryout: {
     heading: 'Essayer',
-    leadLive: 'Le code ci-dessus tourne dans votre navigateur. Changez le texte, le résultat suit.',
+    /* Le mot qui dit, avant tout le reste, que cette zone se manipule. */
+    interactive: 'interactif',
+    leadLive: 'Le code ci-dessus tourne dans votre navigateur. Écrivez dans le champ : le résultat se refait sous vos yeux.',
     leadFrozen: 'Ce code ne peut pas tourner dans un navigateur. Les sorties ci-dessous sont calculées à la construction du site, en exécutant le vrai code.',
     inputLabel: 'Votre texte',
+    /* L’étiquette du champ dit qu’on peut y écrire, et le champ vide le redit. */
+    editable: 'à vous d’écrire',
+    placeholder: 'Écrivez ou collez votre texte ici, ou choisissez un exemple ci-dessous.',
+    run: 'Lancer le code',
+    ran: 'Recalculé',
+    liveHint: 'Recalculé à chaque frappe.',
+    resultTitle: 'Ce que le code en fait',
+    /* Le compte des passages surlignés, à la manière de regex101. Il ne
+       s’affiche que quand le texte donné est rendu surligné : là, et là
+       seulement, « attrapé » se compte sans interprétation. */
+    matchOne: '1 passage attrapé',
+    matchMany: '{n} passages attrapés',
+    matchNone: 'rien attrapé dans ce texte',
+    emptyReset: 'Champ vide : voici de nouveau l’exemple de départ.',
     caught: 'Ce que le code a repéré',
     output: 'Ce qu’il renvoie',
     conclusion: 'Ce qu’il en conclut',

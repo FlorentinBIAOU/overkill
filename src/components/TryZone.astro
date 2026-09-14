@@ -16,6 +16,15 @@
  * Le rendu du résultat passe par le même module que le navigateur
  * (src/lib/tryout-render.mjs) : la page affiche la même chose avec et sans
  * JavaScript, et il n'y a qu'un endroit à corriger.
+ *
+ * Trois choses doivent se comprendre sans mode d'emploi, et la mise en forme
+ * ne fait que cela :
+ *   — le champ est un champ. Barre d'étiquette, contour épais, texte
+ *     d'invite, mention « à vous d'écrire » : rien n'y ressemble à un affichage.
+ *   — quelque chose se passe quand on tape. Un bouton qui lance, et une ligne
+ *     d'état à côté qui dit ce qui vient d'arriver.
+ *   — le résultat est le résultat. Il a son panneau, son intitulé, son compte
+ *     de passages attrapés, et le surlignage porte jusqu'aux lignes du tableau.
  */
 import { renderResult } from '../lib/tryout-render.mjs';
 import { runAll, runFirst, caseList } from '../lib/tryouts.mjs';
@@ -39,6 +48,8 @@ const s = strings.tryout;
 const labels = {
   caught: s.caught, output: s.output, conclusion: s.conclusion, detail: s.detail,
   image: s.image, empty: s.empty, given: s.given, failed: s.failed,
+  matchOne: s.matchOne, matchMany: s.matchMany, matchNone: s.matchNone,
+  emptyReset: s.emptyReset, ran: s.ran, liveHint: s.liveHint,
 };
 
 const live = tryout.mode === 'live';
@@ -56,7 +67,12 @@ const note = bilingual(tryout.spec.note, lang);
   data-tryout={live ? tryout.id : undefined}
   data-tryout-labels={live ? JSON.stringify(labels) : undefined}
 >
-  <Heading id={`${id}-title`} class="tryout__title">{s.heading}</Heading>
+  <div class="tryout__head">
+    <Heading id={`${id}-title`} class="tryout__title">{s.heading}</Heading>
+    {/* Le mot se lit avant le reste, et c'est tout ce qu'il a à faire :
+        dire que cette zone-là n'est pas une illustration. */}
+    {live && <span class="tryout__tag">{s.interactive}</span>}
+  </div>
   <p class="tryout__lead">{live ? s.leadLive : s.leadFrozen}</p>
   {/* Le mot que l'essai lui-même ajoute, une fois, plutôt que répété sous
       chacun de ses cas. */}
@@ -65,13 +81,52 @@ const note = bilingual(tryout.spec.note, lang);
   {
     live && premier && (
       <>
-        <label class="tryout__label" for={`${id}-input`}>{s.inputLabel}</label>
-        <textarea
-          class="tryout__input"
-          id={`${id}-input`}
-          rows="2"
-          spellcheck="false"
-          data-tryout-input>{premier.input}</textarea>
+        <div class="tryout__field">
+          <div class="tryout__field-bar">
+            <label class="tryout__label" for={`${id}-input`}>
+              <svg
+                class="tryout__pencil"
+                viewBox="0 0 16 16"
+                width="14"
+                height="14"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M2 11.6 10.9 2.7l2.4 2.4L4.4 14H2z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              {s.inputLabel}
+            </label>
+            <span class="tryout__editable">{s.editable}</span>
+          </div>
+          <textarea
+            class="tryout__input"
+            id={`${id}-input`}
+            rows="2"
+            spellcheck="false"
+            placeholder={s.placeholder}
+            data-tryout-input>{premier.input}</textarea>
+        </div>
+
+        {/* Le code se relance de lui-même à chaque frappe. Le bouton ne sert
+            donc pas à déclencher : il sert à dire qu'il y a quelque chose à
+            déclencher, et la ligne d'état à côté dit que ça vient d'avoir
+            lieu. Sans ces deux-là, rien ne signalait qu'il s'était passé
+            quoi que ce soit. */}
+        <div class="tryout__bar">
+          <button type="button" class="tryout__run" data-tryout-run disabled>
+            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+              <path d="M4 2.5 13 8l-9 5.5z" fill="currentColor" />
+            </svg>
+            {s.run}
+          </button>
+          <p class="tryout__status" data-tryout-status>{s.liveHint}</p>
+        </div>
 
         <div class="tryout__cases">
           <p class="tryout__cases-label" id={`${id}-cases`}>{s.examples}</p>
@@ -97,9 +152,12 @@ const note = bilingual(tryout.spec.note, lang);
         {/* Le résultat du premier cas est calculé à la construction du site :
             la zone dit donc quelque chose de vrai avant que le moindre octet
             de JavaScript n'arrive, et le champ n'est pas un décor. */}
-        <div class="tryout__result" data-tryout-result aria-live="polite" set:html={
-          renderResult(premier.result, premier.input, labels)
-        } />
+        <div class="tryout__panel" data-tryout-panel>
+          <p class="tryout__panel-bar">{s.resultTitle}</p>
+          <div class="tryout__result" data-tryout-result aria-live="polite" set:html={
+            renderResult(premier.result, premier.input, labels)
+          } />
+        </div>
 
         <p class="tryout__breaks" data-tryout-why hidden={!premier.fails}>
           <span class="tryout__breaks-tag">{s.failsHere}</span>
@@ -118,7 +176,7 @@ const note = bilingual(tryout.spec.note, lang);
         {tous.map((c) => (
           <li class:list={['tryout__frozen-case', c.fails && 'tryout__frozen-case--fails']}>
             <p class="tryout__frozen-label">{c.label}</p>
-            <div class="tryout__panes" set:html={
+            <div class="tryout__frozen-body" set:html={
               renderResult(c.result, c.input, labels, {
                 alwaysShowInput: true,
                 displayInput: c.shown,
@@ -154,6 +212,13 @@ const note = bilingual(tryout.spec.note, lang);
     background: var(--paper);
   }
 
+  .tryout__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
   .tryout__title {
     font-family: var(--font-display);
     font-weight: 800;
@@ -162,37 +227,156 @@ const note = bilingual(tryout.spec.note, lang);
     margin: 0;
   }
 
+  /* L'aplat de marque, sous de l'encre : l'emploi prévu du jaune (CDC 8.3). */
+  .tryout__tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--brand);
+    color: var(--on-brand);
+  }
+
   .tryout__lead {
     margin: var(--space-2) 0 var(--space-6);
     font-size: 0.95rem;
     color: var(--muted);
   }
 
+  /* ---- Le champ -----------------------------------------------------------
+     Il portait un contour d'un pixel et demi sur un fond à peine distinct, et
+     se lisait comme un encadré d'affichage. Il a maintenant sa barre
+     d'étiquette, son contour épais et son texte d'invite : la forme d'un
+     champ, empruntée à celle du bloc de code juste au-dessus. */
+  .tryout__field {
+    border: 2px solid var(--rule-strong);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--paper-2);
+  }
+
+  .tryout__field:hover {
+    border-color: var(--ink);
+  }
+
+  /* L'anneau se pose sur le cadre entier, et non sur la seule zone de texte :
+     le champ et son étiquette sont une seule chose à l'œil. */
+  .tryout__field:focus-within {
+    border-color: var(--ink);
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .tryout__field-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-block-end: 1px solid var(--rule);
+  }
+
   .tryout__label {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
     font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0;
+    cursor: text;
+  }
+
+  .tryout__pencil {
+    flex: none;
+  }
+
+  .tryout__editable {
+    font-size: 0.72rem;
     font-weight: 600;
-    margin-block-end: var(--space-2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-pill);
+    padding: 2px 9px;
   }
 
   .tryout__input {
+    display: block;
     font: inherit;
     font-family: var(--font-code);
     font-size: 0.9rem;
     line-height: 1.6;
     width: 100%;
     padding: var(--space-3) var(--space-4);
-    border: 1.5px solid var(--rule-strong);
-    border-radius: 10px;
-    background: var(--paper-2);
+    border: 0;
+    background: transparent;
     color: var(--ink);
     resize: vertical;
     field-sizing: content;
-    min-height: 3.2rem;
+    min-height: 3.6rem;
+    cursor: text;
   }
 
   .tryout__input:focus-visible {
-    border-color: var(--ink);
+    outline: none;
+  }
+
+  .tryout__input::placeholder {
+    color: var(--muted);
+    opacity: 1;
+  }
+
+  /* ---- Le bouton et la ligne d'état --------------------------------------- */
+  .tryout__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3) var(--space-4);
+    margin-block-start: var(--space-4);
+  }
+
+  .tryout__run {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-5);
+    border: 1.5px solid var(--brand-deep);
+    border-radius: var(--radius-pill);
+    background: var(--brand);
+    color: var(--on-brand);
+    cursor: pointer;
+  }
+
+  .tryout__run:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .tryout__run:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  .tryout__status {
+    margin: 0;
+    font-size: 0.83rem;
+    color: var(--muted);
+  }
+
+  /* Le mot « recalculé » remplace l'invite une seconde et demie après chaque
+     exécution : c'est le seul signe qu'il s'est passé quelque chose quand le
+     résultat ne change pas d'un caractère. */
+  .tryout__status[data-just-ran='true'] {
+    color: var(--ink);
+    font-weight: 600;
   }
 
   .tryout__cases {
@@ -263,18 +447,60 @@ const note = bilingual(tryout.spec.note, lang);
     display: none;
   }
 
+  /* ---- Le panneau de résultat ---------------------------------------------
+     Le résultat n'avait pas de contenant : deux intitulés gris posés sous les
+     exemples, qu'on prenait pour la suite de la page. Il a désormais son
+     cadre et sa barre, comme un bloc de sortie, et on voit où il commence. */
+  .tryout__panel {
+    margin-block-start: var(--space-6);
+    border: 1px solid var(--rule-strong);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+
+  .tryout__panel-bar {
+    margin: 0;
+    /* La colonne de lecture ne s'applique pas à une barre de panneau : sans
+       cela elle s'arrête aux 68 caractères de la règle globale et laisse un
+       vide à droite. */
+    max-width: none;
+    padding: var(--space-2) var(--space-4);
+    background: var(--paper-2);
+    border-block-end: 1px solid var(--rule);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .tryout__result {
+    padding: var(--space-4);
+  }
+
+  /* Le panneau bat une fois quand le résultat vient d'être refait. Réservé à
+     ce qui répond à une action (CDC 8.2), et supprimé par la règle globale de
+     mouvement réduit. */
+  .tryout__panel[data-flash='true'] {
+    animation: tryout-flash 420ms var(--motion-ease);
+  }
+
+  @keyframes tryout-flash {
+    from { border-color: var(--brand-deep); background: color-mix(in oklab, var(--brand) 16%, transparent); }
+    to { border-color: var(--rule-strong); background: var(--paper); }
+  }
+
   /* Deux panneaux côte à côte quand la place le permet, l'un sous l'autre
      sinon. En flex et non en grille : un panneau seul doit prendre toute la
      largeur, et une grille à deux colonnes le laissait serré dans une demie
      dès que la phrase de commentaire occupait la seconde. Un tableau de
      résultats y perdait ses dernières colonnes. */
-  .tryout__result,
-  .tryout__panes {
+  .tryout :global(.tryout__panes) {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
     gap: var(--space-4) var(--space-6);
-    margin-block-start: var(--space-6);
   }
 
   .tryout :global(.tryout__pane) {
@@ -293,11 +519,53 @@ const note = bilingual(tryout.spec.note, lang);
     color: var(--muted);
   }
 
+  /* Le compte des passages attrapés, au-dessus du résultat, comme regex101
+     pose le sien au-dessus de ses correspondances. */
+  .tryout :global(.tryout__summary) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: none;
+    margin: 0 0 var(--space-4);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .tryout :global(.tryout__summary[data-caught='false']) {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .tryout :global(.tryout__summary-dot) {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-pill);
+    background: var(--brand);
+    border: 1px solid var(--brand-deep);
+  }
+
+  .tryout :global(.tryout__summary[data-caught='false'] .tryout__summary-dot) {
+    background: transparent;
+    border-color: var(--rule-strong);
+  }
+
+  /* Ce qui est montré n'est pas ce qui est dans le champ : on le dit. */
+  .tryout :global(.tryout__notice) {
+    max-width: none;
+    margin: 0 0 var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    border-inline-start: 3px solid var(--rule-strong);
+    background: var(--paper-2);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
   .tryout :global(.tryout__text) {
     margin: 0;
     font-family: var(--font-code);
     font-size: 0.88rem;
-    line-height: 1.65;
+    line-height: 1.9;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     max-width: none;
@@ -315,8 +583,20 @@ const note = bilingual(tryout.spec.note, lang);
   .tryout :global(.tryout__mark) {
     background: var(--brand);
     color: var(--on-brand);
-    padding: 1px 3px;
+    padding: 2px 4px;
     border-radius: 3px;
+    box-shadow: 0 0 0 1px var(--brand-deep);
+  }
+
+  /* Le nom que l'essai donne au passage, quand il en donne un : posé en
+     exposant sur le surlignage, comme regex101 nomme ses groupes. */
+  .tryout :global(.tryout__mark[data-label])::after {
+    content: ' ' attr(data-label);
+    font-size: 0.66em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: 0.35em;
   }
 
   .tryout :global(.tryout__void) {
@@ -324,16 +604,19 @@ const note = bilingual(tryout.spec.note, lang);
     font-style: italic;
   }
 
+  /* Le verdict est la réponse : il se lit avant le reste du panneau, pas à la
+     taille d'un paragraphe. */
   .tryout :global(.tryout__verdict) {
     margin: 0;
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.15rem;
-    line-height: 1.25;
+    font-weight: 800;
+    font-size: 1.45rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
   }
 
   .tryout :global(.tryout__detail) {
-    margin: var(--space-1) 0 0;
+    margin: var(--space-2) 0 0;
     font-size: 0.9rem;
     color: var(--muted);
   }
@@ -375,6 +658,18 @@ const note = bilingual(tryout.spec.note, lang);
     color: var(--muted);
   }
 
+  /* Une cellule surlignée au milieu de six colonnes ne se voyait pas. La
+     ligne entière porte désormais la teinte et un repère au bord : on voit
+     d'un coup d'œil laquelle a été retenue, et lesquelles sont passées au
+     travers. */
+  .tryout :global(tr.tryout__row--caught td) {
+    background: color-mix(in oklab, var(--brand) 14%, transparent);
+  }
+
+  .tryout :global(tr.tryout__row--caught td:first-child) {
+    box-shadow: inset 3px 0 0 var(--brand-deep);
+  }
+
   .tryout__breaks {
     display: flex;
     flex-wrap: wrap;
@@ -411,32 +706,34 @@ const note = bilingual(tryout.spec.note, lang);
     margin: 0;
     padding: 0;
     display: grid;
-    gap: var(--space-8);
+    gap: var(--space-5);
   }
 
+  /* Six cas à la suite, séparés par un filet, se lisaient comme un seul long
+     texte : on ne voyait pas où un cas finissait ni où sa sortie commençait.
+     Chacun a maintenant son cadre, comme le panneau de résultat de la forme
+     interactive. */
   .tryout__frozen-case {
     max-width: none;
-    padding-block-start: var(--space-6);
-    border-block-start: 1px solid var(--rule);
-  }
-
-  .tryout__frozen-case:first-child {
-    padding-block-start: 0;
-    border-block-start: 0;
+    border: 1px solid var(--rule-strong);
+    border-radius: 10px;
+    padding: var(--space-4) var(--space-5) var(--space-5);
   }
 
   .tryout__frozen-label {
-    margin: 0;
-    font-weight: 600;
+    margin: 0 calc(var(--space-5) * -1) var(--space-3);
+    padding: 0 var(--space-5) var(--space-3);
+    border-block-end: 1px solid var(--rule);
+    font-weight: 700;
     font-size: 0.95rem;
+    max-width: none;
   }
 
-  .tryout__panes {
-    margin-block-start: var(--space-3);
+  .tryout__frozen-body {
+    margin-block-start: 0;
   }
 
-  .tryout__result > :global(.tryout__note),
-  .tryout__panes > :global(.tryout__note) {
+  .tryout :global(.tryout__panes > .tryout__note) {
     flex: 1 1 100%;
   }
 </style>
