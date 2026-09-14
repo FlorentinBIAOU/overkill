@@ -1047,14 +1047,19 @@ complète, ni le serveur de développement. Le plancher déclaré du projet pass
 texte, barrées puis expliquées, jamais effacées : le tableau récapitulatif à
 sept colonnes remplacé par quatre cartes, la feuille de route publique retirée,
 la page de famille qui se termine sur l'appel à proposer un besoin, le plancher
-des cibles tactiles à 44 px ajouté à la section 8.7, et la liste des contrôles
-de la section 11.2 élargie à `check-seo` et à la nouvelle étendue de
-`check-a11y` et de `check-overflow`.
+des cibles tactiles à 44 px ajouté à la section 8.7, la liste des contrôles de
+la section 11.2 élargie à `check-seo` et à la nouvelle étendue de `check-a11y`
+et de `check-overflow`, la condition posée à toute mesure d'audience marquée
+tenue, et la ligne d'hébergement du tableau technique remise à la réalité.
 
 **`docs/DECISIONS-CLARTE.md`**, dont trois décisions étaient contredites par ce
-lot : le catalogue rangé par famille, le tableau récapitulatif, la mesure
-d'audience interdite. Chacune porte désormais la décision qui la remplace et la
-raison.
+lot. « Barreau » ne survivait que dans la page méthodologie : il disparaît aussi
+des vingt-cinq fiches. L'interdiction de toute exécution dans le navigateur
+visait un bac à sable de plusieurs mégaoctets ; elle ne tient plus quand ce
+qu'on exécute est l'extrait lui-même, quelques kilooctets sans dépendance. Et la
+mention « Code exécuté tel quel », affichée en bloc au-dessus du code, cède sa
+place à une preuve posée dans la barre du bloc. Chacune porte la décision qui la
+remplace et la raison.
 
 **`docs/sprints/JOURNAL.md`**, une entrée par partie, écrite au moment où la
 partie se termine.
