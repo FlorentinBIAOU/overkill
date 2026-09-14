@@ -22,7 +22,7 @@ const OPTIONS = { window: 12, threshold: 3.5 };
 const T = {
   fr: {
     colonnes: ['Minute', 'Mesuré', 'Habituel', 'Écart', 'Écart toléré'],
-    note: (anomalies, juges, total) => `${anomalies} anomalie${anomalies > 1 ? 's' : ''} sur ${juges} minutes jugées, ${total} points fournis. Les ${OPTIONS.window} premières minutes ne sont pas jugées : elles servent de fenêtre.`,
+    note: (anomalies, juges, total) => `${anomalies} anomalie${anomalies > 1 ? 's' : ''} sur ${juges} minute${juges > 1 ? 's' : ''} jugée${juges > 1 ? 's' : ''}, ${total} point${total > 1 ? 's' : ''} fourni${total > 1 ? 's' : ''}. Les ${OPTIONS.window} premières minutes ne sont pas jugées : elles servent de fenêtre.`,
     calme: 'Aucune anomalie',
     calmeDetail: (juges, depart, fin) => `${juges} minutes jugées, aucune ne dépasse l’écart toléré. La métrique est passée de ${depart} à ${fin}.`,
     courte: 'Pas assez d’historique',
@@ -31,7 +31,7 @@ const T = {
   },
   en: {
     colonnes: ['Minute', 'Measured', 'Usual', 'Gap', 'Gap allowed'],
-    note: (anomalies, juges, total) => `${anomalies} anomal${anomalies > 1 ? 'ies' : 'y'} over ${juges} minutes judged, ${total} points given. The first ${OPTIONS.window} minutes are not judged: they are the window.`,
+    note: (anomalies, juges, total) => `${anomalies} anomal${anomalies > 1 ? 'ies' : 'y'} over ${juges} minute${juges > 1 ? 's' : ''} judged, ${total} point${total > 1 ? 's' : ''} given. The first ${OPTIONS.window} minutes are not judged: they are the window.`,
     calme: 'No anomaly',
     calmeDetail: (juges, depart, fin) => `${juges} minutes judged, not one of them past the allowed gap. The metric went from ${depart} to ${fin}.`,
     courte: 'Not enough history',
