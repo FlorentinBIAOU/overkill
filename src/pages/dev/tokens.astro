@@ -131,7 +131,7 @@ const spacing = [4, 8, 12, 16, 24, 32, 48, 64, 96, 128];
     <section>
       <h2>Focus</h2>
       <p class="small">Chaque element ci-dessous doit montrer un anneau visible au clavier.</p>
-      <p>
+      <p class="focus-row">
         <a href="#main">Un lien</a>
         <button type="button" class="tbtn">Un bouton</button>
         <input type="text" aria-label="Un champ" placeholder="Un champ" />
@@ -272,6 +272,23 @@ const spacing = [4, 8, 12, 16, 24, 32, 48, 64, 96, 128];
     border-radius: var(--radius-block);
     background: var(--paper);
     color: var(--ink);
+  }
+
+  /* Les trois témoins du focus sont des objets à toucher, pas du texte dans
+     une phrase : ils respectent le plancher de 44 px du site. */
+  .focus-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .focus-row a,
+  .focus-row button,
+  .focus-row input {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 </style>
 

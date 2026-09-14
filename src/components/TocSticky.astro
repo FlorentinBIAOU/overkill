@@ -1,7 +1,17 @@
 ---
 /**
- * Sommaire latéral, collant au-delà de 900 px, liste simple en dessous
+ * Sommaire de fiche. Colonne collante au-delà de 900 px, replié en dessous
  * (CDC 7.5, point de rupture unique à 900 px).
+ *
+ * Le repli n'est pas cosmétique : déplié, ce sommaire fait dix entrées de
+ * 44 px, soit quatre cent cinquante pixels avant le verdict sur un écran de
+ * téléphone. C'est le verdict qu'on vient chercher.
+ *
+ * Le `<details>` est servi ouvert, et un script en ligne le referme au
+ * chargement si la fenêtre est étroite. Sans JavaScript, la page garde donc
+ * exactement le comportement d'avant — un sommaire déplié — et non un
+ * sommaire inaccessible. Le titre reste visible dans les deux cas : c'est lui
+ * qui nomme la région de navigation.
  */
 export interface Props {
   title: string;
@@ -12,19 +22,38 @@ const { title, items } = Astro.props;
 ---
 
 <nav class="toc" aria-labelledby="toc-title">
-  <h2 id="toc-title" class="toc__title">{title}</h2>
-  <ol class="toc__list">
-    {
-      items.map((item) => (
-        <li>
-          <a href={item.href} class:list={['toc__link', item.muted && 'toc__link--muted']}>
-            {item.label}
-          </a>
-        </li>
-      ))
-    }
-  </ol>
+  <details class="toc__fold" open data-toc-fold>
+    <summary class="toc__summary">
+      <h2 id="toc-title" class="toc__title">{title}</h2>
+    </summary>
+    <ol class="toc__list">
+      {
+        items.map((item) => (
+          <li>
+            <a href={item.href} class:list={['toc__link', item.muted && 'toc__link--muted']}>
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </details>
 </nav>
+
+<script is:inline>
+  /* Exécuté pendant l'analyse du document, avant le premier rendu : le
+     sommaire ne s'affiche pas déplié pour se refermer ensuite. */
+  (() => {
+    const etroit = matchMedia('(max-width: 899px)');
+    const fold = document.currentScript.previousElementSibling?.querySelector('[data-toc-fold]');
+    if (!fold) return;
+    const appliquer = () => {
+      fold.open = !etroit.matches;
+    };
+    appliquer();
+    etroit.addEventListener('change', appliquer);
+  })();
+</script>
 
 <style>
   .toc__title {
@@ -32,7 +61,34 @@ const { title, items } = Astro.props;
     font-size: var(--size-small);
     font-weight: 600;
     color: var(--muted);
-    margin: 0 0 var(--space-2);
+    margin: 0;
+  }
+
+  .toc__summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .toc__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Le signe dit l'état, à toutes les largeurs : un titre qui se replie au
+     clic doit le montrer, même là où le repli ne sert pas à gagner de la
+     place. */
+  .toc__summary::after {
+    content: '+';
+    margin-inline-start: auto;
+    font-family: var(--font-code);
+    color: var(--muted);
+  }
+
+  .toc__fold[open] > .toc__summary::after {
+    content: '−';
   }
 
   .toc__list {
@@ -48,7 +104,9 @@ const { title, items } = Astro.props;
   }
 
   .toc__link {
-    display: block;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
     padding-block: var(--space-2);
     text-decoration: none;
   }

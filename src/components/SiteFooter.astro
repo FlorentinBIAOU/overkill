@@ -119,7 +119,15 @@ const colonnes = [
 
   .site-footer__nav li {
     max-width: none;
-    padding-block: var(--space-1);
+  }
+
+  /* 44 px de haut par entrée : le lien porte la hauteur, pas l'élément de
+     liste, pour que la cible et la zone visible coïncident (CDC 8.7). */
+  .site-footer__nav a {
+    display: inline-flex;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .site-footer__meta {

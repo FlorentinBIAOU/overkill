@@ -97,6 +97,15 @@ const levelName = strings.rung[rung.level as Level];
     border: 1px solid var(--rule);
   }
 
+  /* Sur un téléphone, 32 px de marge de chaque côté prennent 66 px sur les
+     328 disponibles, au détriment du code qui défile déjà. La carte se
+     resserre ; le cadre suffit à la distinguer. */
+  @media (max-width: 599px) {
+    .rung-section--verdict {
+      padding: var(--space-4);
+    }
+  }
+
   .rung-section__answer {
     font-family: var(--font-display);
     font-weight: 800;

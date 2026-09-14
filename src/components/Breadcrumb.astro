@@ -53,7 +53,8 @@ const jsonld = {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-2);
+    column-gap: var(--space-2);
+    row-gap: 0;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -67,11 +68,29 @@ const jsonld = {
     max-width: none;
   }
 
+  /* Chaque maillon cliquable fait 44 px de haut ; le texte reste centré sur
+     sa ligne, le fil ne grossit donc que d'une vingtaine de pixels. */
+  .fil__item a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
   .fil__sep {
     opacity: 0.5;
   }
 
   .fil__item span[aria-current] {
     color: var(--muted);
+  }
+
+  /*
+   * Sur l'aplat de marque, --muted n'a pas de contraste : 4,03:1 en clair,
+   * 1,59:1 en sombre, où le gris clair se pose sur du jaune. L'aplat impose
+   * son encre, et la page courante s'y distingue par son poids.
+   */
+  :global(.band-brand) .fil__item span[aria-current] {
+    color: inherit;
+    font-weight: 500;
   }
 </style>

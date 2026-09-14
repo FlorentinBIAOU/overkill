@@ -87,13 +87,17 @@ const liens = [
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-4) var(--space-6);
+    gap: var(--space-2) var(--space-6);
     padding-block: var(--space-3);
   }
 
+  /* Les cibles tactiles du site ne descendent pas sous 44 px (CDC 8.7). Ici
+     c'est du remplissage vertical plutôt qu'une hauteur minimale : l'alignement
+     du carré de marque sur la ligne de base doit survivre. */
   .site-header__brand {
     display: inline-flex;
     align-items: baseline;
+    padding-block: 4px;
     gap: var(--space-2);
     text-decoration: none;
     font-family: var(--font-display);
@@ -116,10 +120,14 @@ const liens = [
     flex: 1 1 auto;
   }
 
+  /* Pas d'interligne entre deux rangées de liens : chaque lien fait déjà
+     44 px de haut, la rangée suivante se pose contre lui. À 360 px les cinq
+     entrées tiennent ainsi sur deux rangées au lieu de trois. */
   .site-header__nav ul {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-4);
+    column-gap: var(--space-3);
+    row-gap: 0;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -130,7 +138,15 @@ const liens = [
     max-width: none;
   }
 
+  /* min-width autant que min-height : « À propos » ne fait que 39 px de
+     large, et une cible se mesure dans les deux sens. Le libellé reste
+     centré, le décalage ne se voit pas. */
   .site-header__nav a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
     text-decoration: none;
     color: var(--muted);
   }
@@ -151,6 +167,9 @@ const liens = [
   }
 
   .site-header__lang {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     font-size: var(--size-small);
     text-decoration: none;
     border: 1px solid var(--rule-strong);
@@ -163,6 +182,11 @@ const liens = [
   }
 
   .site-header__theme {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
     font: inherit;
     line-height: 1;
     padding: var(--space-1) var(--space-2);
@@ -175,5 +199,32 @@ const liens = [
 
   .site-header__theme:hover {
     border-color: var(--ink);
+  }
+
+  /*
+   * Deux rangées jusqu'à 900 px, une seule au-delà.
+   *
+   * Marque, navigation et outils ne tiennent sur une ligne qu'à partir de
+   * 900 px environ — cinq entrées font 500 px à elles seules. En dessous, la
+   * navigation passe sous la ligne de tête et les outils restent avec la
+   * marque : deux rangées au lieu de trois, et le contenu remonte de 60 px
+   * sur un écran de téléphone. Sans ce point de rupture, l'en-tête était plus
+   * haut à 600 px qu'à 360.
+   */
+  .site-header__tools {
+    order: 1;
+  }
+
+  .site-header__nav {
+    order: 2;
+    flex-basis: 100%;
+  }
+
+  @media (min-width: 900px) {
+    .site-header__tools,
+    .site-header__nav {
+      order: 0;
+      flex-basis: auto;
+    }
   }
 </style>

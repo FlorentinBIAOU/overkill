@@ -489,6 +489,7 @@ const hasRegulatory = entry.rungs.some(
   .entry__fold summary {
     display: flex;
     align-items: baseline;
+    min-height: 44px;
     gap: var(--space-4);
     padding-block: var(--space-5);
     cursor: pointer;
@@ -555,6 +556,18 @@ const hasRegulatory = entry.rungs.some(
 
   .entry__meta dd {
     margin: 0;
+  }
+
+  /* Le seul lien de cette liste est une cible à part entière, pas un mot dans
+     une phrase : il tient les 44 px, la ligne se cale dessus. */
+  .entry__meta dd a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .entry__meta div {
+    align-items: center;
   }
 
   .entry__refs :global(.legal-notice) {
