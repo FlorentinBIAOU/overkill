@@ -393,6 +393,76 @@ vocabulaire du document. Le fait tient, l'explication était incomplète.
 | `npm run check` au vert | de bout en bout |
 
 
+
+### Partie 9 — Référencement, responsive, accessibilité
+
+| Fait | Preuve |
+|---|---|
+| Données structurées produites depuis les gabarits | 860 blocs sur 463 pages ; `check-seo` les analyse un par un |
+| Fil d'Ariane visible et balisé, d'une seule source | le même tableau d'étapes rend la navigation et le balisage : ils ne peuvent pas se contredire |
+| Titres et descriptions uniques par langue, canoniques, hreflang | `check-seo` au vert, 144 ms sur la construction à 200 fiches |
+| `check-overflow` étendu aux pages réelles | 22 pages publiques des deux langues, plus les 7 galeries internes, à quatre largeurs |
+| Taille des cibles tactiles vérifiée | 44 px dans les deux sens, mesurés à 360 px ; sept familles de contrôles corrigées |
+| Aucun débordement horizontal | 29 pages × 4 largeurs ; seuls les blocs de code défilent, dans leur conteneur |
+| Tableaux lisibles à 360 px | les quatre tableaux du site regardés à cette largeur : aucun ne défile, tous se replient en colonnes |
+| En-tête resserré sur téléphone | deux rangées au lieu de trois, soixante pixels gagnés ; captures à 360, 600, 899, 900 et 1440 px |
+| Sommaire de fiche replié sous 900 px | capture regardée : le verdict est à quarante pixels du haut au lieu de quatre cent cinquante |
+| `check-a11y` étendu aux six gabarits dans les deux langues | 13 pages, 26 analyses axe, clair et sombre |
+| Cinq contrôles structurels ajoutés | éprouvés sur une page fautive écrite pour eux : les huit règles se déclenchent |
+| Aucune violation sérieuse ni critique, aucun avertissement | y compris les repères de navigation, désormais tous nommés |
+| Ordre de tabulation vérifié au clavier | 55 arrêts sur une fiche, 43 sur le catalogue, 16 sur le questionnaire ; l'ordre suit la page |
+| Composants interactifs annoncés | zone d'essai en région vive, onglets au clavier avec sélection glissante, bouton copier en région d'état, compteur du catalogue et progression du questionnaire en région vive |
+| Contraste de toutes les couleurs, clair et sombre | 27 couples mesurés, tous au-dessus de 4,5:1, y compris les onze où 3:1 suffirait |
+| `npm run check` au vert | de bout en bout |
+
+
+### Défauts trouvés en regardant l'écran, et corrigés — partie 9
+
+1. **Douze marges valaient zéro sans le dire.** `var(--space-5)` et
+   `var(--space-7)` n'existaient pas dans l'échelle : douze déclarations les
+   appelaient, et CSS ignore silencieusement une propriété personnalisée
+   absente. La carte de point de rupture d'un niveau n'avait aucune marge
+   horizontale, les cartes de lien non plus. L'échelle a gagné ses deux pas,
+   et `check-colour-usage` refuse désormais tout token inexistant.
+
+2. **Le fil d'Ariane était illisible sur l'aplat jaune.** La page courante
+   s'écrivait en gris doux : 4,03:1 en clair, 1,59:1 en sombre, où un gris
+   clair se posait sur du jaune. L'audit l'a signalé à l'endroit exact ;
+   l'aplat impose maintenant son encre, et la page courante se distingue par
+   son poids.
+
+3. **L'en-tête était plus haut à 600 px qu'à 360.** Cinq entrées de
+   navigation, une marque et deux outils occupaient trois rangées. La
+   navigation passe sous la ligne de tête et les outils restent avec la
+   marque : deux rangées jusqu'à 900 px, une seule au-delà.
+
+4. **Le sommaire d'une fiche poussait le verdict à quatre cent cinquante
+   pixels du haut** sur un téléphone : dix entrées de 44 px avant la première
+   phrase. Il est servi ouvert et se replie au chargement en dessous de
+   900 px.
+
+5. **La carte du verdict prenait 66 de ses 328 pixels en marges** sur un
+   téléphone, au détriment du code qui défile déjà. Elle se resserre sous
+   600 px : trente-deux pixels de code gagnés.
+
+6. **Les illustrations bégayaient.** Chaque pictogramme de famille et de
+   niveau portait un titre égal au texte écrit juste à côté, et sur l'accueil
+   il était dans le même lien : « Détecter et filtrer, image, Détecter et
+   filtrer, comment repérer… ». L'arbre d'accessibilité le montrait ; le
+   `textContent` non, ce qui explique qu'il ait survécu si longtemps.
+
+7. **Deux repères complémentaires sans nom se suivaient** sur les pages
+   éditoriales. Un lecteur d'écran annonçait deux fois « complémentaire » sans
+   rien dire de plus.
+
+8. **La bascule de thème n'annonçait pas vers quoi elle basculait.** Elle dit
+   maintenant l'action à venir, dans la langue de la page.
+
+9. **Un lien de pagination s'appelait « 2 ».** Hors contexte, cela ne désigne
+   rien. Son nom accessible porte « Page 2 », et contient le libellé visible
+   comme la norme l'exige.
+
+
 ### Défauts trouvés en regardant l'écran, et corrigés — parties 1 et 2
 
 1. **L'adresse de contact s'affichait à l'envers** (`moc.liamg@olfuoaib`) sur
@@ -692,6 +762,71 @@ mesure.** Il n'existe pas hors production, et son absence faisait apparaître un
 erreur 404 en console sur chaque page — donc échouer tous les contrôles qui
 refusent les erreurs de console. Le stub est documenté à l'endroit où il est
 posé.
+
+
+### Partie 9
+
+**Le fil d'Ariane vient d'une seule source.** Un seul tableau d'étapes produit
+la navigation qu'on lit et le balisage que les moteurs lisent. *Écarté :*
+déclarer le balisage à part, qui aurait divergé de la page au premier
+changement d'intitulé.
+
+**Aucune date de publication n'est inventée.** Les fiches portent une date de
+révision, qui est vraie ; le balisage ne déclare donc que `dateModified`.
+*Écarté :* recopier la date de révision en date de publication pour remplir un
+champ que les moteurs apprécient.
+
+**Le plancher des cibles tactiles est 44 px, pas 24.** La norme demande 24 au
+niveau AA ; le site se donne 44, qui est le niveau AAA et la taille d'un doigt.
+Trois exemptions, écrites dans le contrôle : un lien posé dans une phrase, dont
+la cible est la ligne de texte ; une case ou un bouton radio, dont la cible est
+l'étiquette, mesurée à sa place ; un élément qui ne porte `tabindex` que pour
+être défilable au clavier, comme un bloc de code. *Écarté :* agrandir la zone
+cliquable par un pseudo-élément invisible, qui aurait fait se chevaucher des
+cibles voisines — une cible fausse vaut moins qu'une petite cible honnête.
+
+**La hauteur est portée par le contrôle, jamais par son conteneur.** Un lien de
+pied de page mesure 44 px lui-même, au lieu d'être posé dans un élément de
+liste rembourré. C'est la seule façon que la zone visible et la zone cliquable
+coïncident.
+
+**Le sommaire de fiche est servi ouvert, et replié par le script.** Sans
+JavaScript, la page garde exactement le comportement d'avant : un sommaire
+déplié. Avec, le téléphone reçoit un sommaire replié. *Écartés :* le replier
+dans le HTML et forcer son ouverture en CSS au-delà de 900 px, qui dépend de
+`::details-content` et laisserait un sommaire inaccessible sur un navigateur
+qui ne le connaît pas ; le masquer entièrement sous 900 px, qui retirerait un
+moyen de naviguer plutôt que de le ranger.
+
+**Le point de rupture de l'en-tête est 900 px, comme celui du sommaire.** Le
+site n'a qu'un point de rupture, et il n'y en a pas de second ici : les trois
+blocs de l'en-tête ne tiennent sur une ligne qu'à partir de cette largeur.
+
+**Les illustrations sont masquées aux technologies d'assistance, pas
+supprimées.** Le `<title>` reste dans le fichier, pour qui l'ouvre seul et pour
+le contrôle des illustrations. Ce qui change, c'est qu'il n'est plus annoncé
+juste avant le texte qu'il recopie. *Écarté :* retirer les titres des fichiers,
+qui aurait fait échouer le contrôle des illustrations et privé les SVG de leur
+seul nom.
+
+**La bascule de thème annonce l'action, pas l'état.** « Passer au thème
+sombre » se comprend seul ; « thème clair, activé » demande de deviner ce que
+fait le clic. Le libellé ne peut pas être décidé à la construction — le thème
+initial dépend de la préférence du système —, il descend donc en deux attributs
+et le script pose le bon. *Écarté :* `aria-pressed`, qui annonce « enfoncé »
+pour un bouton qui n'est pas un interrupteur.
+
+**Le bouton copier garde son libellé court.** Un nom accessible fixe comme
+« Copier le code » entrerait en conflit avec le libellé visible, qui devient
+« Copié » après le clic et c'est ainsi que la réussite est annoncée. Le bouton
+vit dans une figure dont la barre nomme le fichier : le contexte est là.
+
+**Le focus au chargement du catalogue est conservé.** Le cahier des charges le
+demande à la section 7.3, et le catalogue est un outil de recherche. Le coût est
+réel et assumé : l'en-tête et le lien d'évitement ne sont atteignables qu'en
+tabulation arrière depuis le champ. *Écarté :* retirer le focus, qui aurait
+contredit une décision antérieure sans qu'aucun critère ne l'exige.
+
 
 ---
 

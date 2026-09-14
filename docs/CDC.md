@@ -626,7 +626,8 @@ Ne prends pas d'illustration existante, ne t'inspire d'aucune œuvre identifiabl
 
 Non négociable, vérifié en CI :
 
-- Responsive jusqu'à 360 px de large
+- Responsive jusqu'à 360 px de large, vérifié sur les pages réelles et non sur des maquettes
+- Cibles tactiles de 44 px au moins dans les deux sens — **ajouté au lot 14** : la norme demande 24 px, le site se donne 44. Exemptions : un lien posé dans une phrase, une case ou un bouton radio dont on mesure l'étiquette, un élément qui ne porte `tabindex` que pour être défilable au clavier
 - Focus clavier visible sur tout élément interactif, jamais supprimé
 - `prefers-reduced-motion` respecté, toute animation désactivée
 - Navigation complète au clavier, ordre de tabulation logique
@@ -743,7 +744,9 @@ Sur chaque pull request et chaque push, dans cet ordre. Un échec bloque le dép
 3. `build` — construction du site
 4. `check-links` — aucun lien interne mort, liens externes signalés en avertissement
 5. `check-weight` — budgets de poids respectés (section 12)
-6. `check-a11y` — audit automatisé sur l'accueil, une page de famille et une page de fiche
+6. ~~`check-a11y` — audit automatisé sur l'accueil, une page de famille et une page de fiche~~ — **élargi au lot 14** : les six gabarits dans les deux langues, en clair et en sombre, plus cinq contrôles structurels qu'axe ne fait pas (texte alternatif honnête, libellés de liens non génériques, identifiants uniques, repères de navigation nommés, lien d'évitement en premier)
+7. `check-seo` — **ajouté au lot 14** : titres et descriptions uniques par langue, canonique qui désigne la page, hreflang complet, données structurées analysables
+8. `check-overflow` — **élargi au lot 14** : aucun débordement horizontal et aucune cible tactile sous 44 px, sur les pages publiques des deux langues, à quatre largeurs
 
 ### 11.3 Gabarits
 

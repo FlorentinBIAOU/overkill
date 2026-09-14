@@ -689,3 +689,47 @@ pas en développement, son absence faisait apparaître une erreur 404 en console
 sur chaque page, donc échouer tous les contrôles qui refusent les erreurs de
 console ; et le badge manquait aux pages de démonstration du gabarit, dont les
 fiches factices n'en ont pas.
+
+### Partie 9 — Référencement, responsive, accessibilité
+
+**Terminée.** Les données structurées sont produites depuis les gabarits, à
+partir des données de la page : un article technique par fiche, une page de
+collection sur le catalogue et les familles, le site sur l'accueil, un fil
+d'Ariane au-delà du premier niveau. Le fil vient d'une seule source — le même
+tableau d'étapes rend la navigation qu'on lit et le balisage que les moteurs
+lisent —, et aucune date de publication n'est inventée : les fiches portent une
+date de révision, le balisage ne déclare donc que `dateModified`.
+
+**Trois contrôles ont changé de périmètre.** `check-seo` est né et parcourt
+`dist` : titre manquant ou en double par langue, description idem, canonique
+absente ou qui ne désigne pas la page, hreflang manquant, bloc de données
+structurées illisible. `check-overflow` ne regardait que les sept galeries
+internes ; il couvre les vingt-deux pages publiques des deux langues, et mesure
+en plus la taille des cibles tactiles. `check-a11y` ne voyait que six pages et
+une seule langue pour la moitié d'entre elles ; il couvre les six gabarits dans
+les deux langues, plus la seule fiche qui affiche une image, et ajoute cinq
+contrôles structurels qu'axe ne fait pas.
+
+**Le plancher des cibles tactiles est 44 px**, pas les 24 de la norme AA, avec
+trois exemptions écrites dans le contrôle : un lien dans une phrase, une case à
+cocher dont on mesure l'étiquette, un bloc de code qui ne porte `tabindex` que
+pour défiler au clavier. Sept familles de contrôles étaient en dessous.
+
+**Douze marges valaient zéro sans le dire** : `var(--space-5)` et
+`var(--space-7)` n'existaient pas dans l'échelle, et CSS ignore en silence une
+propriété personnalisée absente. L'échelle a gagné ses deux pas, et
+`check-colour-usage` refuse désormais tout token inexistant — c'est la seule
+façon que cela ne recommence pas.
+
+**Ce que l'automatisation ne voit pas a été regardé à la main** : l'arbre
+d'accessibilité, où les illustrations bégayaient le texte écrit à côté d'elles ;
+l'ordre de tabulation, parcouru au clavier sur une fiche, le catalogue et le
+questionnaire ; l'annonce des composants qui se mettent à jour, zone d'essai
+comprise ; les cent trente libellés de liens du site, lus hors contexte, dont un
+seul — « 2 », dans la pagination — ne disait rien.
+
+**Vingt-sept couples de couleurs sont mesurés** dans les deux thèmes, contre
+treize avant : les quatre couleurs de réponse sur les deux fonds, le vert de
+recommandation en texte et en aplat, le texte et le bouton de l'aplat de marque,
+l'anneau de focus au seuil non textuel. Tous dépassent 4,5:1, y compris les onze
+auxquels 3:1 suffirait.
