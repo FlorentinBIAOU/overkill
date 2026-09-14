@@ -365,10 +365,18 @@ const note = bilingual(tryout.spec.note, lang);
     opacity: 0.45;
   }
 
+  /* La ligne d'état dit ce que le module fait. Sans JavaScript il ne fait
+     rien, et elle ne dit donc rien : c'est la ligne juste en dessous qui
+     explique alors ce qui manque. */
   .tryout__status {
+    display: none;
     margin: 0;
     font-size: 0.83rem;
     color: var(--muted);
+  }
+
+  .tryout[data-enhanced='true'] .tryout__status {
+    display: block;
   }
 
   /* Le mot « recalculé » remplace l'invite une seconde et demie après chaque
@@ -591,7 +599,9 @@ const note = bilingual(tryout.spec.note, lang);
   /* Le nom que l'essai donne au passage, quand il en donne un : posé en
      exposant sur le surlignage, comme regex101 nomme ses groupes. */
   .tryout :global(.tryout__mark[data-label])::after {
-    content: ' ' attr(data-label);
+    /* Espace insécable : le nom du passage ne part pas seul à la ligne
+       suivante quand la colonne est étroite. */
+    content: '\00a0' attr(data-label);
     font-size: 0.66em;
     font-weight: 700;
     letter-spacing: 0.04em;
