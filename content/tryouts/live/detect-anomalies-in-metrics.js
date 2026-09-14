@@ -40,9 +40,23 @@ const T = {
   },
 };
 
+const NOMBRE = /-?\d+(?:[.,]\d+)?/g;
+
 /** La saisie telle qu'on la tape : des nombres séparés par ce qu'on veut. */
 function serie(saisie) {
-  return (saisie.match(/-?\d+(?:[.,]\d+)?/g) ?? []).map((n) => Number(n.replace(',', '.')));
+  return (saisie.match(NOMBRE) ?? []).map((n) => Number(n.replace(',', '.')));
+}
+
+/**
+ * Où chaque nombre de la série se trouve dans la saisie. `scan` désigne les
+ * minutes par leur rang dans la série ; ce rang est le même que celui des
+ * occurrences du nombre dans le texte, puisque la série vient de là.
+ */
+function emplacements(saisie) {
+  return [...saisie.matchAll(NOMBRE)].map((m) => ({
+    start: m.index,
+    end: m.index + m[0].length,
+  }));
 }
 
 export default {
@@ -68,6 +82,9 @@ export default {
       /* Le silence n'est un résultat que si on dit sur quoi il porte : combien
          de minutes ont été jugées, et où la métrique a fini. */
       return {
+        // La série est montrée sans un surlignage : la hausse étalée du
+        // quatrième cas se lit là, et nulle part ailleurs.
+        spans: [],
         verdict: {
           label: t.calme,
           detail: t.calmeDetail(verdicts.length, points[0], points[points.length - 1]),
@@ -75,7 +92,13 @@ export default {
       };
     }
 
+    const places = emplacements(saisie);
     return {
+      /* La minute signalée est surlignée dans la série elle-même : sans cela,
+         il fallait compter les nombres à la main pour savoir laquelle. */
+      spans: anomalies
+        .map((verdict) => places[verdict.index])
+        .filter(Boolean),
       rows: {
         columns: t.colonnes,
         rows: anomalies.map((verdict) => [

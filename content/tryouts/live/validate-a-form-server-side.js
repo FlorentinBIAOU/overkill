@@ -56,18 +56,29 @@ const T = {
 
 const ENTIER = /^-?\d+$/;
 
-/** Une ligne `champ: valeur` par champ, comme un corps de requête décodé. */
+/**
+ * Une ligne `champ: valeur` par champ, comme un corps de requête décodé.
+ *
+ * La position de chaque ligne dans la saisie est gardée au passage : c'est
+ * elle qui permet de surligner, dans le texte tapé, la ligne que l'extrait a
+ * refusée.
+ */
 function lireSaisie(texte) {
   const soumis = {};
+  const lignes = {};
+  let debutLigne = 0;
   for (const ligne of texte.split('\n')) {
     const separateur = ligne.indexOf(':');
-    if (separateur === -1 || ligne.trim() === '') continue;
-    const champ = ligne.slice(0, separateur).trim();
-    // Pas de découpe sur les deux-points suivants : une URL en contient un.
-    const brut = ligne.slice(separateur + 1).trim();
-    soumis[champ] = ENTIER.test(brut) ? Number(brut) : brut;
+    if (separateur !== -1 && ligne.trim() !== '') {
+      const champ = ligne.slice(0, separateur).trim();
+      // Pas de découpe sur les deux-points suivants : une URL en contient un.
+      const brut = ligne.slice(separateur + 1).trim();
+      soumis[champ] = ENTIER.test(brut) ? Number(brut) : brut;
+      lignes[champ] = { start: debutLigne, end: debutLigne + ligne.trimEnd().length };
+    }
+    debutLigne += ligne.length + 1;
   }
-  return soumis;
+  return { soumis, lignes };
 }
 
 export default {
@@ -80,7 +91,7 @@ export default {
 
   run(texte, lang) {
     const t = T[lang];
-    const soumis = lireSaisie(texte);
+    const { soumis, lignes } = lireSaisie(texte);
     const erreurs = validate(soumis, SCHEMA);
 
     const rows = Object.keys(SCHEMA).map((champ) => {
@@ -95,6 +106,12 @@ export default {
 
     const nombre = Object.keys(erreurs).length;
     return {
+      /* Les lignes refusées sont surlignées dans le texte tapé : on voit du
+         premier coup d'œil lesquelles sont passées et lesquelles ont buté,
+         sans lire le tableau ligne à ligne. */
+      spans: Object.keys(erreurs)
+        .map((champ) => lignes[champ])
+        .filter(Boolean),
       verdict:
         nombre === 0
           ? { label: t.valide, detail: t.valideDetail }

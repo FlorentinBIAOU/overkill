@@ -71,6 +71,34 @@ const T = {
   },
 };
 
+/**
+ * Où se trouve, dans l'adresse tapée, ce que l'extrait a rangé dans un champ.
+ *
+ * L'extrait rend les mots d'un champ recollés par un espace ; la ponctuation
+ * de l'adresse est perdue au passage, et deux compléments écrits « Appartement
+ * 12, Bâtiment C » reviennent sans leur virgule. La valeur est donc cherchée
+ * telle quelle d'abord, puis, à défaut, mot par mot du premier au dernier, ce
+ * qui donne l'étendue exacte que le champ occupe dans l'adresse. Quand un mot
+ * ne se retrouve pas, rien n'est surligné : on ne surligne jamais à peu près.
+ */
+function situer(texte, valeur) {
+  if (!valeur) return null;
+  const direct = texte.indexOf(valeur);
+  if (direct !== -1) return { start: direct, end: direct + valeur.length };
+
+  let curseur = 0;
+  let debut = -1;
+  let fin = -1;
+  for (const mot of tokenise(valeur)) {
+    const place = texte.indexOf(mot, curseur);
+    if (place === -1) return null;
+    if (debut === -1) debut = place;
+    fin = place + mot.length;
+    curseur = fin;
+  }
+  return debut === -1 ? null : { start: debut, end: fin };
+}
+
 export default {
   level: 'N1',
 
@@ -82,7 +110,18 @@ export default {
   run(adresse, lang) {
     const t = T[lang];
     const champs = parse(MODELE, adresse);
+
+    /* Chaque morceau rangé dans un champ est surligné là où il se trouve dans
+       l'adresse, et porte le nom du champ : on lit le découpage sur l'adresse
+       elle-même, sans faire l'aller-retour avec le tableau. */
+    const spans = [];
+    for (const [cle, intitule] of CHAMPS) {
+      const ou = situer(adresse, champs[cle]);
+      if (ou) spans.push({ ...ou, label: intitule[lang] });
+    }
+
     return {
+      spans,
       rows: {
         columns: t.colonnes,
         rows: CHAMPS.map(([cle, intitule]) => [

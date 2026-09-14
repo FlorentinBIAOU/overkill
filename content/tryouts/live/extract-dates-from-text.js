@@ -38,6 +38,25 @@ function lisible(date, lang) {
   return new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(date);
 }
 
+/**
+ * Où, dans le texte donné, se trouve chacun des passages que l'extrait a
+ * retenus. Les positions ne sont pas déduites du texte, elles sont cherchées :
+ * `extractDates` rend le passage tel qu'il était écrit, et on avance un
+ * curseur pour retrouver les occurrences dans l'ordre, sans jamais relire deux
+ * fois le même morceau.
+ */
+function positions(texte, retenus) {
+  const spans = [];
+  let curseur = 0;
+  for (const { text } of retenus) {
+    const debut = texte.indexOf(text, curseur);
+    if (debut === -1) continue;
+    spans.push({ start: debut, end: debut + text.length });
+    curseur = debut + text.length;
+  }
+  return spans;
+}
+
 export default {
   level: 'N0',
 
@@ -54,7 +73,9 @@ export default {
     const restant = extractDates(texte, false);
 
     if (jourDabord.length === 0 && restant.length === 0) {
-      return { verdict: { label: t.rien, detail: t.rienDetail } };
+      // Le texte est montré sans un surlignage : c'est ce qu'il faut voir
+      // quand l'extrait ne trouve rien, et l'échec est silencieux.
+      return { spans: [], verdict: { label: t.rien, detail: t.rienDetail } };
     }
 
     const rows = jourDabord.map(({ text, date }) => {
@@ -71,6 +92,9 @@ export default {
     });
 
     return {
+      // Les passages retenus sont surlignés dans le texte donné : on voit du
+      // même coup d'œil ce que l'extrait a attrapé et ce qu'il a laissé.
+      spans: positions(texte, jourDabord),
       rows: { columns: [t.ecrit, t.jour, t.mois], rows },
       note: t.trouvees(jourDabord.length),
     };

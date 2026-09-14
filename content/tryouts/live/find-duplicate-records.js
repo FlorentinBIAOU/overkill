@@ -62,6 +62,23 @@ function lireFiches(texte) {
     });
 }
 
+/**
+ * Où chaque fiche se trouve dans le texte tapé, dans l'ordre où `lireFiches`
+ * les rend — les lignes vides y sont sautées de la même façon, sans quoi le
+ * surlignage désignerait la mauvaise ligne.
+ */
+function lignesDesFiches(texte) {
+  const places = [];
+  let debut = 0;
+  for (const ligne of texte.split('\n')) {
+    if (ligne.trim() !== '') {
+      places.push({ start: debut, end: debut + ligne.trimEnd().length });
+    }
+    debut += ligne.length + 1;
+  }
+  return places;
+}
+
 const etiquette = ({ name, postcode }) => `${name}, ${postcode}`;
 
 export default {
@@ -109,11 +126,20 @@ export default {
         ? t.jamais(etiquette(manquee.a), etiquette(manquee.b), nombre.format(manquee.score))
         : '');
 
+    /* Les lignes que l'extrait a appariées sont surlignées dans le texte
+       tapé. C'est là que se lit ce que la fiche raconte : les lignes laissées
+       en clair sont celles que le blocage n'a jamais mises côte à côte. */
+    const places = lignesDesFiches(texte);
+    const retenues = new Set(paires.flatMap(([i, j]) => [i, j]));
+
     if (paires.length === 0) {
-      return { verdict: { label: t.aucun, detail: t.aucunDetail }, note };
+      // Aucune paire : le texte est montré sans un seul surlignage, ce qui est
+      // le résultat, et non l'absence de résultat.
+      return { spans: [], verdict: { label: t.aucun, detail: t.aucunDetail }, note };
     }
 
     return {
+      spans: [...retenues].sort((a, b) => a - b).map((i) => places[i]).filter(Boolean),
       rows: {
         columns: [t.ficheA, t.ficheB, t.score(nombre.format(SEUIL))],
         rows: paires.map(([i, j, score]) => [
