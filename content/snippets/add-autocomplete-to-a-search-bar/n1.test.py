@@ -1,4 +1,10 @@
-from n1 import learn, rerank
+import random
+import time
+
+import pytest
+
+import n0
+from n1 import learn, normalise, rerank
 
 # A slice of a click log: what was typed, and which suggestion was chosen.
 # The kind of file a search bar already writes without being asked.
@@ -14,19 +20,74 @@ CLICKS = (
 # ordered by how often the term is searched.
 BY_FREQUENCY = ["chaussures de running", "chaussettes de sport"]
 
+# The catalogue of the N0 tests, to chain both rungs as the entry describes.
+CATALOGUE = [
+    ("chaussures de running", 900),
+    ("chaussettes de sport", 400),
+    ("étagère murale", 300),
+    ("chemise en lin", 250),
+    ("écharpe en laine", 120),
+    ("échelle télescopique", 60),
+]
+
 
 def make_model():
     return learn(CLICKS)
 
 
-def test_a_clicked_term_moves_above_a_more_searched_one():
+def chain(model, prefix):
+    """N0 retrieves, N1 reorders: the pipeline the verdict recommends."""
+    return rerank(model, prefix, n0.suggest(n0.build(CATALOGUE), prefix))
+
+
+# ---------------------------------------------------------------------------
+# Point de rupture
+# ---------------------------------------------------------------------------
+
+
+def test_point_de_rupture_echarpe_en_laine_a_un_clic_sous_echa_et_rcharpe_ne_lui_donne_rien_a_classer():
+    """
+    breaking_point : « « écharpe en laine » a un clic à son actif sous le
+    préfixe « echa », et « rcharpe » ne lui donne toujours rien à classer ».
+    Le témoin : sous « echa », la chaîne N0 puis N1 remonte bien le terme.
+    """
+    model = make_model()
+    assert model[("echa", "écharpe en laine")] == 1
+    assert chain(model, "echa") == ["écharpe en laine"]
+    assert chain(model, "rcharpe") == []
+
+
+def test_point_de_rupture_ce_niveau_reordonne_une_liste_il_ne_l_allonge_pas():
+    """
+    breaking_point : « Ce niveau réordonne une liste, il ne l'allonge pas ».
+    Même quand le journal a vu des clics sous la faute de frappe elle-même, le
+    terme cliqué n'apparaît pas s'il n'est pas dans les candidats.
+
+    Le test d'origine, rerank(model, "rcharpe", []) == [], ne démontrait rien à
+    lui seul : une liste vide en entrée donne une liste vide pour n'importe quel
+    classement. Il est conservé ici, complété.
+    """
+    model = learn(CLICKS + [("rcharpe", "écharpe en laine")] * 50)
+    assert rerank(model, "rcharpe", []) == []
+    assert rerank(model, "vhauss", []) == []
+    assert rerank(model, "rcharpe", ["échelle télescopique"]) == ["échelle télescopique"]
+
+
+# ---------------------------------------------------------------------------
+# Autres affirmations du niveau
+# ---------------------------------------------------------------------------
+
+
+def test_un_terme_clique_passe_devant_un_terme_plus_cherche():
+    """name : « Réordonnancement par comptage des clics passés »."""
     assert rerank(make_model(), "cha", BY_FREQUENCY) == [
         "chaussettes de sport",
         "chaussures de running",
     ]
 
 
-def test_a_prefix_never_typed_falls_back_on_a_shorter_one():
+def test_un_prefixe_jamais_frappe_se_replie_sur_un_prefixe_plus_court():
+    """docstring de _evidence : « Backing off matters »."""
     # "chaus" is absent from the log; "chau" is not, and it carries the clicks.
     assert rerank(make_model(), "chaus", BY_FREQUENCY) == [
         "chaussettes de sport",
@@ -34,7 +95,29 @@ def test_a_prefix_never_typed_falls_back_on_a_shorter_one():
     ]
 
 
-def test_an_empty_prefix_ranks_on_the_whole_log():
+def test_plus_le_prefixe_commun_est_long_plus_le_clic_pese():
+    """docstring de _evidence : « The longer the matching prefix, the more specific the evidence, hence the weight »."""
+    model = learn([("c", "chemise en lin")] + [("cha", "chaussettes de sport")])
+    assert rerank(model, "cha", ["chemise en lin", "chaussettes de sport"]) == [
+        "chaussettes de sport",
+        "chemise en lin",
+    ]
+    # Witness: at "c", both clicks sit on the same prefix length, and order stands.
+    assert rerank(model, "c", ["chemise en lin", "chaussettes de sport"]) == [
+        "chemise en lin",
+        "chaussettes de sport",
+    ]
+
+
+def test_un_clic_renseigne_tous_les_prefixes_de_ce_qui_a_ete_frappe():
+    """docstring de learn : « One click teaches something about every prefix of what was typed »."""
+    model = learn([("chau", "chaussettes de sport")])
+    for prefix in ("", "c", "ch", "cha", "chau"):
+        assert model[(prefix, "chaussettes de sport")] == 1
+    assert ("chaus", "chaussettes de sport") not in model
+
+
+def test_un_prefixe_vide_classe_sur_tout_le_journal():
     candidates = ["chaussures de running", "chemise en lin", "chaussettes de sport"]
     assert rerank(make_model(), "", candidates) == [
         "chaussettes de sport",
@@ -43,7 +126,8 @@ def test_an_empty_prefix_ranks_on_the_whole_log():
     ]
 
 
-def test_ignores_accents_and_case_like_the_prefix_tree():
+def test_accents_et_casse_sont_ignores_comme_dans_l_arbre_de_prefixes():
+    """commentaire de normalise : « Same folding as the prefix tree, so both rungs agree »."""
     model = make_model()
     candidates = ["échelle télescopique", "écharpe en laine"]
     assert rerank(model, "echa", candidates) == [
@@ -51,31 +135,98 @@ def test_ignores_accents_and_case_like_the_prefix_tree():
         "échelle télescopique",
     ]
     assert rerank(model, "ÉCHA", candidates) == rerank(model, "echa", candidates)
+    for text in ("Écharpe", "Straße", "e\u0301CHA", "🎁 Coffret"):
+        assert normalise(text) == n0.normalise(text)
 
 
-def test_honours_the_limit():
+def test_la_limite_est_respectee():
     assert rerank(make_model(), "cha", BY_FREQUENCY, limit=1) == ["chaussettes de sport"]
 
 
-def test_terms_nobody_ever_clicked_keep_their_incoming_order():
-    # The cold start: on a term with no click behind it the model stays silent
-    # and the frequency ordering stands.
+def test_les_termes_que_personne_n_a_cliques_gardent_leur_ordre_d_arrivee():
+    """docstring de rerank : « A term nobody ever clicked keeps that order »."""
     untouched = ["chaussures de running", "échelle télescopique"]
     assert rerank(make_model(), "cha", untouched) == untouched
 
 
-def test_an_empty_log_changes_nothing():
+def test_un_journal_vide_ne_change_rien():
+    """docstring de rerank : « safe to ship on a log that is still thin »."""
     assert rerank(learn([]), "cha", BY_FREQUENCY) == BY_FREQUENCY
 
 
-def test_breaking_point_reranking_cannot_rescue_what_was_never_retrieved():
-    """
-    This rung reorders a list; it does not lengthen one. The typo on the first
-    character that empties the prefix tree, the breaking point claimed on the
-    entry, empties this rung too, however many clicks the term has behind it.
-    """
+def test_la_requete_est_comptee_telle_quelle_sans_filtre():
+    """risks.regulatory : « rien dans l'approche ne la filtre avant de la compter »."""
+    model = learn([("jean.dupont@exemple.fr", "chemise en lin")])
+    assert model[("jean.dupont@exemple.fr", "chemise en lin")] == 1
+
+
+def test_deux_apprentissages_du_meme_journal_rendent_le_meme_classement():
+    """risks.deterministic: true, quel que soit l'ordre du journal."""
+    melange = list(CLICKS)
+    random.Random(3).shuffle(melange)
+    candidates = ["chaussures de running", "chemise en lin", "chaussettes de sport"]
+    assert rerank(learn(melange), "ch", candidates) == rerank(make_model(), "ch", candidates)
+
+
+# ---------------------------------------------------------------------------
+# Cas de production
+# ---------------------------------------------------------------------------
+
+
+def test_production_journal_vide_candidats_vides_prefixe_vide():
+    assert rerank(learn([]), "", []) == []
+    assert learn([]) == {}
+
+
+def test_production_cent_mille_clics_et_mille_candidats_dans_une_borne_large():
+    alea = random.Random(1)
+    lettres = "abcdefghijklmnopqrstuvwxyz "
+    termes = ["".join(alea.choice(lettres) for _ in range(20)) for _ in range(100_000)]
+    debut = time.perf_counter()
+    model = learn((terme[:8], terme) for terme in termes)
+    assert len(rerank(model, "abcd", termes[:1000], limit=10)) == 10
+    assert time.perf_counter() - debut < 30
+
+
+def test_production_une_requete_collee_de_10000_caracteres_termine_dans_une_borne_large():
+    debut = time.perf_counter()
+    model = learn([("q" * 10_000, "chemise en lin")])
+    assert rerank(model, "q" * 10_000, ["x"] * 9 + ["chemise en lin"])[0] == "chemise en lin"
+    assert time.perf_counter() - debut < 10
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "DÉFAUT : learn garde une clé par préfixe, chacune copie du préfixe : une "
+        "seule requête de 10 000 caractères laisse 50 005 000 caractères de clés "
+        "dans le modèle, rien ne borne la longueur comptée"
+    ),
+)
+def test_defaut_une_requete_collee_de_10000_caracteres_laisse_cinquante_millions_de_caracteres_de_cles():
+    model = learn([("q" * 10_000, "chemise en lin")])
+    assert sum(len(prefix) for prefix, _ in model) <= 100 * 10_000
+
+
+def test_production_une_saisie_en_accents_decomposes_retrouve_les_clics_du_terme_compose():
+    model = learn([("e\u0301cha", "écharpe en laine")])
+    assert rerank(model, "écha", ["échelle télescopique", "écharpe en laine"]) == [
+        "écharpe en laine",
+        "échelle télescopique",
+    ]
+
+
+def test_production_une_tabulation_dans_la_saisie_ne_cree_pas_de_clic_fantome():
+    """Une saisie « a<TAB>b » cliquée sur « c » ne donne aucun clic à « b<TAB>c » sous « a »."""
+    model = learn([("a\tb", "c")])
+    assert rerank(model, "a", ["x", "b\tc"]) == ["x", "b\tc"]
+
+
+def test_production_limite_a_zero_et_au_nombre_exact_de_candidats():
     model = make_model()
-    # A click is on record for this term, and the prefix tree still hands over nothing.
-    assert model[("echa", "écharpe en laine")] == 1
-    assert rerank(model, "rcharpe", []) == []
-    assert rerank(model, "vhauss", []) == []
+    assert rerank(model, "cha", BY_FREQUENCY, limit=0) == []
+    assert rerank(model, "cha", BY_FREQUENCY, limit=2) == [
+        "chaussettes de sport",
+        "chaussures de running",
+    ]
+    assert len(rerank(model, "cha", BY_FREQUENCY, limit=3)) == 2
