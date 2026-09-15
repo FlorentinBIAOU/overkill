@@ -1,95 +1,226 @@
 """
-These tests inject a local double instead of loading the real model.
+Ces tests injectent un double local au lieu de charger le vrai modèle.
 
-What they prove: the batch is sent in one call, the scores are decoded into
-the right decision, the thresholds are honoured, and an answer the caller
-cannot act on sends the comment to a human rather than publishing it.
-
-What they do not prove: that the model scores comments well. That is why this
-snippet is declared `verification: stubbed` on the entry, and why the page
-says so next to the code.
+Ce qu'ils prouvent : le lot part en un appel, les notes deviennent la bonne
+décision, les seuils sont respectés, une réponse inexploitable part chez un
+humain. Ce qu'ils ne prouvent pas : que le modèle note bien les commentaires.
 """
+
+import json
+import re
+import time
+from pathlib import Path
 
 import pytest
 
+import n2
 from _harness.fake_model import FakeClassifier
-from n2 import ModerationUnavailable, moderate
+from n2 import DEFAULT_THRESHOLDS, MODEL_NAME, ModerationUnavailable, ToxicityModel, moderate
 
 ATTACK = "get off this forum you blorptard"
 BORDERLINE = "that was a spectacularly bad take, honestly"
 CALM = "the diagram is much clearer than the text"
+DOXXING = "he lives at the corner of rue des Lilas by the way, go and say hello"
 
-# The labels are the ones a toxicity model actually exposes; the scores are
-# ours, so the test exercises our thresholds and not the model's opinions.
+# Les notes sont les nôtres : le test exerce nos seuils, pas l'avis du modèle.
 SCORES = {
     ATTACK: {"toxicity": 0.96, "insult": 0.91, "threat": 0.04},
     BORDERLINE: {"toxicity": 0.71, "insult": 0.35, "threat": 0.01},
     CALM: {"toxicity": 0.02, "insult": 0.01, "threat": 0.0},
 }
 
+ESSAI = Path(__file__).parents[2] / "tryouts" / "frozen" / "moderate-user-comments.js"
 
-def test_routes_each_comment_to_its_decision():
-    classifier = FakeClassifier(SCORES)
-    actions = [d["action"] for d in moderate([ATTACK, BORDERLINE, CALM], classifier)]
+
+def essai_cases():
+    """(saisie anglaise, notes simulées, seuils simulés) de chaque cas de l'essai figé."""
+    source = ESSAI.read_text(encoding="utf-8")
+    cases = []
+    for block in source.split("label: {")[1:]:
+        english = re.search(r"en: '([^']*)',\s*\},\s*simulate", block).group(1)
+        scores = re.search(r"scores: (\{[^}]*\})", block).group(1)
+        thresholds = re.search(r"thresholds: (\{[^}]*\})", block)
+        as_json = lambda text: json.loads(re.sub(r"(\w+):", r'"\1":', text))
+        cases.append((english, as_json(scores), as_json(thresholds.group(1)) if thresholds else None))
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Point de rupture (plomberie seulement)
+# ---------------------------------------------------------------------------
+
+
+def test_point_de_rupture_un_prejudice_sans_etiquette_note_bas_partout_part_en_publication():
+    """
+    « le test lui soumet « he lives at the corner of rue des Lilas by the way, go and
+    say hello », qui n'est aucune des trois, ressort bas partout et part en publication ».
+    Les notes basses sont écrites par le test ; ce qui est démontré, c'est ce que le code en fait.
+    """
+    classifier = FakeClassifier({DOXXING: {"toxicity": 0.08, "insult": 0.03, "threat": 0.06}})
+    assert moderate([DOXXING], classifier) == [{"action": "allow", "label": "toxicity", "score": 0.08}]
+    # Témoin : la même plomberie bloque ce qui est noté haut.
+    assert moderate([ATTACK], FakeClassifier(SCORES))[0]["action"] == "block"
+
+
+# ---------------------------------------------------------------------------
+# Autres affirmations du niveau
+# ---------------------------------------------------------------------------
+
+
+def test_oriente_chaque_commentaire_vers_sa_decision():
+    actions = [d["action"] for d in moderate([ATTACK, BORDERLINE, CALM], FakeClassifier(SCORES))]
     assert actions == ["block", "review", "allow"]
 
 
-def test_keeps_the_strongest_label_so_a_reviewer_knows_why():
-    classifier = FakeClassifier(SCORES)
-    decision = moderate([ATTACK], classifier)[0]
-    assert decision["label"] == "toxicity"
-    assert decision["score"] == 0.96
+def test_garde_l_etiquette_la_plus_forte_pour_que_le_relecteur_sache_pourquoi():
+    assert moderate([ATTACK], FakeClassifier(SCORES))[0] == {"action": "block", "label": "toxicity", "score": 0.96}
 
 
-def test_sends_the_whole_batch_in_one_call():
+def test_deux_seuils_une_bande_pour_un_humain():
+    """« Two thresholds, not one » ; valeurs aux limites : 0,9 bloque, 0,6 part en relecture, juste en dessous publie."""
+    assert DEFAULT_THRESHOLDS == {"block": 0.9, "review": 0.6}
+    rows = {"a": {"toxicity": 0.9}, "b": {"toxicity": 0.8999}, "c": {"toxicity": 0.6}, "d": {"toxicity": 0.5999}}
+    assert [d["action"] for d in moderate(list(rows), FakeClassifier(rows))] == ["block", "review", "review", "allow"]
+
+
+def test_une_decision_de_blocage_est_prise_sans_humain():
+    """regulatory : « Décision de modération prise sans intervention humaine dès qu'un commentaire franchit le seuil de blocage »."""
+    assert moderate([ATTACK], FakeClassifier(SCORES))[0]["action"] == "block"
+
+
+def test_le_lot_entier_part_en_un_appel():
     classifier = FakeClassifier(SCORES)
     moderate([ATTACK, BORDERLINE, CALM], classifier)
     assert classifier.calls == [[ATTACK, BORDERLINE, CALM]]
 
 
-def test_thresholds_are_the_callers_to_set():
-    classifier = FakeClassifier(SCORES)
-    strict = moderate([BORDERLINE], classifier, {"block": 0.7, "review": 0.3})[0]
-    lenient = moderate([BORDERLINE], classifier, {"block": 0.99, "review": 0.95})[0]
-    assert strict["action"] == "block"
-    assert lenient["action"] == "allow"
+def test_les_seuils_sont_a_l_appelant():
+    strict = moderate([BORDERLINE], FakeClassifier(SCORES), {"block": 0.7, "review": 0.3})[0]
+    lenient = moderate([BORDERLINE], FakeClassifier(SCORES), {"block": 0.99, "review": 0.95})[0]
+    assert strict["action"] == "block" and lenient["action"] == "allow"
 
 
-def test_an_unusable_row_goes_to_a_human_rather_than_through():
-    # An empty mapping, and a score that is not a number: two shapes of the
-    # same failure. Neither may end in "allow".
-    classifier = FakeClassifier({ATTACK: {}, BORDERLINE: {"toxicity": "very"}})
-    decisions = moderate([ATTACK, BORDERLINE], classifier)
-    assert [d["action"] for d in decisions] == ["review", "review"]
-    assert decisions[0]["score"] is None
+def test_une_ligne_inexploitable_part_chez_un_humain_plutot_que_publiee():
+    """« Falling back to "allow" would […] mean that a model failure silently publishes everything. »"""
+    rows = {"a": {}, "b": {"toxicity": "very"}, "c": None, "d": {"toxicity": float("nan")},
+            "e": {"toxicity": True}, "f": {"toxicity": 1.5}, "g": {"toxicity": -0.1}}
+    decisions = moderate(list(rows), FakeClassifier(rows))
+    assert decisions == [{"action": "review", "label": None, "score": None}] * len(rows)
 
 
-def test_a_short_answer_raises_rather_than_misaligning_the_comments():
-    class TruncatingClassifier:
+def test_une_reponse_de_mauvaise_longueur_leve_plutot_que_de_decaler_les_commentaires():
+    class Short:
         def predict(self, comments):
             return [{"toxicity": 0.99}]
 
-    with pytest.raises(ModerationUnavailable):
-        moderate([ATTACK, CALM], TruncatingClassifier())
+    class Long:
+        def predict(self, comments):
+            return [{"toxicity": 0.1}] * (len(comments) + 1)
+
+    for classifier in (Short(), Long()):
+        with pytest.raises(ModerationUnavailable):
+            moderate([ATTACK, CALM], classifier)
 
 
-def test_an_empty_batch_never_reaches_the_model():
+@pytest.mark.xfail(
+    strict=True,
+    reason="INFIRMÉ : le test existant s'appelle « an empty batch never reaches the model » ; le modèle est appelé avec []",
+)
+def test_un_lot_vide_n_atteint_jamais_le_modele():
     classifier = FakeClassifier(SCORES)
     assert moderate([], classifier) == []
+    assert classifier.calls == []
 
 
-def test_breaking_point_the_label_list_is_the_policy_you_get():
-    """
-    The breaking point of this rung: you inherit someone else's taxonomy.
+def test_le_classifieur_est_injecte_et_par_defaut_c_est_le_vrai():
+    """« `classifier` is injected so this can be tested without downloading the weights. »"""
+    with pytest.raises(ModuleNotFoundError, match="transformers"):
+        moderate([CALM])
+    assert MODEL_NAME == "unitary/unbiased-toxic-roberta"
 
-    The model scores toxicity, insult and threat. A comment that publishes
-    someone's home address, or that quietly organises a pile-on, is not any of
-    those, so it scores low everywhere and is allowed. Nothing in the code is
-    wrong; the harm simply has no label.
 
-    Widening the policy here means fine-tuning and a labelled corpus of your
-    own, which is the cost N2 is usually assumed not to have.
-    """
-    doxxing = "he lives at the corner of rue des Lilas by the way, go and say hello"
-    classifier = FakeClassifier({doxxing: {"toxicity": 0.08, "insult": 0.03, "threat": 0.06}})
-    assert moderate([doxxing], classifier)[0]["action"] == "allow"
+def test_predict_convertit_la_sortie_du_pipeline_une_ligne_par_commentaire():
+    """ToxicityModel.predict : « One label-to-score mapping per comment, in the order given » ; forme de `pipeline(..., top_k=None)`."""
+    model = object.__new__(ToxicityModel)
+    model._pipe = lambda comments: [[{"label": "toxicity", "score": 0.9}, {"label": "insult", "score": 0.1}] for _ in comments]
+    assert model.predict([ATTACK, CALM]) == [{"toxicity": 0.9, "insult": 0.1}] * 2
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="INFIRMÉ : la docstring dit « The real model, loaded once and kept in memory for the process » ; "
+    "`moderate` sans classifieur construit un ToxicityModel, donc recharge le pipeline, à chaque appel",
+)
+def test_le_vrai_modele_est_charge_une_fois_pour_le_processus(monkeypatch):
+    loads = []
+
+    class Counting:
+        def __init__(self):
+            loads.append(1)
+
+        def predict(self, comments):
+            return [{"toxicity": 0.0}] * len(comments)
+
+    monkeypatch.setattr(n2, "ToxicityModel", Counting)
+    moderate([CALM])
+    moderate([CALM])
+    assert len(loads) == 1
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="DÉFAUT : la décision prend le maximum sur toutes les étiquettes ; le modèle par défaut (unbiased-toxic-roberta) "
+    "rend aussi des étiquettes de mention d'identité (muslim, female…), et un commentaire qui mentionne une identité est bloqué",
+)
+def test_defaut_une_etiquette_de_mention_d_identite_ne_bloque_pas_un_commentaire():
+    comment = "as a muslim woman i found the second section very useful"
+    row = {"toxicity": 0.01, "severe_toxicity": 0.0, "obscene": 0.0, "identity_attack": 0.01, "insult": 0.0,
+           "threat": 0.0, "sexual_explicit": 0.0, "male": 0.02, "female": 0.91, "muslim": 0.95}
+    assert moderate([comment], FakeClassifier({comment: row}))[0]["action"] == "allow"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="DÉFAUT : une ligne d'une autre forme ({'label': …, 'score': …}) devient une décision étiquetée « score »",
+)
+def test_defaut_une_ligne_d_une_autre_forme_ne_devient_pas_une_decision():
+    rows = {ATTACK: {"label": "toxicity", "score": 0.95}}
+    assert moderate([ATTACK], FakeClassifier(rows))[0]["action"] == "review"
+
+
+def test_l_essai_fige_six_cas():
+    """Essai : six cas ; la note la plus forte, les seuils, le cas inexploitable, et l'adresse publiée."""
+    cases = essai_cases()
+    assert len(cases) == 6
+    decisions = []
+    for text, scores, thresholds in cases:
+        decisions.append(moderate([text], FakeClassifier({text: scores}), thresholds)[0])
+    assert [d["action"] for d in decisions] == ["block", "allow", "review", "block", "review", "allow"]
+    assert decisions[0]["label"] == "toxicity" and decisions[0]["score"] == 0.96
+    assert decisions[4]["label"] is None
+
+
+# ---------------------------------------------------------------------------
+# Cas de production
+# ---------------------------------------------------------------------------
+
+
+def test_production_mille_commentaires_en_un_lot():
+    comments = [f"comment {i}" for i in range(1000)]
+    classifier = FakeClassifier({}, default={"toxicity": 0.1})
+    start = time.perf_counter()
+    decisions = moderate(comments, classifier)
+    assert time.perf_counter() - start < 2
+    assert len(decisions) == 1000 and len(classifier.calls) == 1
+
+
+def test_production_egalite_entre_etiquettes_la_premiere_gagne():
+    rows = {"x": {"insult": 0.7, "toxicity": 0.7}}
+    assert moderate(["x"], FakeClassifier(rows))[0]["label"] == "insult"
+
+
+def test_production_commentaires_vides_nfd_emoji_passent_au_classifieur_tels_quels():
+    comments = ["", "quel flarnwît", "🙂", "﻿hello"]
+    classifier = FakeClassifier({}, default={"toxicity": 0.2})
+    assert [d["action"] for d in moderate(comments, classifier)] == ["allow"] * 4
+    assert classifier.calls == [comments]
