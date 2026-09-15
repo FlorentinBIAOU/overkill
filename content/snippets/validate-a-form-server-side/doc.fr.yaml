@@ -14,8 +14,11 @@ n0.py: |
   Trois décisions portent la conception.
 
   D'abord, le schéma est une donnée, pas du code. Il peut être écrit à côté du
-  formulaire, lu par quelqu'un qui n'écrit pas de Python, et comparé au schéma
-  JavaScript qui garde le même formulaire dans le navigateur.
+  formulaire, lu par quelqu'un qui n'écrit pas de Python, et confié à la
+  version JavaScript qui garde le même formulaire dans le navigateur. Un motif
+  n'a le même sens des deux côtés qu'avec des classes explicites : les
+  raccourcis d'un chiffre et d'un caractère de mot dépassent l'ASCII en Python
+  et s'y arrêtent en JavaScript ; écrivez donc [0-9] et [A-Za-z].
 
   Ensuite, la réponse associe un nom de champ à un message, jamais un booléen.
   Un formulaire qui répond « non » sans dire quel champ est en faute envoie
@@ -38,8 +41,11 @@ n0.js: |
   Trois décisions portent la conception.
 
   D'abord, le schéma est une donnée, pas du code. Il peut être écrit à côté du
-  formulaire, lu par quelqu'un qui n'écrit pas de JavaScript, et comparé au
-  schéma Python qui garde le même formulaire de l'autre côté.
+  formulaire, lu par quelqu'un qui n'écrit pas de JavaScript, et confié à la
+  version Python qui garde le même formulaire de l'autre côté. Un motif n'a le
+  même sens des deux côtés qu'avec des classes explicites : les raccourcis d'un
+  chiffre et d'un caractère de mot dépassent l'ASCII en Python et s'y arrêtent
+  en JavaScript ; écrivez donc [0-9] et [A-Za-z].
 
   Ensuite, la réponse associe un nom de champ à un message, jamais un booléen.
   Un formulaire qui répond « non » sans dire quel champ est en faute envoie

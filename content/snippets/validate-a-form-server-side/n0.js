@@ -8,8 +8,11 @@
  * Three decisions carry the design.
  *
  * First, the schema is data, not code. It can be written next to the form, read
- * by someone who does not write JavaScript, and compared with the Python one
- * that guards the same form on the other side.
+ * by someone who does not write JavaScript, and handed to the Python version
+ * that guards the same form on the other side. A pattern means the same thing
+ * on both sides only with explicit classes: the shorthands for a digit and a
+ * word character reach beyond ASCII in Python and stop at it in JavaScript, so
+ * write [0-9] and [A-Za-z].
  *
  * Second, the answer is a mapping of field name to message, never a boolean. A
  * form that answers "no" without saying which field is wrong sends the user
@@ -32,11 +35,15 @@ export function check(value, rule) {
   const kind = rule.type ?? 'string';
   if (!TYPES[kind](value)) return `must be of type ${kind}`;
   // For a string the bounds read as a length; for a number, as a value.
-  const [size, unit] = kind === 'string' ? [value.length, ' characters'] : [value, ''];
+  // The length counts code points once composed (NFC), as the Python version
+  // does: "é" counts one however it was typed, and an emoji made of several
+  // code points, such as a flag, still counts several.
+  const text = String(value).normalize('NFC');
+  const [size, unit] = kind === 'string' ? [[...text].length, ' characters'] : [value, ''];
   if (rule.min !== undefined && size < rule.min) return `must be at least ${rule.min}${unit}`;
   if (rule.max !== undefined && size > rule.max) return `must be at most ${rule.max}${unit}`;
   // Anchored, so a pattern matches the whole field and not a fragment of it.
-  if (rule.pattern !== undefined && !new RegExp(`^(?:${rule.pattern})$`).test(value)) {
+  if (rule.pattern !== undefined && !new RegExp(`^(?:${rule.pattern})$`).test(text)) {
     return rule.message ?? 'is not in the expected format';
   }
   return null;
@@ -50,7 +57,12 @@ export function check(value, rule) {
  * for a field the user left alone.
  */
 export function validate(data, schema) {
+  // A field the schema does not declare is refused, not ignored: whoever
+  // stores the submission would otherwise store it too.
   const errors = {};
+  for (const field of Object.keys(data)) {
+    if (!Object.hasOwn(schema, field)) errors[field] = 'is not a field of this form';
+  }
   for (const [field, rule] of Object.entries(schema)) {
     const value = data[field];
     if (value === undefined || value === null || value === '') {

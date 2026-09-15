@@ -207,11 +207,6 @@ def test_production_encodage_espaces_insecables_et_casse():
     assert validate({**VALID, "display_name": "﻿Ada 🙂"}, SCHEMA) == {}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : « at least N characters » compte des points de code : « é » décomposé (NFD) en vaut deux, et un "
-    "pseudonyme de 16 lettres accentuées est refusé à 30 « characters » selon la forme Unicode envoyée par le navigateur",
-)
 def test_defaut_les_bornes_comptent_des_caracteres_percus():
     assert validate({**VALID, "display_name": unicodedata.normalize("NFD", "é" * 16)}, SCHEMA) == {}
     assert validate({**VALID, "display_name": "🙂"}, SCHEMA) == {"display_name": "must be at least 2 characters"}
@@ -227,11 +222,6 @@ def test_defaut_un_meme_motif_a_le_meme_sens_cote_navigateur_et_cote_serveur():
     assert check("Zoé", {"pattern": r"\w+"}) is None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un champ absent du schéma (« is_admin »: true) passe sans un mot ; `validate` rend {} et "
-    "l'appelant qui enregistre la saisie enregistre aussi ce champ (assignation de masse)",
-)
 def test_defaut_un_champ_hors_schema_est_signale():
     assert validate({**VALID, "is_admin": True}, SCHEMA) != {}
 

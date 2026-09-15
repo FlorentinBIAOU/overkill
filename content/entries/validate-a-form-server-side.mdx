@@ -3,7 +3,7 @@ id: validate-a-form-server-side
 family: decide-validate
 status: published
 verdict: N0
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -35,10 +35,10 @@ rungs:
       regulatory:
         fr:
           - "Aucun périmètre spécifique ajouté : la saisie ne quitte pas votre infrastructure"
-          - "Les messages renvoyés nomment le champ et la règle enfreinte, jamais la valeur saisie : ce qui atterrit dans vos journaux d’erreur reste ce que vous y mettez"
+          - "Les messages renvoyés nomment le champ et la règle enfreinte, jamais la valeur saisie : ce qui atterrit dans vos journaux d’erreur reste ce que vous y mettez, à ceci près qu’un champ non déclaré est nommé tel qu’il a été envoyé"
         en:
           - "No specific scope added: the submission never leaves your infrastructure"
-          - "Messages name the field and the rule it broke, never the value typed: what ends up in your error logs stays what you put there"
+          - "Messages name the field and the rule it broke, never the value typed: what ends up in your error logs stays what you put there, except that an undeclared field is named as it was sent"
     code:
       python: snippets/validate-a-form-server-side/n0.py
       javascript: snippets/validate-a-form-server-side/n0.js
@@ -77,6 +77,8 @@ further_reading:
     url: "https://json-schema.org/draft/2020-12/json-schema-validation"
   - label: "OWASP — Input Validation Cheat Sheet"
     url: "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html"
+  - label: "OWASP — LLM01 Prompt Injection, une saisie qui modifie la conduite du modèle qui la lit"
+    url: "https://genai.owasp.org/llmrisk/llm01-prompt-injection/"
   - label: "WHATWG HTML — définition normative d’une adresse électronique valide"
     url: "https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address"
   - label: "MDN — Validation de formulaire, et pourquoi le contrôle côté client ne suffit pas"

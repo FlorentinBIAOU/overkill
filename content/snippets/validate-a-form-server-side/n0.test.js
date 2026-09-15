@@ -202,12 +202,10 @@ test('production : encodage, espaces insécables et casse', () => {
   assert.deepEqual(validate({ ...VALID, display_name: '﻿Ada 🙂' }, SCHEMA), {});
 });
 
-test('DÉFAUT : les bornes ne comptent pas des caractères perçus', () => {
+test('les bornes ne comptent pas des caractères perçus', () => {
   // JavaScript compte des unités UTF-16 : « 🙂 » en vaut deux et passe le minimum de 2.
-  assert.throws(() => {
-    assert.deepEqual(validate({ ...VALID, display_name: 'é'.repeat(16).normalize('NFD') }, SCHEMA), {});
-    assert.deepEqual(validate({ ...VALID, display_name: '🙂' }, SCHEMA), { display_name: 'must be at least 2 characters' });
-  }, assert.AssertionError);
+  assert.deepEqual(validate({ ...VALID, display_name: 'é'.repeat(16).normalize('NFD') }, SCHEMA), {});
+  assert.deepEqual(validate({ ...VALID, display_name: '🙂' }, SCHEMA), { display_name: 'must be at least 2 characters' });
   assert.deepEqual(validate({ ...VALID, display_name: '🙂' }, SCHEMA), {});
 });
 
@@ -219,8 +217,8 @@ test('DÉFAUT : un même motif n’a pas le même sens côté navigateur et côt
   }, assert.AssertionError);
 });
 
-test('DÉFAUT : un champ hors schéma passe sans un mot', () => {
-  assert.throws(() => assert.notDeepEqual(validate({ ...VALID, is_admin: true }, SCHEMA), {}), assert.AssertionError);
+test('un champ hors schéma passe sans un mot', () => {
+  assert.notDeepEqual(validate({ ...VALID, is_admin: true }, SCHEMA), {});
 });
 
 test('production : un motif sur un entier convertit l’entier en texte', () => {
