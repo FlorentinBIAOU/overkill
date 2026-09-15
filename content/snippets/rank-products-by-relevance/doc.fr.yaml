@@ -15,10 +15,12 @@ n0: |
 
   Deux décisions la rendent utilisable.
 
-  Chaque signal est ramené à la même échelle de zéro à un avant que les
-  pondérations ne le touchent : un poids de deux compte donc vraiment deux
-  fois plus, et le score lui-même reste dans cette échelle quelles que soient
-  les pondérations.
+  Chaque signal est sur la même échelle de zéro à un avant que les pondérations
+  ne le touchent : le texte et la disponibilité par construction, la marge et
+  la popularité parce qu'une valeur hors de l'échelle est refusée plutôt que
+  laissée écraser les autres. Un poids de deux compte vraiment deux fois plus,
+  et le score, moyenne sur des pondérations qui ne peuvent pas être négatives,
+  reste dans cette échelle.
 
   Le tri est stable : deux produits que le score ne sait pas séparer restent
   dans l'ordre où le catalogue les a donnés. Un tri instable rebattrait les
@@ -29,17 +31,19 @@ n1.py: |
   Apprendre les pondérations de classement des interactions passées au lieu de
   les régler à la main.
 
-  Niveau N1. Le score est celui de N0, une somme pondérée des mêmes quatre
-  signaux. Ce qui change, c'est l'origine des quatre nombres : le jugement d'un
-  responsable de rayon en N0, le journal de clics ici.
+  Niveau N1. Le score repose sur les mêmes quatre signaux qu'en N0, chacun
+  entre zéro et un. Ce qui change, c'est l'origine des quatre pondérations : le
+  jugement d'un responsable de rayon en N0, le journal de clics ici.
 
   La méthode est par paires. Ce qu'un journal dit réellement n'est jamais
   « ce produit mérite 0,8 », c'est « montrés côte à côte, un acheteur a pris
   celui-là ». Chaque paire devient une ligne d'entraînement, la différence
   entre les deux vecteurs de signaux, et une régression logistique sur ces
-  différences redonne les pondérations du score d'origine. Rien d'autre ne
-  change : le code de service, l'explication montrée au rayon, l'échelle du
-  score, tout reste en place.
+  différences redonne les pondérations du score d'origine. Les signaux montrés
+  au rayon restent les mêmes ; le score, non. Des pondérations apprises peuvent
+  être négatives : le score est donc une simple somme sur des pondérations dont
+  les valeurs absolues totalisent un, entre moins un et un, là où N0 prend une
+  moyenne sur des pondérations qui ne peuvent pas être négatives.
 
   Chaque paire est ajoutée dans les deux sens, l'une étiquetée gagnante et
   l'autre perdante. Cela maintient les deux classes équilibrées, et c'est
@@ -51,17 +55,19 @@ n1.js: |
   Apprendre les pondérations de classement des interactions passées au lieu de
   les régler à la main.
 
-  Niveau N1. Le score est celui de N0, une somme pondérée des mêmes quatre
-  signaux. Ce qui change, c'est l'origine des quatre nombres : le jugement d'un
-  responsable de rayon en N0, le journal de clics ici.
+  Niveau N1. Le score repose sur les mêmes quatre signaux qu'en N0, chacun
+  entre zéro et un. Ce qui change, c'est l'origine des quatre pondérations : le
+  jugement d'un responsable de rayon en N0, le journal de clics ici.
 
   La méthode est par paires. Ce qu'un journal dit réellement n'est jamais
   « ce produit mérite 0,8 », c'est « montrés côte à côte, un acheteur a pris
   celui-là ». Chaque paire devient une ligne d'entraînement, la différence
   entre les deux vecteurs de signaux, et une régression logistique sur ces
-  différences redonne les pondérations du score d'origine. Rien d'autre ne
-  change : le code de service, l'explication montrée au rayon, l'échelle du
-  score, tout reste en place.
+  différences redonne les pondérations du score d'origine. Les signaux montrés
+  au rayon restent les mêmes ; le score, non. Des pondérations apprises peuvent
+  être négatives : le score est donc une simple somme sur des pondérations dont
+  les valeurs absolues totalisent un, entre moins un et un, là où N0 prend une
+  moyenne sur des pondérations qui ne peuvent pas être négatives.
 
   Chaque paire est ajoutée dans les deux sens, l'une étiquetée gagnante et
   l'autre perdante. Cela maintient les deux classes équilibrées, et c'est
@@ -69,5 +75,5 @@ n1.js: |
   décalerait les deux sens d'une même paire de la même façon, ce qui n'a pas
   de sens quand on compare deux produits d'une même page de résultats.
 
-  L'ajustement tient en trente lignes de descente de gradient plutôt qu'en une
-  dépendance, et c'est l'argument de ce niveau tout entier.
+  L'ajustement tient en quarante lignes de descente de gradient plutôt qu'en
+  une dépendance, et c'est l'argument de ce niveau tout entier.

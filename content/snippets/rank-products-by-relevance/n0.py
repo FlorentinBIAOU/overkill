@@ -9,9 +9,11 @@ in an afternoon rather than in a retraining cycle.
 
 Two decisions make it usable.
 
-Every signal is reduced to the same nought-to-one scale before the weights
-touch it, so a weight of two really does mean twice as much, and the score
-itself stays inside the same scale whatever the weights.
+Every signal sits on the same nought-to-one scale before the weights touch it:
+text and availability by construction, margin and popularity because a value
+outside is refused rather than left to swamp the others. A weight of two
+really does mean twice as much, and the score, a mean over weights that cannot
+be negative, stays inside the same scale.
 
 The sort is stable, so two products the score cannot separate stay in the
 order the catalogue gave them. An unstable sort would reshuffle equal results
@@ -29,14 +31,20 @@ DEFAULT_WEIGHTS = {"text": 6.0, "availability": 2.0, "margin": 1.0, "popularity"
 
 
 def fold(text: str) -> str:
-    """Lowercase and drop accents, so that "crème" finds "creme"."""
+    """
+    Lowercase and drop accents, so that "crème" finds "creme".
+
+    Only the diacritics Latin scripts use (U+0300 to U+036F) are dropped: in
+    Devanagari or Arabic the vowel signs are marks too, and dropping them
+    would turn one word into another.
+    """
     decomposed = unicodedata.normalize("NFD", text.lower())
-    return "".join(c for c in decomposed if not unicodedata.combining(c))
+    return "".join(c for c in decomposed if not "\u0300" <= c <= "\u036f")
 
 
 def terms(text: str) -> list[str]:
-    """Split on anything that is not a letter or a digit."""
-    letters = "".join(c if c.isalnum() else " " for c in fold(text))
+    """Split on anything that is not a letter, a mark or a digit."""
+    letters = "".join(c if c.isalnum() or unicodedata.category(c)[0] == "M" else " " for c in fold(text))
     return letters.split()
 
 
@@ -45,8 +53,8 @@ def text_match(query: str, product: dict) -> float:
     Share of the query terms found at the start of a word of the product.
 
     Prefix matching, not equality: a shopper who types "chauss" is looking
-    for "chaussures", and a shopper who types the plural is looking for the
-    singular too.
+    for "chaussures", and "sandale" finds "sandales". Not the other way round:
+    "sandales" does not find "sandale".
     """
     wanted = terms(query)
     if not wanted:
@@ -58,6 +66,9 @@ def text_match(query: str, product: dict) -> float:
 
 def signals(product: dict, query: str) -> dict[str, float]:
     """The four signals, each on the same nought-to-one scale."""
+    for name in ("margin", "popularity"):
+        if not 0.0 <= product[name] <= 1.0:
+            raise ValueError(f"{name} must lie between 0 and 1, not {product[name]!r}")
     return {
         "text": text_match(query, product),
         "availability": 1.0 if product["in_stock"] else 0.0,
@@ -68,6 +79,8 @@ def signals(product: dict, query: str) -> dict[str, float]:
 
 def score(measured: dict[str, float], weights: dict[str, float]) -> float:
     """Weighted mean of the signals, so the score stays on the same scale."""
+    if any(weights[name] < 0 for name in SIGNALS):
+        raise ValueError("a weight cannot be negative: the score is a weighted mean")
     total = 0.0
     weighted = 0.0
     for name in SIGNALS:

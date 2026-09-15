@@ -306,13 +306,7 @@ def test_production_valeurs_aux_limites_tous_les_signaux_a_zero_ou_a_un():
     assert all(v == pytest.approx(0.25) for v in weights.values())
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : un journal où chaque produit cliqué a exactement les signaux d'un "
-    "produit ignoré ne contient aucune information ; au lieu de l'erreur nommée "
-    "« nothing to learn from », Python lève ZeroDivisionError (échelle nulle) et "
-    "JavaScript rend quatre poids NaN, sans erreur"
-))
-def test_defaut_un_journal_sans_aucune_difference_leve_lerreur_nommee():
+def test_un_journal_sans_aucune_difference_leve_lerreur_nommee():
     identiques = [[(0.5, 1.0, 0.3, 0.2, True), (0.5, 1.0, 0.3, 0.2, False)]]
     with pytest.raises(ValueError, match="nothing to learn from"):
         learn_weights(impressions(identiques))

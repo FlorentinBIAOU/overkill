@@ -328,14 +328,7 @@ def test_production_nfd_insecable_largeur_nulle_emoji_et_casse_mixte():
     assert text_match("rando\u200bnnée", {"title": "randonnée"}) == 0.5
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : le repli des accents retire toute marque combinante, ce qui détruit "
-    "les écritures où les voyelles sont des marques (devanagari, arabe voyellé, "
-    "thaï…) : en Python « हिंदी » devient les termes « ह » et « द » et trouve à "
-    "moitié le mot « हद » ; en JavaScript il devient « हद » et le trouve "
-    "entièrement. Les deux langages divergent, et aucun des deux ne rend 0"
-))
-def test_defaut_un_mot_en_devanagari_ne_trouve_pas_un_autre_mot():
+def test_un_mot_en_devanagari_ne_trouve_pas_un_autre_mot():
     assert text_match("हिंदी", {"title": "हद"}) == 0.0
 
 

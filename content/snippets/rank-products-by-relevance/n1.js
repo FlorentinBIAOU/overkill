@@ -1,28 +1,32 @@
 /**
  * Learn the ranking weights from past interactions instead of setting them by hand.
  *
- * Rung N1. The score is the one of N0, a weighted sum of the same four
- * signals. What changes is where the four numbers come from: a merchandiser's
- * judgement on N0, the click log here.
+ * Rung N1. The score is built on the same four signals as N0, each between
+ * nought and one. What changes is where the four weights come from: a
+ * merchandiser's judgement on N0, the click log here.
  *
  * The method is pairwise. What a log really says is never "this product
  * deserves 0.8", it is "shown these two side by side, a shopper took that
  * one". Each such pair becomes one training row, the difference between the
  * two signal vectors, and a logistic regression on those differences gives
- * back the weights of the original score. Nothing else changes: the serving
- * code, the explanation shown to the shop, the scale of the score, all stay
- * as they were.
+ * back the weights of the original score. The signals shown to the shop stay
+ * the same; the score does not. Learned weights can be negative, so the score
+ * is a plain sum over weights whose absolute values add up to one, between
+ * minus one and one, where N0 takes a mean of weights that cannot be negative.
  *
  * Every pair is added in both directions, one labelled a win and one a loss.
  * That keeps the two classes balanced, and it is why the model carries no
  * intercept: a constant would shift both directions of the same pair the same
  * way, which is meaningless when comparing two products of one result page.
  *
- * The fit is thirty lines of gradient descent rather than a dependency, which
- * is the argument of this whole rung.
+ * The fit is forty lines of gradient descent rather than a dependency,
+ * which is the argument of this whole rung.
  */
 
 export const SIGNALS = ['text', 'availability', 'margin', 'popularity'];
+
+/** Every signal between 0 and 1, the scale N0 serves them on; undefined fails too. */
+const inScale = (signals) => SIGNALS.every((name) => signals[name] >= 0 && signals[name] <= 1);
 
 /**
  * Turn result pages into training rows.
@@ -37,6 +41,7 @@ export function pairs(impressions) {
   const rows = [];
   const labels = [];
   for (const page of impressions) {
+    if (!page.every((item) => inScale(item.signals))) throw new RangeError('every logged signal must lie between 0 and 1');
     const clicked = page.filter((item) => item.clicked).map((item) => item.signals);
     const ignored = page.filter((item) => !item.clicked).map((item) => item.signals);
     for (const winner of clicked) {
@@ -72,20 +77,23 @@ export function learnWeights(impressions, { regularisation = 1, epochs = 600, ra
       const error = 1 / (1 + Math.exp(-z)) - labels[i];
       rows[i].forEach((value, j) => { gradient[j] += (error * value) / rows.length; });
     }
-    // The penalty keeps a signal the log never varied at exactly nought,
-    // rather than letting it drift on noise.
+    // The penalty of scikit-learn's `C`, divided by the row count because the
+    // gradient above is a mean: it is what makes both versions fit one model.
     const penalty = regularisation * rows.length;
     learnt.forEach((w, j) => { learnt[j] = w - rate * (gradient[j] + w / penalty); });
   }
   const scale = learnt.reduce((sum, value) => sum + Math.abs(value), 0);
+  if (!scale) throw new Error('clicked and ignored products never differ in the log: nothing to learn from');
   return Object.fromEntries(SIGNALS.map((name, j) => [name, learnt[j] / scale]));
 }
 
 /**
  * Score candidates whose signals were computed by the serving pipeline.
  *
- * Same weighted sum as N0, same stable sort, same explanation returned: only
- * the provenance of the weights differs.
+ * A sum weighted over the same signals, the same stable sort, the signals
+ * handed back with each candidate. Not N0's mean: dividing by the signed total
+ * of learned weights would reverse the order when that total is negative, and
+ * wipe it out when it is nought.
  */
 export function rank(candidates, weights) {
   const scored = candidates.map((candidate) => ({

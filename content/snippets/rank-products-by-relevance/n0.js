@@ -9,9 +9,11 @@
  *
  * Two decisions make it usable.
  *
- * Every signal is reduced to the same nought-to-one scale before the weights
- * touch it, so a weight of two really does mean twice as much, and the score
- * itself stays inside the same scale whatever the weights.
+ * Every signal sits on the same nought-to-one scale before the weights touch
+ * it: text and availability by construction, margin and popularity because a
+ * value outside is refused rather than left to swamp the others. A weight of
+ * two really does mean twice as much, and the score, a mean over weights that
+ * cannot be negative, stays inside the same scale.
  *
  * The sort is stable, so two products the score cannot separate stay in the
  * order the catalogue gave them. An unstable sort would reshuffle equal
@@ -26,22 +28,28 @@ export const SIGNALS = ['text', 'availability', 'margin', 'popularity'];
 // A starting point, not a truth. These are the numbers to argue about.
 export const DEFAULT_WEIGHTS = { text: 6, availability: 2, margin: 1, popularity: 3 };
 
-/** Lowercase and drop accents, so that "crème" finds "creme". */
+/**
+ * Lowercase and drop accents, so that "crème" finds "creme".
+ *
+ * Only the diacritics Latin scripts use (U+0300 to U+036F) are dropped: in
+ * Devanagari or Arabic the vowel signs are marks too, and dropping them would
+ * turn one word into another.
+ */
 export function fold(text) {
-  return text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-/** Split on anything that is not a letter or a digit. */
+/** Split on anything that is not a letter, a mark or a digit. */
 export function terms(text) {
-  return fold(text).match(/[\p{L}\p{N}]+/gu) ?? [];
+  return fold(text).match(/[\p{L}\p{M}\p{N}]+/gu) ?? [];
 }
 
 /**
  * Share of the query terms found at the start of a word of the product.
  *
  * Prefix matching, not equality: a shopper who types "chauss" is looking for
- * "chaussures", and a shopper who types the plural is looking for the
- * singular too.
+ * "chaussures", and "sandale" finds "sandales". Not the other way round:
+ * "sandales" does not find "sandale".
  */
 export function textMatch(query, product) {
   const wanted = terms(query);
@@ -53,6 +61,12 @@ export function textMatch(query, product) {
 
 /** The four signals, each on the same nought-to-one scale. */
 export function signals(product, query) {
+  for (const name of ['margin', 'popularity']) {
+    // Also catches a missing field: undefined is not between 0 and 1.
+    if (!(product[name] >= 0 && product[name] <= 1)) {
+      throw new RangeError(`${name} must lie between 0 and 1, not ${product[name]}`);
+    }
+  }
   return {
     text: textMatch(query, product),
     availability: product.inStock ? 1 : 0,
@@ -63,6 +77,9 @@ export function signals(product, query) {
 
 /** Weighted mean of the signals, so the score stays on the same scale. */
 export function score(measured, weights) {
+  if (SIGNALS.some((name) => weights[name] < 0)) {
+    throw new RangeError('a weight cannot be negative: the score is a weighted mean');
+  }
   let total = 0;
   let weighted = 0;
   for (const name of SIGNALS) {

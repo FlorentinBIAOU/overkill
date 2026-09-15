@@ -279,14 +279,12 @@ test('production : valeurs aux limites, tous les signaux à zéro ou à un', () 
   for (const v of Object.values(weights)) assert.ok(close(v, 0.25, 1e-9));
 });
 
-test('DÉFAUT : un journal sans aucune différence lève l’erreur nommée', () => {
+test('un journal sans aucune différence lève l’erreur nommée', () => {
   // JavaScript rend quatre poids NaN sans erreur ; Python lève ZeroDivisionError.
-  assert.throws(() => {
-    assert.throws(
-      () => learnWeights(impressions([[[0.5, 1, 0.3, 0.2, true], [0.5, 1, 0.3, 0.2, false]]])),
-      /nothing to learn from/,
-    );
-  });
+  assert.throws(
+    () => learnWeights(impressions([[[0.5, 1, 0.3, 0.2, true], [0.5, 1, 0.3, 0.2, false]]])),
+    /nothing to learn from/,
+  );
 });
 
 test('DÉFAUT : un signal manquant rend des poids NaN, sans erreur', () => {

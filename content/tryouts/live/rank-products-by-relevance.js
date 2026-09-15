@@ -5,7 +5,7 @@
  * le navigateur est exactement ce que la fiche affiche au-dessus.
  *
  * Le catalogue est celui du printemps, et les poids sont ceux qu'un
- * merchandiser avait réglés à l'automne. C'est tout le sujet du barreau : les
+ * merchandiser avait réglés à l'automne. C'est tout le sujet du niveau : les
  * quatre nombres sont posés sur la page, et le tableau dit lequel a décidé.
  */
 import {
@@ -120,8 +120,8 @@ export default {
       input: { fr: 'sandales randonnée', en: 'hiking sandals' },
       fails: true,
       why: {
-        fr: 'Le seul produit qui répond exactement à la requête arrive troisième, derrière une paire de chaussures de course et des chaussettes, qui n’ont rien à voir avec des sandales. Les poids ont été réglés à l’automne, quand les produits populaires étaient aussi les pertinents ; la popularité pèse deux fois le texte, et une nouveauté n’a par définition aucune popularité. Rien ne le signale : ni exception, ni test rouge, ni ligne de journal. Il faut que quelqu’un s’en aperçoive et déplace un nombre.',
-        en: 'The only product that answers the query exactly comes third, behind a pair of running shoes and a pair of socks, which have nothing to do with sandals. The weights were set in autumn, when the popular products were also the relevant ones; popularity weighs twice as much as text, and a new range has, by definition, no popularity at all. Nothing flags it: no exception, no failing test, no log line. Somebody has to notice, and move a number.',
+        fr: 'Le seul produit qui répond exactement à la requête arrive troisième, derrière une paire de chaussures de course et des chaussettes, qui n’ont rien à voir avec des sandales. Les poids ont été réglés à l’automne, quand les produits populaires étaient aussi les pertinents ; la popularité pèse deux fois le texte, et cette nouveauté n’a presque aucune popularité. Rien ne le signale : ni exception, ni test rouge, ni ligne de journal. Il faut que quelqu’un s’en aperçoive et déplace un nombre.',
+        en: 'The only product that answers the query exactly comes third, behind a pair of running shoes and a pair of socks, which have nothing to do with sandals. The weights were set in autumn, when the popular products were also the relevant ones; popularity weighs twice as much as text, and this new range has next to no popularity. Nothing flags it: no exception, no failing test, no log line. Somebody has to notice, and move a number.',
       },
     },
   ],

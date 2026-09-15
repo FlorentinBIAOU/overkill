@@ -1,16 +1,18 @@
 """
 Learn the ranking weights from past interactions instead of setting them by hand.
 
-Rung N1. The score is the one of N0, a weighted sum of the same four signals.
-What changes is where the four numbers come from: a merchandiser's judgement
-on N0, the click log here.
+Rung N1. The score is built on the same four signals as N0, each between
+nought and one. What changes is where the four weights come from: a
+merchandiser's judgement on N0, the click log here.
 
 The method is pairwise. What a log really says is never "this product
 deserves 0.8", it is "shown these two side by side, a shopper took that
 one". Each such pair becomes one training row, the difference between the two
 signal vectors, and a logistic regression on those differences gives back the
-weights of the original score. Nothing else changes: the serving code, the
-explanation shown to the shop, the scale of the score, all stay as they were.
+weights of the original score. The signals shown to the shop stay the same;
+the score does not. Learned weights can be negative, so the score is a plain
+sum over weights whose absolute values add up to one, between minus one and
+one, where N0 takes a mean of weights that cannot be negative.
 
 Every pair is added in both directions, one labelled a win and one a loss.
 That keeps the two classes balanced, and it is why the model carries no
@@ -36,6 +38,8 @@ def pairs(impressions: list[list[dict]]) -> tuple[np.ndarray, np.ndarray]:
     """
     rows, labels = [], []
     for page in impressions:
+        if not all(0.0 <= item["signals"][name] <= 1.0 for item in page for name in SIGNALS):
+            raise ValueError("every logged signal must lie between 0 and 1")
         clicked = [item["signals"] for item in page if item["clicked"]]
         ignored = [item["signals"] for item in page if not item["clicked"]]
         for winner in clicked:
@@ -63,6 +67,8 @@ def learn_weights(impressions: list[list[dict]], regularisation: float = 1.0) ->
     model.fit(rows, labels)
     learnt = model.coef_[0]
     scale = float(np.abs(learnt).sum())
+    if scale == 0:
+        raise ValueError("clicked and ignored products never differ in the log: nothing to learn from")
     return {name: float(value) / scale for name, value in zip(SIGNALS, learnt)}
 
 
@@ -70,8 +76,10 @@ def rank(candidates: list[dict], weights: dict) -> list[dict]:
     """
     Score candidates whose signals were computed by the serving pipeline.
 
-    Same weighted sum as N0, same stable sort, same explanation returned: only
-    the provenance of the weights differs.
+    A sum weighted over the same signals, the same stable sort, the signals
+    handed back with each candidate. Not N0's mean: dividing by the signed
+    total of learned weights would reverse the order when that total is
+    negative, and wipe it out when it is nought.
     """
     scored = []
     for candidate in candidates:

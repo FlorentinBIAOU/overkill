@@ -290,9 +290,9 @@ test('production : NFD, insécable, largeur nulle, emoji et casse mixte', () => 
   assert.equal(textMatch('rando\u200bnnée', { title: 'randonnée' }), 0.5);
 });
 
-test('DÉFAUT : un mot en devanagari ne trouve pas un autre mot', () => {
+test('un mot en devanagari ne trouve pas un autre mot', () => {
   // Le repli retire toute marque : « हिंदी » devient « हद » ici, « ह » et « द » en Python.
-  assert.throws(() => assert.equal(textMatch('हिंदी', { title: 'हद' }), 0));
+  assert.equal(textMatch('हिंदी', { title: 'हद' }), 0);
 });
 
 test('DÉFAUT : un produit sans popularité ou des poids incomplets ne lèvent aucune erreur', () => {
