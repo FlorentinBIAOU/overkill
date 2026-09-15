@@ -1,15 +1,16 @@
 /**
- * The corpus lives here, not in the snippet: the snippet shows a function,
- * not a demonstration. The same corpus and the same expected table appear in
- * n1.test.py, which is how the two languages are held to the same ranking.
+ * Le fonds vit ici, pas dans l'extrait. Le même fonds et les mêmes nombres
+ * figurent dans n1.test.py, où tourne scikit-learn : c'est ce qui démontre que
+ * ce fichier « ranks a corpus exactly as the Python version does ».
+ *
+ * L'essai interactif, qui importe cet extrait, est testé en fin de fichier.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articleText, buildNeighbourTable } from './n1.js';
+import { readFileSync } from 'node:fs';
+import { articleText, buildNeighbourTable, tokenise, vectorise } from './n1.js';
+import essai from '../../tryouts/live/show-similar-articles.js';
 
-// Two pairs that belong together, two articles that belong with nothing, and
-// an announcement. Bodies are short, which is the hard case for TF-IDF: there
-// is little text for the weighting to work with.
 const ARTICLES = [
   {
     id: 'sourdough-starter',
@@ -69,8 +70,6 @@ const ARTICLES = [
   },
 ];
 
-// The stop list belongs to the corpus, not to the snippet: it is one per
-// language, and this corpus happens to be in English.
 const ENGLISH_FILLER = (
   'an and are as at be but by for from in into is it its of on or so that ' +
   'the then this to until when while with you'
@@ -86,7 +85,6 @@ const EXPECTED = {
   'site-news': [],
 };
 
-// Same subject, two languages. Nothing in common but the punctuation.
 const SAME_SUBJECT_TWO_LANGUAGES = [
   {
     id: 'sourdough-starter',
@@ -113,61 +111,297 @@ const SAME_SUBJECT_TWO_LANGUAGES = [
   },
 ];
 
-const rowOf = (table, id) => new Map(table[id]);
+const scoresOf = (table, id) => Object.fromEntries(table[id]);
+const tokens = (article) => new Set(tokenise(articleText(article)));
+const shared = (a, b) => [...tokens(a)].filter((t) => tokens(b).has(t)).sort();
 
-test('the whole table is built at once', () => {
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
+
+test('point de rupture : le même sujet en deux langues vaut exactement zéro', () => {
+  const table = buildNeighbourTable(SAME_SUBJECT_TWO_LANGUAGES, { minimum: -1 });
+  assert.equal(scoresOf(table, 'sourdough-starter')['levain-naturel'], 0);
+  assert.deepEqual(shared(SAME_SUBJECT_TWO_LANGUAGES[0], SAME_SUBJECT_TWO_LANGUAGES[1]), []);
+});
+
+test('point de rupture : l’annonce de déménagement obtient un score strictement supérieur', () => {
+  const scores = scoresOf(buildNeighbourTable(SAME_SUBJECT_TWO_LANGUAGES, { minimum: -1 }), 'sourdough-starter');
+  assert.deepEqual(scores, { 'office-move': 0.199, 'levain-naturel': 0 });
+  assert.deepEqual(buildNeighbourTable(SAME_SUBJECT_TWO_LANGUAGES)['sourdough-starter'], [['office-move', 0.199]]);
+});
+
+test('INFIRMÉ : l’annonce ne partage que de la grammaire, elle partage aussi « day »', async () => {
+  await assert.rejects(async () => {
+    const grammar = new Set([...ENGLISH_FILLER, 'will']);
+    assert.ok(shared(SAME_SUBJECT_TWO_LANGUAGES[0], SAME_SUBJECT_TWO_LANGUAGES[2]).every((t) => grammar.has(t)));
+  });
+});
+
+test('point de rupture : la grammaire seule suffit à passer devant le jumeau', () => {
+  const noDay = SAME_SUBJECT_TWO_LANGUAGES.map((a) => ({ ...a }));
+  noDay[2].body = noDay[2].body.replace(' for a day', '');
+  assert.deepEqual(shared(noDay[0], noDay[2]), ['and', 'is', 'of', 'the', 'will']);
+  assert.deepEqual(scoresOf(buildNeighbourTable(noDay, { minimum: -1 }), 'sourdough-starter'), {
+    'office-move': 0.192, 'levain-naturel': 0,
+  });
+});
+
+test('point de rupture : aucun seuil ne rattrape cela', () => {
+  for (const floor of [-1, -0.001, 0, 0.01, 0.05, 0.1, 0.19, 0.2, 0.5]) {
+    const row = scoresOf(buildNeighbourTable(SAME_SUBJECT_TWO_LANGUAGES, { minimum: floor }), 'sourdough-starter');
+    if ('levain-naturel' in row) assert.ok('office-move' in row);
+    assert.ok(!('levain-naturel' in row && floor >= 0));
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Autres affirmations du niveau
+// ---------------------------------------------------------------------------
+
+test('la table entière est construite d’un coup', () => {
   assert.deepEqual(buildNeighbourTable(ARTICLES, { stopWords: ENGLISH_FILLER }), EXPECTED);
 });
 
-test('the title counts twice', () => {
+test('le titre compte deux fois', () => {
   assert.equal(articleText(ARTICLES[6]), `Site news Site news ${ARTICLES[6].body}`);
+  const pair = [
+    { id: 't', title: 'rye', body: 'bread' },
+    { id: 'u', title: 'bread', body: 'rye' },
+    { id: 'v', title: 'oven', body: 'hot' },
+  ];
+  assert.deepEqual(buildNeighbourTable(pair).t, [['u', 0.8]]);
 });
 
-test('without a stop list, ordinary words create similarity', () => {
-  // An article about whetstones and an announcement about the comment form
-  // share nothing but grammar, and still land above the floor. This is what
-  // the stop list is for, and why the floor is not enough on its own.
-  const table = buildNeighbourTable(ARTICLES);
-  assert.ok(rowOf(table, 'knife-sharpening').has('site-news'));
+test('INFIRMÉ : un mot présent partout ne pèse presque rien', async () => {
+  await assert.rejects(async () => {
+    const three = [
+      { id: 'a', title: 'the', body: 'sourdough' },
+      { id: 'b', title: 'the', body: 'rye' },
+      { id: 'c', title: 'the', body: 'kimchi' },
+    ];
+    assert.deepEqual(buildNeighbourTable(three), { a: [], b: [], c: [] });
+  });
 });
 
-test('an article whose body is empty is still ranked on its title', () => {
-  const articles = ARTICLES.map((article) => ({ ...article }));
-  articles[0].body = '';
-  const table = buildNeighbourTable(articles, { stopWords: ENGLISH_FILLER });
-  assert.deepEqual(table['sourdough-starter'], [['rye-bread', 0.082]]);
+test('constat : l’idf d’un mot présent partout vaut un', () => {
+  // Dans un article « the sourdough » d'un fonds de trois où « the » est partout,
+  // « the » pèse 1 et « sourdough » ln(4/2) + 1 avant normalisation.
+  const [vector] = vectorise(['the sourdough', 'the rye', 'the kimchi']);
+  assert.ok(Math.abs(vector.get('sourdough') / vector.get('the') - (Math.log(2) + 1)) < 1e-12);
 });
 
-test('a corpus of one article', () => {
-  assert.deepEqual(buildNeighbourTable([ARTICLES[0]]), { 'sourdough-starter': [] });
+test('INFIRMÉ : sans liste de mots vides, le classement tient encore', async () => {
+  await assert.rejects(async () => {
+    assert.ok(!new Map(buildNeighbourTable(ARTICLES)['knife-sharpening']).has('site-news'));
+  });
 });
 
-test('k caps the length of each row', () => {
+test('sans liste de mots vides, l’affûtage est apparié à l’annonce du site', () => {
+  assert.equal(scoresOf(buildNeighbourTable(ARTICLES), 'knife-sharpening')['site-news'], 0.054);
+  assert.ok(!('site-news' in scoresOf(buildNeighbourTable(ARTICLES, { stopWords: ENGLISH_FILLER }), 'knife-sharpening')));
+});
+
+test('les lignes normalisées donnent un cosinus : un article et sa copie valent un', () => {
+  const corpus = [ARTICLES[0], { ...ARTICLES[0], id: 'copy' }, ARTICLES[2]];
+  assert.deepEqual(buildNeighbourTable(corpus, { stopWords: ENGLISH_FILLER }).copy, [['sourdough-starter', 1]]);
+  for (const vector of vectorise(ARTICLES.map(articleText))) {
+    assert.ok(Math.abs(Math.hypot(...vector.values()) - 1) < 1e-12);
+  }
+});
+
+test('les égalités sont départagées par l’identifiant', () => {
+  const corpus = [{ ...ARTICLES[0], id: 'z-copy' }, { ...ARTICLES[0], id: 'a-copy' }, ARTICLES[0], ARTICLES[2]];
+  assert.deepEqual(buildNeighbourTable(corpus)['sourdough-starter'].slice(0, 2), [['a-copy', 1], ['z-copy', 1]]);
+});
+
+test('la pondération est recalculée sur le seul fonds à chaque construction', () => {
+  assert.deepEqual(buildNeighbourTable(ARTICLES, { stopWords: ENGLISH_FILLER })['kimchi-at-home'], [['pickled-cucumbers', 0.3]]);
+  const extra = { id: 'z', title: 'Brine and jar', body: 'brine jar brine' };
+  assert.deepEqual(buildNeighbourTable([...ARTICLES, extra], { stopWords: ENGLISH_FILLER })['kimchi-at-home'], [
+    ['z', 0.349], ['pickled-cucumbers', 0.278],
+  ]);
+});
+
+test('INFIRMÉ : la table ne change qu’à la publication ou au réétiquetage', async () => {
+  await assert.rejects(async () => {
+    const edited = ARTICLES.map((a) => ({ ...a }));
+    edited[6].body = 'Sharpen your knife on a whetstone before the comment form comes back.';
+    assert.deepEqual(buildNeighbourTable(edited, { stopWords: ENGLISH_FILLER }), EXPECTED);
+  });
+});
+
+test('INFIRMÉ : écarter les jetons d’une lettre ne coûte rien', async () => {
+  await assert.rejects(async () => {
+    const corpus = [
+      { id: 'a', title: 'Programming in C', body: '' },
+      { id: 'b', title: 'Pointers in C', body: '' },
+      { id: 'c', title: 'Rust traits', body: '' },
+    ];
+    assert.ok(scoresOf(buildNeighbourTable(corpus, { stopWords: ENGLISH_FILLER, minimum: -1 }), 'a').b > 0);
+  });
+});
+
+test('INFIRMÉ : sans lissage, un terme présent partout diviserait par zéro', async () => {
+  // Formule non lissée : ln(n / df) + 1. df vaut au moins 1 pour un terme vu.
+  await assert.rejects(async () => {
+    const n = ARTICLES.length;
+    for (let df = 1; df <= n; df += 1) assert.ok(!Number.isFinite(Math.log(n / df) + 1));
+  });
+});
+
+test('l’extrait n’importe rien', () => {
+  const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /^\s*import\s/m);
+});
+
+test('deux constructions rendent la même table', () => {
+  assert.deepEqual(
+    buildNeighbourTable(ARTICLES, { stopWords: ENGLISH_FILLER }),
+    buildNeighbourTable(ARTICLES, { stopWords: ENGLISH_FILLER }),
+  );
+});
+
+test('k borne la longueur de chaque ligne', () => {
   const table = buildNeighbourTable(ARTICLES, { k: 2 });
   assert.ok(Object.values(table).every((row) => row.length <= 2));
   assert.equal(table['sourdough-starter'][0][0], 'rye-bread');
 });
 
-test('limit of this rung: the same subject in two languages scores zero', () => {
-  // The breaking point the entry claims for this rung, and the reason it goes
-  // on to N2.
-  //
-  // TF-IDF compares strings. Two articles that say the same thing in two
-  // languages, or with two vocabularies, share no term at all, so their
-  // cosine is exactly zero: not low, zero. Meanwhile an office announcement
-  // that shares nothing but English grammar scores well above them both.
-  //
-  // No threshold rescues this. It needs a model that maps words onto meaning,
-  // which is what N2 buys, and what it is paid for.
-  //
-  // `minimum: -1` keeps every pair, so the zero is visible rather than
-  // filtered out.
-  const all = buildNeighbourTable(SAME_SUBJECT_TWO_LANGUAGES, { minimum: -1 });
-  const scores = rowOf(all, 'sourdough-starter');
-  assert.equal(scores.get('levain-naturel'), 0);
-  assert.ok(scores.get('office-move') > 0);
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
 
-  // And so the twin never appears in the block, at any threshold above zero.
-  const table = buildNeighbourTable(SAME_SUBJECT_TWO_LANGUAGES);
-  assert.ok(!rowOf(table, 'sourdough-starter').has('levain-naturel'));
+test('production : fonds vide et fonds d’un article', () => {
+  assert.deepEqual(buildNeighbourTable([]), {});
+  assert.deepEqual(buildNeighbourTable([ARTICLES[0]]), { 'sourdough-starter': [] });
+});
+
+test('production : un article au corps vide est classé sur son titre', () => {
+  const articles = ARTICLES.map((article) => ({ ...article }));
+  articles[0].body = '';
+  assert.deepEqual(buildNeighbourTable(articles, { stopWords: ENGLISH_FILLER })['sourdough-starter'], [['rye-bread', 0.082]]);
+});
+
+test('production : un fonds sans aucun mot retenu rend des lignes vides (le Python lève)', () => {
+  assert.deepEqual(buildNeighbourTable([{ id: 'a', title: 'A', body: '' }, { id: 'b', title: 'B', body: '' }]), { a: [], b: [] });
+});
+
+test('DÉFAUT : un corps absent devient le mot « null »', async () => {
+  await assert.rejects(async () => {
+    const corpus = [
+      { id: 'a', title: 'Kimchi', body: null },
+      { id: 'b', title: 'Knives', body: null },
+      { id: 'c', title: 'Rye', body: 'rye bread' },
+    ];
+    assert.deepEqual(buildNeighbourTable(corpus).a, []);
+  });
+});
+
+test('DÉFAUT : le même article en NFD ne se reconnaît pas', async () => {
+  await assert.rejects(async () => {
+    const nfc = { id: 'nfc', title: 'Pâte à crêpes', body: 'La pâte à crêpes repose une heure.' };
+    const nfd = { id: 'nfd', title: nfc.title.normalize('NFD'), body: nfc.body.normalize('NFD') };
+    const other = { id: 'x', title: 'Other', body: 'thing' };
+    assert.ok(scoresOf(buildNeighbourTable([nfc, nfd, other], { minimum: -1 }), 'nfc').nfd > 0.9);
+  });
+});
+
+test('production : espace insécable, emoji, BOM et casse', () => {
+  const corpus = [
+    { id: 'a', title: '﻿KIMCHI jar 🥬', body: 'cabbage' },
+    { id: 'b', title: 'kimchi jar', body: 'Cabbage' },
+    { id: 'c', title: 'oven', body: 'hot' },
+  ];
+  assert.deepEqual(buildNeighbourTable(corpus).a, [['b', 1]]);
+});
+
+test('production : limites k nul et score égal au minimum', () => {
+  assert.deepEqual(buildNeighbourTable(ARTICLES, { k: 0, stopWords: ENGLISH_FILLER }), Object.fromEntries(ARTICLES.map((a) => [a.id, []])));
+  assert.deepEqual(buildNeighbourTable(ARTICLES, { minimum: 0.3, stopWords: ENGLISH_FILLER })['kimchi-at-home'], []);
+  assert.deepEqual(buildNeighbourTable(ARTICLES, { minimum: 0.299, stopWords: ENGLISH_FILLER })['kimchi-at-home'], [['pickled-cucumbers', 0.3]]);
+});
+
+test('production : mille articles de deux cents mots', () => {
+  let seed = 1;
+  const next = () => { seed = (seed * 16807) % 2147483647; return seed; };
+  const word = () => `w${next() % 3000}`;
+  const corpus = Array.from({ length: 1000 }, (_, i) => ({
+    id: `a${String(i).padStart(4, '0')}`,
+    title: Array.from({ length: 5 }, word).join(' '),
+    body: Array.from({ length: 200 }, word).join(' '),
+  }));
+  const started = Date.now();
+  assert.equal(Object.keys(buildNeighbourTable(corpus)).length, 1000);
+  assert.ok(Date.now() - started < 60_000);
+});
+
+// ---------------------------------------------------------------------------
+// L'essai interactif (niveau N1)
+// ---------------------------------------------------------------------------
+
+const rowsOf = (lang, cas) => essai.run(cas.input[lang], lang).rows.rows;
+const inBlock = (rows) => rows.filter((r) => r[1].caught).map((r) => [r[0], r[1].v]);
+
+test('essai : un titre proche d’un article du fonds', () => {
+  const [cas] = essai.cases;
+  assert.deepEqual(inBlock(rowsOf('fr', cas)), [['Cuire un pain de seigle dense', '0,58'], ['Baking a dense rye loaf', '0,09']]);
+  assert.deepEqual(inBlock(rowsOf('en', cas)), [['Baking a dense rye loaf', '0.67'], ['Cuire un pain de seigle dense', '0.08']]);
+});
+
+test('essai : des mots du corps, pas du titre, en français', () => {
+  const cas = essai.cases[1];
+  assert.deepEqual(inBlock(rowsOf('fr', cas)), [['Kimchi en bocal', '0,20']]);
+  assert.deepEqual(tokenise(cas.input.fr).filter((t) => tokenise('Kimchi en bocal').includes(t)), []);
+});
+
+test('INFIRMÉ : le libellé anglais dit « Words from the body, not the title », « cucumbers » est dans le titre', async () => {
+  const cas = essai.cases[1];
+  assert.deepEqual(inBlock(rowsOf('en', cas)), [['Pickled cucumbers in brine', '0.39']]);
+  await assert.rejects(async () => {
+    const title = new Set(tokenise('Pickled cucumbers in brine'));
+    assert.ok(tokenise(cas.input.en).every((t) => !title.has(t) || ENGLISH_FILLER.includes(t)));
+  });
+});
+
+test('essai : un sujet que le fonds ne traite pas ne passe pas le plancher', () => {
+  const cas = essai.cases[2];
+  assert.deepEqual(inBlock(rowsOf('fr', cas)), []);
+  assert.deepEqual(inBlock(rowsOf('en', cas)), []);
+  assert.equal(essai.run(cas.input.fr, 'fr').note, 'Aucun des 8 articles ne passe le plancher de 0,05.');
+});
+
+test('INFIRMÉ : la note dit qu’un zéro est « l’absence de tout mot commun », « un » et « de » sont communs', async () => {
+  // Le zéro est l'absence de mot commun hors mots vides.
+  const cas = essai.cases[2];
+  const levain = rowsOf('fr', cas).find((r) => r[0] === 'Entretenir un levain naturel');
+  assert.equal(levain[1].v, '0,00');
+  await assert.rejects(async () => {
+    const title = new Set(tokenise('Entretenir un levain naturel'));
+    assert.ok(tokenise(cas.input.fr).every((t) => !title.has(t)));
+  });
+});
+
+test('essai : le même sujet dans l’autre langue vaut zéro, et l’annonce passe le plancher', () => {
+  const cas = essai.cases[3];
+  assert.equal(cas.fails, true);
+  const fr = Object.fromEntries(rowsOf('fr', cas).map((r) => [r[0], r[1]]));
+  assert.deepEqual(fr['Keeping a sourdough starter alive'], { v: '0,00', caught: false });
+  assert.deepEqual(fr['Comment nous joindre pendant les travaux'], { v: '0,10', caught: true });
+  const en = Object.fromEntries(rowsOf('en', cas).map((r) => [r[0], r[1]]));
+  assert.deepEqual(en['Entretenir un levain naturel'], { v: '0.00', caught: false });
+  assert.deepEqual(en['The office is moving in June'], { v: '0.10', caught: true });
+});
+
+test('essai : les citations du why sont dans le fonds', () => {
+  // why fr : « Feed the starter twice a day » ; « une fois par jour ». why en :
+  // « Nourrissez le levain deux fois par jour » ; « it mentions a day ».
+  const source = readFileSync(new URL('../../tryouts/live/show-similar-articles.js', import.meta.url), 'utf8');
+  for (const quote of ['Feed the starter twice a day', 'une fois par jour', 'Nourrissez le levain ', 'for a day']) {
+    assert.ok(source.replace(/'\s*\+\s*'/g, '').includes(quote), quote);
+  }
+});
+
+test('essai : un titre vide ne compare rien', () => {
+  assert.deepEqual(essai.run('   ', 'fr').verdict, { label: 'Rien à comparer', detail: 'Le titre est vide : il n’en reste aucun mot à peser.' });
 });
