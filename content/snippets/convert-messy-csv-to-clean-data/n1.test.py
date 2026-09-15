@@ -1,13 +1,19 @@
 """
-The labelled columns live here, never in the snippet.
+Tests du niveau N1 : inférence du type de colonne par régression logistique.
 
-Twenty-one columns, the kind an afternoon of tagging produces. That is the
-real size of the training set this rung needs, and showing it is part of the
-argument: a classifier is only cheap if its labelling is.
+Les colonnes étiquetées vivent ici, jamais dans l'extrait : vingt et une
+colonnes, ce que produit un après-midi d'étiquetage.
 """
 
+import ast
+import time
+import unicodedata
+from pathlib import Path
+
+import pytest
+
 from n0 import clean_csv
-from n1 import classify, column_features, infer_schema, train
+from n1 import FEATURE_NAMES, LONG_VALUE, classify, column_features, infer_schema, train
 
 LABELLED = {
     "integer": [
@@ -56,34 +62,59 @@ ROWS = [
 ]
 
 
-def make_model():
-    return train(COLUMNS, LABELS)
+MODEL = train(COLUMNS, LABELS)
 
 
-def test_features_are_proportions_between_zero_and_one():
-    features = column_features(["12", "7", "103"])
-    assert all(0.0 <= value <= 1.0 for value in features)
-    assert features[0] == 1.0  # all digits
-    assert features[3] == 0.0  # none contains a letter
-    # Twice as many values of the same shape give the same shape traits: they
-    # are proportions, not counts. Only the traits that describe the sample
-    # itself, such as how many values are distinct, move.
-    deeper = column_features(["12", "7", "103", "44", "9", "271"])
-    assert deeper[:5] == features[:5]
+def repeat(values, n):
+    return [values[i % len(values)] for i in range(n)]
 
 
-def test_infers_the_schema_of_a_file_nobody_documented():
-    schema = infer_schema(make_model(), HEADER, ROWS)
-    assert schema == {
-        "id": "integer",
-        "name": "text",
-        "joined": "date",
-        "amount": "number",
-        "active": "boolean",
+# ---------------------------------------------------------------------------
+# Point de rupture
+# ---------------------------------------------------------------------------
+
+
+def test_point_de_rupture_un_identifiant_fait_de_chiffres():
+    """
+    « Une colonne de codes postaux — 01000, 06400, 75014 — a tous les traits
+    d'une colonne d'entiers, le classifieur répond « integer », et la
+    coercition de N0 rend 1000 et 6400. […] rien n'est rejeté » (existant, complété).
+    """
+    postcodes = ["01000", "06400", "75014", "02100", "13008"]
+    assert classify(MODEL, postcodes) == "integer"
+    result = clean_csv(b"postcode\n01000\n06400\n75014\n", {"postcode": classify(MODEL, postcodes)})
+    assert result["rejects"] == []
+    assert [row["postcode"] for row in result["rows"]] == [1000, 6400, 75014]
+    # Témoin : les mêmes codes portant une lettre sont du texte, et gardent leur zéro.
+    lettered = ["F-01000", "F-06400", "F-75014", "F-02100", "F-13008"]
+    assert classify(MODEL, lettered) == "text"
+    assert clean_csv(b"postcode\nF-01000\n", {"postcode": "text"})["rows"] == [{"postcode": "F-01000"}]
+
+
+# ---------------------------------------------------------------------------
+# Nom, docstring, commentaires
+# ---------------------------------------------------------------------------
+
+
+def test_n1_est_une_regression_logistique_de_bibliotheque():
+    """name « par régression logistique sur des traits d'échantillon » ; risks `vendor_lock: library`."""
+    assert type(MODEL).__name__ == "LogisticRegression"
+    assert list(MODEL.classes_) == ["boolean", "date", "integer", "number", "text"]
+    source = ast.parse(Path(__file__).with_name("n1.py").read_text(encoding="utf-8"))
+    modules = {a.name for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
+    modules |= {n.module.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
+    assert modules == {"re", "numpy", "sklearn"}
+
+
+def test_infere_le_schema_d_un_fichier_que_personne_n_a_documente():
+    """Existant."""
+    assert infer_schema(MODEL, HEADER, ROWS) == {
+        "id": "integer", "name": "text", "joined": "date", "amount": "number", "active": "boolean",
     }
 
 
-def test_the_inferred_schema_is_what_rung_n0_takes():
+def test_le_schema_infere_est_celui_que_n0_prend():
+    """« The output is exactly the schema `clean_csv` of rung N0 takes as its second argument » (existant)."""
     data = (
         "id,name,joined,amount,active\n"
         "1,Alice,2023-04-12,12.50,yes\n"
@@ -92,44 +123,127 @@ def test_the_inferred_schema_is_what_rung_n0_takes():
         "4,Dan,2023-07-14,7.25,no\n"
         "5,Eve,2023-08-02,45.10,yes\n"
     ).encode("utf-8")
-    result = clean_csv(data, infer_schema(make_model(), HEADER, ROWS))
+    result = clean_csv(data, infer_schema(MODEL, HEADER, ROWS))
     assert result["rejects"] == []
-    assert result["rows"][0] == {
-        "id": 1,
-        "name": "Alice",
-        "joined": "2023-04-12",
-        "amount": 12.50,
-        "active": True,
-    }
+    assert result["rows"][0] == {"id": 1, "name": "Alice", "joined": "2023-04-12", "amount": 12.50, "active": True}
 
 
-def test_columns_with_little_or_nothing_in_them():
-    model = make_model()
-    # No evidence at all: text, and the model is not consulted.
-    assert classify(model, ["", "  ", ""]) == "text"
-    assert classify(model, []) == "text"
-    # A column that is mostly empty is still typed on what it does contain.
-    assert classify(model, ["2023-04-12", "", "", "2024-01-09", ""]) == "date"
-    # A single value is thin evidence, but it is evidence.
-    assert classify(model, ["2023-04-12"]) == "date"
+def test_huit_traits_tous_entre_zero_et_un():
+    """« Describe one column with eight numbers, all between zero and one » (existant, complété)."""
+    features = column_features(["12", "7", "103"])
+    assert len(features) == len(FEATURE_NAMES) == 8
+    assert all(0.0 <= value <= 1.0 for value in features)
+    assert features[0] == 1.0 and features[3] == 0.0
+    long_text = column_features(["x" * 500, "y" * 800])
+    assert long_text[6] == 1.0  # LONG_VALUE : la longueur moyenne plafonne à un
+    assert column_features(["x" * LONG_VALUE])[6] == 1.0
+    assert column_features(["x" * (LONG_VALUE // 2)])[6] == 0.5
 
 
-def test_the_limit_of_this_rung_an_identifier_that_looks_like_a_number():
-    """
-    A postcode is not a quantity, and neither is a product reference. Both are
-    made of digits, so every trait this rung measures says integer, and the
-    classifier says integer. It is not wrong about the shape; it has no way to
-    be right about the meaning.
+def test_les_traits_de_forme_ne_dependent_pas_de_la_taille_de_l_echantillon():
+    """« Every trait is a proportion rather than a count » : vrai pour les cinq traits de forme (existant)."""
+    features = column_features(["12", "7", "103"])
+    deeper = column_features(["12", "7", "103", "44", "9", "271"])
+    assert deeper[:5] == features[:5]
 
-    The cost is silent, which is what makes it worth a test: rung N0 then
-    coerces the value and the leading zero is gone for good. Nothing is
-    rejected, because nothing failed.
-    """
-    model = make_model()
-    postcodes = ["01000", "06400", "75014", "02100", "13008"]
-    assert classify(model, postcodes) == "integer"
 
-    data = b"postcode\n01000\n06400\n75014\n"
-    result = clean_csv(data, {"postcode": classify(model, postcodes)})
-    assert result["rejects"] == []
-    assert [row["postcode"] for row in result["rows"]] == [1000, 6400, 75014]
+@pytest.mark.xfail(
+    strict=True,
+    reason="INFIRMÉ : « a column sampled from ten rows and one sampled from ten thousand are described on the same "
+    "scale » ; la part de valeurs distinctes baisse avec l'échantillon : la colonne 0, 1, 2, 3 est « integer » sur "
+    "8 lignes et « boolean » sur 200, et N0 refuse alors chaque 2 et chaque 3",
+)
+def test_une_colonne_est_typee_pareil_sur_dix_lignes_et_sur_deux_cents():
+    assert classify(MODEL, repeat(["0", "1", "2", "3"], 8)) == classify(MODEL, repeat(["0", "1", "2", "3"], 200))
+
+
+def test_les_valeurs_vides_sont_mises_de_cote_et_comptees_a_part():
+    """« Blank values are set aside before the proportions are taken, and counted separately »."""
+    assert column_features(["2023-04-12", "", "  ", "2024-01-09"])[:7] == column_features(["2023-04-12", "2024-01-09"])[:7]
+    assert column_features(["2023-04-12", "", "  ", "2024-01-09"])[7] == 0.5
+
+
+def test_les_colonnes_ou_il_n_y_a_presque_rien():
+    """`classify` : « A column with nothing in it is text, and the model is not consulted » (existant, complété)."""
+    assert classify(None, ["", "  ", ""]) == "text"
+    assert classify(None, []) == "text"
+    assert classify(MODEL, ["2023-04-12", "", "", "2024-01-09", ""]) == "date"
+    assert classify(MODEL, ["2023-04-12"]) == "date"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="INFIRMÉ : « A couple of hundred rows say as much about the shape of a column as a million do » ; une "
+    "colonne de montants entiers sur ses 200 premières lignes puis décimaux est typée « integer », et N0 refuse "
+    "chaque montant décimal qui suit",
+)
+def test_deux_cents_lignes_disent_la_forme_de_toute_la_colonne():
+    rows = [[str(i)] for i in range(1, 201)] + [["12.50"]] * 50
+    assert infer_schema(MODEL, ["amount"], rows) == infer_schema(MODEL, ["amount"], rows[150:])
+
+
+def test_l_echantillon_est_de_deux_cents_lignes_et_les_lignes_courtes_comptent_vide():
+    rows = [["1", "Alice"], ["2"]] + [["x", "y"]] * 300
+    assert infer_schema(MODEL, ["id", "name"], rows[:2]) == {"id": "integer", "name": "text"}
+    assert infer_schema(MODEL, ["id"], [[str(i)] for i in range(200)] + [["abc"]] * 1000) == {"id": "integer"}
+
+
+def test_n1_est_deterministe():
+    """risks `deterministic: true`."""
+    again = train(COLUMNS, LABELS)
+    assert (again.coef_ == MODEL.coef_).all()
+    assert infer_schema(again, HEADER, ROWS) == infer_schema(MODEL, HEADER, ROWS)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="INFIRMÉ (Python) : latency « ~10 ms » ; 0,3 ms pour les 5 colonnes du test, 45 ms pour les deux cents "
+    "colonnes que la docstring cite (200 lignes chacune), plus près de « ~100 ms » ; JavaScript : 18 ms",
+)
+def test_deux_cents_colonnes_s_inferent_de_l_ordre_de_dix_millisecondes():
+    header = [f"c{i}" for i in range(200)]
+    rows = [[str(j * i % 97) if i % 3 == 0 else ("2023-04-12" if i % 3 == 1 else "Alice") for i in range(200)] for j in range(200)]
+    best = float("inf")
+    for _ in range(3):
+        start = time.perf_counter()
+        infer_schema(MODEL, header, rows)
+        best = min(best, time.perf_counter() - start)
+    assert best < 0.032  # milieu logarithmique entre « ~10 ms » et « ~100 ms »
+
+
+def test_verdict_n1_devine_le_schema_que_n0_reclame():
+    """verdict_rationale : « N1 devine le schéma que N0 réclame » ; docstring « This rung replaces the typing, not the cleaning »."""
+    data = b"id,joined\n1,2023-04-12\n2,31/02/2024\n"
+    schema = infer_schema(MODEL, ["id", "joined"], [["1", "2023-04-12"], ["2", "31/02/2024"]])
+    assert schema == {"id": "integer", "joined": "date"}
+    assert [(r["line"], r["reason"]) for r in clean_csv(data, schema)["rejects"]] == [(3, "not a real date")]
+
+
+# ---------------------------------------------------------------------------
+# Cas de production
+# ---------------------------------------------------------------------------
+
+
+def test_production_un_jeu_d_entrainement_vide_ou_a_une_seule_classe_est_refuse():
+    with pytest.raises(ValueError):
+        train([], [])
+    with pytest.raises(ValueError):
+        train([["1"], ["2"]], ["integer", "integer"])
+
+
+def test_production_deux_cents_colonnes_de_deux_cents_lignes_terminent():
+    header = [f"c{i}" for i in range(200)]
+    rows = [["1"] * 200 for _ in range(2000)]
+    start = time.perf_counter()
+    assert set(infer_schema(MODEL, header, rows).values()) == {"boolean"}
+    assert time.perf_counter() - start < 5
+
+
+def test_production_encodage_nfd_emoji_insecables():
+    names = [unicodedata.normalize("NFD", n) for n in ("Zoé", "Anaïs", "Léon 🙂")]
+    assert classify(MODEL, names) == "text"
+    assert classify(MODEL, ["1\u00a0234,50", "12,00", "7\u202f000,25"]) == "number"
+
+
+def test_production_echantillon_nul():
+    assert infer_schema(MODEL, HEADER, ROWS, sample=0) == {name: "text" for name in HEADER}

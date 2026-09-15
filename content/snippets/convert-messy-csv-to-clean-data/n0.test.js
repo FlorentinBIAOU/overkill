@@ -1,25 +1,27 @@
 /**
- * The sample files live here, never in the snippet: the snippet shows a
- * function, not a demonstration.
- *
- * Every file below is built as bytes, because that is what a CSV is before
- * anybody has decided what encoding it is in. The cases are the same as in
- * n0.test.py, and so are the expected values: both versions of this snippet
- * have to return the same rows and the same journal for the same bytes.
+ * Tests du niveau N0 : dialecte, encodage, coercition typée, journal des
+ * rejets. Les fichiers d'exemple vivent ici, en octets. Les cas et les valeurs
+ * attendues sont ceux de n0.test.py : les deux versions de l'extrait doivent
+ * rendre les mêmes lignes et le même journal pour les mêmes octets.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanCsv, decodeText, detectDialect } from './n0.js';
+import { readFileSync } from 'node:fs';
+import essai from '../../tryouts/live/convert-messy-csv-to-clean-data.js';
+import { Rejected, cleanCsv, coerceRow, decodeText, detectDialect, parseRecords } from './n0.js';
 
-const SCHEMA = {
-  id: 'integer',
-  name: 'text',
-  joined: 'date',
-  amount: 'number',
-  active: 'boolean',
-};
+const SCHEMA = { id: 'integer', name: 'text', joined: 'date', amount: 'number', active: 'boolean' };
 
 const bytes = (text, encoding = 'utf8') => Buffer.from(text, encoding);
+const journal = (result) => result.rejects.map((r) => [r.line, r.column, r.reason]);
+const SOURCE = readFileSync(new URL('./n0.js', import.meta.url), 'utf8');
+
+/** Lignes de code d'une fonction, hors lignes vides et commentaires seuls. */
+function codeLines(source, signature) {
+  const start = source.indexOf(signature);
+  const end = source.indexOf('\n}\n', start);
+  return source.slice(start, end + 2).split('\n').filter((l) => l.trim() !== '' && !/^\s*(\/\/|\*|\/\*\*)/.test(l)).length;
+}
 
 const NOMINAL = bytes(
   'id,name,joined,amount,active\n' +
@@ -28,184 +30,306 @@ const NOMINAL = bytes(
     '3,Carol,2023-06-30,0.99,true\n',
 );
 
-test('reads a well-formed file', () => {
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
+
+test('point de rupture : une colonne change de sens en cours de fichier', () => {
+  const data = bytes('id,joined\n1,07/04/2023\n2,07/04/2023\n3,12/25/2023\n');
+  const result = cleanCsv(data, SCHEMA);
+  assert.deepEqual(result.rows.map((row) => row.joined), ['2023-04-07', '2023-04-07']);
+  assert.deepEqual(journal(result), [[4, 'joined', 'not a real date']]);
+  // Témoin : une date jour d'abord sans ambiguïté est lue juste.
+  assert.deepEqual(cleanCsv(bytes('id,joined\n1,25/12/2023\n'), SCHEMA).rows, [{ id: 1, joined: '2023-12-25' }]);
+});
+
+test('point de rupture : un second export recollé avec un autre séparateur', () => {
+  const data = bytes('id;name;joined\n1;Alice;2023-04-12\n2;Bob;2023-05-01\nid,name,joined\n3,Carol,2024-01-09\n4,Dan,2024-02-11\n');
+  const result = cleanCsv(data, SCHEMA);
+  assert.equal(result.delimiter, ';');
+  assert.deepEqual(result.rows.map((row) => row.id), [1, 2]);
+  assert.deepEqual(result.rejects.map((r) => [r.line, r.reason]), [
+    [4, 'expected 3 fields, found 1'],
+    [5, 'expected 3 fields, found 1'],
+    [6, 'expected 3 fields, found 1'],
+  ]);
+  assert.deepEqual(journal(cleanCsv(bytes('id,name,joined\n3,Carol,2024-01-09\n'), SCHEMA)), []);
+});
+
+test('point de rupture : une ligne du premier dialecte après le second reste lue', () => {
+  const data = bytes(
+    'id;name;joined\n1;Alice;2023-04-12\n2;Bob;2023-05-01\n# second export appended below\n' +
+      'id,name,joined\n3,Carol,2024-01-09\n4;Dan;2024-02-11\n',
+  );
+  const result = cleanCsv(data, SCHEMA);
+  assert.deepEqual(result.rows.map((row) => row.id), [1, 2, 4]);
+  assert.deepEqual(result.rejects.map((r) => [r.line, r.reason]), [
+    [4, 'expected 3 fields, found 1'],
+    [5, 'expected 3 fields, found 1'],
+    [6, 'expected 3 fields, found 1'],
+  ]);
+});
+
+test('point de rupture : l’essai montre la date qui change de sens', () => {
+  const cas = essai.cases[3];
+  assert.equal(cas.fails, true);
+  const out = essai.run(cas.input, 'fr');
+  assert.deepEqual(out.rows.rows.map((r) => [r[0], r[1], r[3], r.at(-1)]), [
+    ['2', '41', '2023-04-07', 'retenue'],
+    ['3', '42', '2023-04-07', 'retenue'],
+    ['4', { v: '43', caught: false }, { v: '12/25/2023', caught: true }, 'not a real date'],
+  ]);
+});
+
+test('INFIRMÉ : le `why` de l’essai parle des « lignes 41 et 42 » ; ce sont les identifiants, le tableau affiche les lignes 2 et 3', () => {
+  const out = essai.run(essai.cases[3].input, 'fr');
+  assert.throws(() => {
+    assert.ok(out.rows.rows.some((r) => r[0] === '41'));
+  }, assert.AssertionError);
+});
+
+// ---------------------------------------------------------------------------
+// Nom, docstring, commentaires
+// ---------------------------------------------------------------------------
+
+test('lit un fichier bien formé', () => {
   const result = cleanCsv(NOMINAL, SCHEMA);
   assert.deepEqual(result.rejects, []);
   assert.deepEqual(result.columns, ['id', 'name', 'joined', 'amount', 'active']);
-  assert.deepEqual(result.rows[0], {
-    id: 1,
-    name: 'Alice',
-    joined: '2023-04-12',
-    amount: 12.5,
-    active: true,
-  });
-  // A day-first date becomes ISO, and a European decimal comma becomes a
-  // number, thousands separator included.
-  assert.equal(result.rows[1].joined, '2023-05-01');
-  assert.equal(result.rows[1].amount, 1234.56);
+  assert.deepEqual(result.rows, [
+    { id: 1, name: 'Alice', joined: '2023-04-12', amount: 12.5, active: true },
+    { id: 2, name: 'Bob', joined: '2023-05-01', amount: 1234.56, active: false },
+    { id: 3, name: 'Carol', joined: '2023-06-30', amount: 0.99, active: true },
+  ]);
 });
 
-test('detects a semicolon file whose free text is full of commas', () => {
-  const data = bytes(
-    'id;name;note\n' +
-      '1;Alice;"a, b, c"\n' +
-      '2;Bob;"she said ""hello"""\n' +
-      '3;Carol;plain\n',
-  );
+test('n0 n’emploie que la bibliothèque standard', () => {
+  // « Node's standard library only, parser included ».
+  assert.doesNotMatch(SOURCE, /\bimport\b|\brequire\(/);
+});
+
+test('n0 est déterministe et se traite en moins d’une milliseconde', () => {
+  const first = cleanCsv(NOMINAL, SCHEMA);
+  let best = Infinity;
+  for (let i = 0; i < 20; i += 1) {
+    const start = performance.now();
+    assert.deepEqual(cleanCsv(NOMINAL, SCHEMA), first);
+    best = Math.min(best, performance.now() - start);
+  }
+  assert.ok(best < 1, `${best} ms`);
+});
+
+test('les octets deviennent du texte avant que le séparateur soit compté', () => {
+  const data = Buffer.concat([Buffer.from([0xff, 0xfe]), bytes('id;ville\n1;Besançon\n', 'utf16le')]);
   const result = cleanCsv(data, { id: 'integer' });
   assert.equal(result.delimiter, ';');
-  assert.deepEqual(
-    result.rows.map((row) => row.note),
-    ['a, b, c', 'she said "hello"', 'plain'],
-  );
+  assert.deepEqual(result.rows, [{ id: 1, ville: 'Besançon' }]);
 });
 
-test('detects tabs and apostrophe quoting', () => {
+test('détecte un fichier à points-virgules dont le texte libre est plein de virgules', () => {
+  const data = bytes('id;name;note\n1;Alice;"a, b, c"\n2;Bob;"she said ""hello"""\n3;Carol;plain\n');
+  const result = cleanCsv(data, { id: 'integer' });
+  assert.equal(result.delimiter, ';');
+  assert.deepEqual(result.rows.map((row) => row.note), ['a, b, c', 'she said "hello"', 'plain']);
+});
+
+test('détecte les tabulations et les apostrophes comme guillemets', () => {
   assert.deepEqual(detectDialect('id\tname\n1\tAlice\n'), { delimiter: '\t', quote: '"' });
   assert.deepEqual(detectDialect("id;name\n1;'Al;ice'\n"), { delimiter: ';', quote: "'" });
 });
 
-test('normalises the encoding whatever the file arrived in', () => {
-  // The same two rows, written three ways a spreadsheet really exports them.
+test('une apostrophe ne compte que lorsqu’elle ouvre un champ', () => {
+  assert.deepEqual(detectDialect("id;name\n1;l'été\n2;aujourd'hui\n3;c'est\n"), { delimiter: ';', quote: '"' });
+});
+
+test('normalise l’encodage quel que soit le fichier reçu', () => {
   const expected = [{ city: 'Besançon' }, { city: 'Nîmes' }];
-  const plain = 'city\nBesançon\nNîmes\n';
-  const utf8Bom = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), bytes(plain)]);
-  const utf16 = Buffer.concat([Buffer.from([0xff, 0xfe]), bytes(plain, 'utf16le')]);
-  const cp1252 = Buffer.from([...plain].map((c) => c.codePointAt(0))); // latin-1 range
-  for (const data of [utf8Bom, utf16, cp1252]) {
+  const text = 'city\nBesançon\nNîmes\n';
+  const utf16be = Buffer.from(bytes(text, 'utf16le')).swap16();
+  for (const data of [
+    Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), bytes(text)]),
+    Buffer.concat([Buffer.from([0xff, 0xfe]), bytes(text, 'utf16le')]),
+    Buffer.concat([Buffer.from([0xfe, 0xff]), utf16be]),
+    bytes(text),
+    bytes(text, 'latin1'),
+  ]) {
     assert.deepEqual(cleanCsv(data, {}).rows, expected);
   }
-  // The byte order mark is consumed, not carried into the first column name.
-  assert.ok(decodeText(utf8Bom).startsWith('city'));
+  assert.ok(decodeText(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), bytes(text)])).startsWith('city'));
 });
 
-test('handles the files nobody writes a test for', () => {
-  const empty = cleanCsv(bytes(''), {});
-  assert.deepEqual(empty.rows, []);
-  assert.deepEqual(empty.columns, []);
-  assert.deepEqual(empty.rejects, []);
+test('les cinq octets indéfinis de cp1252 deviennent le caractère de remplacement', () => {
+  // « both versions of this snippet have to return the same text for the same bytes ».
+  assert.equal(decodeText(Buffer.from([0x63, 0x81, 0x8d, 0x8f, 0x90, 0x9d, 0xe9])), 'c�����é');
+});
 
-  const headerOnly = cleanCsv(bytes('id,name\n'), SCHEMA);
-  assert.deepEqual(headerOnly.columns, ['id', 'name']);
-  assert.deepEqual(headerOnly.rows, []);
+test('production : une marque UTF-8 suivie d’un octet invalide est remplacée', () => {
+  // Python lève UnicodeDecodeError sur ces octets (DÉFAUT, n0.test.py) : les deux versions divergent.
+  const data = Buffer.from([0xef, 0xbb, 0xbf, ...bytes('city\nBesan'), 0xe7, ...bytes('on\nNimes\n')]);
+  assert.deepEqual(cleanCsv(data, {}).rows, [{ city: 'Besan�on' }, { city: 'Nimes' }]);
+});
 
-  // One column, blank lines, and no newline at the end of the file.
-  const single = cleanCsv(bytes('code\nAB1\n\nCD2'), {});
-  assert.deepEqual(
-    single.rows.map((row) => row.code),
-    ['AB1', 'CD2'],
-  );
+test('DÉFAUT : un encodage non pris en charge est lu en colonnes illisibles sans journal', () => {
+  const utf32 = Buffer.from([0xff, 0xfe, 0x00, 0x00, ...[...'city\nBesançon\n'].flatMap((c) => [c.codePointAt(0), 0, 0, 0])]);
+  assert.throws(() => {
+    for (const data of [bytes('city\nBesançon\n', 'utf16le'), utf32]) {
+      const result = cleanCsv(data, {});
+      assert.ok(result.columns[0] === 'city' || result.rejects.length > 0, JSON.stringify(result.columns));
+    }
+  }, assert.AssertionError);
+});
 
-  // A quoted field may hold the delimiter, a doubled quote, or a newline.
-  const quoted = cleanCsv(bytes('id,note\r\n1,"line one\r\nline two"\r\n2,"a,b"\r\n'), {
-    id: 'integer',
+test('une virgule et un point : la dernière marque est décimale', () => {
+  const data = bytes('amount\n"1.234,56"\n"1,234.56"\n"12,5"\n1 234\n"1 234,56"\n"1 234,56"\n5.\n.5\n');
+  assert.deepEqual(cleanCsv(data, { amount: 'number' }).rows.map((row) => row.amount), [1234.56, 1234.56, 12.5, 1234, 1234.56, 1234.56, 5, 0.5]);
+});
+
+test('production : un séparateur de milliers seul est lu comme une marque décimale', () => {
+  const result = cleanCsv(bytes('amount\n"1,234"\n1.234\n'), { amount: 'number' });
+  assert.deepEqual(result.rows.map((row) => row.amount), [1.234, 1.234]);
+  assert.deepEqual(result.rejects, []);
+});
+
+test('une date hors forme ISO est lue jour d’abord et le calendrier est vérifié', () => {
+  const data = bytes('joined\n01.05.2023\n29/02/2024\n29/02/2000\n31/02/2024\n01/13/2023\n29/02/2023\n29/02/1900\n0000-01-01\n7/4/2023\n');
+  const result = cleanCsv(data, { joined: 'date' });
+  assert.deepEqual(result.rows.map((row) => row.joined), ['2023-05-01', '2024-02-29', '2000-02-29']);
+  assert.deepEqual(result.rejects.map((r) => r.reason), [...Array(5).fill('not a real date'), 'not a date']);
+  // Commentaire : « Built-in date objects roll 31 February over to 2 March instead of refusing it ».
+  const rolled = new Date(2024, 1, 31);
+  assert.deepEqual([rolled.getMonth(), rolled.getDate()], [2, 2]);
+});
+
+test('les mots vrai et faux', () => {
+  const words = ['true', 'YES', 'y', '1', 'vrai', 'Oui', 'o', 'false', 'No', 'n', '0', 'faux', 'NON'];
+  const result = cleanCsv(bytes(`active\n${words.join('\n')}\n`), { active: 'boolean' });
+  assert.deepEqual(result.rows.map((row) => row.active), [...Array(7).fill(true), ...Array(6).fill(false)]);
+});
+
+test('la première valeur refusée nomme la ligne', () => {
+  assert.deepEqual(journal(cleanCsv(bytes('id,name,joined,amount,active\nx,Alice,xx,yy,maybe\n'), SCHEMA)), [[2, 'id', 'not an integer']]);
+  assert.throws(() => coerceRow(['joined', 'amount'], ['xx', 'yy'], SCHEMA), (error) => {
+    assert.ok(error instanceof Rejected);
+    assert.deepEqual([error.column, error.reason], ['joined', 'not a date']);
+    return true;
   });
-  assert.deepEqual(
-    quoted.rows.map((row) => row.note),
-    ['line one\r\nline two', 'a,b'],
-  );
-
-  // An empty cell is missing, not malformed, so it is not a rejection.
-  const blanks = cleanCsv(bytes('id,joined\n1,\n'), SCHEMA);
-  assert.deepEqual(blanks.rows, [{ id: 1, joined: null }]);
-  assert.deepEqual(blanks.rejects, []);
 });
 
-test('the journal names the line, the column and the reason', () => {
+test('le journal nomme la ligne, la colonne et la raison', () => {
   const data = bytes(
-    'id,name,joined,amount,active\n' +
-      '1,Alice,31/02/2024,3.5,yes\n' + // a date that does not exist
-      '2,Bob,2024-01-09,abc,no\n' + // not a number
-      '3,Carol,2024-01-10,1.0,maybe\n' + // not a boolean
-      'x,Dan,2024-01-11,1.0,yes\n' + // not an integer
-      '5,Eve\n' + // a row shorter than the header
-      '6,Frank,2024-01-12,2.0,no\n', // the only survivor
+    'id,name,joined,amount,active\n1,Alice,31/02/2024,3.5,yes\n2,Bob,2024-01-09,abc,no\n' +
+      '3,Carol,2024-01-10,1.0,maybe\nx,Dan,2024-01-11,1.0,yes\n5,Eve\n6,Frank,2024-01-12,2.0,no\n',
   );
   const result = cleanCsv(data, SCHEMA);
-
-  assert.deepEqual(
-    result.rows.map((row) => row.id),
-    [6],
-  );
-  assert.deepEqual(
-    result.rejects.map((r) => [r.line, r.column, r.reason]),
-    [
-      [2, 'joined', 'not a real date'],
-      [3, 'amount', 'not a number'],
-      [4, 'active', 'not a true or false value'],
-      [5, 'id', 'not an integer'],
-      [6, '', 'expected 5 fields, found 2'],
-    ],
-  );
-  // The fields are kept as they were read, so a refusal can be acted on
-  // without opening the file again. This is what rung N3 is handed.
+  assert.deepEqual(result.rows.map((row) => row.id), [6]);
+  assert.deepEqual(journal(result), [
+    [2, 'joined', 'not a real date'],
+    [3, 'amount', 'not a number'],
+    [4, 'active', 'not a true or false value'],
+    [5, 'id', 'not an integer'],
+    [6, '', 'expected 5 fields, found 2'],
+  ]);
   assert.deepEqual(result.rejects[0].fields, ['1', 'Alice', '31/02/2024', '3.5', 'yes']);
 });
 
-test('breaking point: the separator changes partway through the file', () => {
-  // The breaking point claimed on the entry, first half: a file whose
-  // separators are not consistent from one line to the next.
-  //
-  // The dialect is decided once, from the top of the file. Everything written
-  // in the other dialect arrives as a single field and is refused. The claim
-  // this test defends is not that the cleaner copes, because it does not: it
-  // is that the cleaner says so, line by line, instead of quietly returning
-  // three rows out of five.
-  const data = bytes(
-    'id;name;joined\n' +
-      '1;Alice;2023-04-12\n' +
-      '2;Bob;2023-05-01\n' +
-      '# second export appended below\n' +
-      'id,name,joined\n' +
-      '3,Carol,2024-01-09\n' +
-      '4;Dan;2024-02-11\n',
-  );
-  const result = cleanCsv(data, SCHEMA);
-
-  assert.equal(result.delimiter, ';');
-  assert.deepEqual(
-    result.rows.map((row) => row.id),
-    [1, 2, 4],
-  );
-  assert.deepEqual(
-    result.rejects.map((r) => [r.line, r.reason]),
-    [
-      [4, 'expected 3 fields, found 1'],
-      [5, 'expected 3 fields, found 1'],
-      [6, 'expected 3 fields, found 1'],
-    ],
-  );
+test('les numéros de ligne suivent les champs sur plusieurs lignes', () => {
+  assert.deepEqual(journal(cleanCsv(bytes('id,note,amount\n1,"deux\nlignes",1.0\n2,ok,abc\n'), { amount: 'number' })), [[4, 'amount', 'not a number']]);
 });
 
-test('breaking point: a column changes meaning partway through the file', () => {
-  // The breaking point claimed on the entry, second half, and the worse one:
-  // a column whose meaning changes without its shape changing.
-  //
-  // Here the export switches from day-first to month-first halfway down.
-  // Every row still has the right number of fields and every value still
-  // coerces, so the journal is empty and the file looks clean. It is not: the
-  // fourth of July has become the seventh of April.
-  //
-  // Nothing in this rung can see that, and nothing in the next two can either
-  // without being told what the file means. A type checker checks types. Only
-  // a date whose day happens to exceed twelve gets caught, and that is luck,
-  // not detection.
-  const data = bytes(
-    'id,joined\n' +
-      '1,07/04/2023\n' + // written day-first: the seventh of April
-      '2,07/04/2023\n' + // written month-first: the fourth of July
-      '3,12/25/2023\n', // written month-first: Christmas
-  );
-  const result = cleanCsv(data, SCHEMA);
+test('une colonne absente du schéma reste du texte', () => {
+  assert.deepEqual(cleanCsv(bytes('id,code\n007,  0042 \n'), {}).rows, [{ id: '007', code: '0042' }]);
+});
 
-  // Two different days, silently read as the same one, with nothing said.
-  assert.deepEqual(
-    result.rows.map((row) => row.joined),
-    ['2023-04-07', '2023-04-07'],
-  );
-  // Caught only because no month has twenty-five days.
-  assert.deepEqual(
-    result.rejects.map((r) => [r.line, r.column, r.reason]),
-    [[4, 'joined', 'not a real date']],
-  );
+test('le découpeur garde a"b tel qu’il a été tapé', () => {
+  // « A quote only opens a field at the start of one, which is what lets `a"b` stay the three characters ».
+  assert.deepEqual(parseRecords('x,a"b\n', ',', '"'), [[1, ['x', 'a"b']]]);
+});
+
+test('INFIRMÉ : « a CSV parser is a thirty-line state machine » ; parseRecords compte 47 lignes de code', () => {
+  assert.throws(() => assert.ok(codeLines(SOURCE, 'export function parseRecords') <= 30), assert.AssertionError);
+  assert.equal(codeLines(SOURCE, 'export function parseRecords'), 47);
+});
+
+test('les fichiers pour lesquels personne n’écrit de test', () => {
+  assert.deepEqual(cleanCsv(bytes(''), {}), { columns: [], delimiter: ',', quote: '"', rows: [], rejects: [] });
+  const headerOnly = cleanCsv(bytes('id,name\n'), SCHEMA);
+  assert.deepEqual([headerOnly.columns, headerOnly.rows], [['id', 'name'], []]);
+  assert.deepEqual(cleanCsv(bytes('code\nAB1\n\nCD2'), {}).rows.map((row) => row.code), ['AB1', 'CD2']);
+  const quoted = cleanCsv(bytes('id,note\r\n1,"line one\r\nline two"\r\n2,"a,b"\r\n'), { id: 'integer' });
+  assert.deepEqual(quoted.rows.map((row) => row.note), ['line one\r\nline two', 'a,b']);
+  const blanks = cleanCsv(bytes('id,joined\n1,\n'), SCHEMA);
+  assert.deepEqual([blanks.rows, blanks.rejects], [[{ id: 1, joined: null }], []]);
+});
+
+test('l’essai lit ses trois premiers cas comme il les annonce', () => {
+  const notes = [
+    'Séparateur détecté : « ; ». 3 lignes retenues, 0 refusée.',
+    'Séparateur détecté : « , ». 2 lignes retenues, 0 refusée.',
+    'Séparateur détecté : « ; ». 1 ligne retenue, 3 refusées.',
+  ];
+  notes.forEach((note, i) => assert.equal(essai.run(essai.cases[i].input, 'fr').note, note));
+  const refused = essai.run(essai.cases[2].input, 'fr').rows.rows.map((r) => r.at(-1));
+  assert.deepEqual(refused, ['retenue', 'not a real date', 'not a number', 'expected 5 fields, found 4']);
+  const second = essai.run(essai.cases[1].input, 'en').rows.rows;
+  assert.deepEqual(second.map((r) => [r[2], r[4]]), [['Boulangerie Martin', '1234.56'], ['Dubois, Menuiserie', '99']]);
+});
+
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
+
+test('production : fins de ligne CR seules et guillemet au milieu d’un champ', () => {
+  assert.deepEqual(cleanCsv(bytes('id;name\r1;Alice\r2;Bob\r'), {}).rows, [{ id: '1', name: 'Alice' }, { id: '2', name: 'Bob' }]);
+  assert.deepEqual(cleanCsv(bytes('id,name\n1,Eve "the boss"\n2,"a"b\n'), {}).rows.map((row) => row.name), ['Eve "the boss"', 'ab']);
+});
+
+test('production : cent mille lignes terminent vite', () => {
+  const data = bytes(`id,name,joined,amount,active\n${Array.from({ length: 100_000 }, (_, i) => `${i},Alice,2023-04-12,12.50,yes\n`).join('')}`);
+  const start = performance.now();
+  const result = cleanCsv(data, SCHEMA);
+  assert.ok(performance.now() - start < 5000); // mesuré 0,2 s
+  assert.equal(result.rows.length, 100_000);
+});
+
+test('production : encodage NFD, emoji, insécables', () => {
+  const name = 'Zoé 🙂'.normalize('NFD');
+  assert.deepEqual(cleanCsv(bytes(`id;name;amount\n1;${name};1 234,5\n`), SCHEMA).rows, [{ id: 1, name, amount: 1234.5 }]);
+});
+
+test('DÉFAUT : un grand entier est arrondi sans journal', () => {
+  // Python rend 123456789012345678901 et 9007199254740993 exacts.
+  const result = cleanCsv(bytes('id\n123456789012345678901\n9007199254740993\n'), { id: 'integer' });
+  assert.throws(() => {
+    assert.deepEqual(result.rows.map((row) => String(row.id)), ['123456789012345678901', '9007199254740993']);
+  }, assert.AssertionError);
+});
+
+test('production : des chiffres non ASCII divisent les deux langages', () => {
+  // `\d` sans drapeau `u` refuse « ١٢ » ; Python l'accepte comme 12.
+  assert.deepEqual(journal(cleanCsv(bytes('a\n١٢\n'), { a: 'integer' })), [[2, 'a', 'not an integer']]);
+});
+
+test('production : une clé de schéma à la mauvaise casse laisse la colonne en texte', () => {
+  assert.deepEqual(cleanCsv(bytes('id,Name\n1,Alice\n'), { name: 'integer' }).rows, [{ id: '1', Name: 'Alice' }]);
+});
+
+test('DÉFAUT : une apostrophe de tableur fusionne des lignes', () => {
+  const result = cleanCsv(bytes("id,phone\n1,'0612345678\n2,'0698765432\n3,'0611111111\n"), {});
+  assert.throws(() => assert.equal(result.rows.length + result.rejects.length, 3), assert.AssertionError);
+});
+
+test('DÉFAUT : un guillemet non fermé fait disparaître la suite', () => {
+  const result = cleanCsv(bytes('id,name\n1,"Alice\n2,Bob\n3,Carol\n'), {});
+  assert.throws(() => assert.equal(result.rows.length + result.rejects.length, 3), assert.AssertionError);
+});
+
+test('DÉFAUT : deux colonnes du même nom perdent une valeur', () => {
+  const result = cleanCsv(bytes('id,id\n1,2\n'), {});
+  assert.throws(() => assert.ok(result.rejects.length > 0 || Object.values(result.rows[0]).includes('1')), assert.AssertionError);
+});
+
+test('production : un champ très long est lu', () => {
+  // Python lève csv.Error au-delà de 131 072 caractères (DÉFAUT, n0.test.py).
+  const data = Buffer.concat([bytes('id,note\n1,'), Buffer.alloc(200_000, 0x78), bytes('\n2,ok\n')]);
+  assert.equal(cleanCsv(data, {}).rows.length, 2);
 });
