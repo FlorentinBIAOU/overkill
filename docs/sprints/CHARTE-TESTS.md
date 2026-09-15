@@ -141,7 +141,7 @@ tests prouvent la plomberie :
   nommée, et ne rend jamais une sortie qui passerait pour un résultat ;
 - une réponse entièrement enveloppée dans **une seule clôture de code**
   (```` ```json … ``` ````) est décodée comme si elle ne l'était pas : c'est
-  une forme courante, et la refuser coûterait un réessai payé pour rien. Tout
+  une forme courante, et la refuser ferait payer un nouvel appel pour rien. Tout
   autre écart — texte avant ou après, deux blocs, clôture non refermée — lève ;
 - `content` nul (refus du modèle) est une réponse inutilisable, traitée comme
   telle, pas passée au décodeur JSON en comptant sur l'exception ;
