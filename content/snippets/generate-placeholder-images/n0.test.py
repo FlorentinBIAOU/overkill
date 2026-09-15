@@ -141,7 +141,8 @@ def test_le_balisage_attendu_est_exactement_celui_du_test_javascript():
 def test_python_et_javascript_saccordent_au_caractere_pres():
     """
     Docstring : « lets the Python and the JavaScript version agree character
-    for character », « the same image on every machine, in every language ».
+    for character », « The same identifier always yields exactly the same image,
+    in Python as in JavaScript, for as long as this code is left unchanged ».
     Deux mille identifiants, dont accents, emoji et marques, toutes teintes
     couvertes, sur plusieurs tailles, comparés à la sortie réelle de n0.js.
     """
@@ -150,6 +151,7 @@ def test_python_et_javascript_saccordent_au_caractere_pres():
     identifiants = [f"sku-{i}" for i in range(2000)] + [
         "", "café-crème", "cafe\u0301", "\ufeffsku", "a\u200bb", "canapé 🛋️",
         'chaise "Löw" & <co>', "ZAŻÓŁĆ", "\u00a0espace",
+        "canapé\x0b4501", "a\ufffeb\uffff", "x\ud800y", "tab\there\nline\r",
     ]
     tailles = [240, 60, 7, 5, 4, 1, 0, 1001]
     attendu = [[placeholder_svg(i, t) for t in tailles] for i in identifiants]
@@ -175,7 +177,10 @@ def test_est_deterministe_et_depend_de_lidentifiant():
 
 
 def test_le_hachage_est_le_fnv_1a_32_bits_de_reference():
-    """Commentaire : « FNV-1a, the same constants as the rest of the catalogue »."""
+    """
+    Commentaire : « FNV-1a, the same constants as the rest of the catalogue » ;
+    docstring : « identical to the reference on ASCII ».
+    """
     assert stable_hash("") == 0x811C9DC5
     assert stable_hash("a") == 0xE40C292C
     assert stable_hash("foobar") == 0xBF9CF968
@@ -357,8 +362,66 @@ def test_production_insecables_largeur_nulle_emoji_et_bom_sont_recopies_tels_que
     assert placeholder_svg("SKU-1") != placeholder_svg("sku-1")
 
 
-def test_un_caractere_de_controle_rend_le_svg_mal_forme():
-    ElementTree.fromstring(placeholder_svg("canapé\x0b4501"))
+def test_production_un_caractere_de_controle_est_retire_et_le_svg_reste_bien_forme():
+    """
+    Commentaire de _escape : « a control character pasted from a spreadsheet has
+    no escaped form in XML 1.0 and would make the whole SVG unreadable, so it is
+    dropped ».
+    """
+    svg = placeholder_svg("canapé\x0b4501")
+    assert ElementTree.fromstring(svg).get("aria-label") == "canapé4501"
+    for code in [*range(0x00, 0x09), 0x0B, 0x0C, *range(0x0E, 0x20)]:
+        identifiant = f"a{chr(code)}b"
+        assert ElementTree.fromstring(placeholder_svg(identifiant)).get("aria-label") == "ab", hex(code)
+
+
+def test_production_l_echappement_ne_suffit_pas_un_controle_echappe_reste_mal_forme():
+    """Commentaire : « Escaping is not enough […] no escaped form in XML 1.0 » : `&#11;` est refusé par le parseur."""
+    with pytest.raises(ElementTree.ParseError):
+        ElementTree.fromstring('<svg aria-label="&#11;"/>')
+    # Témoin : une tabulation échappée, elle, est permise.
+    assert ElementTree.fromstring('<svg aria-label="&#9;"/>').get("aria-label") == "\t"
+
+
+def test_production_u_fffe_u_ffff_et_un_demi_codet_isole_sont_retires_un_emoji_reste():
+    """Commentaire de NOT_XML : « lone surrogates, U+FFFE and U+FFFF »."""
+    svg = placeholder_svg("a\ufffeb\uffffc\ud800d\udfffe🛋️")
+    assert ElementTree.fromstring(svg).get("aria-label") == "abcde🛋️"
+    svg.encode("utf-8")  # plus aucun demi-codet isolé
+
+
+def test_production_tabulation_et_fins_de_ligne_restent_et_le_svg_reste_bien_forme():
+    """Commentaire de NOT_XML : « C0 controls other than tab and line breaks » ; le parseur les normalise en espaces."""
+    svg = placeholder_svg("canapé\t4501\nbleu\r")
+    assert 'aria-label="canapé\t4501\nbleu\r"' in svg
+    assert ElementTree.fromstring(svg).get("aria-label") == "canapé 4501 bleu "
+
+
+def test_production_le_hachage_porte_sur_l_identifiant_brut_seul_le_nom_accessible_perd_le_controle():
+    """Corrections : l'image d'un identifiant à caractère de contrôle est celle de l'identifiant brut."""
+    brut = placeholder_svg("canapé\x0b4501")
+    propre = placeholder_svg("canapé4501")
+    corps = lambda svg: re.sub(r'aria-label="[^"]*"', "", svg)
+    assert corps(brut) != corps(propre)
+    assert teinte("canapé\x0b4501") != teinte("canapé4501")
+
+
+def test_le_hachage_est_fed_par_points_de_code_pas_par_octets_utf_8():
+    """
+    Docstring de stable_hash : « fed code points rather than UTF-8 bytes:
+    identical to the reference on ASCII, different from it on any other
+    character ».
+    """
+    def fnv1a_octets(texte):
+        digest = 2166136261
+        for octet in texte.encode("utf-8"):
+            digest = ((digest ^ octet) * 16777619) & 0xFFFFFFFF
+        return digest
+
+    for ascii_ in ("", "a", "foobar", "sku-4451", 'chaise "Low" & <co>'):
+        assert stable_hash(ascii_) == fnv1a_octets(ascii_), ascii_
+    for autre in ("é", "café-crème", "🛋️", "\u00a0"):
+        assert stable_hash(autre) != fnv1a_octets(autre), autre
 
 
 def test_production_tailles_aux_limites():

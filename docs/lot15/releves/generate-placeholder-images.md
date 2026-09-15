@@ -84,3 +84,32 @@ Remarques qui ne sont pas des défauts (tranché : comportement annoncé par le 
 - Un commentaire propre à un seul langage (le sel du `hash` Python, `Math.imul` en JavaScript) ne peut pas avoir de jumeau de même nom : j'ai testé chacun dans son seul langage. La règle « un test Python et son jumeau JavaScript portent le même nom » mériterait cette exception écrite.
 - L'essai n'existe qu'en JavaScript : ses affirmations chiffrées sont testées en JavaScript en important le module de l'essai, et en Python en recopiant la table des familles de teintes. La charte pourrait dire lequel des deux est attendu.
 - L'accord entre les deux langages se démontre bien mieux en lançant l'autre interpréteur depuis le test (sous-processus local, pas de réseau) qu'avec une seule constante recopiée. La charte pourrait le recommander pour toute fiche qui affirme cet accord.
+
+## Tour 2 — contre-épreuve
+
+Après `aec2c02` (corrections du rédacteur, tour 1). Tests : n0.py 28 → 33,
+n0.js 29 → 35 ; 11 tests ajoutés, 1 renommé (le test démarqué), aucun retiré.
+Les deux tests d'accord Python / JavaScript reçoivent quatre identifiants de
+plus (caractère de contrôle, U+FFFE et U+FFFF, demi-codet isolé, tabulation et
+fins de ligne). **Plus aucun marquage.** `node scripts/test-snippets.mjs
+generate-placeholder-images` : vert.
+
+### Lignes « À retester »
+
+| # | Ligne du tour 1 | Désormais | Test |
+|---|---|---|---|
+| 43 | N0 production, caractère de contrôle ; commentaire de `_escape` / `escape` : « Escaping is not enough: a control character pasted from a spreadsheet has no escaped form in XML 1.0 and would make the whole SVG unreadable, so it is dropped » | démontrée (py, js) : les 29 caractères C0 interdits sont retirés d'`aria-label`, le SVG est bien formé (ElementTree en Python ; en JavaScript, balisage produit par n0.js confié à ElementTree). « no escaped form » démontré en Python : `&#11;` est refusé par le parseur, `&#9;` accepté (fait XML, indépendant du langage) | test_production_un_caractere_de_controle_est_retire_et_le_svg_reste_bien_forme, test_production_l_echappement_ne_suffit_pas_un_controle_echappe_reste_mal_forme, production : un SVG à caractères retirés est accepté par un parseur XML (js) |
+| — | commentaire de `NOT_XML` : « lone surrogates, U+FFFE and U+FFFF » | démontrée (py, js) : retirés ; un emoji (paire de substitution valide) reste | test_production_u_fffe_u_ffff_et_un_demi_codet_isole_sont_retires_un_emoji_reste |
+| — | commentaire de `NOT_XML` : « C0 controls other than tab and line breaks » | démontrée (py, js) : tabulation, saut de ligne et retour chariot restent tels quels dans le balisage, le parseur les rend en espaces | test_production_tabulation_et_fins_de_ligne_restent_et_le_svg_reste_bien_forme |
+| — | corrections : « Le hachage porte toujours sur l'identifiant brut » | démontrée (py, js) : hors `aria-label`, l'image de « canapé␋4501 » diffère de celle de « canapé4501 », et sa teinte aussi | test_production_le_hachage_porte_sur_l_identifiant_brut_seul_le_nom_accessible_perd_le_controle |
+| 7 | N0 docstring : « in Python as in JavaScript, for as long as this code is left unchanged » | démontrée (py, js) par l'accord au caractère près (2 013 identifiants × 8 tailles, désormais avec les caractères retirés) et le balisage épinglé dans les deux tests | test_python_et_javascript_saccordent_au_caractere_pres, test_le_balisage_attendu_est_exactement_celui_du_test_javascript |
+| 11 | docstring de `stable_hash` : « FNV-1a on 32 bits, fed code points rather than UTF-8 bytes: identical to the reference on ASCII, different from it on any other character » | démontrée (py, js) : égal au FNV-1a de référence sur octets pour cinq chaînes ASCII, différent sur « é », « café-crème », un emoji, une espace insécable | test_le_hachage_est_fed_par_points_de_code_pas_par_octets_utf_8 / le hachage est nourri de points de code, pas d'octets UTF-8 |
+| — | essai, note `stable` : « en JavaScript comme en Python, tant que ce code ne change pas » | démontrée (js) : la note le dit dans les deux langues, l'image affichée est `placeholderSvg(id, 240)` et deux exécutions rendent la même sortie ; l'accord entre langages est le test de la ligne 7 | l'essai : la note dit « en JavaScript comme en Python… », et l'image est celle de l'extrait |
+
+### Phrases nouvelles ou modifiées, non testables
+
+| # | Où | Affirmation (citée) | Statut |
+|---|---|---|---|
+| T2-1 | N2 unavailable_reason | PyTorch « ne garantit pas des résultats reproductibles d'une version à l'autre, d'une plateforme à l'autre, ni entre processeur et carte graphique, même à graine identique » ; « une image vraisemblable de l'objet absent » | non testable : pas de code N2, fait sourcé (PyTorch, Diffusers) |
+| T2-2 | N3 unavailable_reason | « chaque vignette manquante devient un appel facturé » ; « a arrêté DALL·E 2 et DALL·E 3 le 12 mai 2026 » | non testable : pas de code N3, faits sourcés (Pricing, Deprecations) |
+| T2-3 | N0 docstring (retiré) | « would flicker in a grid and defeat every HTTP cache » | retiré, ligne 9 close |

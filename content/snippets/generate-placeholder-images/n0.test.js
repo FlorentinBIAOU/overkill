@@ -126,7 +126,8 @@ test('Python et JavaScript s’accordent au caractère près', () => {
   const ids = [];
   for (let i = 0; i < 2000; i += 1) ids.push(`sku-${i}`);
   ids.push('', 'café-crème', 'cafe\u0301', '\ufeffsku', 'a\u200bb', 'canapé 🛋️',
-    'chaise "Löw" & <co>', 'ZAŻÓŁĆ', '\u00a0espace');
+    'chaise "Löw" & <co>', 'ZAŻÓŁĆ', '\u00a0espace',
+    'canapé\u000b4501', 'a\ufffeb\uffff', 'x\ud800y', 'tab\there\nline\r');
   const tailles = [240, 60, 7, 5, 4, 1, 0, 1001];
   assert.equal(new Set(ids.map(teinte)).size, 360);
   const script =
@@ -148,6 +149,8 @@ test('est déterministe et dépend de l’identifiant', () => {
 });
 
 test('le hachage est le FNV-1a 32 bits de référence', () => {
+  // Commentaire : « FNV-1a, the same constants as the rest of the catalogue » ;
+  // docstring : « identical to the reference on ASCII ».
   assert.equal(stableHash(''), 0x811c9dc5);
   assert.equal(stableHash('a'), 0xe40c292c);
   assert.equal(stableHash('foobar'), 0xbf9cf968);
@@ -349,10 +352,76 @@ test('production : insécables, largeur nulle, emoji et BOM sont recopiés tels 
   assert.notEqual(placeholderSvg('SKU-1'), placeholderSvg('sku-1'));
 });
 
-test('un caractère de contrôle est recopié tel quel et rend le SVG mal formé', () => {
-  // Une tabulation verticale collée depuis un tableur passe dans aria-label :
-  // XML 1.0 l'interdit, le SVG servi en image/svg+xml ne s'affiche plus.
-  assert.doesNotMatch(placeholderSvg('canapé\u000b4501'), CONTROLE_INTERDIT_EN_XML);
+test('production : un caractère de contrôle est retiré et le SVG reste bien formé', () => {
+  // Commentaire de escape : « a control character pasted from a spreadsheet has no
+  // escaped form in XML 1.0 and would make the whole SVG unreadable, so it is dropped ».
+  const svg = placeholderSvg('canapé\u000b4501');
+  assert.doesNotMatch(svg, CONTROLE_INTERDIT_EN_XML);
+  assert.match(svg, WELL_FORMED);
+  assert.equal(ariaLabel(svg), 'canapé4501');
+  const codes = [...Array(9).keys(), 0x0b, 0x0c, ...Array.from({ length: 18 }, (_, i) => 0x0e + i)];
+  for (const code of codes) {
+    assert.equal(ariaLabel(placeholderSvg(`a${String.fromCharCode(code)}b`)), 'ab', code.toString(16));
+  }
+});
+
+test('production : U+FFFE, U+FFFF et un demi-codet isolé sont retirés, un emoji reste', () => {
+  // Commentaire de NOT_XML : « lone surrogates, U+FFFE and U+FFFF » ; le drapeau u ne
+  // vise que les demi-codets isolés, pas les paires d'un emoji.
+  const svg = placeholderSvg('a\ufffeb\uffffc\ud800d\udfffe🛋️');
+  assert.equal(ariaLabel(svg), 'abcde🛋️');
+  assert.ok(svg.isWellFormed());
+});
+
+test('production : tabulation et fins de ligne restent, et le SVG reste bien formé', () => {
+  // Commentaire de NOT_XML : « C0 controls other than tab and line breaks ».
+  const svg = placeholderSvg('canapé\t4501\nbleu\r');
+  assert.ok(svg.includes('aria-label="canapé\t4501\nbleu\r"'));
+  assert.doesNotMatch(svg, CONTROLE_INTERDIT_EN_XML);
+});
+
+test('production : le hachage porte sur l’identifiant brut, seul le nom accessible perd le contrôle', () => {
+  const corps = (svg) => svg.replace(/aria-label="[^"]*"/, '');
+  const brut = placeholderSvg('canapé\u000b4501');
+  assert.notEqual(corps(brut), corps(placeholderSvg('canapé4501')));
+  assert.notEqual(teinte('canapé\u000b4501'), teinte('canapé4501'));
+});
+
+test('production : un SVG à caractères retirés est accepté par un parseur XML', () => {
+  // Node n'a pas de parseur XML : le balisage produit ici est confié à ElementTree.
+  const racine = fileURLToPath(new URL('../../../', import.meta.url));
+  const venv = `${racine}.venv-tools/bin/python`;
+  const python = existsSync(venv) ? venv : 'python3';
+  const svgs = ['canapé\u000b4501', 'a\ufffeb\uffffc\ud800d🛋️', 'tab\there\n'].map((id) => placeholderSvg(id));
+  const script = 'import sys, json; import xml.etree.ElementTree as E; '
+    + 'print(json.dumps([E.fromstring(s).get("aria-label") for s in json.load(sys.stdin)]))';
+  const r = spawnSync(python, ['-c', script], { input: JSON.stringify(svgs), encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(JSON.parse(r.stdout), ['canapé4501', 'abcd🛋️', 'tab here ']);
+});
+
+test('le hachage est nourri de points de code, pas d’octets UTF-8', () => {
+  // Docstring de stableHash : « fed code points rather than UTF-8 bytes: identical to
+  // the reference on ASCII, different from it on any other character ».
+  const fnv1aOctets = (texte) => {
+    let digest = 2166136261;
+    for (const octet of new TextEncoder().encode(texte)) digest = Math.imul(digest ^ octet, 16777619) >>> 0;
+    return digest;
+  };
+  for (const ascii of ['', 'a', 'foobar', 'sku-4451', 'chaise "Low" & <co>']) {
+    assert.equal(stableHash(ascii), fnv1aOctets(ascii), ascii);
+  }
+  for (const autre of ['é', 'café-crème', '🛋️', '\u00a0']) {
+    assert.notEqual(stableHash(autre), fnv1aOctets(autre), autre);
+  }
+});
+
+test('l’essai : la note dit « en JavaScript comme en Python, tant que ce code ne change pas », et l’image est celle de l’extrait', () => {
+  const sortie = essai.run('sku-4451', 'fr');
+  assert.match(sortie.note, /en JavaScript comme en Python, tant que ce code ne change pas/);
+  assert.match(essai.run('sku-4451', 'en').note, /in JavaScript as in Python, for as long as this code is left unchanged/);
+  assert.equal(sortie.image.svg, placeholderSvg('sku-4451', 240));
+  assert.deepEqual(essai.run('sku-4451', 'fr'), sortie);
 });
 
 test('production : tailles aux limites', () => {
