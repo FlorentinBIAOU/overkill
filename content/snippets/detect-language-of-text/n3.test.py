@@ -207,14 +207,6 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un texte vide ou blanc part quand même chez le fournisseur ; un "
-        "appel payé pour un extrait vide, alors que la docstring présente le "
-        "plafonnement comme un contrôle de coût"
-    ),
-)
 def test_defaut_un_texte_vide_ne_coute_aucun_appel():
     for text in ("", "   \n "):
         client = FakeLLM(response='{"language": "und"}')

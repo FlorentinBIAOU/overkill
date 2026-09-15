@@ -2,8 +2,8 @@
  * Detect the language of a text with a naive Bayes classifier on character
  * n-grams.
  *
- * Rung N1. Same features as N0, one to three characters, but weighed instead
- * of ranked. Each n-gram of the text votes for every language, in proportion
+ * Rung N1. Features close to those of N0, n-grams of one to three characters
+ * cut at word boundaries, but weighed instead of ranked. Each n-gram of the text votes for every language, in proportion
  * to how often that language uses it, and the votes are multiplied together.
  *
  * What this buys over the rank distance of N0 is a number the caller can act
@@ -12,8 +12,8 @@
  * right slightly more often.
  *
  * Written out in full rather than pulled from a library, because multinomial
- * naive Bayes is thirty lines of counting. That is the argument of this rung:
- * the classical tool is small enough to read.
+ * naive Bayes is nothing but counting, and fits in this file. That is the
+ * argument of this rung: the classical tool is small enough to read.
  */
 
 // Smoothing. An n-gram a language never used should count against it, without

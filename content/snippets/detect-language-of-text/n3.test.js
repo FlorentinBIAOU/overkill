@@ -165,14 +165,12 @@ test('DÉFAUT : le client par défaut n’a pas la forme du vrai kit, « complet
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : un texte vide coûte un appel', async () => {
-  await assert.rejects(async () => {
-    for (const text of ['', '   \n ']) {
-      const client = new FakeLLM({ response: '{"language": "und"}' });
-      assert.equal(await detect(text, LANGUAGES, { client }), null);
-      assert.equal(client.callCount, 0);
-    }
-  });
+test('un texte vide coûte un appel', async () => {
+  for (const text of ['', '   \n ']) {
+    const client = new FakeLLM({ response: '{"language": "und"}' });
+    assert.equal(await detect(text, LANGUAGES, { client }), null);
+    assert.equal(client.callCount, 0);
+  }
 });
 
 test('production : exactement 8 000 caractères passent et 8 001 sont refusés', async () => {
@@ -183,23 +181,19 @@ test('production : exactement 8 000 caractères passent et 8 001 sont refusés',
   assert.equal(client.callCount, 1);
 });
 
-test('DÉFAUT : un emoji à la frontière de l’extrait est coupé en deux', async () => {
+test('un emoji à la frontière de l’extrait est coupé en deux', async () => {
   // slice compte en unités UTF-16 : la moitié haute du 😀 part seule.
-  await assert.rejects(async () => {
-    const client = new FakeLLM({ response: '{"language": "en"}' });
-    await detect(`${'a'.repeat(EXCERPT_CHARACTERS - 1)}😀b`, LANGUAGES, { client });
-    const { prompt } = client.lastRequest;
-    assert.ok(prompt.isWellFormed());
-    assert.ok(prompt.endsWith('a😀'));
-  });
+  const client = new FakeLLM({ response: '{"language": "en"}' });
+  await detect(`${'a'.repeat(EXCERPT_CHARACTERS - 1)}😀b`, LANGUAGES, { client });
+  const { prompt } = client.lastRequest;
+  assert.ok(prompt.isWellFormed());
+  assert.ok(prompt.endsWith('a😀'));
 });
 
-test('DÉFAUT : cinq mille emoji comptent pour dix mille caractères et sont refusés', async () => {
+test('cinq mille emoji comptent pour dix mille caractères et sont refusés', async () => {
   // text.length compte les unités UTF-16 ; Python compte les caractères et accepte.
-  await assert.rejects(async () => {
-    const client = new FakeLLM({ response: '{"language": "en"}' });
-    assert.equal(await detect('😀'.repeat(5000), LANGUAGES, { client }), 'en');
-  });
+  const client = new FakeLLM({ response: '{"language": "en"}' });
+  assert.equal(await detect('😀'.repeat(5000), LANGUAGES, { client }), 'en');
 });
 
 test('production : accents décomposés et espaces insécables partent intacts', async () => {

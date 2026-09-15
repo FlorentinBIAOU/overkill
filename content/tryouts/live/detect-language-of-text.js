@@ -132,8 +132,8 @@ export default {
       input: 'chat',
       fails: true,
       why: {
-        fr: 'Le mot est français et ressort en anglais, avec un écart large qui a toutes les apparences de la confiance. Quatre trigrammes seulement, et ce sont ceux que l’anglais emploie dans « that » et « what » : rien dans la sortie n’avertit que la réponse ne repose sur presque rien.',
-        en: 'The word is French for cat and comes back as English, with a wide gap that has every appearance of confidence. Four trigrams only, and they are the ones English uses in “that” and “what”: nothing in the output warns that the answer rests on almost nothing.',
+        fr: 'Le mot est français et ressort en anglais, avec un écart large qui a toutes les apparences de la confiance. Quatre trigrammes seulement, dont deux, « hat » et « at », que l’échantillon anglais emploie dans « that » et « at », et qu’aucun des deux autres n’emploie : rien dans la sortie n’avertit que la réponse ne repose sur presque rien.',
+        en: 'The word is French for cat and comes back as English, with a wide gap that has every appearance of confidence. Four trigrams only, two of which, “hat” and “at”, the English sample uses in “that” and “at” while neither other sample does: nothing in the output warns that the answer rests on almost nothing.',
       },
     },
     {

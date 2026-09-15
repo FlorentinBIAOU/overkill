@@ -2,8 +2,8 @@
 Detect the language of a text with a naive Bayes classifier on character
 n-grams.
 
-Rung N1. Same features as N0, one to three characters, but weighed instead of
-ranked. Each n-gram of the text votes for every language, in proportion to
+Rung N1. Features close to those of N0, n-grams of one to three characters
+cut at word boundaries, but weighed instead of ranked. Each n-gram of the text votes for every language, in proportion to
 how often that language uses it, and the votes are multiplied together.
 
 What this buys over the rank distance of N0 is a number the caller can act
@@ -11,8 +11,7 @@ on. N0 answers "French"; this answers "French, and here is how far ahead
 of Spanish it is". A detector that can abstain is worth more than one that
 is right slightly more often.
 
-Training is a paragraph per language and a fraction of a second. The model is
-a table of counts.
+Training takes a paragraph per language. The model is a table of counts.
 """
 
 from sklearn.feature_extraction.text import CountVectorizer

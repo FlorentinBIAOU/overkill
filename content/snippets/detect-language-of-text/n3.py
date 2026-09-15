@@ -6,10 +6,10 @@ what it costs, not because this entry recommends it.
 
 Note what the code has to do that N0 did not: cap the input, send only an
 excerpt, retry on failure, parse an answer that is only probably valid JSON,
-normalise a code the model may write in half a dozen ways, and refuse an
-answer that is outside the list it was given. That plumbing is the real cost
-of this rung, and it is the part your tests have to cover, because the model
-itself is not testable.
+normalise a code the model may write in capitals, with a region or with stray
+spaces, and refuse an answer that is outside the list it was given. That
+plumbing is the real cost of this rung, and it is the part your tests have to
+cover, because the model itself is not testable.
 
 The one thing this rung genuinely adds is that it needs no sample of the
 language. The one thing it cannot do is tell you it is wrong.
@@ -20,18 +20,23 @@ from __future__ import annotations
 import json
 from collections.abc import Collection
 
+# The provider named here is an example, not a recommendation: the reasoning
+# holds for any general-purpose model API, and the client is swappable. Pass
+# any object with a `complete(prompt=..., temperature=...)` method.
+MODEL = "gpt-4.1-mini"  # an example id: check the parameters your model accepts
+
 PROMPT = (
     "Identify the language of the text below.\n"
-    "Answer with JSON only: an object with keys `language` and `confidence`,\n"
-    "where `language` is a two-letter ISO 639-1 code chosen from this list:\n"
+    "Answer with JSON only: an object with the key `language`, whose value is\n"
+    "a two-letter ISO 639-1 code chosen from this list:\n"
     "{languages}, or `und` if the text is in none of them.\n\n"
     "Text:\n{excerpt}"
 )
 
 MAX_CHARACTERS = 8000
 
-# A language is decided in the first few sentences. Sending the whole document
-# is not thoroughness, it is paying by the token for nothing.
+# Only the first characters are sent, a few sentences: N0 and N1 already name
+# the language of a single sentence, and the model bills every token past it.
 EXCERPT_CHARACTERS = 600
 
 
@@ -39,29 +44,46 @@ class DetectionUnavailable(Exception):
     """The provider could not be reached, or answered something unusable."""
 
 
+class ProviderClient:
+    """The one call this snippet makes, on top of the provider's SDK."""
+
+    def __init__(self, sdk=None, model: str = MODEL):
+        if sdk is None:  # pragma: no cover - needs a key and a network
+            from openai import OpenAI
+
+            sdk = OpenAI()
+        self.sdk, self.model = sdk, model
+
+    def complete(self, *, prompt: str, temperature: float) -> str:
+        response = self.sdk.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+        )
+        return response.choices[0].message.content
+
+
 def detect(text: str, languages: Collection[str], client=None, *, attempts: int = 3) -> str | None:
     """
-    Return the code of the detected language, or None when the model says the
-    text is in none of the languages it was offered.
+    Return the code of the detected language, or None when the text is blank
+    or the model says it is in none of the languages it was offered.
 
     `client` is injected so this function can be tested without a network
     call. In production it defaults to a real provider client.
     """
-    if client is None:  # pragma: no cover - needs a key and a network
-        from openai import OpenAI
-
-        client = OpenAI()
-
-    # A model charges by the token. Refusing oversized input is not an
-    # optimisation, it is a cost control.
+    # A model charges by the token. Refusing oversized input, and blank input,
+    # is not an optimisation, it is a cost control.
     if len(text) > MAX_CHARACTERS:
         raise ValueError(f"text longer than {MAX_CHARACTERS} characters")
+    if not text.strip():
+        return None
 
+    client = client or ProviderClient()
     answer = _ask(client, text[:EXCERPT_CHARACTERS], sorted(languages), attempts)
 
-    # Models answer "fr", "FR", "fr-CA" and "French" for the same
-    # thing. Everything but the first is a bug waiting to reach production.
-    code = str(answer.get("language", "")).strip().lower().split("-")[0]
+    # "fr", "FR", "fr-CA" and the locale form "fr_CA" are all read as "fr". A
+    # language name such as "French" is not a code, and is refused below.
+    code = str(answer.get("language", "")).strip().lower().replace("_", "-").split("-")[0]
     if code == "und":
         return None
     if code not in languages:
@@ -79,7 +101,8 @@ def _ask(client, excerpt: str, languages: list[str], attempts: int) -> dict:
                 # between two identical calls cannot be reviewed.
                 temperature=0,
             )
-            parsed = json.loads(answer)
+            # No content at all (a refusal) is as unusable as prose.
+            parsed = json.loads(answer) if isinstance(answer, str) else None
             if isinstance(parsed, dict):
                 return parsed
             last_error = ValueError("the model answered something that is not an object")

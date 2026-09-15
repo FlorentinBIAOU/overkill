@@ -6,29 +6,51 @@
  *
  * Note what the code has to do that N0 did not: cap the input, send only an
  * excerpt, retry on failure, parse an answer that is only probably valid
- * JSON, normalise a code the model may write in half a dozen ways, and refuse
- * an answer that is outside the list it was given. That plumbing is the real
- * cost of this rung, and it is the part your tests have to cover, because the
- * model itself is not testable.
+ * JSON, normalise a code the model may write in capitals, with a region or
+ * with stray spaces, and refuse an answer that is outside the list it was
+ * given. That plumbing is the real cost of this rung, and it is the part your
+ * tests have to cover, because the model itself is not testable.
  *
  * The one thing this rung genuinely adds is that it needs no sample of the
  * language. The one thing it cannot do is tell you it is wrong.
  */
 
+// The provider named here is an example, not a recommendation: the reasoning
+// holds for any general-purpose model API, and the client is swappable. Pass
+// any object with a `complete({ prompt, temperature })` method.
+export const MODEL = 'gpt-4.1-mini'; // an example id: check the parameters your model accepts
+
 export const MAX_CHARACTERS = 8000;
 
-// A language is decided in the first few sentences. Sending the whole
-// document is not thoroughness, it is paying by the token for nothing.
+// Only the first characters are sent, a few sentences: N0 and N1 already name
+// the language of a single sentence, and the model bills every token past it.
 export const EXCERPT_CHARACTERS = 600;
 
 export class DetectionUnavailable extends Error {}
+
+export async function providerClient(sdk, model = MODEL) {
+  if (!sdk) {
+    const { OpenAI } = await import('openai');
+    sdk = new OpenAI();
+  }
+  return {
+    async complete({ prompt, temperature }) {
+      const response = await sdk.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+      });
+      return response.choices[0].message.content;
+    },
+  };
+}
 
 /** The exact request sent to the model. Exported so a test can read it. */
 export function buildPrompt(languages, excerpt) {
   return [
     'Identify the language of the text below.',
-    'Answer with JSON only: an object with keys `language` and `confidence`,',
-    'where `language` is a two-letter ISO 639-1 code chosen from this list:',
+    'Answer with JSON only: an object with the key `language`, whose value is',
+    'a two-letter ISO 639-1 code chosen from this list:',
     `${[...languages].sort().join(', ')}, or \`und\` if the text is in none of them.`,
     '',
     'Text:',
@@ -37,8 +59,8 @@ export function buildPrompt(languages, excerpt) {
 }
 
 /**
- * The code of the detected language, or null when the model says the text is
- * in none of the languages it was offered.
+ * The code of the detected language, or null when the text is blank or the
+ * model says it is in none of the languages it was offered.
  *
  * @param {string} text
  * @param {string[]} languages the codes the model may choose from
@@ -48,23 +70,24 @@ export function buildPrompt(languages, excerpt) {
  * @param {number} [options.attempts]
  */
 export async function detect(text, languages, { client, attempts = 3 } = {}) {
-  if (!client) {
-    // Needs a key and a network, so it is never reached in the tests.
-    const { OpenAI } = await import('openai');
-    client = new OpenAI();
-  }
+  // Counted in characters, as Python counts them: `length` would count an
+  // emoji twice, and `slice` could cut one in half.
+  const characters = [...text];
 
-  // A model charges by the token. Refusing oversized input is not an
-  // optimisation, it is a cost control.
-  if (text.length > MAX_CHARACTERS) {
+  // A model charges by the token. Refusing oversized input, and blank input,
+  // is not an optimisation, it is a cost control.
+  if (characters.length > MAX_CHARACTERS) {
     throw new RangeError(`text longer than ${MAX_CHARACTERS} characters`);
   }
+  if (!text.trim()) return null;
 
-  const answer = await ask(client, text.slice(0, EXCERPT_CHARACTERS), languages, attempts);
+  client ??= await providerClient();
+  const excerpt = characters.slice(0, EXCERPT_CHARACTERS).join('');
+  const answer = await ask(client, excerpt, languages, attempts);
 
-  // Models answer "fr", "FR", "fr-CA" and "French" for the same thing.
-  // Everything but the first is a bug waiting to reach production.
-  const code = String(answer.language ?? '').trim().toLowerCase().split('-')[0];
+  // "fr", "FR", "fr-CA" and the locale form "fr_CA" are all read as "fr". A
+  // language name such as "French" is not a code, and is refused below.
+  const code = String(answer.language ?? '').trim().toLowerCase().replace('_', '-').split('-')[0];
   if (code === 'und') return null;
   if (![...languages].includes(code)) {
     throw new DetectionUnavailable(`the model answered a language outside the list: ${code}`);
@@ -82,7 +105,8 @@ async function ask(client, excerpt, languages, attempts) {
         // two identical calls cannot be reviewed.
         temperature: 0,
       });
-      const parsed = JSON.parse(answer);
+      // No content at all (a refusal) is as unusable as prose.
+      const parsed = typeof answer === 'string' ? JSON.parse(answer) : null;
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
       lastError = new Error('the model answered something that is not an object');
     } catch (error) {

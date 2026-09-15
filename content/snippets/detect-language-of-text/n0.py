@@ -4,9 +4,9 @@ Detect the language of a text: character trigram profiles, rank distance.
 Rung N0. Deterministic, standard library only, and the whole model is a few
 hundred short strings per language.
 
-The idea is older than most of the field. Every language repeats its own
-trigrams: "ent", "les", "eur" in French, "the", "ing" in English,
-"que", "los" in Spanish. Rank those trigrams by frequency in a sample of
+The idea comes from Cavnar and Trenkle, in 1994. Each language uses some
+trigrams far more than others: "ent", "les", "eur" in French, "the", "ing" in
+English, "que", "los" in Spanish. Rank those trigrams by frequency in a sample of
 the language, rank them again in the text to identify, and compare the two
 orderings. The language whose ordering is closest wins.
 
@@ -16,8 +16,10 @@ First, words are padded with spaces before being cut, so a trigram carries
 the information that it opens or closes a word. "les" inside a word is not
 the article.
 
-Second, the comparison is on ranks, not on frequencies. A rank survives a
-sample four times longer, and a text four times shorter, unchanged.
+Second, the comparison is on ranks, not on raw counts. A count grows with the
+length of the text, a rank does not: the same text repeated four times keeps
+every rank. And the distance is divided by the number of trigrams, so a long
+text and a short one land on the same scale.
 """
 
 import re

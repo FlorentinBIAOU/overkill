@@ -3,7 +3,7 @@ id: detect-language-of-text
 family: classify-route
 status: published
 verdict: N0
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/detect-language-of-text/n0.js
       verification: executed
     breaking_point:
-      fr: "Les textes très courts, et ceux qui contiennent deux langues. « chat » ressort en anglais, ses quatre trigrammes étant ceux que l’anglais emploie dans « that » et « what » ; sur « ça va », les trois langues sont à la distance maximale et c’est l’ordre alphabétique qui répond ; sur une phrase française suivie d’une phrase anglaise, l’espagnol arrive deuxième alors qu’il n’est nulle part dans le texte."
-      en: "Very short texts, and texts that hold two languages. The word chat, French for cat, comes back as English, its four trigrams being the ones English uses in that and what; on ça va the three languages all sit at the maximum distance and the alphabetical tie-break answers; and on a French sentence followed by an English one, Spanish comes second although it is nowhere in the text."
+      fr: "Les textes très courts, et ceux qui contiennent deux langues. « chat » ressort en anglais : de ses quatre trigrammes, les deux derniers figurent dans le profil anglais, qui les tient de « that » et de « at », et aucun ne figure dans les profils français et espagnol ; sur « ça va », les trois langues sont à la distance maximale et c’est l’ordre alphabétique qui répond ; sur une phrase française suivie d’une phrase anglaise, l’espagnol arrive deuxième alors qu’il n’est nulle part dans le texte."
+      en: "Very short texts, and texts that hold two languages. The word chat, French for cat, comes back as English: of its four trigrams, the last two are in the English profile, which gets them from that and at, and none is in the French or Spanish profile; on ça va the three languages all sit at the maximum distance and the alphabetical tie-break answers; and on a French sentence followed by an English one, Spanish comes second although it is nowhere in the text."
     escalate_when:
       fr: "Vos textes tiennent en deux ou trois mots, un objet de message ou un champ de recherche, et vous voyez l’écart entre les deux premières langues tomber à zéro."
       en: "Your texts are two or three words long, a subject line or a search box, and you can see the gap between the top two languages fall to zero."
@@ -80,8 +80,8 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Un modèle d’identification dédié, chargé et servi en permanence, ne se distingue de N1 qu’en dessous de quelques dizaines de caractères. Dans ce régime, la langue d’interface de l’utilisateur, l’en-tête Accept-Language ou les messages précédents du fil tranchent mieux que n’importe quel modèle, et sans rien coûter."
-      en: "A dedicated identification model, loaded and served permanently, only pulls ahead of N1 below a few dozen characters. In that regime the user’s interface language, the Accept-Language header, or the earlier messages in the thread settle the question better than any model, and for nothing."
+      fr: "Un modèle d’identification dédié, comme celui que publie fastText, reconnaît 176 langues sans échantillon de votre part. Mais ses poids sont entraînés sur Wikipédia et deux autres corpus publics, et distribués sous licence CC BY-SA 3.0 : c’est un artefact tiers à embarquer, à suivre et dont la licence est à examiner, quand un paragraphe par langue suffit à N0 et N1 pour les langues que vous traitez. Sur un texte trop court pour eux, la langue d’interface de l’utilisateur, l’en-tête Accept-Language ou les messages précédents du fil sont des indices qui ne coûtent rien."
+      en: "A dedicated identification model, such as the one fastText publishes, recognises 176 languages without any sample from you. Its weights, though, are trained on Wikipedia and two other public corpora, and released under CC BY-SA 3.0: a third-party artefact to ship, track and clear for licensing, when a paragraph per language is all N0 and N1 need for the languages you handle. On a text too short for them, the user’s interface language, the Accept-Language header, or the earlier messages in the thread are clues that cost nothing."
 
   - level: N3
     available: true
@@ -112,15 +112,15 @@ rungs:
       javascript: snippets/detect-language-of-text/n3.js
       verification: stubbed
     breaking_point:
-      fr: "La confiance est écrite par le modèle, pas mesurée. Le test lui fait répondre « es », assorti d’une confiance de son cru, sur une phrase manifestement française : l’extrait valide la forme, la trouve parfaite, et rend le mauvais code. Il ne lève une erreur que sur ce qu’il peut voir, de la prose là où du JSON était demandé, ou une langue absente de la liste qu’il avait fournie."
-      en: "The confidence is written by the model, not measured. In the test it answers es, with a self-reported confidence, on a plainly French sentence: the snippet validates the shape, finds it perfect, and hands back the wrong code. It only raises on what it can actually see, prose where JSON was asked for, or a language outside the list it supplied."
+      fr: "Une confiance écrite par le modèle n’est pas mesurée, et l’extrait n’en lit aucune. Le test lui fait répondre « es » sur une phrase manifestement française, assorti d’une confiance de 0,99 puis de 0,01 : le code est dans la liste, l’extrait le rend les deux fois. Il ne lève une erreur que sur ce qu’il peut voir, de la prose là où du JSON était demandé, ou une langue absente de la liste qu’il avait fournie."
+      en: "A confidence written by the model is not measured, and the snippet reads none. In the test the model answers es on a plainly French sentence, with a self-reported confidence of 0.99, then of 0.01: the code is on the list, and the snippet hands it back both times. It only raises on what it can actually see, prose where JSON was asked for, or a language outside the list it supplied."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0 l’emporte sur le point qui décide de tout ici : savoir quand se taire. Son seul signal est l’écart entre les deux premières langues, et cet écart s’effondre exactement là où il le faut, sur le message bilingue ; la probabilité de N1 fait l’inverse et monte à la quasi-certitude sur ce même message. Montez à N1 le jour où vous devez répondre sur un ou deux mots, en sachant que son seuil vous protège des textes courts et de rien d’autre."
-  en: "N0 wins on the point that decides everything here: knowing when to keep quiet. Its only signal is the gap between the top two languages, and that gap collapses exactly where it should, on the bilingual message; N1's probability does the opposite and climbs to near-certainty on that same message. Move up to N1 the day you have to answer on one or two words, knowing that its threshold protects you against short texts and nothing else."
+  fr: "N0 l’emporte sur le point qui décide de tout ici : savoir quand se taire. Son seul signal est l’écart entre les deux premières langues, et cet écart s’effondre exactement là où il le faut, sur le message bilingue ; la probabilité de N1 fait l’inverse et monte à la quasi-certitude sur ce même message. Montez à N1 le jour où vous voulez un seuil exprimé en probabilité plutôt qu’en écart de rang, en sachant qu’il s’abstient sur « ça va » mais laisse passer « chat » en anglais au-dessus du seuil, et qu’il ne connaît que les langues apprises."
+  en: "N0 wins on the point that decides everything here: knowing when to keep quiet. Its only signal is the gap between the top two languages, and that gap collapses exactly where it should, on the bilingual message; N1's probability does the opposite and climbs to near-certainty on that same message. Move up to N1 the day you want a threshold expressed as a probability rather than a rank gap, knowing that it abstains on ça va but lets chat through as English above the threshold, and that it only knows the languages it was trained on."
 
 further_reading:
   - label: "Cavnar & Trenkle — N-Gram-Based Text Categorization, l’article dont vient la distance de rang"

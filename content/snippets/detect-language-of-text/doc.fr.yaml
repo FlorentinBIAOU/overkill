@@ -9,9 +9,9 @@ n0: |
   Niveau N0. Déterministe, sans dépendance, et le modèle entier tient en
   quelques centaines de chaînes courtes par langue.
 
-  L'idée est plus vieille que la plupart du domaine. Chaque langue répète ses
-  propres trigrammes : « ent », « les », « eur » en français, « the »,
-  « ing » en anglais, « que », « los » en espagnol. Classez-les par
+  L'idée vient de Cavnar et Trenkle, en 1994. Chaque langue emploie certains
+  trigrammes bien plus que d'autres : « ent », « les », « eur » en français,
+  « the », « ing » en anglais, « que », « los » en espagnol. Classez-les par
   fréquence dans un échantillon de la langue, classez-les de nouveau dans le
   texte à identifier, puis comparez les deux ordres. La langue dont l'ordre
   est le plus proche gagne.
@@ -22,16 +22,19 @@ n0: |
   trigramme porte ainsi l'information qu'il ouvre ou ferme un mot. « les » au
   milieu d'un mot n'est pas l'article.
 
-  Ensuite, la comparaison porte sur des rangs et non sur des fréquences. Un
-  rang survit sans changer à un échantillon quatre fois plus long, et à un
-  texte quatre fois plus court.
+  Ensuite, la comparaison porte sur des rangs et non sur des comptes bruts. Un
+  compte grandit avec la longueur du texte, un rang non : le même texte répété
+  quatre fois garde tous ses rangs. Et la distance est divisée par le nombre de
+  trigrammes, si bien qu'un texte long et un texte court tombent sur la même
+  échelle.
 
 n1.py: |
   Détecter la langue d'un texte avec un classifieur bayésien naïf sur des
   n-grammes de caractères.
 
-  Niveau N1. Les mêmes traits qu'en N0, un à trois caractères, mais pondérés
-  au lieu d'être classés. Chaque n-gramme du texte vote pour chaque langue, en
+  Niveau N1. Des traits voisins de ceux de N0, des n-grammes d'un à trois
+  caractères découpés aux frontières des mots, mais pondérés au lieu d'être
+  classés. Chaque n-gramme du texte vote pour chaque langue, en
   proportion de la fréquence à laquelle cette langue l'emploie, et les votes
   se multiplient entre eux.
 
@@ -41,15 +44,16 @@ n1.py: |
   qui sait s'abstenir vaut mieux qu'un détecteur qui a raison un peu plus
   souvent.
 
-  L'entraînement tient en un paragraphe par langue et une fraction de
-  seconde. Le modèle est une table de comptes.
+  L'entraînement demande un paragraphe par langue. Le modèle est une table de
+  comptes.
 
 n1.js: |
   Détecter la langue d'un texte avec un classifieur bayésien naïf sur des
   n-grammes de caractères.
 
-  Niveau N1. Les mêmes traits qu'en N0, un à trois caractères, mais pondérés
-  au lieu d'être classés. Chaque n-gramme du texte vote pour chaque langue, en
+  Niveau N1. Des traits voisins de ceux de N0, des n-grammes d'un à trois
+  caractères découpés aux frontières des mots, mais pondérés au lieu d'être
+  classés. Chaque n-gramme du texte vote pour chaque langue, en
   proportion de la fréquence à laquelle cette langue l'emploie, et les votes
   se multiplient entre eux.
 
@@ -60,7 +64,7 @@ n1.js: |
   souvent.
 
   Écrit en entier plutôt que tiré d'une bibliothèque, parce qu'un bayésien
-  naïf multinomial, c'est trente lignes de comptage. C'est l'argument de ce
+  naïf multinomial n'est que du comptage, et tient dans ce fichier. C'est l'argument de ce
   niveau : l'outil classique est assez petit pour être lu.
 
 n3: |
@@ -72,10 +76,10 @@ n3: |
   Voyez ce que le code doit faire et que N0 ne faisait pas : plafonner
   l'entrée, n'envoyer qu'un extrait, réessayer en cas d'échec, analyser une
   réponse qui n'est que probablement du JSON valide, normaliser un code que le
-  modèle peut écrire d'une demi-douzaine de façons, et refuser une réponse qui
-  sort de la liste qu'on lui a fournie. Cette plomberie est le vrai coût de ce
-  niveau, et c'est la part que vos tests doivent couvrir, parce que le modèle
-  lui-même n'est pas testable.
+  modèle peut écrire en capitales, avec une région ou entouré d'espaces, et
+  refuser une réponse qui sort de la liste qu'on lui a fournie. Cette
+  plomberie est le vrai coût de ce niveau, et c'est la part que vos tests
+  doivent couvrir, parce que le modèle lui-même n'est pas testable.
 
   La seule chose que ce niveau apporte vraiment, c'est qu'il n'a besoin
   d'aucun échantillon de la langue. La seule chose qu'il ne sait pas faire,
