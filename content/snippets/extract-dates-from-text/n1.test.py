@@ -1,5 +1,12 @@
+import ast
+import time
+import unicodedata
 from datetime import date
+from pathlib import Path
 
+import pytest
+
+import n0
 from n1 import context, extract_dates, train
 
 # A small labelled set, the kind an afternoon of tagging produces. The label is
@@ -27,66 +34,208 @@ MONTH_FIRST = [
 ]
 
 
-def make_model():
-    return train(DAY_FIRST + MONTH_FIRST, [1] * len(DAY_FIRST) + [0] * len(MONTH_FIRST))
+def make_model(day_first=DAY_FIRST, month_first=MONTH_FIRST):
+    return train(day_first + month_first, [1] * len(day_first) + [0] * len(month_first))
 
 
-def test_context_keeps_the_words_and_drops_the_digits():
+MODEL = make_model()
+
+
+class ModelThatMustNotBeAsked:
+    """Stands in for the classifier where the rules alone must decide."""
+
+    def predict_proba(self, rows):
+        raise AssertionError("the rules should have settled this without the model")
+
+
+# ---------------------------------------------------------------------------
+# Point de rupture
+# ---------------------------------------------------------------------------
+
+
+def test_point_de_rupture_sur_03_04_2024_seul_le_classifieur_tranche_quand_meme():
+    """
+    breaking_point : « Le classifieur ne s'abstient jamais. Sur « 03/04/2024 »
+    seul, sans une phrase autour à lire, il tranche quand même ». Avec le jeu
+    d'entraînement des tests, il tranche pour le 4 mars. Témoin : entourée de
+    prose française, la même date est lue 3 avril.
+    """
+    assert extract_dates(MODEL, "03/04/2024") == [("03/04/2024", date(2024, 3, 4))]
+    assert extract_dates(MODEL, "Facture émise le 03/04/2024, à régler sous trente jours.") == [
+        ("03/04/2024", date(2024, 4, 3))
+    ]
+
+
+def test_point_de_rupture_sans_contexte_il_tranche_dans_le_sens_ou_penche_le_jeu_d_entrainement():
+    """breaking_point : « dans le sens vers lequel penchait le jeu d'entraînement »."""
+    leaning_day_first = make_model(DAY_FIRST, MONTH_FIRST[:3])
+    leaning_month_first = make_model(DAY_FIRST[:3], MONTH_FIRST)
+    assert extract_dates(leaning_day_first, "03/04/2024") == [("03/04/2024", date(2024, 4, 3))]
+    assert extract_dates(leaning_month_first, "03/04/2024") == [("03/04/2024", date(2024, 3, 4))]
+
+
+def test_point_de_rupture_la_supposition_a_exactement_la_forme_d_un_fait():
+    """breaking_point : « rien dans la sortie ne dit à l'appelant laquelle des deux il tient »."""
+    guessed = extract_dates(MODEL, "03/04/2024")
+    settled = extract_dates(MODEL, "25/12/2024")
+    assert [type(item) for item in guessed] == [type(item) for item in settled] == [tuple]
+    assert len(guessed[0]) == len(settled[0]) == 2
+
+
+def test_point_de_rupture_3_avril_2024_12_03_24_et_2024_03_12_trouves_par_n0_ne_ressortent_plus():
+    """breaking_point : « « 3 avril 2024 », « 12.03.24 » et « 2024-03-12 », que N0 trouvait, ne ressortent plus »."""
+    for written in ("3 avril 2024", "12.03.24", "2024-03-12"):
+        assert extract_dates(MODEL, f"Facture émise le {written}, à régler.") == [], written
+        assert len(n0.extract_dates(f"Facture émise le {written}, à régler.")) == 1, written
+
+
+def test_point_de_rupture_les_dates_relatives_restent_invisibles():
+    """breaking_point : « Les dates relatives, elles, restent invisibles »."""
+    assert extract_dates(MODEL, "on se voit jeudi prochain") == []
+    assert extract_dates(MODEL, "livraison dans quinze jours") == []
+    assert extract_dates(MODEL, "à partir de demain") == []
+
+
+# ---------------------------------------------------------------------------
+# Autres affirmations du niveau
+# ---------------------------------------------------------------------------
+
+
+def test_le_contexte_garde_les_mots_et_retire_les_chiffres():
+    """docstring de context : « The words around a date, with every digit removed »."""
     text = "Facture émise le 05/06/2024, à régler pour le 4e trimestre."
     assert context(text, (17, 27)) == "facture émise le  , à régler pour le  e trimestre."
 
 
-def test_reads_the_same_digits_two_ways_in_two_documents():
-    model = make_model()
-    french = extract_dates(model, "Facture émise le 03/04/2024, à régler sous trente jours.")
-    american = extract_dates(model, "Invoice issued 03/04/2024, net thirty days.")
+def test_le_contexte_s_arrete_a_quarante_caracteres_de_chaque_cote():
+    """commentaire : « characters of context kept on each side of a candidate »."""
+    text = "x" * 100 + "03/04/2024" + "y" * 100
+    assert context(text, (100, 110)) == "x" * 40 + " " + "y" * 40
+
+
+def test_lit_les_memes_chiffres_de_deux_facons_dans_deux_documents():
+    """name : « Candidats trouvés par règle, puis classifieur de contexte pour l'ambiguïté jour-mois »."""
+    french = extract_dates(MODEL, "Facture émise le 03/04/2024, à régler sous trente jours.")
+    american = extract_dates(MODEL, "Invoice issued 03/04/2024, net thirty days.")
     assert french == [("03/04/2024", date(2024, 4, 3))]
     assert american == [("03/04/2024", date(2024, 3, 4))]
 
 
-def test_the_rules_settle_what_they_can_without_the_model():
-    model = make_model()
-    # 25 cannot be a month, whatever the prose around it says.
-    assert extract_dates(model, "Invoice issued 25/12/2024, net thirty days.") == [
-        ("25/12/2024", date(2024, 12, 25))
+def test_un_document_qui_cite_un_fournisseur_etranger_est_lu_date_par_date():
+    """docstring : N0 « demande à l'appelant de choisir une convention pour tout un document, ce qui est faux dès l'instant où ce document cite un fournisseur étranger »."""
+    text = (
+        "Facture émise le 03/04/2024, à régler sous trente jours. Par ailleurs, "
+        "notre fournisseur écrit : Invoice issued 03/04/2024, net thirty days."
+    )
+    assert extract_dates(MODEL, text) == [
+        ("03/04/2024", date(2024, 4, 3)),
+        ("03/04/2024", date(2024, 3, 4)),
     ]
+    assert [value for _, value in n0.extract_dates(text)] == [date(2024, 4, 3), date(2024, 4, 3)]
 
 
-def test_still_rejects_a_day_the_calendar_does_not_have():
-    model = make_model()
-    assert extract_dates(model, "Facture émise le 31/02/2024, à régler.") == []
-    assert extract_dates(model, "Facture émise le 29/02/2023, à régler.") == []
-    assert extract_dates(model, "Facture émise le 29/02/2024, à régler.") == [
-        ("29/02/2024", date(2024, 2, 29))
-    ]
+def test_les_regles_tranchent_seules_ce_qu_elles_peuvent_trancher():
+    """docstring : « les règles tranchent encore tous les cas qu'elles peuvent trancher seules »."""
+    silent = ModelThatMustNotBeAsked()
+    assert extract_dates(silent, "Invoice issued 25/12/2024.") == [("25/12/2024", date(2024, 12, 25))]
+    assert extract_dates(silent, "Invoice issued 12/25/2024.") == [("12/25/2024", date(2024, 12, 25))]
+    assert extract_dates(silent, "13/13/2024") == []
 
 
-def test_reads_several_dates_in_one_document():
-    model = make_model()
+def test_la_verification_calendaire_de_n0_est_gardee():
+    """docstring de _to_date : « Real calendar validation, kept from N0 »."""
+    assert extract_dates(MODEL, "Facture émise le 31/02/2024, à régler.") == []
+    assert extract_dates(MODEL, "Facture émise le 29/02/2023, à régler.") == []
+    assert extract_dates(MODEL, "Facture émise le 29/02/2024, à régler.") == [("29/02/2024", date(2024, 2, 29))]
+    assert extract_dates(MODEL, "Facture émise le 29/02/1900, à régler.") == []
+
+
+def test_lit_plusieurs_dates_dans_un_document():
     text = "Commande passée le 02/03/2024, échéance fixée au 04/05/2024, pénalités au-delà."
-    assert extract_dates(model, text) == [
+    assert extract_dates(MODEL, text) == [
         ("02/03/2024", date(2024, 3, 2)),
         ("04/05/2024", date(2024, 5, 4)),
     ]
 
 
-def test_breaking_point_a_date_with_no_context_to_read():
-    """
-    The breaking point of this rung: the classifier never abstains.
-
-    Given a bare date, with no prose around it to read, it still commits to a
-    convention, and the answer it commits to is whatever the training set
-    leaned towards. It is a guess, returned with the same shape as a fact, and
-    nothing in the output tells the caller which of the two it is holding.
-    """
-    model = make_model()
-    bare = extract_dates(model, "03/04/2024")
-    assert len(bare) == 1
-    assert bare[0][1] in (date(2024, 4, 3), date(2024, 3, 4))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "INFIRMÉ : la docstring dit que la forme tout en chiffres à année sur quatre "
+        "positions est « la seule que l'ambiguïté touche » ; « 03/04/24 » est tout aussi "
+        "ambigu (N0 le lit 3 avril ou 4 mars) et N1 ne le voit pas"
+    ),
+)
+def test_infirme_la_forme_a_annee_sur_quatre_positions_est_la_seule_que_l_ambiguite_touche():
+    assert n0.extract_dates("03/04/24") != n0.extract_dates("03/04/24", day_first=False)
+    assert extract_dates(MODEL, "Invoice issued 03/04/24, net thirty days.") != []
 
 
-def test_breaking_point_relative_dates_are_still_invisible():
-    """The candidates come from a rule, so what N0 could not see, this cannot see either."""
-    model = make_model()
-    assert extract_dates(model, "on se voit jeudi prochain") == []
-    assert extract_dates(model, "livraison dans quinze jours") == []
+def test_l_extrait_n_importe_que_scikit_learn_et_la_bibliotheque_standard():
+    """risks.data_egress: none."""
+    source = ast.parse(Path(__file__).with_name("n1.py").read_text(encoding="utf-8"))
+    imported = {a.name.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
+    imported |= {n.module.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
+    assert imported == {"re", "datetime", "sklearn"}
+
+
+def test_deux_entrainements_sur_le_meme_jeu_rendent_les_memes_lectures():
+    """risks.deterministic: true."""
+    text = "Order placed 03/04/2024. Commande passée le 05/06/2024."
+    assert extract_dates(make_model(), text) == extract_dates(MODEL, text)
+
+
+def test_verdict_il_faut_garder_n0_a_cote_pour_les_mois_ecrits_en_lettres():
+    """verdict_rationale : « il faut garder N0 à côté pour les mois écrits en lettres »."""
+    text = "Livraison le 3 avril 2024."
+    assert extract_dates(MODEL, text) == []
+    assert n0.extract_dates(text) == [("3 avril 2024", date(2024, 4, 3))]
+
+
+# ---------------------------------------------------------------------------
+# Cas de production
+# ---------------------------------------------------------------------------
+
+
+def test_production_texte_vide():
+    assert extract_dates(MODEL, "") == []
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "DÉFAUT : train suppose une date candidate dans chaque phrase ; une phrase qui "
+        "écrit « 12.03.24 » fait lever AttributeError ('NoneType' object has no "
+        "attribute 'span'), une erreur qui ne dit pas quelle phrase est en cause"
+    ),
+)
+def test_defaut_une_phrase_d_entrainement_sans_date_candidate_fait_planter_l_entrainement():
+    model = train(DAY_FIRST + MONTH_FIRST + ["Facture du 12.03.24"], [1] * 8 + [0] * 8 + [1])
+    assert extract_dates(model, "Facture émise le 25/12/2024.") == [("25/12/2024", date(2024, 12, 25))]
+
+
+def test_production_cinq_mille_dates_ambigues_dans_une_borne_large():
+    text = "Facture émise le 03/04/2024, à régler. " * 5000
+    debut = time.perf_counter()
+    assert len(extract_dates(MODEL, text)) == 5000
+    assert time.perf_counter() - debut < 30
+
+
+def test_production_accents_decomposes_et_capitales_autour_de_la_date():
+    nfd = unicodedata.normalize("NFD", "Facture émise le 03/04/2024, à régler sous trente jours.")
+    assert extract_dates(MODEL, nfd) == [("03/04/2024", date(2024, 4, 3))]
+    shouted = "FACTURE ÉMISE LE 03/04/2024, À RÉGLER SOUS TRENTE JOURS."
+    assert extract_dates(MODEL, shouted) == [("03/04/2024", date(2024, 4, 3))]
+
+
+def test_production_espace_insecable_et_bom_autour_de_la_date():
+    text = "\ufeffFacture émise le\u00a003/04/2024,\u00a0à régler sous trente jours."
+    assert extract_dates(MODEL, text) == [("03/04/2024", date(2024, 4, 3))]
+
+
+def test_production_valeurs_aux_limites_des_regles():
+    silent = ModelThatMustNotBeAsked()
+    assert extract_dates(silent, "13/12/2024") == [("13/12/2024", date(2024, 12, 13))]
+    assert extract_dates(silent, "12/13/2024") == [("12/13/2024", date(2024, 12, 13))]
+    assert extract_dates(MODEL, "12/12/2024") == [("12/12/2024", date(2024, 12, 12))]
+    assert extract_dates(MODEL, "00/00/2024") == []
