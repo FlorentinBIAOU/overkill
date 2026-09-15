@@ -4,14 +4,13 @@
  * Le vrai extrait du niveau recommandé, importé tel quel : ce qui tourne dans
  * le navigateur est exactement ce que la fiche affiche au-dessus.
  *
- * Ce barreau n'a pas de règles, il n'a qu'une archive : tout ce qu'il sait des
+ * Ce niveau n'a pas de règles, il n'a qu'une archive : tout ce qu'il sait des
  * trois équipes, il l'a lu dans vingt et un tickets déjà résolus, écrits
  * ci-dessous. Une archive française n'apprend rien de l'anglais, il y en a
- * donc deux, une par langue, et la page entraîne celle dont elle a besoin. Les
- * deux tiennent en une soixantaine de millisecondes au chargement.
+ * donc deux, une par langue, et la page entraîne celle dont elle a besoin.
  *
  * L'essai montre le classement complet et pas seulement la première équipe,
- * parce que c'est là qu'est le gain du barreau : le ticket qui appartient à
+ * parce que c'est là qu'est le gain du niveau : le ticket qui appartient à
  * deux équipes le dit, au lieu d'être tranché en silence par un ordre de
  * priorité.
  */
@@ -195,8 +194,8 @@ export default {
         en: 'Does your warehouse accept school visits on wednesdays',
       },
       why: {
-        fr: 'Aucun mot de ce ticket ne figure dans l’archive : les trois équipes ressortent presque à égalité, le plancher n’est pas atteint, et le ticket repart dans la file par défaut. N1 n’a pas supprimé cette file, il l’a rétrécie — et chaque nouveau type de ticket doit être traité, étiqueté et ajouté à l’archive à la main avant que le modèle sache le router.',
-        en: 'Not one word of this ticket appears in the archive: the three teams come out nearly tied, the floor is not cleared, and the ticket returns to the default queue. N1 did not remove that queue, it made it smaller — and every new kind of ticket has to be answered, labelled and added to the archive by hand before the model can route it.',
+        fr: 'De ce ticket, l’archive ne connaît que le mot « le » : les trois équipes ressortent presque à égalité, le plancher n’est pas atteint, et le ticket repart dans la file par défaut. N1 n’a pas supprimé cette file, il l’a rétrécie — et chaque nouveau type de ticket doit être traité, étiqueté et ajouté à l’archive à la main avant que le modèle sache le router.',
+        en: 'Of this ticket, the archive only knows « does » and « on »: no team stands out, the best one stays under the floor, and the ticket returns to the default queue. N1 did not remove that queue, it made it smaller — and every new kind of ticket has to be answered, labelled and added to the archive by hand before the model can route it.',
       },
     },
   ],

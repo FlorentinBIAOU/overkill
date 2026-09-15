@@ -246,15 +246,6 @@ def test_production_un_ticket_dun_megaoctet_emoji_bom_et_insecables():
     assert time.perf_counter() - debut < 10.0
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : entraînés sur la même archive, les deux extraits ne routent pas les "
-    "mêmes tickets. Le modèle JavaScript n'a aucune régularisation et 300 passes : "
-    "il est bien plus sûr de lui. « Le colis n'est jamais arrivé et le prélèvement "
-    "est passé quand même » : file par défaut en Python (0,45), livraison en "
-    "JavaScript (0,88) ; « Bonjour, depuis hier je n'arrive plus à faire ce que je "
-    "faisais avant » : file par défaut en Python (0,34), livraison en JavaScript "
-    "(0,60) — le haussement d'épaules que le plancher devait arrêter"
-))
 def test_defaut_python_et_javascript_routent_les_memes_tickets_vers_les_memes_files():
     tickets = [TWO_TEAMS, SHRUG, UNKNOWN, NO_KEYWORD]
     model = make_model()

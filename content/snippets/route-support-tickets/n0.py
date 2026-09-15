@@ -29,7 +29,7 @@ DEFAULT_TEAM = "general"
 # the customer's work, a parcel is the one that can wait a day. Whoever
 # disagrees can reorder this tuple and nothing else.
 RULES = (
-    ("billing", ("facture", "remboursement", "prélèvement", "iban", "devis", "paiement")),
+    ("billing", ("facture", "facturation", "remboursement", "prélèvement", "iban", "devis", "paiement")),
     ("technical", ("bug", "erreur", "panne", "connexion", "mot de passe", "identifiant")),
     ("shipping", ("livraison", "colis", "transporteur", "expédition", "suivi", "retard")),
 )
@@ -42,8 +42,8 @@ def _fold(text: str) -> str:
 
 
 # A word boundary on the left only. "facture" then also matches "factures"
-# and "facturation", which is what French tickets are full of; the price is
-# that it would match a longer word starting the same way.
+# and "facturé"; "facturation" does not start with it, and has its own entry.
+# The price is that a keyword matches a longer word starting the same way.
 _COMPILED = tuple(
     (team, tuple((word, re.compile(rf"\b{re.escape(_fold(word))}")) for word in words))
     for team, words in RULES

@@ -1,15 +1,14 @@
 """
 Route a ticket by its nearest resolved tickets, with a self-hosted encoder.
 
-Rung N2. N1 learns the words of the archive; an encoder maps a ticket to a
-vector by meaning, so a customer who says "je n'arrive plus à entrer dans mon
-espace" lands next to the archived tickets about a lost password even though
-they share no word with them.
+Rung N2. N1 learns the words of the archive; this compares vectors instead.
+The encoder is a model trained for semantic search and paraphrase mining: it
+maps each ticket to a vector, and a ticket is routed by the resolved tickets
+whose vectors are closest, whether or not they share its words.
 
 There is no training step here, and that is the point of the rung: the index
 is the archive itself. A team that changes scope is a re-encoding, not a
-retraining, and the neighbours are shown to the agent as the reason for the
-routing — which is more than N1's weights ever explain.
+retraining.
 
 What it costs: a model file to ship and keep in sync, a warm process to hold
 it, and a routing whose answers change the day you upgrade the model. The
@@ -47,6 +46,11 @@ def build_index(tickets: list[str], teams: list[str], encoder=None) -> dict:
 def neighbours(index: dict, ticket: str, k: int = 3) -> list[tuple[float, str]]:
     """The k nearest resolved tickets, best first, with their cosine score."""
     vector = _unit(index["encoder"].encode([ticket])[0])
+    # Vectors from another model do not compare. A different length gives it
+    # away, where a dot product would still return a plausible number; a model
+    # of the same width goes unnoticed.
+    if index["vectors"] and len(vector) != len(index["vectors"][0]):
+        raise ValueError("the index was encoded by another model: re-encode the archive")
     scored = [(_dot(known, vector), team)
               for known, team in zip(index["vectors"], index["teams"])]
     # A stable sort, so two equally close tickets always come back in archive

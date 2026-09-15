@@ -1,9 +1,8 @@
 """
 Route a ticket by asking a general-purpose model.
 
-Rung N3. This is the option people reach for first, and it is the shortest
-piece of routing logic on the entry: no rules to maintain, no archive to
-label, and a ticket in any language.
+Rung N3. No rules to maintain and no archive to label: the team names go in
+the prompt, and the model answers with one of them.
 
 Note what the code has to do that N0 did not: cap the input size, retry a
 provider that fails, parse an answer that is only probably JSON, and refuse a
@@ -33,6 +32,31 @@ PROMPT = (
 )
 
 
+# The provider named here is an example, not a recommendation: the reasoning
+# holds for any general-purpose model API, and the client is swappable. Pass
+# any object with a `complete(prompt=..., temperature=...)` method.
+MODEL = "gpt-4.1-mini"  # an example id: check the parameters your model accepts
+
+
+class ProviderClient:
+    """The one call this snippet makes, on top of the provider's SDK."""
+
+    def __init__(self, sdk=None, model: str = MODEL):
+        if sdk is None:  # pragma: no cover - needs a key and a network
+            from openai import OpenAI
+
+            sdk = OpenAI()
+        self.sdk, self.model = sdk, model
+
+    def complete(self, *, prompt: str, temperature: float) -> str:
+        response = self.sdk.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+        )
+        return response.choices[0].message.content
+
+
 class RoutingUnavailable(Exception):
     """The provider could not be reached, or answered something unparseable."""
 
@@ -44,14 +68,10 @@ def route(ticket: str, client=None, *, attempts: int = 3) -> str:
     `client` is injected so this function can be tested without a network
     call. In production it defaults to a real provider client.
     """
-    if client is None:  # pragma: no cover - needs a key and a network
-        from openai import OpenAI
+    client = client or ProviderClient()
 
-        client = OpenAI()
-
-    # A model charges by the token, and a ticket with a forwarded thread under
-    # it is long. Refusing oversized input is not an optimisation, it is a
-    # cost control.
+    # The provider bills every token of the prompt, and a ticket with a
+    # forwarded thread under it is long. The cap counts characters, not tokens.
     if len(ticket) > MAX_CHARACTERS:
         raise ValueError(f"ticket longer than {MAX_CHARACTERS} characters")
 
@@ -69,9 +89,13 @@ def _ask(client, ticket: str, attempts: int) -> dict:
     last_error: Exception | None = None
     for _ in range(attempts):
         try:
-            # Temperature zero, because a routing decision that changes
-            # between two identical calls cannot be reviewed.
-            return json.loads(client.complete(prompt=prompt, temperature=0))
+            # The lowest temperature: the SDK documents lower values as more
+            # focused and deterministic.
+            answer = client.complete(prompt=prompt, temperature=0)
+            if not isinstance(answer, str):  # a refusal comes back as no content
+                last_error = ValueError("the model answered no text")
+                continue
+            return json.loads(answer)
         except Exception as error:  # noqa: BLE001 - any provider failure is retried
             last_error = error
     raise RoutingUnavailable(str(last_error))

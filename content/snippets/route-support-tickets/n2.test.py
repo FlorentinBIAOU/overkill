@@ -261,14 +261,6 @@ def test_production_une_archive_de_900_tickets_repond_vite():
     assert time.perf_counter() - debut < 5.0
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : la docstring prévient que l'archive doit être ré-encodée quand le "
-    "modèle change, mais rien ne le vérifie. Un index de vecteurs de 384 nombres "
-    "interrogé par un encodeur de 768 n'est pas refusé : Python tronque le produit "
-    "scalaire (`zip`) et route sur un score faux mais plausible (facturation, "
-    "0,38) ; JavaScript tronque de même, et calcule NaN quand l'encodeur est plus "
-    "étroit que l'index, ce qui envoie tout en file par défaut"
-))
 def test_defaut_un_index_encode_par_un_autre_modele_est_refuse():
     index = make_index()
     index["encoder"] = FakeEncoder(768)

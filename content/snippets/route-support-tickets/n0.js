@@ -28,7 +28,7 @@ export const DEFAULT_TEAM = 'general';
  * disagrees can reorder this list and nothing else.
  */
 export const RULES = [
-  ['billing', ['facture', 'remboursement', 'prélèvement', 'iban', 'devis', 'paiement']],
+  ['billing', ['facture', 'facturation', 'remboursement', 'prélèvement', 'iban', 'devis', 'paiement']],
   ['technical', ['bug', 'erreur', 'panne', 'connexion', 'mot de passe', 'identifiant']],
   ['shipping', ['livraison', 'colis', 'transporteur', 'expédition', 'suivi', 'retard']],
 ];
@@ -38,12 +38,14 @@ function fold(text) {
   return text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
 }
 
-// A word boundary on the left only. "facture" then also matches "factures"
-// and "facturation", which is what French tickets are full of; the price is
-// that it would match a longer word starting the same way.
+// A word boundary on the left only, with Python's idea of a word character, so
+// both languages cut "我的colis" the same way. "facture" then also matches
+// "factures" and "facturé"; "facturation" does not start with it, and has its
+// own entry. The price is that a keyword matches a longer word starting the
+// same way.
 const COMPILED = RULES.map(([team, words]) => [
   team,
-  words.map((word) => [word, new RegExp(`\\b${fold(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)]),
+  words.map((word) => [word, new RegExp(`(?<![\\p{L}\\p{N}_])${fold(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u')]),
 ]);
 
 /**

@@ -78,14 +78,6 @@ def test_point_de_rupture_sans_la_liste_fermee_le_ticket_part_dans_une_equipe_qu
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle "
-    "`client.complete(prompt=…, temperature=0)` ; cette méthode n'existe pas dans le "
-    "kit `openai` (3.14.0), dont la surface est "
-    "`client.chat.completions.create(model=…, messages=[…])`, réponse dans "
-    "`choices[0].message.content`. L'AttributeError est avalée et retentée, "
-    "l'appelant reçoit RoutingUnavailable sans qu'aucune requête soit partie"
-))
 def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(monkeypatch):
     monkeypatch.setitem(sys.modules, "openai", faux_openai('{"team": "billing"}'))
     assert route(BILLING) == "billing"

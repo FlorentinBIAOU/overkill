@@ -3,7 +3,7 @@ id: route-support-tickets
 family: classify-route
 status: published
 verdict: N1
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Send each incoming support ticket to the team that can answer it."
 
 scenario:
-  fr: "Le premier réflexe est un appel de modèle par ticket entrant, avec les noms des équipes dans l’invite. Pendant ce temps, l’outil de ticketing contient déjà tous les tickets résolus, chacun étiqueté par l’équipe qui l’a fermé : un jeu d’entraînement payé depuis des années et laissé de côté. Et la difficulté du routage n’est pas le ticket qui appartient clairement à une équipe, c’est celui qui appartient à deux, ou à aucune : aucun niveau ne le supprime, et chacun doit dire ce qu’il en fait."
-  en: "The first move is usually one model call per inbound ticket, with the team names in the prompt. Meanwhile the ticketing system already holds every ticket the desk has resolved, each labelled with the team that closed it: a training set paid for years ago and left unused. And the hard part of routing is not the ticket that clearly belongs to one team, it is the one that belongs to two, or to none. No level removes that ticket, and each has to say what it does with it."
+  fr: "Un appel de modèle par ticket entrant, avec les noms des équipes dans l’invite, route sans règle ni archive. Or l’outil de ticketing contient déjà les tickets résolus, chacun rattaché à l’équipe qui l’a fermé : un jeu d’entraînement qui existe avant qu’on le demande. Et la difficulté du routage n’est pas le ticket qui appartient clairement à une équipe, c’est celui qui appartient à deux, ou à aucune : aucun niveau ne le supprime, et chacun doit dire ce qu’il en fait."
+  en: "One model call per inbound ticket, with the team names in the prompt, routes without rules or an archive. Yet the ticketing system already holds the resolved tickets, each tied to the team that closed it: a training set that exists before anyone asks for one. And the hard part of routing is not the ticket that clearly belongs to one team, it is the one that belongs to two, or to none. No level removes that ticket, and each has to say what it does with it."
 
 rungs:
   - level: N0
@@ -71,8 +71,8 @@ rungs:
       javascript: snippets/route-support-tickets/n1.js
       verification: executed
     breaking_point:
-      fr: "Le modèle connaît l’archive, et rien d’autre. « Votre entrepôt accepte-t-il les visites scolaires le mercredi » ne recoupe aucun mot des tickets déjà résolus : les trois équipes ressortent presque à égalité, le seuil de confiance n’est pas atteint, et le ticket repart dans la file par défaut. N1 n’a pas supprimé cette file, il l’a rétrécie."
-      en: "The model knows the archive and nothing else. « Votre entrepôt accepte-t-il les visites scolaires le mercredi » overlaps none of the words in the resolved tickets: the three teams come out nearly tied, the confidence floor is not cleared, and the ticket returns to the default queue. N1 did not remove that queue, it made it smaller."
+      fr: "Le modèle connaît l’archive, et rien d’autre. « Votre entrepôt accepte-t-il les visites scolaires le mercredi » ne partage avec les tickets déjà résolus que le mot « le » : les trois équipes ressortent presque à égalité, le seuil de confiance n’est pas atteint, et le ticket repart dans la file par défaut. N1 n’a pas supprimé cette file, il l’a rétrécie."
+      en: "The model knows the archive and nothing else. « Votre entrepôt accepte-t-il les visites scolaires le mercredi » shares a single word with the resolved tickets, « le »: the three teams come out nearly tied, the confidence floor is not cleared, and the ticket returns to the default queue. N1 did not remove that queue, it made it smaller."
     escalate_when:
       fr: "Vos agents ressortent régulièrement de la file par défaut des tickets qui se révèlent être des problèmes connus, décrits avec des mots absents de l’archive."
       en: "Agents keep pulling tickets out of the default queue that turn out to be ordinary known problems, described in words the archive does not contain."
@@ -104,8 +104,8 @@ rungs:
       javascript: snippets/route-support-tickets/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Il n’y a pas de modèle des équipes ici, seulement une archive, et le ticket le plus proche n’est pas toujours un ticket pertinent. « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier » ne s’adresse à personne en particulier, et part chez facturation avec un score élevé : l’archive contient un ticket de facturation écrit avec les mêmes formules de politesse, et le vote y voit une forte ressemblance. Un vrai encodeur déplace l’accident, il ne le supprime pas : ce dont l’archive est faite est la politique de routage, y compris ce que personne n’y a choisi."
-      en: "There is no model of the teams on this level, only an archive, and the nearest ticket is not always a relevant one. « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier » is addressed to nobody in particular and lands on billing with a high score: the archive happens to hold one billing ticket written with the same politeness formulas, and the vote reads that as a strong match. A real encoder moves where the accident happens, it does not remove it: whatever the archive is made of is the routing policy, including the parts nobody chose."
+      fr: "Il n’y a pas de modèle des équipes ici, seulement une archive, et le ticket le plus proche n’est pas toujours un ticket pertinent. Le test tourne avec un encodeur de substitution, qui rapproche les tickets partageant des mots : « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier », qui ne s’adresse à personne en particulier, part chez facturation, parce que l’archive contient un ticket de facturation écrit avec les mêmes formules de politesse, et que ce seul voisin l’emporte de justesse sur deux tickets techniques. Retirez ce ticket de l’archive et le même message part chez technique : ce dont l’archive est faite est la politique de routage, y compris ce que personne n’y a choisi."
+      en: "There is no model of the teams on this level, only an archive, and the nearest ticket is not always a relevant one. The test runs with a stand-in encoder that brings tickets sharing words together: « Bonjour, merci de me confirmer que vous avez bien reçu mon dossier », addressed to nobody in particular, lands on billing, because the archive happens to hold one billing ticket written with the same politeness formulas, and that single neighbour narrowly outvotes two technical tickets. Take that ticket out of the archive and the same message goes to technical: whatever the archive is made of is the routing policy, including the parts nobody chose."
     escalate_when:
       fr: "Des tickets arrivent dans une langue absente de l’archive, ou la règle de routage existe sous forme de consigne écrite qu’aucun ticket résolu n’illustre."
       en: "Tickets arrive in a language the archive does not contain, or the routing rule exists as a written instruction that no resolved ticket illustrates."
@@ -139,15 +139,15 @@ rungs:
       javascript: snippets/route-support-tickets/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle répond des mots, et les mots ne sont pas des files. Interrogé sur trois équipes, il en renvoie une quatrième qui sonne juste et n’existe pas : « customer success », en JSON parfaitement formé, sans la moindre hésitation. La liste fermée l’attrape et le ticket part dans la file par défaut ; retirez ce contrôle, comme le fait la première version de ce genre de code, et le ticket est classé dans une équipe que personne n’a créée et que personne ne surveille."
-      en: "The model answers words, and words are not queues. Asked to pick from three teams, it returns a fourth that sounds right and does not exist: « customer success », as well-formed JSON, with no hedging at all. The closed list catches it and the ticket goes to the default queue; take that check out, as the first version of this kind of code usually does, and the ticket is filed into a team nobody created and nobody watches."
+      fr: "Le modèle répond des mots, et les mots ne sont pas des files. Rien dans la requête n’oblige la réponse à nommer une équipe de la liste : le test fait répondre au double local une quatrième équipe qui sonne juste et n’existe pas, « customer success », en JSON parfaitement formé. La liste fermée l’attrape et le ticket part dans la file par défaut ; ajoutez ce nom à la liste, et le même ticket est classé dans cette équipe — c’est la liste, et elle seule, qui l’arrête. Elle n’arrête d’ailleurs que l’invention : une réponse qui nomme une équipe existante passe, même dictée par un client qui a écrit dans son ticket de l’envoyer en facturation."
+      en: "The model answers words, and words are not queues. Nothing in the request forces the answer to name a team from the list: the test has the local double answer a fourth team that sounds right and does not exist, « customer success », as well-formed JSON. The closed list catches it and the ticket goes to the default queue; add that name to the list and the same ticket is filed into that team — the list, and the list alone, stops it. And it only stops invention: an answer naming a team that exists passes, even one dictated by a customer who wrote in the ticket that it should go to billing."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N1 l’emporte parce que ses données d’entraînement existent déjà : l’archive des tickets résolus, chacun étiqueté par l’équipe qui l’a fermé, est à un export de distance, et elle route les formulations que la liste de mots-clés de N0 n’avait pas prévues. Elle remet aussi le ticket ambigu sur la table, puisque l’équipe suivante figure dans la réponse, là où N0 la laissait tomber sans le dire. N2 achète la reconnaissance des paraphrases au prix d’un fichier de modèle, d’un processus chaud et d’un index à ré-encoder à chaque mise à jour : ce prix se paie le jour où vos agents repêchent des problèmes connus dans la file par défaut, pas avant."
-  en: "N1 wins because its training data already exists: the archive of resolved tickets, each labelled with the team that closed it, is one export away, and it routes the phrasings N0's keyword list never anticipated. It also puts the ambiguous ticket back on the table, since the runner-up team is part of the answer, where N0 dropped it silently. N2 buys paraphrase matching at the price of a model file, a warm process and an index to re-encode on every upgrade: that price is worth paying the day your agents start fishing known problems out of the default queue, not before."
+  fr: "N1 l’emporte parce que ses données d’entraînement existent déjà : l’archive des tickets résolus, chacun étiqueté par l’équipe qui l’a fermé, est à un export de distance, et elle route les formulations que la liste de mots-clés de N0 n’avait pas prévues. Elle remet aussi le ticket ambigu sur la table : `rank` rend l’équipe suivante avec sa probabilité, là où N0 la laissait tomber sans le dire. N2 achète la reconnaissance des paraphrases au prix d’un fichier de modèle, d’un processus chaud et d’un index à ré-encoder à chaque mise à jour : ce prix se paie le jour où vos agents repêchent des problèmes connus dans la file par défaut, pas avant."
+  en: "N1 wins because its training data already exists: the archive of resolved tickets, each labelled with the team that closed it, is one export away, and it routes the phrasings N0's keyword list never anticipated. It also puts the ambiguous ticket back on the table: `rank` returns the runner-up team with its probability, where N0 dropped it silently. N2 buys paraphrase matching at the price of a model file, a warm process and an index to re-encode on every upgrade: that price is worth paying the day your agents start fishing known problems out of the default queue, not before."
 
 further_reading:
   - label: "scikit-learn — Extraction de caractéristiques sur du texte, TF-IDF"
@@ -159,5 +159,15 @@ further_reading:
   - label: "Sentence Transformers — encodeurs de phrases auto-hébergés"
     url: "https://sbert.net/"
 
-sources: []
+sources:
+  - label: "scikit-learn — LogisticRegression : C, class_weight=\"balanced\", objectif pénalisé"
+    url: "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html"
+  - label: "Sentence Transformers — recherche sémantique, similarité, repérage de paraphrases"
+    url: "https://sbert.net/"
+  - label: "paraphrase-multilingual-MiniLM-L12-v2 — vecteurs de 384 dimensions, cinquante langues, licence Apache 2.0"
+    url: "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+  - label: "Transformers.js — pipelines, option dtype"
+    url: "https://huggingface.co/docs/transformers.js/pipelines"
+  - label: "OpenAI — tarifs de l’API, exprimés par million de jetons"
+    url: "https://developers.openai.com/api/docs/pricing"
 ---

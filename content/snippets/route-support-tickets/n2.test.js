@@ -222,7 +222,7 @@ test('production : une archive de 900 tickets répond vite', async () => {
   assert.ok(performance.now() - debut < 5000);
 });
 
-test('DÉFAUT : un index encodé par un autre modèle est refusé', async () => {
+test('un index encodé par un autre modèle est refusé', async () => {
   // Rien ne vérifie la dimension. Encodeur plus large (768 contre 384) : le
   // produit scalaire est tronqué et le ticket routé sur un score faux (facturation).
   // Encodeur plus étroit : NaN, et tout part en file par défaut.
@@ -232,7 +232,5 @@ test('DÉFAUT : un index encodé par un autre modèle est refusé', async () => 
   index = await makeIndex(new FakeEncoder(768));
   index.encoder = new FakeEncoder(DIMENSIONS);
   assert.equal(await route(index, 'Ma facture de janvier'), DEFAULT_TEAM);
-  await assert.rejects(async () => {
-    await assert.rejects(() => route(index, 'Ma facture de janvier'));
-  });
+  await assert.rejects(() => route(index, 'Ma facture de janvier'));
 });

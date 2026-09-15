@@ -196,18 +196,18 @@ test('production : un ticket vide part dans la file par défaut', () => {
   assert.equal(route(model, ''), DEFAULT_TEAM);
 });
 
-test('DÉFAUT : une archive d’une seule équipe est refusée', () => {
+test('une archive d’une seule équipe est refusée', () => {
   // Elle route tout, même un ticket sans aucun mot connu, avec une confiance de 1. Python lève ValueError.
   const unique = train(BILLING, BILLING.map(() => 'billing'));
   assert.deepEqual(rank(unique, 'zzz'), [['billing', 1]]);
-  assert.throws(() => assert.throws(() => train(BILLING, BILLING.map(() => 'billing'))));
+  assert.throws(() => train(BILLING, BILLING.map(() => 'billing')));
 });
 
 test('production : une archive vide lève à la première question', () => {
   assert.throws(() => route(train([], []), UNKNOWN), TypeError);
 });
 
-test('DÉFAUT : une archive de 630 tickets au vocabulaire varié s’entraîne vite', () => {
+test('une archive de 630 tickets au vocabulaire varié s’entraîne vite', () => {
   // Chaque ligne TF-IDF est dense (taille du vocabulaire) et chaque passe les
   // parcourt toutes : 210 tickets, 0,6 s ; 525 tickets, 6,3 s observés ici.
   // scikit-learn, creux, entraîne les mêmes 630 tickets en 0,35 s.
@@ -215,7 +215,7 @@ test('DÉFAUT : une archive de 630 tickets au vocabulaire varié s’entraîne v
   const tickets = Array.from({ length: 630 }, (_, i) => `Commande ${10000 + i} client ${(i * 7919) % 100000} probleme numero ${i}`);
   const debut = performance.now();
   train(tickets, tickets.map((_, i) => equipes[i % 3]));
-  assert.throws(() => assert.ok(performance.now() - debut < 2000));
+  assert.ok(performance.now() - debut < 2000);
 });
 
 test('production : un ticket d’un mégaoctet, emoji, BOM et insécables', () => {
@@ -224,11 +224,9 @@ test('production : un ticket d’un mégaoctet, emoji, BOM et insécables', () =
   assert.ok(performance.now() - debut < 10_000);
 });
 
-test('DÉFAUT : Python et JavaScript routent les mêmes tickets vers les mêmes files', () => {
+test('Python et JavaScript routent les mêmes tickets vers les mêmes files', () => {
   // Sans régularisation, le modèle JS est bien plus sûr de lui : TWO_TEAMS part
   // chez livraison (0,88) et SHRUG chez livraison (0,60), deux files par défaut en Python.
-  assert.throws(() => {
-    const tickets = [TWO_TEAMS, SHRUG, UNKNOWN, NO_KEYWORD];
-    assert.deepEqual(routeEnPython(tickets), tickets.map((t) => route(model, t)));
-  });
+  const tickets = [TWO_TEAMS, SHRUG, UNKNOWN, NO_KEYWORD];
+  assert.deepEqual(routeEnPython(tickets), tickets.map((t) => route(model, t)));
 });

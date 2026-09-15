@@ -31,11 +31,11 @@ n1.js: |
   si bien que c'est le vocabulaire des clients qui décide, et non celui de
   l'auteur des règles.
 
-  Écrit à la main plutôt que tiré d'une bibliothèque, parce que TF-IDF et une
-  régression softmax font soixante lignes. Le modèle est une table de poids :
-  assez petite pour tenir à côté du code, réentraînée le temps que vous lisiez
-  ceci, et chaque poids peut être imprimé et discuté quand quelqu'un demande
-  pourquoi son ticket a changé de file.
+  Écrit à la main plutôt que tiré d'une bibliothèque, et écrit pour apprendre ce
+  que l'extrait Python apprend avec scikit-learn : les mêmes mots et paires de
+  mots, la même pondération TF-IDF, le même objectif pénalisé. Le modèle est une
+  table de poids, et chaque poids peut être imprimé et discuté quand quelqu'un
+  demande pourquoi son ticket a changé de file.
 
   Ce qu'il garde du niveau N0, délibérément : une équipe par défaut. Un
   classifieur renvoie toujours quelque chose, et sa classe la plus probable sur
@@ -60,24 +60,21 @@ n1.py: |
   au lieu d'une mauvaise file.
 
   Les données d'entraînement sont l'archive exportée : les tickets résolus et
-  l'équipe qui a résolu chacun d'eux. Le modèle est une table de poids assez
-  petite pour être conservée dans le dépôt, et le réentraîner est une étape de
-  l'export nocturne, pas un projet.
+  l'équipe qui a résolu chacun d'eux.
 
 n2: |
   Router un ticket d'après les tickets résolus les plus proches, avec un
   encodeur auto-hébergé.
 
-  Niveau N2. Le niveau N1 apprend les mots de l'archive ; un encodeur associe au
-  ticket un vecteur qui suit le sens, si bien qu'un client qui écrit « je
-  n'arrive plus à entrer dans mon espace » atterrit à côté des tickets archivés
-  sur un mot de passe perdu, alors qu'ils n'ont aucun mot en commun.
+  Niveau N2. Le niveau N1 apprend les mots de l'archive ; celui-ci compare des
+  vecteurs. L'encodeur est un modèle entraîné pour la recherche sémantique et le
+  repérage de paraphrases : il associe un vecteur à chaque ticket, et un ticket
+  est routé d'après les tickets résolus dont les vecteurs sont les plus proches,
+  qu'ils partagent ses mots ou non.
 
   Il n'y a pas d'étape d'entraînement ici, et c'est tout l'intérêt du niveau :
   l'index est l'archive elle-même. Une équipe dont le périmètre change est un
-  ré-encodage, pas un réentraînement, et les voisins sont montrés à l'agent
-  comme la raison du routage — ce que les poids du niveau N1 n'expliquent
-  jamais.
+  ré-encodage, pas un réentraînement.
 
   Ce qu'il coûte : un fichier de modèle à livrer et à tenir à jour, un processus
   chaud pour le garder en mémoire, et un routage dont les réponses changent le
@@ -87,9 +84,8 @@ n2: |
 n3: |
   Router un ticket en interrogeant un modèle généraliste.
 
-  Niveau N3. C'est l'option vers laquelle on se tourne d'abord, et c'est la
-  logique de routage la plus courte de la fiche : aucune règle à maintenir,
-  aucune archive à étiqueter, et un ticket dans n'importe quelle langue.
+  Niveau N3. Aucune règle à maintenir, aucune archive à étiqueter : les noms des
+  équipes vont dans l'invite, et le modèle répond par l'un d'eux.
 
   Voyez ce que le code doit faire et que le niveau N0 n'avait pas à faire :
   borner la taille de l'entrée, réessayer quand le fournisseur échoue, analyser

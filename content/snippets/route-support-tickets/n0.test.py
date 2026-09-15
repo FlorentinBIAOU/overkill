@@ -185,12 +185,6 @@ def test_production_un_caractere_de_largeur_nulle_dans_un_mot_cle_le_cache():
     assert route("fac\u200bture impayée") == DEFAULT_TEAM
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : la frontière de mot diffère entre les langages ; `\\b` de Python est "
-    "Unicode, celui de JavaScript ne connaît que l'ASCII. « 我的colis » (sans espace "
-    "entre écritures) part en file par défaut en Python et chez livraison en "
-    "JavaScript"
-))
 def test_defaut_un_ticket_a_ecritures_melangees_est_route_de_meme_dans_les_deux_langages():
     tickets = ["我的colis est perdu", "Привет,colis"]
     assert en_javascript(tickets) == [(route(t), matches(t)) for t in tickets]

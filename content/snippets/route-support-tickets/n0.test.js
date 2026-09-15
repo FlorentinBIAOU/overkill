@@ -146,12 +146,10 @@ test('production : un caractère de largeur nulle dans un mot-clé le cache', ()
   assert.equal(route('fac\u200bture impayée'), DEFAULT_TEAM);
 });
 
-test('DÉFAUT : un ticket à écritures mélangées est routé de même dans les deux langages', () => {
+test('un ticket à écritures mélangées est routé de même dans les deux langages', () => {
   // `\b` sans drapeau u est ASCII : « 我的colis » part chez livraison ici, en file par défaut en Python.
-  assert.throws(() => {
-    const tickets = ['我的colis est perdu', 'Привет,colis'];
-    assert.deepEqual(enPython(tickets), tickets.map((t) => [route(t), matches(t)]));
-  });
+  const tickets = ['我的colis est perdu', 'Привет,colis'];
+  assert.deepEqual(enPython(tickets), tickets.map((t) => [route(t), matches(t)]));
 });
 
 test('production : un ticket absent lève', () => {

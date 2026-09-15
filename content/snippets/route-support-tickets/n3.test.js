@@ -69,12 +69,10 @@ test('point de rupture : sans la liste fermée, le ticket part dans une équipe 
 // Le client par défaut
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit', async () => {
+test('le client par défaut a la forme du vrai kit', async () => {
   // `new OpenAI()` puis `client.complete(...)` : la méthode n'existe pas.
   globalThis.__openai = { requests: [] };
-  await assert.rejects(async () => {
-    assert.equal(await route(BILLING), 'billing');
-  });
+  assert.equal(await route(BILLING), 'billing');
   assert.equal(globalThis.__openai.requests.length, 0);
   await assert.rejects(() => route(BILLING), /client\.complete is not a function/);
 });
