@@ -219,11 +219,9 @@ test('une multiplication ordinaire dériverait là où Math.imul reste exact', (
   assert.equal(Number(exact), stableHash('orders-2024'));
 });
 
-test('INFIRMÉ : le séparateur n’apparaît dans aucune partie de la clé', () => {
+test('le séparateur n’apparaît dans aucune partie de la clé', () => {
   // Le commentaire dit que U+001F « appears in none of them » ; rien ne l'empêche.
-  assert.throws(() => {
-    assert.notEqual(draw('a\u001fb', 'c', 0), draw('a', 'b\u001fc', 0));
-  });
+  assert.notEqual(draw('a\u001fb', 'c', 0), draw('a', 'b\u001fc', 0));
 });
 
 test('INFIRMÉ : chaque cellule est dérivée de la graine', () => {
@@ -388,16 +386,14 @@ test('production : valeurs aux limites', () => {
   assert.deepEqual(valeurs({ type: 'date', start: '2024-02-28', days: 2 }), new Set(['2024-02-28', '2024-02-29']));
 });
 
-test('DÉFAUT : une durée nulle ou négative est refusée', () => {
+test('une durée nulle ou négative est refusée', () => {
   // days=0 lève RangeError « Invalid time value » (ZeroDivisionError en Python) ;
   // days=-5 rend des dates postérieures au début ici, antérieures en Python.
-  assert.throws(() => {
-    assert.throws(
-      () => generateRows({ d: { type: 'date', start: '2024-01-01', days: 0 } }, 1, 's'),
-      /days|duration|durée/,
-    );
-    assert.throws(() => generateRows({ d: { type: 'date', start: '2024-01-01', days: -5 } }, 3, 's'), RangeError);
-  });
+  assert.throws(
+    () => generateRows({ d: { type: 'date', start: '2024-01-01', days: 0 } }, 1, 's'),
+    /days|duration|durée/,
+  );
+  assert.throws(() => generateRows({ d: { type: 'date', start: '2024-01-01', days: -5 } }, 3, 's'), RangeError);
 });
 
 test('production : un champ sans type lève une erreur', () => {

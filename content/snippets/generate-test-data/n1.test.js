@@ -111,12 +111,10 @@ test('Python et JavaScript produisent les mêmes lignes pour la même table obse
   assert.deepEqual(sampleRowsEnPython(appels), appels.map(([s, n, g]) => sampleRows(s, n, g)));
 });
 
-test('INFIRMÉ : les deux langages s’accordent sur des libellés emoji et pleine chasse', () => {
+test('les deux langages s’accordent sur des libellés emoji et pleine chasse', () => {
   // Python trie les libellés par point de code, JavaScript par unité UTF-16.
-  assert.throws(() => {
-    const appel = [{ x: { type: 'categorical', counts: { '🍕 restauration': 1, 'Ｚ': 1 } } }, 6, SEED];
-    assert.deepEqual(sampleRowsEnPython([appel]), [sampleRows(...appel)]);
-  });
+  const appel = [{ x: { type: 'categorical', counts: { '🍕 restauration': 1, 'Ｚ': 1 } } }, 6, SEED];
+  assert.deepEqual(sampleRowsEnPython([appel]), [sampleRows(...appel)]);
 });
 
 test('la même graine redonne les mêmes lignes, une autre graine non', () => {
@@ -229,25 +227,23 @@ test('production : cinquante mille lignes sur quatre colonnes terminent vite', (
   assert.equal(rows.length, 50_000);
 });
 
-test('DÉFAUT : les libellés sont triés une fois par colonne et non à chaque cellule', () => {
+test('les libellés sont triés une fois par colonne et non à chaque cellule', () => {
   // Coût lignes × libellés × log(libellés) : un GROUP BY code_postal de 6 000
   // codes sur 10 000 lignes prend environ 5 s ici.
-  assert.throws(() => {
-    const vraiSort = Array.prototype.sort;
-    let tris = 0;
-    // eslint-disable-next-line no-extend-native
-    Array.prototype.sort = function compte(...args) {
-      tris += 1;
-      return vraiSort.apply(this, args);
-    };
-    try {
-      const counts = Object.fromEntries(Array.from({ length: 6000 }, (_, i) => [String(i).padStart(5, '0'), (i % 7) + 1]));
-      sampleRows({ postcode: { type: 'categorical', counts } }, 1000, SEED);
-    } finally {
-      Array.prototype.sort = vraiSort; // eslint-disable-line no-extend-native
-    }
-    assert.ok(tris <= 1, `${tris} tris`);
-  });
+  const vraiSort = Array.prototype.sort;
+  let tris = 0;
+  // eslint-disable-next-line no-extend-native
+  Array.prototype.sort = function compte(...args) {
+    tris += 1;
+    return vraiSort.apply(this, args);
+  };
+  try {
+    const counts = Object.fromEntries(Array.from({ length: 6000 }, (_, i) => [String(i).padStart(5, '0'), (i % 7) + 1]));
+    sampleRows({ postcode: { type: 'categorical', counts } }, 1000, SEED);
+  } finally {
+    Array.prototype.sort = vraiSort; // eslint-disable-line no-extend-native
+  }
+  assert.ok(tris <= 1, `${tris} tris`);
 });
 
 test('production : libellés accentués, NFD, emoji et BOM', () => {

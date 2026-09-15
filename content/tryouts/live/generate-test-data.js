@@ -9,7 +9,7 @@
  * Le tableau montre les cinq premières lignes. Le verdict, lui, est calculé sur
  * cinq cents lignes tirées de la même graine, et compte ce que les adresses
  * produites ne contiennent jamais. C'est là que se trouve le point de rupture
- * de ce barreau : non pas ce que le générateur écrit, mais ce qu'il n'écrit
+ * de ce niveau : non pas ce que le générateur écrit, mais ce qu'il n'écrit
  * jamais.
  */
 import { generateRows } from '../../snippets/generate-test-data/n0.js';
@@ -37,7 +37,7 @@ const T = {
     detail: (plus, majuscule, apostrophe) =>
       `${plus} avec une étiquette après un +, ${majuscule} avec une majuscule, ${apostrophe} avec une apostrophe.`,
     note: (graine, n) =>
-      `Les ${n} premières des ${TIREES} lignes. « ${graine} » les redonnera identiques, sur n’importe quelle machine et dans les deux langages de la fiche.`,
+      `Les ${n} premières des ${TIREES} lignes. « ${graine} » les redonnera identiques, en JavaScript comme en Python, tant que le code de la fiche ne change pas.`,
     vide: 'Aucune graine saisie',
     videDetail: 'Tapez n’importe quelle chaîne : un numéro de ticket, une date, un nom de campagne.',
   },
@@ -48,7 +48,7 @@ const T = {
     detail: (plus, majuscule, apostrophe) =>
       `${plus} with a plus tag, ${majuscule} with a capital letter, ${apostrophe} with an apostrophe.`,
     note: (graine, n) =>
-      `The first ${n} of ${TIREES} rows. “${graine}” will give them back identical, on any machine and in both languages of this entry.`,
+      `The first ${n} of ${TIREES} rows. “${graine}” will give them back identical, in JavaScript as in Python, for as long as this entry’s code is left unchanged.`,
     vide: 'No seed given',
     videDetail: 'Type any string: a ticket number, a date, the name of a campaign.',
   },

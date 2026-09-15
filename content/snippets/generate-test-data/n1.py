@@ -59,7 +59,8 @@ def pick(counts: list[int], number: int) -> int:
     raise AssertionError("unreachable: the target is below the total")
 
 
-def _value(spec: dict, seed: str, field: str, row: int):
+def _sampler(spec: dict, seed: str, field: str):
+    """Read one column's distribution once, and return what draws its value for a row."""
     kind = spec["type"]
     if kind == "categorical":
         # `counts` is a label to observed-count mapping, straight out of a
@@ -69,18 +70,26 @@ def _value(spec: dict, seed: str, field: str, row: int):
         # The labels are sorted rather than taken in the order the query
         # returned them, so the same observed table always gives the same data.
         # It is also what keeps the two languages together: a JavaScript object
-        # reorders its numeric-looking keys, and a postcode is one of those.
-        labels = sorted(spec["counts"])
-        return labels[pick([spec["counts"][label] for label in labels], draw(seed, field, row))]
+        # reorders its numeric-looking keys, and a postcode is one of those. The
+        # key sorts by UTF-16 code unit, as JavaScript's `sort` does, or an emoji
+        # and a full-width letter would come out in a different order. Sorting
+        # once per column, not once per cell, keeps thousands of postcodes cheap.
+        labels = sorted(spec["counts"], key=lambda label: label.encode("utf-16-be", "surrogatepass"))
+        weights = [spec["counts"][label] for label in labels]
+        return lambda row: labels[pick(weights, draw(seed, field, row))]
     if kind == "histogram":
         edges, counts = spec["edges"], spec["counts"]
         if len(edges) != len(counts) + 1:
             raise ValueError("a histogram needs one more edge than it has buckets")
-        bucket = pick(counts, draw(seed, field, row))
-        low, high = edges[bucket], edges[bucket + 1]
-        # A second, independent draw places the value inside its bucket. Within
-        # a bucket the shape is unknown, so uniform is the only honest choice.
-        return low + draw(seed, f"{field}{UNIT}within", row) % max(high - low, 1)
+
+        def within(row: int):
+            bucket = pick(counts, draw(seed, field, row))
+            low, high = edges[bucket], edges[bucket + 1]
+            # A second, independent draw places the value inside its bucket. Within
+            # a bucket the shape is unknown, so uniform is the only honest choice.
+            return low + draw(seed, f"{field}{UNIT}within", row) % max(high - low, 1)
+
+        return within
     raise ValueError(f"unknown distribution type {kind!r}")
 
 
@@ -90,10 +99,9 @@ def sample_rows(distributions: dict, count: int, seed: str) -> list[dict]:
 
     `distributions` maps a field name to either
     {"type": "categorical", "counts": {label: observed count}} or
-    {"type": "histogram", "edges": [...], "counts": [...]}, where the buckets
-    are half-open and `edges` holds one more value than `counts`.
+    {"type": "histogram", "edges": [...], "counts": [...]}, where the edges are
+    integers, the buckets are half-open and `edges` holds one more value than
+    `counts`.
     """
-    return [
-        {field: _value(spec, seed, field, row) for field, spec in distributions.items()}
-        for row in range(count)
-    ]
+    samplers = {field: _sampler(spec, seed, field) for field, spec in distributions.items()}
+    return [{field: sample(row) for field, sample in samplers.items()} for row in range(count)]

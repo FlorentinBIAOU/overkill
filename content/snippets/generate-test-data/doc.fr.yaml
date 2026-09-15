@@ -10,16 +10,15 @@ n0.py: |
   éprouve.
 
   Le déterminisme est tout l'enjeu. La même graine et le même schéma donnent
-  exactement les mêmes lignes, sur chaque machine, dans les deux langages, pour
-  toujours. C'est ce qui rend un test en échec rejouable et une régression
+  exactement les mêmes lignes, en Python comme en JavaScript, tant que ce code
+  reste inchangé. C'est ce qui rend un test en échec rejouable et une régression
   reproductible : la graine imprimée à côté d'un échec suffit à reconstruire la
   donnée qui l'a causé.
 
   C'est pourquoi le générateur est écrit ici au lieu d'être pris à la
-  plateforme. Les générateurs standard de Python et de JavaScript produisent des
-  suites différentes depuis la même graine : un jeu de données bâti sur eux ne
-  peut donc pas être passé d'un langage à l'autre, ni comparé entre un serveur
-  et une interface.
+  plateforme. Le `random` de Python accepte une graine, le `Math.random` de
+  JavaScript non : un jeu de données bâti sur eux ne peut donc pas être passé
+  d'un langage à l'autre, ni comparé entre un serveur et une interface.
 
   Chaque cellule est tirée d'un hachage de (graine, champ, ligne) plutôt que
   d'un flux qui se déroule. Ajouter un champ au schéma laisse par conséquent
@@ -33,17 +32,15 @@ n0.js: |
   tableau de lignes qu'un test peut passer tel quel au code qu'il éprouve.
 
   Le déterminisme est tout l'enjeu. La même graine et le même schéma donnent
-  exactement les mêmes lignes, sur chaque machine, dans les deux langages, pour
-  toujours. C'est ce qui rend un test en échec rejouable et une régression
+  exactement les mêmes lignes, en Python comme en JavaScript, tant que ce code
+  reste inchangé. C'est ce qui rend un test en échec rejouable et une régression
   reproductible : la graine imprimée à côté d'un échec suffit à reconstruire la
   donnée qui l'a causé.
 
   C'est pourquoi le générateur est écrit ici au lieu d'être pris à la
-  plateforme. `Math.random` ne peut pas recevoir de graine du tout, et les
-  générateurs standard de Python et de JavaScript produisent des suites
-  différentes depuis la même graine : un jeu de données bâti sur eux ne peut
-  donc pas être passé d'un langage à l'autre, ni comparé entre un serveur et
-  une interface.
+  plateforme. Le `random` de Python accepte une graine, le `Math.random` de
+  JavaScript non : un jeu de données bâti sur eux ne peut donc pas être passé
+  d'un langage à l'autre, ni comparé entre un serveur et une interface.
 
   Chaque cellule est tirée d'un hachage de (graine, champ, ligne) plutôt que
   d'un flux qui se déroule. Ajouter un champ au schéma laisse par conséquent
@@ -106,18 +103,18 @@ n3: |
   Rédiger les champs textuels d'un jeu de données de test en interrogeant un
   modèle généraliste.
 
-  Niveau N3. C'est l'option vers laquelle on se tourne d'abord, et elle apporte
-  bien quelque chose de réel : un ticket de support qui se lit comme un ticket
-  de support, avec les fautes de frappe, les majuscules et les deux questions
-  dans une même phrase qu'aucun gabarit ne produit.
+  Niveau N3. C'est l'option vers laquelle on se tourne d'abord, et le seul
+  niveau de cette fiche qui rédige du texte libre au lieu de choisir parmi des
+  valeurs que l'appelant a listées.
 
   Elle abandonne aussi la propriété sur laquelle les niveaux du dessous étaient
-  bâtis. Il n'y a pas de graine ici. Deux appels avec la même consigne
-  renvoient des lignes différentes : le jeu de données doit donc être produit
-  une fois puis conservé, comme une fixture, et non reconstruit à la demande.
+  bâtis. Il n'y a pas de graine ici : la requête porte une consigne et une
+  température, et rien qui ferait répéter au second appel ce qu'a rendu le
+  premier. Le jeu de données doit donc être produit une fois puis conservé,
+  comme une fixture, et non reconstruit à la demande.
 
-  Et le modèle ne garantit rien : ni les clés demandées, ni le nombre de
-  lignes, ni l'unicité d'un identifiant. Voyez quelle part de ce fichier
+  Et une consigne n'est qu'une demande : rien en elle n'astreint le modèle aux
+  clés demandées, au nombre de lignes ni à l'unicité d'un identifiant. Voyez quelle part de ce fichier
   vérifie au lieu de demander. Cette plomberie est le vrai coût du niveau, et
   c'est la part que les tests peuvent couvrir, parce que le modèle lui-même
   n'est pas testable.

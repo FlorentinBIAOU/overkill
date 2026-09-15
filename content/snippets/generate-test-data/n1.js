@@ -24,7 +24,7 @@
 const FNV_OFFSET = 2166136261;
 const FNV_PRIME = 16777619;
 
-// Unit separator: it joins the parts of a cell key, and appears in none of them.
+// Unit separator: it joins the parts of a cell key.
 const UNIT = '\u001f';
 
 /** FNV-1a on 32 bits, identical to the Python version of this file. */
@@ -59,7 +59,8 @@ export function pick(counts, number) {
   throw new Error('unreachable: the target is below the total');
 }
 
-function value(spec, seed, field, row) {
+/** Read one column's distribution once, and return what draws its value for a row. */
+function sampler(spec, seed, field) {
   switch (spec.type) {
     case 'categorical': {
       // `counts` maps a label to its observed count, straight out of a
@@ -69,20 +70,25 @@ function value(spec, seed, field, row) {
       // The labels are sorted rather than taken in the order the query
       // returned them, so the same observed table always gives the same data.
       // It is also what keeps the two languages together: an object reorders
-      // its numeric-looking keys, and a postcode is one of those.
+      // its numeric-looking keys, and a postcode is one of those. `sort` orders
+      // by UTF-16 code unit, and the Python version sorts the same way. Sorting
+      // once per column, not once per cell, keeps thousands of postcodes cheap.
       const labels = Object.keys(spec.counts).sort();
-      return labels[pick(labels.map((label) => spec.counts[label]), draw(seed, field, row))];
+      const weights = labels.map((label) => spec.counts[label]);
+      return (row) => labels[pick(weights, draw(seed, field, row))];
     }
     case 'histogram': {
       const { edges, counts } = spec;
       if (edges.length !== counts.length + 1) {
         throw new RangeError('a histogram needs one more edge than it has buckets');
       }
-      const bucket = pick(counts, draw(seed, field, row));
-      const [low, high] = [edges[bucket], edges[bucket + 1]];
-      // A second, independent draw places the value inside its bucket. Within
-      // a bucket the shape is unknown, so uniform is the only honest choice.
-      return low + (draw(seed, `${field}${UNIT}within`, row) % Math.max(high - low, 1));
+      return (row) => {
+        const bucket = pick(counts, draw(seed, field, row));
+        const [low, high] = [edges[bucket], edges[bucket + 1]];
+        // A second, independent draw places the value inside its bucket. Within
+        // a bucket the shape is unknown, so uniform is the only honest choice.
+        return low + (draw(seed, `${field}${UNIT}within`, row) % Math.max(high - low, 1));
+      };
     }
     default:
       throw new RangeError(`unknown distribution type ${JSON.stringify(spec.type)}`);
@@ -94,17 +100,14 @@ function value(spec, seed, field, row) {
  *
  * `distributions` maps a field name to either
  * {type: 'categorical', counts: {label: observed count}} or
- * {type: 'histogram', edges, counts}, where the buckets are half-open and
- * `edges` holds one more value than `counts`.
+ * {type: 'histogram', edges, counts}, where the edges are integers, the
+ * buckets are half-open and `edges` holds one more value than `counts`.
  */
 export function sampleRows(distributions, count, seed) {
+  const samplers = Object.entries(distributions).map(([field, spec]) => [field, sampler(spec, seed, field)]);
   const rows = [];
   for (let row = 0; row < count; row += 1) {
-    const built = {};
-    for (const [field, spec] of Object.entries(distributions)) {
-      built[field] = value(spec, seed, field, row);
-    }
-    rows.push(built);
+    rows.push(Object.fromEntries(samplers.map(([field, sample]) => [field, sample(row)])));
   }
   return rows;
 }

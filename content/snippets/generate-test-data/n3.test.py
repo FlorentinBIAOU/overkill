@@ -292,13 +292,7 @@ def test_production_zero_tentative_leve_sans_appeler():
     assert client.call_count == 0
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : une demande qu'aucune réponse ne peut satisfaire n'est pas refusée "
-    "avant l'appel ; un nombre de lignes non entier (2.5) passe la garde "
-    "`0 < count <= MAX_ROWS`, et un `unique_field` absent de `fields` fait lever "
-    "chaque vérification : les deux coûtent `attempts` appels facturés voués à l'échec"
-))
-def test_defaut_une_demande_impossible_a_satisfaire_est_refusee_avant_lappel():
+def test_une_demande_impossible_a_satisfaire_est_refusee_avant_lappel():
     for kwargs in ({"count": 2.5}, {"count": 2, "unique_field": "email"}):
         client = FakeLLM(response=TWO_ROWS)
         with pytest.raises(ValueError):

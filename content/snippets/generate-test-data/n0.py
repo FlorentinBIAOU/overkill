@@ -5,14 +5,15 @@ Rung N0. Standard library only, no file written: the function returns a list of
 rows that a test can hand straight to the code under test.
 
 Determinism is the whole point. The same seed and the same schema give exactly
-the same rows, on every machine, in both languages, for ever. That is what
+the same rows, in Python as in JavaScript, for as long as this code is left
+unchanged. That is what
 makes a failing test replayable and a regression reproducible: the seed printed
 next to a failure is enough to rebuild the data that caused it.
 
 Which is why the generator is written out here instead of being taken from the
-platform. The standard generators of Python and JavaScript produce different
-sequences from the same seed, so a data set built with them cannot be handed
-from one language to the other, nor compared between a back end and a front end.
+platform. Python's `random` takes a seed, JavaScript's `Math.random` does not,
+so a data set built on them cannot be handed from one language to the other,
+nor compared between a back end and a front end.
 
 Each cell is drawn from a hash of (seed, field, row) rather than from a running
 stream. Adding a field to the schema therefore leaves every other column
@@ -28,6 +29,7 @@ FNV_PRIME = 16777619
 MASK32 = 0xFFFFFFFF
 
 UNIT = "\x1f"  # separates the parts of a cell key, and appears in none of them
+ESCAPE = "\x1e"  # stands in for UNIT inside a part, and is escaped itself
 
 
 def stable_hash(text: str) -> int:
@@ -43,9 +45,14 @@ def stable_hash(text: str) -> int:
     return digest
 
 
+def _part(text: str) -> str:
+    """Keep UNIT out of a part, so that two different cells never share a key."""
+    return str(text).replace(ESCAPE, ESCAPE + "0").replace(UNIT, ESCAPE + "1")
+
+
 def draw(seed: str, field: str, row: int) -> int:
     """The single source of randomness: one 32-bit integer per cell."""
-    return stable_hash(f"{seed}{UNIT}{field}{UNIT}{row}")
+    return stable_hash(f"{_part(seed)}{UNIT}{_part(field)}{UNIT}{row}")
 
 
 def _value(spec: dict, number: int, row: int):
@@ -67,6 +74,8 @@ def _value(spec: dict, number: int, row: int):
         return number % 100 < spec.get("true_percent", 50)
     if kind == "date":
         span = spec.get("days", 1)
+        if not isinstance(span, int) or span < 1:
+            raise ValueError(f"a date field needs a whole number of days from 1, not {span!r}")
         return (date.fromisoformat(spec["start"]) + timedelta(days=number % span)).isoformat()
     if kind == "sequence":
         # Unique by construction, because an identifier that repeats turns a

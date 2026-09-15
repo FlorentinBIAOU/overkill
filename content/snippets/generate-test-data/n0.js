@@ -5,15 +5,14 @@
  * rows that a test can hand straight to the code under test.
  *
  * Determinism is the whole point. The same seed and the same schema give
- * exactly the same rows, on every machine, in both languages, for ever. That
- * is what makes a failing test replayable and a regression reproducible: the
+ * exactly the same rows, in JavaScript as in Python, for as long as this code
+ * is left unchanged. That is what makes a failing test replayable and a regression reproducible: the
  * seed printed next to a failure is enough to rebuild the data that caused it.
  *
  * Which is why the generator is written out here instead of being taken from
- * the platform. `Math.random` cannot be seeded at all, and the standard
- * generators of Python and JavaScript produce different sequences from the
- * same seed, so a data set built with them cannot be handed from one language
- * to the other, nor compared between a back end and a front end.
+ * the platform. Python's `random` takes a seed, JavaScript's `Math.random` does
+ * not, so a data set built on them cannot be handed from one language to the
+ * other, nor compared between a back end and a front end.
  *
  * Each cell is drawn from a hash of (seed, field, row) rather than from a
  * running stream. Adding a field to the schema therefore leaves every other
@@ -27,6 +26,8 @@ const FNV_PRIME = 16777619;
 
 // Unit separator: it joins the parts of a cell key, and appears in none of them.
 const UNIT = '\u001f';
+// Stands in for UNIT inside a part, and is escaped itself.
+const ESCAPE = '\u001e';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -44,9 +45,14 @@ export function stableHash(text) {
   return digest;
 }
 
+/** Keep UNIT out of a part, so that two different cells never share a key. */
+function part(text) {
+  return String(text).replaceAll(ESCAPE, `${ESCAPE}0`).replaceAll(UNIT, `${ESCAPE}1`);
+}
+
 /** The single source of randomness: one 32-bit integer per cell. */
 export function draw(seed, field, row) {
-  return stableHash(`${seed}${UNIT}${field}${UNIT}${row}`);
+  return stableHash(`${part(seed)}${UNIT}${part(field)}${UNIT}${row}`);
 }
 
 /** Turn one drawn integer into one value that satisfies the field spec. */
@@ -66,8 +72,12 @@ function value(spec, number, row) {
       // dashboard as a percentage, and copied here as one.
       return number % 100 < (spec.true_percent ?? 50);
     case 'date': {
+      const span = spec.days ?? 1;
+      if (!Number.isInteger(span) || span < 1) {
+        throw new RangeError(`a date field needs a whole number of days from 1, not ${span}`);
+      }
       const start = Date.parse(`${spec.start}T00:00:00Z`);
-      return new Date(start + (number % (spec.days ?? 1)) * DAY).toISOString().slice(0, 10);
+      return new Date(start + (number % span) * DAY).toISOString().slice(0, 10);
     }
     case 'sequence': {
       // Unique by construction, because an identifier that repeats turns a

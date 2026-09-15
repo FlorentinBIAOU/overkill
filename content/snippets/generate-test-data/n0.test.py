@@ -244,12 +244,7 @@ def test_le_hash_natif_de_python_change_dun_processus_a_lautre():
     assert len(valeurs) == 2
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : le commentaire dit que le séparateur U+001F « appears in none of "
-    "them » ; rien ne l'empêche, et une graine ou un nom de champ qui le contient "
-    "donne la même clé de cellule qu'un autre couple (graine, champ)"
-))
-def test_infirme_le_separateur_napparait_dans_aucune_partie_de_la_cle():
+def test_le_separateur_napparait_dans_aucune_partie_de_la_cle():
     assert draw("a\x1fb", "c", 0) != draw("a", "b\x1fc", 0)
 
 
@@ -400,14 +395,7 @@ def test_production_valeurs_aux_limites():
     assert dates == {"2024-02-28", "2024-02-29"}
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : une durée nulle ou négative n'est pas refusée comme les autres "
-    "contraintes impossibles ; days=0 lève ZeroDivisionError en Python "
-    "(RangeError « Invalid time value » en JavaScript), et days=-5 rend des dates "
-    "antérieures au début en Python, postérieures en JavaScript : les deux "
-    "langages divergent sans erreur"
-))
-def test_defaut_une_duree_nulle_ou_negative_est_refusee():
+def test_une_duree_nulle_ou_negative_est_refusee():
     with pytest.raises(ValueError):
         generate_rows({"d": {"type": "date", "start": "2024-01-01", "days": 0}}, 1, "s")
     with pytest.raises(ValueError):

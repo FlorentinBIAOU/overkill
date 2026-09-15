@@ -273,16 +273,14 @@ test('production : zéro tentative lève sans appeler', async () => {
   assert.equal(client.callCount, 0);
 });
 
-test('DÉFAUT : une demande impossible à satisfaire est refusée avant l’appel', async () => {
+test('une demande impossible à satisfaire est refusée avant l’appel', async () => {
   // Un nombre de lignes non entier passe la garde, un uniqueField absent des
   // champs fait échouer chaque vérification : `attempts` appels facturés perdus.
-  await assert.rejects(async () => {
-    for (const [count, options] of [[2.5, {}], [2, { uniqueField: 'email' }]]) {
-      const client = new FakeLLM({ response: TWO_ROWS });
-      await assert.rejects(() => writeRows(FIELDS, count, { ...options, client }), RangeError);
-      assert.equal(client.callCount, 0);
-    }
-  });
+  for (const [count, options] of [[2.5, {}], [2, { uniqueField: 'email' }]]) {
+    const client = new FakeLLM({ response: TWO_ROWS });
+    await assert.rejects(() => writeRows(FIELDS, count, { ...options, client }), RangeError);
+    assert.equal(client.callCount, 0);
+  }
 });
 
 test('check seul accepte une réponse conforme', () => {

@@ -130,15 +130,7 @@ def test_python_et_javascript_produisent_les_memes_lignes_pour_la_meme_table_obs
     assert sample_rows_en_javascript(appels) == [sample_rows(*a) for a in appels]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : la docstring de pick et le commentaire des libellés disent que les "
-    "deux langages restent ensemble ; le tri des libellés diverge dès qu'un libellé "
-    "contient un caractère hors du plan de base (emoji) et un autre un caractère "
-    "entre U+E000 et U+FFFF (formes pleine chasse, usage privé) : Python trie par "
-    "point de code, JavaScript par unité UTF-16, et les deux tirent des lignes "
-    "différentes pour la même graine"
-))
-def test_infirme_les_deux_langages_saccordent_sur_des_libelles_emoji_et_pleine_chasse():
+def test_les_deux_langages_saccordent_sur_des_libelles_emoji_et_pleine_chasse():
     appel = [{"x": {"type": "categorical", "counts": {"🍕 restauration": 1, "Ｚ": 1}}}, 6, SEED]
     assert sample_rows_en_javascript([appel]) == [sample_rows(*appel)]
 
@@ -267,14 +259,7 @@ def test_production_cinquante_mille_lignes_sur_quatre_colonnes_terminent_vite():
     assert len(rows) == 50_000
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : les libellés d'une colonne catégorielle sont triés, et la liste "
-    "des effectifs reconstruite, à chaque cellule ; le coût est lignes × libellés "
-    "× log(libellés) au lieu d'un tri par colonne. Un GROUP BY code_postal "
-    "(environ 6 000 codes en France) sur 10 000 lignes coûte 10 000 tris de "
-    "6 000 libellés (observé : environ 2,4 s en Python, 5 s en Node)"
-))
-def test_defaut_les_libelles_sont_tries_une_fois_par_colonne_et_non_a_chaque_cellule(monkeypatch):
+def test_les_libelles_sont_tries_une_fois_par_colonne_et_non_a_chaque_cellule(monkeypatch):
     appels = []
     vrai_sorted = builtins.sorted
 
