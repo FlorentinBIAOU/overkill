@@ -1,4 +1,11 @@
-from n0 import detect, profile, ranked
+import ast
+import time
+import unicodedata
+from pathlib import Path
+
+import pytest
+
+from n0 import PROFILE_SIZE, detect, distance, profile, ranked, trigrams
 
 # One paragraph per language is enough to rank three hundred trigrams. The
 # samples live here, not in the snippet: the snippet builds a profile from
@@ -40,6 +47,12 @@ SAMPLES = {
 
 PROFILES = {name: profile(sample) for name, sample in SAMPLES.items()}
 
+FRENCH = "La réunion de lundi est reportée au mercredi suivant, merci de prévenir les participants."
+MIXED = (
+    "La réunion de lundi est reportée au mercredi suivant. "
+    "Please let the London team know as soon as you can."
+)
+
 
 def gap(text):
     """How far the winner is ahead of the runner-up."""
@@ -47,13 +60,68 @@ def gap(text):
     return scores[1][1] - scores[0][1]
 
 
-def test_detects_a_sentence_in_each_language():
-    assert detect("La réunion de lundi est reportée au mercredi suivant, merci de prévenir les participants.", PROFILES) == "fr"
+# ---------------------------------------------------------------------------
+# Point de rupture
+# ---------------------------------------------------------------------------
+
+
+def test_point_de_rupture_chat_ressort_en_anglais():
+    """
+    breaking_point : « « chat » ressort en anglais ». Témoin : une phrase
+    française ordinaire ressort en français.
+    """
+    assert detect("chat", PROFILES) == "en"
+    assert detect(FRENCH, PROFILES) == "fr"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "INFIRMÉ : la fiche dit « ses quatre trigrammes étant ceux que l'anglais "
+        "emploie dans « that » et « what » » ; seuls « hat » et « at␣ » sont dans le "
+        "profil anglais, « ␣ch » et « cha » ne sont dans aucun profil"
+    ),
+)
+def test_infirme_les_quatre_trigrammes_de_chat_sont_dans_le_profil_anglais():
+    grams = list(trigrams("chat"))
+    assert grams == [" ch", "cha", "hat", "at "]
+    assert all(gram in PROFILES["en"] for gram in grams)
+
+
+def test_point_de_rupture_sur_ca_va_les_trois_langues_sont_a_la_distance_maximale_et_l_ordre_alphabetique_repond():
+    """breaking_point : « sur « ça va », les trois langues sont à la distance maximale et c'est l'ordre alphabétique qui répond »."""
+    scores = dict(ranked("ça va", PROFILES))
+    assert scores["fr"] == scores["en"] == scores["es"] == 300.0
+    assert detect("ça va", PROFILES) == "en"
+    # Witness: the tie-break is alphabetical, not the order of the profiles.
+    reordered = {name: PROFILES[name] for name in ("fr", "es", "en")}
+    assert detect("ça va", reordered) == "en"
+
+
+def test_point_de_rupture_sur_une_phrase_francaise_suivie_d_une_anglaise_l_espagnol_arrive_deuxieme():
+    """
+    breaking_point : « sur une phrase française suivie d'une phrase anglaise,
+    l'espagnol arrive deuxième alors qu'il n'est nulle part dans le texte ».
+    Témoin : l'écart se réduit par rapport à la phrase française seule.
+    """
+    scores = ranked(MIXED, PROFILES)
+    assert [name for name, _ in scores] == ["fr", "es", "en"]
+    assert gap(MIXED) < gap(FRENCH)
+
+
+# ---------------------------------------------------------------------------
+# Autres affirmations du niveau
+# ---------------------------------------------------------------------------
+
+
+def test_detecte_une_phrase_dans_chaque_langue():
+    """name : « Profils de trigrammes de caractères, distance de rang »."""
+    assert detect(FRENCH, PROFILES) == "fr"
     assert detect("The meeting on Monday has been moved to the following Wednesday, please tell the attendees.", PROFILES) == "en"
     assert detect("La reunión del lunes se ha trasladado al miércoles siguiente, avisad a los participantes.", PROFILES) == "es"
 
 
-def test_a_profile_ranks_the_frequent_trigrams_first():
+def test_un_profil_classe_les_trigrammes_frequents_en_tete():
     # The top of the English profile is the definite article, cut into the
     # three padded trigrams it produces. The French profile starts with its
     # own. This is the whole model, and it is readable.
@@ -63,9 +131,95 @@ def test_a_profile_ranks_the_frequent_trigrams_first():
     assert len(PROFILES["fr"]) <= 300
 
 
-def test_survives_capitals_missing_accents_and_punctuation():
-    # What a support ticket typed in a hurry actually looks like. Accents are
-    # a signal, but they are not the only one, so losing them is survivable.
+def test_le_modele_entier_tient_en_quelques_centaines_de_chaines_de_trois_caracteres():
+    """docstring : « the whole model is a few hundred short strings per language » ; scenario : « quelques centaines de chaînes de trois lettres »."""
+    for reference in PROFILES.values():
+        assert 100 <= len(reference) <= PROFILE_SIZE == 300
+        assert all(len(gram) == 3 for gram in reference)
+
+
+def test_chaque_langue_classe_ses_trigrammes_cites_mieux_que_les_autres_langues():
+    """docstring : « "ent", "les", "eur" en français, "the", "ing" en anglais, "que", "los" en espagnol »."""
+    cited = {"fr": ["ent", "les", "eur"], "en": ["the", "ing"], "es": ["que", "los"]}
+    for language, grams in cited.items():
+        for gram in grams:
+            own = PROFILES[language][gram]
+            for other, reference in PROFILES.items():
+                if other != language:
+                    assert own < reference.get(gram, PROFILE_SIZE), (language, gram, other)
+
+
+def test_le_bourrage_d_espaces_distingue_l_article_du_milieu_de_mot():
+    """docstring : « les mots sont entourés d'espaces […] « les » au milieu d'un mot n'est pas l'article »."""
+    assert list(trigrams("les")) == [" le", "les", "es "]
+    inside = list(trigrams("tables"))
+    assert "les" in inside
+    assert " le" not in inside
+
+
+def test_un_rang_survit_a_un_echantillon_quatre_fois_plus_long_et_a_un_texte_quatre_fois_plus_court():
+    """
+    docstring : « Un rang survit sans changer à un échantillon quatre fois plus
+    long, et à un texte quatre fois plus court ». Vrai pour la répétition du
+    même texte ; un échantillon différent et plus long change les rangs.
+    """
+    sample = SAMPLES["fr"]
+    assert profile(" ".join([sample] * 4)) == PROFILES["fr"]
+    long_text = " ".join([FRENCH] * 4)
+    for reference in PROFILES.values():
+        assert distance(long_text, reference) == distance(FRENCH, reference)
+
+
+def test_les_chiffres_la_ponctuation_et_les_symboles_ne_produisent_aucun_trigramme():
+    """commentaire de WORDS : « Letters only. Digits, punctuation and symbols say nothing about a language »."""
+    assert list(trigrams("14 30 !!! ... 2026 € % #")) == []
+    noisy = "RÉF 4471-B / 14h30 / 06 12 34 56 78 / " + FRENCH + " / #9921 €€€ 100 %"
+    assert detect(noisy, PROFILES) == "fr"
+
+
+def test_a_egalite_de_compte_le_profil_est_trie_alphabetiquement():
+    """docstring de profile : « Ties are broken alphabetically, so the same sample always gives the same profile »."""
+    assert profile("ba ab") == {" ab": 0, " ba": 1, "ab ": 2, "ba ": 3}
+    assert profile("ab ba") == profile("ba ab")
+
+
+def test_un_trigramme_absent_de_la_langue_coute_le_maximum():
+    """docstring de distance : « A trigram the language never uses costs the maximum »."""
+    assert distance("zzz", PROFILES["fr"]) == PROFILE_SIZE
+    assert distance("", PROFILES["fr"]) == PROFILE_SIZE
+
+
+def test_ranked_rend_toutes_les_langues_et_l_ecart_entre_les_deux_premieres():
+    """docstring de ranked : « Every candidate language, closest first. The caller gets the gap between the first two »."""
+    scores = ranked(FRENCH, PROFILES)
+    assert sorted(name for name, _ in scores) == ["en", "es", "fr"]
+    assert [value for _, value in scores] == sorted(value for _, value in scores)
+    assert gap(FRENCH) > 0
+
+
+def test_detect_rend_toujours_une_langue_meme_quand_il_ne_devrait_pas():
+    """docstring de detect : « It always returns one, even when it should not » ; un texte vide rend l'anglais, premier par ordre alphabétique."""
+    assert detect("", PROFILES) == "en"
+    assert detect("!!! 123", PROFILES) == "en"
+
+
+def test_escalate_when_l_ecart_tombe_a_zero_sur_deux_mots():
+    """escalate_when : « vous voyez l'écart entre les deux premières langues tomber à zéro » sur deux ou trois mots."""
+    assert gap("ça va") == 0
+    assert gap(FRENCH) > 0
+
+
+def test_l_extrait_est_deterministe_et_n_importe_que_la_bibliotheque_standard():
+    """docstring : « Deterministic, standard library only » ; risks.deterministic: true, data_egress: none."""
+    assert ranked(MIXED, PROFILES) == ranked(MIXED, {k: profile(v) for k, v in SAMPLES.items()})
+    source = ast.parse(Path(__file__).with_name("n0.py").read_text(encoding="utf-8"))
+    imported = {a.name.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
+    imported |= {n.module.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
+    assert imported <= {"re", "unicodedata", "collections"}
+
+
+def test_la_casse_les_accents_manquants_et_la_ponctuation_ne_changent_pas_la_reponse():
+    # What a support ticket typed in a hurry actually looks like.
     shouted = "LA REUNION DE LUNDI EST REPORTEE AU MERCREDI SUIVANT !!! MERCI DE PREVENIR LES PARTICIPANTS..."
     assert detect(shouted, PROFILES) == "fr"
     punctuated = "Réunion : lundi ?? non — mercredi (14h30) ; merci d'avertir les participants, s'il vous plaît."
@@ -73,41 +227,52 @@ def test_survives_capitals_missing_accents_and_punctuation():
     assert detect("LA REUNION DEL LUNES SE HA TRASLADADO AL MIERCOLES SIGUIENTE!!!", PROFILES) == "es"
 
 
-def test_an_empty_text_still_returns_something():
-    # Every language is at maximum distance, so the answer is the first name
-    # in alphabetical order. Nothing about the text justifies it.
-    assert detect("", PROFILES) == "en"
+# ---------------------------------------------------------------------------
+# Cas de production
+# ---------------------------------------------------------------------------
 
 
-def test_breaking_point_a_very_short_text():
-    """
-    The first breaking point claimed on the entry: below a handful of words
-    there are not enough trigrams to rank anything.
-
-    "chat" is French for cat, and the detector reads it as English, because
-    the four trigrams it produces are the ones English uses in "that" and
-    "what". "ça va" produces trigrams no profile has ever seen, and the
-    answer is then decided by the alphabetical tie-break alone.
-    """
-    assert detect("chat", PROFILES) == "en"
-    scores = dict(ranked("ça va", PROFILES))
-    assert scores["fr"] == scores["en"] == scores["es"] == 300.0
-    assert detect("ça va", PROFILES) == "en"
+def test_production_texte_vide_et_texte_sans_lettre_rendent_une_distance_maximale_sans_exception():
+    assert ranked("", PROFILES) == [("en", 300.0), ("es", 300.0), ("fr", 300.0)]
+    assert ranked("   \n\t ", PROFILES) == [("en", 300.0), ("es", 300.0), ("fr", 300.0)]
 
 
-def test_breaking_point_a_text_that_mixes_two_languages():
-    """
-    The second breaking point: the function has to name one language, and a
-    bilingual message has two.
+def test_production_sans_aucun_profil_detect_leve_au_lieu_d_inventer_une_langue():
+    """Aucune langue candidate : une exception, pas une réponse. L'erreur n'est pas nommée (IndexError en Python, TypeError en JavaScript)."""
+    assert ranked(FRENCH, {}) == []
+    with pytest.raises(IndexError):
+        detect(FRENCH, {})
 
-    Worse than the arbitrary winner is the runner-up. On a French sentence
-    followed by an English one, the second-placed language is Spanish, which
-    is not in the text at all: the two halves interfere and the ranking stops
-    meaning anything. The gap collapses, and that collapse is the only
-    warning the caller ever gets.
-    """
-    mixed = ("La réunion de lundi est reportée au mercredi suivant. "
-             "Please let the London team know as soon as you can.")
-    scores = ranked(mixed, PROFILES)
-    assert [name for name, _ in scores] == ["fr", "es", "en"]
-    assert gap(mixed) < gap("La réunion de lundi est reportée au mercredi suivant, merci de prévenir les participants.")
+
+def test_production_un_texte_d_un_million_de_caracteres_termine_dans_une_borne_large():
+    big = " ".join([FRENCH] * 12_000)
+    debut = time.perf_counter()
+    assert detect(big, PROFILES) == "fr"
+    assert time.perf_counter() - debut < 15
+
+
+def test_production_un_mot_de_cent_mille_lettres_termine_sans_exception():
+    debut = time.perf_counter()
+    assert detect("a" * 100_000, PROFILES) == "en"
+    assert time.perf_counter() - debut < 15
+
+
+def test_production_accents_decomposes_meme_classement_que_les_accents_composes():
+    assert ranked(unicodedata.normalize("NFD", FRENCH), PROFILES) == ranked(FRENCH, PROFILES)
+
+
+def test_production_espaces_insecables_largeur_nulle_bom_et_emoji_ne_changent_pas_la_langue():
+    for text in (
+        FRENCH.replace(" ", "\u00a0"),
+        FRENCH.replace("réunion", "réu\u200bnion"),
+        "\ufeff" + FRENCH,
+        "🎉 " + FRENCH + " 👍",
+    ):
+        assert detect(text, PROFILES) == "fr", repr(text[:12])
+
+
+def test_production_taille_de_profil_aux_limites():
+    """Taille 0 : profil vide, toutes les distances valent 0 ; taille 1 : un seul trigramme."""
+    assert profile(SAMPLES["fr"], size=1) == {" le": 0}
+    assert profile(SAMPLES["fr"], size=0) == {}
+    assert distance(FRENCH, PROFILES["fr"], size=0) == 0.0
