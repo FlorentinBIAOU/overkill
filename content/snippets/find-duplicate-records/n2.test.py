@@ -153,15 +153,6 @@ def test_un_modele_qui_ne_tourne_pas_leve():
         find_duplicates(CUSTOMERS, encoder=BrokenEncoder())
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : des vecteurs de dimensions différentes, ou contenant NaN, ne lèvent "
-        "pas : Python tronque le produit scalaire (zip) et rend un score faux, NaN "
-        "fait disparaître la paire en silence ; exactement le « résultat vide qui se "
-        "lit comme aucun doublon » que le test annonce éviter"
-    ),
-)
 def test_defaut_des_vecteurs_de_mauvaise_forme_levent():
     for vectors in ([[1.0, 0.0, 0.0], [1.0, 0.0]], [[float("nan"), 0.0], [1.0, 0.0]]):
         with pytest.raises(EncodingFailed):

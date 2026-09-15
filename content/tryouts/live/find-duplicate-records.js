@@ -5,11 +5,10 @@
  * `nom ; code postal ; ville`, parce que l'extrait travaille sur des
  * enregistrements et que la clé de blocage se calcule sur deux de ces champs.
  *
- * La phrase sous le tableau est l'essentiel de l'essai. L'extrait ne compare
- * jamais toutes les paires : il groupe d'abord, et c'est ce qui le garde rapide
- * quand le fichier grossit. Le compte des comparaisons réellement faites, et la
- * paire la plus ressemblante que le groupement a écartée sans la regarder,
- * disent ce que ce marché coûte — les deux sont calculés avec les fonctions que
+ * La phrase sous le tableau est l'essentiel de l'essai. L'extrait groupe
+ * d'abord, et ne compare que les paires d'un même groupe. Le compte des
+ * comparaisons réellement faites, et la paire la plus ressemblante que le
+ * groupement a écartée sans la regarder, disent ce que ce marché coûte — les deux sont calculés avec les fonctions que
  * l'extrait expose, `blockingKey` et `similarity`.
  */
 import {
@@ -174,6 +173,11 @@ export default {
         'Jean Dupont ; 75011 ; Paris\n' +
         'Jeanne Dupont ; 75011 ; Paris\n' +
         'Sophie Dupont ; 75011 ; Paris',
+      fails: true,
+      why: {
+        fr: 'Jean et Jeanne Dupont sortent en doublon à 0,92 : pour la distance d’édition, deux lettres de plus sur vingt-cinq caractères ne pèsent presque rien. Le score ne sait pas qu’un prénom a changé.',
+        en: 'Jean and Jeanne Dupont come out as duplicates at 0.92: to edit distance, two extra letters out of twenty-five characters weigh almost nothing. The score cannot tell that a first name changed.',
+      },
     },
     {
       label: {

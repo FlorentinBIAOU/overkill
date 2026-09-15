@@ -126,13 +126,11 @@ test('un modèle qui ne tourne pas lève', async () => {
   await assert.rejects(() => findDuplicates(CUSTOMERS, { encoder: brokenEncoder }), EncodingFailed);
 });
 
-test('DÉFAUT : des vecteurs de mauvaise forme ne lèvent pas', async () => {
+test('des vecteurs de mauvaise forme ne lèvent pas', async () => {
   // Dimensions différentes : NaN, la paire disparaît en silence ; NaN dans un vecteur : idem.
-  await assert.rejects(async () => {
-    for (const vectors of [[[1, 0, 0], [1, 0]], [[Number.NaN, 0], [1, 0]]]) {
-      await assert.rejects(() => findDuplicates([{ a: 'x' }, { a: 'y' }], { encoder: given(vectors), threshold: 0 }), EncodingFailed);
-    }
-  });
+  for (const vectors of [[[1, 0, 0], [1, 0]], [[Number.NaN, 0], [1, 0]]]) {
+    await assert.rejects(() => findDuplicates([{ a: 'x' }, { a: 'y' }], { encoder: given(vectors), threshold: 0 }), EncodingFailed);
+  }
 });
 
 test('l’encodeur par défaut est multilingue et n’est chargé que sans double', () => {
@@ -159,10 +157,8 @@ test('production : accents décomposés, espaces insécables et casse partent no
   assert.deepEqual(fake.calls, [['jean dupont', 'jean dupont']]);
 });
 
-test('DÉFAUT : des fiches identiques ne sortent pas au seuil un', async () => {
+test('des fiches identiques ne sortent pas au seuil un', async () => {
   // Le produit scalaire de deux vecteurs unitaires identiques vaut
   // 0,9999999999999999 par arrondi flottant ; Python les rend.
-  await assert.rejects(async () => {
-    assert.deepEqual(await findDuplicates([CUSTOMERS[0], { ...CUSTOMERS[0] }], { encoder: encoder(), threshold: 1 }), [[0, 1, 1]]);
-  });
+  assert.deepEqual(await findDuplicates([CUSTOMERS[0], { ...CUSTOMERS[0] }], { encoder: encoder(), threshold: 1 }), [[0, 1, 1]]);
 });

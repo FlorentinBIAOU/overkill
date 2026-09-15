@@ -6,9 +6,9 @@ n0: |
   Repérer les doublons d'un fichier : normaliser, grouper, puis ne comparer
   qu'à l'intérieur d'un groupe.
 
-  Niveau N0. Déterministe, bibliothèque standard seule, et le seul niveau ici
-  qui reste rapide quand le fichier grossit, parce qu'il ne compare jamais
-  toutes les paires.
+  Niveau N0. Déterministe, bibliothèque standard seule. Il ne compare que les
+  fiches qui partagent une clé de blocage : toutes les paires d'un groupe,
+  aucune d'un groupe à l'autre.
 
   Deux choses font que ça marche.
 
@@ -18,9 +18,10 @@ n0: |
 
   Ensuite, le groupement. Comparer toutes les paires de dix mille fiches fait
   cinquante millions de comparaisons. Les grouper d'abord par une clé qui coûte
-  peu, et ne comparer qu'à l'intérieur d'un groupe, ramène cela à quelques
-  milliers. Tout le prix du niveau est dans la clé que vous choisissez, et son
-  angle mort aussi.
+  peu, et ne comparer qu'à l'intérieur d'un groupe, laisse les paires de chaque
+  groupe : peu nombreuses quand les groupes sont petits, toutes quand chaque
+  fiche tombe dans le même groupe. Tout le prix du niveau est dans la clé que
+  vous choisissez, et son angle mort aussi.
 
 n1.py: |
   Repérer les doublons d'un fichier en comparant l'orthographe, pas les
@@ -37,9 +38,8 @@ n1.py: |
   de trois lettres avec le mot correct. Rien ici n'est appris d'un corpus, et
   il n'y a aucun modèle à entraîner. C'est une pondération et une distance.
 
-  Le prix, c'est la recherche elle-même : sans clé, dans le pire des cas,
-  toutes les paires. Un index de voisinage se justifie bien avant que le
-  fichier devienne gros.
+  Le prix, c'est la recherche elle-même : sans clé, toutes les paires du
+  fichier reçoivent un score.
 
 n1.js: |
   Repérer les doublons d'un fichier en comparant l'orthographe, pas les
@@ -54,27 +54,24 @@ n1.js: |
   une faute de frappe, à un ordre des mots inversé et à un champ tronqué,
   parce qu'un mot mal orthographié partage encore l'essentiel de ses tranches
   de trois lettres avec le mot correct. Rien ici n'est appris d'un corpus, et
-  il n'y a aucun modèle à entraîner. C'est une pondération et une distance, et
-  c'est pour cela que le tout tient sur un écran, sans dépendance.
+  il n'y a aucun modèle à entraîner. C'est une pondération et une distance,
+  écrites ici sans dépendance.
 
-  Le prix, c'est la recherche elle-même : sans clé, dans le pire des cas,
-  toutes les paires. Un index de voisinage se justifie bien avant que le
-  fichier devienne gros.
+  Le prix, c'est la recherche elle-même : sans clé, toutes les paires du
+  fichier reçoivent un score.
 
 n2: |
   Repérer les doublons d'un fichier avec un encodeur de phrases auto-hébergé.
 
   Niveau N2. N1 compare des graphies ; deux fiches qui disent la même chose
   avec d'autres mots ne partagent aucun n-gramme de caractères et restent
-  invisibles. Un encodeur de phrases envoie chaque fiche vers un vecteur où
-  « Société Nationale des Chemins de Fer » et « SNCF » peuvent se retrouver
-  proches, parce que le modèle a été entraîné sur des textes où les deux
-  apparaissent aux mêmes places.
+  invisibles. Un encodeur de phrases envoie chaque fiche vers un vecteur dense,
+  la moyenne des vecteurs de ses jetons, et les fiches sont comparées sur ces
+  vecteurs plutôt que sur les lettres qu'elles partagent.
 
   Ce que ce niveau coûte vraiment n'est pas la comparaison, c'est le
-  déploiement : quelques centaines de mégaoctets de poids à charger, un
-  processus à garder chaud, et un index vectoriel dès que le fichier ne tient
-  plus dans une liste.
+  déploiement : des poids à télécharger et à charger, et un processus à garder
+  chaud.
 
   L'encodeur est un paramètre doté d'une vraie valeur par défaut : le lecteur
   voit le code de chargement, et le test injecte un double local.

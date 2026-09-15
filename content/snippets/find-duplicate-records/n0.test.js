@@ -161,14 +161,12 @@ test('production : accents décomposés, espaces insécables et casse mixte', ()
   assert.equal(blockingKey({ name: 'JEAN\u00a0Dupo\u0302nt', postcode: ' 75011 ' }), 'dup:75011');
 });
 
-test('DÉFAUT : un caractère de largeur nulle dans le nom change la clé', async () => {
-  await assert.rejects(async () => {
-    const records = [
-      { name: 'Jean Dupont', postcode: '75011', city: 'Paris' },
-      { name: 'Jean Du\u200bpont', postcode: '75011', city: 'Paris' },
-    ];
-    assert.deepEqual(indexesOf(findDuplicates(records)), [[0, 1]]);
-  });
+test('un caractère de largeur nulle dans le nom change la clé', async () => {
+  const records = [
+    { name: 'Jean Dupont', postcode: '75011', city: 'Paris' },
+    { name: 'Jean Du\u200bpont', postcode: '75011', city: 'Paris' },
+  ];
+  assert.deepEqual(indexesOf(findDuplicates(records)), [[0, 1]]);
 });
 
 test('production : seuil exactement atteint et valeurs aux limites', () => {

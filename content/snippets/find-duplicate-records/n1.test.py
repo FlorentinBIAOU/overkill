@@ -139,14 +139,6 @@ def test_production_fichier_vide_et_fiche_unique():
     assert find_duplicates([CUSTOMERS[0]]) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : des fiches dont le texte normalisé est vide (champs vides, ou "
-        "ponctuation seule) font lever ValueError: empty vocabulary dans "
-        "TfidfVectorizer ; la version JavaScript rend une liste vide"
-    ),
-)
 def test_defaut_des_fiches_sans_aucune_lettre_ne_font_pas_lever():
     assert find_duplicates([{"name": "", "city": ""}, {"name": "—", "city": "..."}]) == []
 

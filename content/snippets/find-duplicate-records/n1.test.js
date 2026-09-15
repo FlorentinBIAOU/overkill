@@ -137,10 +137,8 @@ test('production : au seuil zéro, toutes les paires sortent', () => {
   assert.equal(findDuplicates(CUSTOMERS, 0).length, 10);
 });
 
-test('DÉFAUT : des fiches identiques ne sortent pas au seuil un', async () => {
+test('des fiches identiques ne sortent pas au seuil un', async () => {
   // Le cosinus de deux vecteurs identiques vaut 0,9999999999999999 par
   // arrondi flottant, sous le seuil ; Python les rend.
-  await assert.rejects(async () => {
-    assert.deepEqual(findDuplicates([CUSTOMERS[0], { ...CUSTOMERS[0] }], 1), [[0, 1, 1]]);
-  });
+  assert.deepEqual(findDuplicates([CUSTOMERS[0], { ...CUSTOMERS[0] }], 1), [[0, 1, 1]]);
 });

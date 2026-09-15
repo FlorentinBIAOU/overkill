@@ -3,7 +3,7 @@ id: find-duplicate-records
 family: detect-filter
 status: published
 verdict: N0
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Find the records that stand for the same person or company in a file entered by several people."
 
 scenario:
-  fr: "On voit passer le fichier entier dans un modèle généraliste, paire par paire, pour lui demander si deux lignes désignent la même personne. Le problème n’est pourtant pas de juger une paire, il est de savoir laquelle regarder : dix mille fiches font cinquante millions de paires, et presque aucune n’a quoi que ce soit en commun. Tout l’art du rapprochement de fiches tient dans ce tri préalable, et il se fait avec une clé et une boucle."
-  en: "The usual reflex is to push the whole file through a general-purpose model, pair by pair, asking whether two lines are the same person. But judging a pair is not the hard part; knowing which pair to look at is. Ten thousand records make fifty million pairs, and almost none of them share anything at all. Record linkage lives or dies on that first sort, and a key and a loop are enough to do it."
+  fr: "On voit passer le fichier entier dans un modèle généraliste, paire par paire, pour lui demander si deux lignes désignent la même personne. Le problème n’est pourtant pas de juger une paire, il est de savoir laquelle regarder : dix mille fiches font cinquante millions de paires. Tout l’art du rapprochement de fiches tient dans ce tri préalable, et il se fait avec une clé et une boucle."
+  en: "The usual reflex is to push the whole file through a general-purpose model, pair by pair, asking whether two lines are the same person. But judging a pair is not the hard part; knowing which pair to look at is. Ten thousand records make fifty million pairs. Record linkage lives or dies on that first sort, and a key and a loop are enough to do it."
 
 rungs:
   - level: N0
@@ -106,8 +106,8 @@ rungs:
       javascript: snippets/find-duplicate-records/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Une fiche est encodée en entier : le jeton qui distingue deux lignes pèse peu dans un vecteur construit sur tout ce qu’elles ont en commun. Dans le test, « Câble HDMI 2 m » est plus proche de « Câble HDMI 3 m » que de la même référence écrite « HDMI lead, 2 metres, black » ; au seuil par défaut, l’extrait rapproche les deux câbles différents et rate le vrai doublon. Le double local du test accentue l’écart ; le rapprochement de deux lignes presque identiques, lui, est ce que font aussi les vrais encodeurs."
-      en: "A record is encoded as a whole, so the one token that tells two lines apart is a small part of a vector built from everything they share. In the test, “Câble HDMI 2 m” lands closer to “Câble HDMI 3 m” than to the same item written “HDMI lead, 2 metres, black”: at the default threshold the snippet pairs the two different cables and misses the real duplicate. The local double sharpens the gap; pulling two near-identical lines together is what real encoders do too."
+      fr: "Une fiche est encodée en entier : le vecteur est la moyenne de ceux de tous ses jetons, et le jeton qui distingue deux lignes n’y compte que pour sa part. Si « Câble HDMI 2 m » tombe plus près de « Câble HDMI 3 m » que de la même référence écrite « HDMI lead, 2 metres, black », comme avec les vecteurs du test, l’extrait rapproche au seuil par défaut les deux câbles différents et rate le vrai doublon. Ces vecteurs sont ceux d’un double local : ce que le vrai modèle rend sur ces lignes n’est pas mesuré ici."
+      en: "A record is encoded as a whole: its vector is the mean of the vectors of all its tokens, and the one token that tells two lines apart only counts for its share. If “Câble HDMI 2 m” lands closer to “Câble HDMI 3 m” than to the same item written “HDMI lead, 2 metres, black”, as with the vectors in the test, the snippet pairs the two different cables at the default threshold and misses the real duplicate. Those vectors come from a local double: what the real model returns on these lines is not measured here."
     escalate_when:
       fr: "Aucun niveau ne vient au-dessus dans cette fiche : au-delà, ce n’est plus un choix d’algorithme mais une relecture humaine des paires que le score laisse en zone grise."
       en: "No level comes above this one here: past it, the question is no longer which algorithm to use but who reads the pairs the score leaves in the grey zone."
@@ -119,8 +119,8 @@ rungs:
       en: "Comparing pairs through a general-purpose model is quadratic: ten thousand records make fifty million calls. And the call only answers the easy question, judging a pair somebody already picked out: a lower level still has to choose which pair to send."
 
 verdict_rationale:
-  fr: "N0 est le seul niveau qui décide à l’avance quelles paires méritent un regard, et c’est ce qui le laisse tenir quand le fichier grossit : les deux autres comparent, dans le pire des cas, toutes les paires. Son prix est écrit dans le code, c’est la clé de blocage, et il est réglable : vous choisissez ce que vous acceptez de ne jamais comparer, et le test vous montre exactement ce que cela coûte. Montez à N1 le jour où vos doublons se cachent précisément dans le champ dont la clé est faite, pas avant."
-  en: "N0 is the only level that decides in advance which pairs deserve a look, which is what keeps it standing as the file grows: the other two compare, in the worst case, every pair. Its price is written into the code as the blocking key, and it is yours to set: you choose what you agree never to compare, and the test shows you exactly what that costs. Move up to N1 the day your duplicates hide in the very field the key is made of, not before."
+  fr: "N0 est le seul niveau qui décide à l’avance quelles paires méritent un regard, et c’est ce qui le laisse tenir quand le fichier grossit, tant que la clé garde les groupes petits : N1 et N2 comparent toutes les paires du fichier, N0 celles de chaque groupe. Son prix est écrit dans le code, c’est la clé de blocage, et il est réglable : vous choisissez ce que vous acceptez de ne jamais comparer, et le test vous montre exactement ce que cela coûte. Montez à N1 le jour où vos doublons se cachent précisément dans le champ dont la clé est faite, pas avant."
+  en: "N0 is the only level that decides in advance which pairs deserve a look, which is what keeps it standing as the file grows, as long as the key keeps the groups small: N1 and N2 compare every pair of the file, N0 the pairs of each group. Its price is written into the code as the blocking key, and it is yours to set: you choose what you agree never to compare, and the test shows you exactly what that costs. Move up to N1 the day your duplicates hide in the very field the key is made of, not before."
 
 further_reading:
   - label: "Splink — règles de blocage, ou pourquoi on ne compare pas toutes les paires"
@@ -132,5 +132,13 @@ further_reading:
   - label: "Sentence-Transformers — documentation des encodeurs de phrases auto-hébergés"
     url: "https://www.sbert.net/"
 
-sources: []
+sources:
+  - label: "Splink — le nombre de paires croît en n(n-1)/2, d’où les règles de blocage"
+    url: "https://moj-analytical-services.github.io/splink/topic_guides/blocking/blocking_rules.html"
+  - label: "Hugging Face — carte de paraphrase-multilingual-MiniLM-L12-v2 : vecteurs de dimension 384, moyenne des jetons, licence Apache 2.0"
+    url: "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+  - label: "Hugging Face — Xenova/paraphrase-multilingual-MiniLM-L12-v2, la conversion pour Transformers.js, importée depuis @huggingface/transformers"
+    url: "https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2"
+  - label: "Sentence Transformers — SentenceTransformer.encode rend un tableau NumPy"
+    url: "https://sbert.net/docs/package_reference/sentence_transformer/SentenceTransformer.html"
 ---

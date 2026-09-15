@@ -1,8 +1,8 @@
 /**
  * Find duplicate records: normalise, block, then compare inside a block only.
  *
- * Rung N0. Deterministic, no dependency, and the only rung here that stays
- * fast when the file grows, because it never compares every pair.
+ * Rung N0. Deterministic, no dependency. It compares only the records that
+ * share a blocking key: every pair inside a group, none across groups.
  *
  * Two things make this work.
  *
@@ -12,21 +12,19 @@
  *
  * Second, blocking. Comparing every pair of ten thousand records is fifty
  * million comparisons. Grouping them by a cheap key first, and comparing only
- * inside a group, turns that into a few thousand. The whole cost of the rung
- * is in the key you pick, and so is its blind spot.
+ * inside a group, leaves the pairs of each group: few when the groups are
+ * small, all of them when every record lands in the same group. The whole cost
+ * of the rung is in the key you pick, and so is its blind spot.
  */
 
-/** Lower case, strip accents and punctuation, collapse spaces. */
+/** Lower case, strip accents, invisible characters and punctuation, collapse spaces. */
 export function normalise(text) {
-  return String(text)
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
+  // A zero-width space is a format character: dropped, it does not split a word.
+  return String(text ?? '').toLowerCase().normalize('NFKD').replace(/\p{Cf}/gu, '')
+    .replace(/\p{Diacritic}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
-/** One comparable string per record. */
+/** One comparable string per record; an empty cell adds nothing. */
 export function recordText(record) {
   return normalise(Object.values(record).join(' '));
 }
@@ -77,12 +75,13 @@ export function findDuplicates(records, threshold = 0.85) {
     blocks.get(key).push(index);
   });
 
+  const texts = records.map(recordText); // once per record, not once per pair
   const pairs = [];
   for (const indexes of blocks.values()) {
     for (let a = 0; a < indexes.length; a += 1) {
       for (let b = a + 1; b < indexes.length; b += 1) {
         const [i, j] = [indexes[a], indexes[b]];
-        const score = similarity(recordText(records[i]), recordText(records[j]));
+        const score = similarity(texts[i], texts[j]);
         if (score >= threshold) pairs.push([i, j, Math.round(score * 1000) / 1000]);
       }
     }

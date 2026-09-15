@@ -10,21 +10,22 @@
  * word order and a truncated field, because a misspelt word still shares most
  * of its three-letter slices with the correct one. Nothing here is learnt
  * from a corpus and there is no model to train. It is a weighting scheme and
- * a distance, which is why it fits in one screen with no dependency.
+ * a distance, written here with no dependency.
  *
- * The price is the search itself: no key means, in the worst case, every
- * pair. A neighbour index earns its place well before the file gets large.
+ * The price is the search itself: no key means every pair of the file is
+ * scored.
  */
 
 const NGRAM_SIZES = [2, 3, 4];
 
-/** Lower case, strip accents and punctuation, collapse spaces. */
+/** Lower case, strip accents, invisible characters and punctuation, collapse spaces. */
 export function normalise(text) {
-  return String(text).toLowerCase().normalize('NFKD')
+  // A zero-width space is a format character: dropped, it does not split a word.
+  return String(text ?? '').toLowerCase().normalize('NFKD').replace(/\p{Cf}/gu, '')
     .replace(/\p{Diacritic}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
-/** One comparable string per record. */
+/** One comparable string per record; an empty cell adds nothing. */
 export function recordText(record) {
   return normalise(Object.values(record).join(' '));
 }
@@ -86,11 +87,13 @@ export function findDuplicates(records, threshold = 0.6) {
   const pairs = [];
   for (let i = 0; i < vectors.length; i += 1) {
     for (let j = i + 1; j < vectors.length; j += 1) {
-      let score = 0;
       // Walking the shorter vector: only the grams the two records share
       // contribute anything to a cosine.
-      for (const [gram, weight] of vectors[i]) score += weight * (vectors[j].get(gram) ?? 0);
-      if (score >= threshold) pairs.push([i, j, Math.round(score * 1000) / 1000]);
+      const [small, large] = vectors[i].size <= vectors[j].size ? [vectors[i], vectors[j]] : [vectors[j], vectors[i]];
+      let score = 0;
+      for (const [gram, weight] of small) score += weight * (large.get(gram) ?? 0);
+      // A hair of tolerance: in floating point, two identical records can score just under 1.0.
+      if (score >= threshold - 1e-9) pairs.push([i, j, Math.round(score * 1000) / 1000]);
     }
   }
   return pairs.sort((a, b) => b[2] - a[2] || a[0] - b[0] || a[1] - b[1]);

@@ -181,10 +181,6 @@ def test_production_un_nom_vide_ne_fait_pas_lever():
     assert find_duplicates([blank, dict(blank)]) == [(0, 1, 1.0)]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un nom absent (None, une cellule vide lue d'un CSV) fait lever AttributeError dans normalise",
-)
 def test_defaut_un_nom_nul_ne_fait_pas_lever():
     records = [{"name": None, "postcode": "75011", "city": "Paris"}, {"name": "Jean Dupont", "postcode": "75011", "city": "Paris"}]
     assert find_duplicates(records) == []
@@ -203,13 +199,6 @@ def test_production_accents_decomposes_espaces_insecables_et_casse_mixte():
     assert blocking_key({"name": "JEAN\u00a0Dupo\u0302nt", "postcode": " 75011 "}) == "dup:75011"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un caractère de largeur nulle collé dans le nom (« Du\\u200bpont ») "
-        "coupe le mot : la clé devient « pon:75011 » et la paire n'est jamais comparée"
-    ),
-)
 def test_defaut_un_caractere_de_largeur_nulle_dans_le_nom_change_la_cle():
     records = [
         {"name": "Jean Dupont", "postcode": "75011", "city": "Paris"},
