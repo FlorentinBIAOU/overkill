@@ -33,7 +33,7 @@ JavaScript, jamais l'un sans l'autre. Chaque extrait a son test à côté de lui
 
 | Règle | Détail |
 |---|---|
-| **Court** | 40 lignes de code utile au maximum, commentaires non compris. Au-delà, c'est un projet, pas un extrait. L'adaptateur commun du client de fournisseur des niveaux N3 (section « Les barreaux N2 et N3 ») n'entre pas dans le décompte : il est identique d'une fiche à l'autre et ne porte aucune logique de la fiche. |
+| **Court** | 40 lignes de code utile au maximum, commentaires non compris. Au-delà, c'est un projet, pas un extrait. La limite porte sur **la logique de l'approche**. N'entrent pas dans le décompte : l'adaptateur commun du client de fournisseur des niveaux N3 (section « Les barreaux N2 et N3 »), identique d'une fiche à l'autre, et les gardes de production — validation d'entrée, plafonds, erreurs nommées — qu'un code publié doit porter (voir `CHARTE-TESTS.md`). Un extrait qui dépasse quarante lignes de logique est découpé, ou le relecteur le refuse. |
 | **Autonome** | Il s'exécute seul. Aucun fichier de données externe, aucun état partagé entre extraits. |
 | **Hors ligne** | Aucun accès réseau, jamais. Ni pendant l'exécution, ni pendant le test. |
 | **Sans effet de bord** | Aucune écriture de fichier hors d'un répertoire temporaire. Aucune variable d'environnement modifiée. |

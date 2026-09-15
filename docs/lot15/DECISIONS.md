@@ -45,3 +45,18 @@ Tenu au fil du lot. Chaque décision, avec l'alternative écartée.
 9. **`extract-fields-from-invoice` en brouillon au tour 1.** Son niveau
    recommandé ne peut pas tourner tel qu'écrit. Écarté pour l'instant : changer
    le verdict sans relecture, ou publier un N2 dans un seul langage.
+10. **La limite des quarante lignes porte sur la logique, pas sur les gardes.**
+    Les réparations de production (entrée vide, plafond, type inattendu, erreur
+    nommée) font dépasser la limite à la plupart des extraits. La mission exige
+    un code qui tient en production ; la charte exige un extrait lisible. Les
+    gardes sortent du décompte, la logique y reste, et le relecteur juge.
+    Écarté : retirer des gardes pour tenir la limite (du code qui ne tient pas
+    en production, publié comme modèle) ; supprimer la limite (un extrait
+    devient un projet).
+11. **`detect-anomalies-in-metrics` : plancher d'écart en paramètre, zéro par
+    défaut.** Sur une métrique de comptage presque toujours nulle, l'écart
+    médian vaut zéro et tout écart sonne. Un plancher non nul par défaut ferait
+    taire sans le dire une métrique de petite unité, ce qu'un test existant
+    démontre. La fiche dit la limite et le paramètre ; le test `DÉFAUT` devient
+    la démonstration de la limite au réglage par défaut et de sa levée avec le
+    paramètre. Écarté : un plancher par défaut à un.
