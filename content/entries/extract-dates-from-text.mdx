@@ -3,7 +3,7 @@ id: extract-dates-from-text
 family: extract
 status: published
 verdict: N0
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Find the dates mentioned in a message or a document, whatever their format."
 
 scenario:
-  fr: "On voit régulièrement un appel de modèle généraliste sur chaque document pour en sortir les échéances. Les dates y sont pourtant écrites dans trois ou quatre formats connus, et les trouver n’est pas la partie difficile : la difficulté est que 31/02/2024 a toutes les apparences d’une date sans en être une, et que 03/04/2024 en désigne deux. Ni l’une ni l’autre ne se tranche par la compréhension du texte : la première se tranche avec un calendrier, la seconde avec une convention que le document ne dit pas toujours."
-  en: "Calling a general-purpose model on every document to pull out its deadlines is a common reflex. Yet dates come in three or four well-known shapes, and finding them is not the hard part: the hard part is that 31/02/2024 has every appearance of a date without being one, and that 03/04/2024 names two different days. Neither is settled by understanding the text: the first is settled by a calendar, the second by a convention the document does not always state."
+  fr: "On voit régulièrement un appel de modèle généraliste sur chaque document pour en sortir les échéances. Les dates y sont pourtant écrites selon des motifs que l’on peut énumérer (12/03/2024, 2024-03-12, 3 avril 2024), et les trouver n’est pas la partie difficile : la difficulté est que 31/02/2024 a toutes les apparences d’une date sans en être une, et que 03/04/2024 en désigne deux. Ni l’une ni l’autre ne se tranche par la compréhension du texte : la première se tranche avec un calendrier, la seconde avec une convention que le document ne dit pas toujours."
+  en: "Calling a general-purpose model on every document to pull out its deadlines is a common reflex. Yet dates follow patterns you can list (12/03/2024, 2024-03-12, 3 April 2024, March 3, 2024), and finding them is not the hard part: the hard part is that 31/02/2024 has every appearance of a date without being one, and that 03/04/2024 names two different days. Neither is settled by understanding the text: the first is settled by a calendar, the second by a convention the document does not always state."
 
 rungs:
   - level: N0
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/extract-dates-from-text/n0.js
       verification: executed
     breaking_point:
-      fr: "Les dates relatives. « jeudi prochain », « dans quinze jours », « à partir de demain » : il n’y a pas de chiffres à faire correspondre, donc il ne se trouve rien du tout. L’échec est silencieux, une liste vide et non une erreur, et un outil de planification bâti sur ce niveau ne voit jamais la moitié de ce que les gens écrivent."
-      en: "Relative dates. \"next Thursday\", \"in a fortnight\", \"from tomorrow\": there are no digits to match, so nothing at all is found. The failure is silent, an empty list rather than an error, and a planning tool built on this level simply never sees half of what people write."
+      fr: "Les dates relatives. « jeudi prochain », « dans quinze jours », « à partir de demain » : il n’y a pas de chiffres à faire correspondre, donc il ne se trouve rien du tout. « dans 15 jours », qui a des chiffres, ne rend rien non plus. L’échec est silencieux, une liste vide et non une erreur. Et une date abrégée comme « 3/4/24 » est écartée exprès : une année sur deux chiffres n’est lue qu’avec un jour et un mois sur deux chiffres, sans quoi « version 2.1.24 » deviendrait un 2 janvier."
+      en: "Relative dates. \"next Thursday\", \"in a fortnight\", \"from tomorrow\": there are no digits to match, so nothing at all is found. \"in 15 days\", which has digits, returns nothing either. The failure is silent, an empty list rather than an error. And a short date such as 3/4/24 is dropped on purpose: a two-digit year is only read with a two-digit day and month, or \"version 2.1.24\" would become 2 January."
     escalate_when:
       fr: "Un même corpus mêle les conventions : des documents français écrits en jour-mois et des documents venus d’ailleurs écrits en mois-jour. La convention unique que vous passez à l’extrait est alors fausse pour une partie du fichier, et elle rend des dates plausibles."
       en: "One corpus mixes conventions: French documents written day-first and documents from elsewhere written month-first. The single convention you hand the snippet is then wrong for part of the file, and it returns plausible dates."
@@ -80,8 +80,8 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Sans intérêt ici : un modèle de reconnaissance d’entités dédié aux dates coûte un service permanent à exploiter et n’apporte rien de plus que N1 sur du texte de gestion, où les dates s’écrivent dans une poignée de formats et où l’ambiguïté qui reste est celle de la convention, pas celle de la langue."
-      en: "Not useful here: a date-specific entity recogniser costs a permanent service to operate and adds nothing to N1 on business documents, where dates come in a handful of shapes and the ambiguity left is one of convention, not of language."
+      fr: "Un modèle de reconnaissance d’entités nommées, celui de spaCy par exemple, étiquette un passage DATE, « jeudi prochain » compris, mais rend le passage et ses positions, pas le jour qu’il désigne : il ne tranche ni 03/04/2024 ni « jeudi prochain ». Il ajoute des poids à télécharger pour repérer ce que les motifs de N0 repèrent déjà, et laisse entier ce que N1 et N3 tranchent."
+      en: "A named-entity model, spaCy's for instance, labels a DATE span, \"next Thursday\" included, but hands back the span and its offsets, not the day it names: it settles neither 03/04/2024 nor \"next Thursday\". It adds weights to download to spot what N0's patterns already spot, and leaves untouched what N1 and N3 settle."
 
   - level: N3
     available: true
@@ -110,15 +110,15 @@ rungs:
       javascript: snippets/extract-dates-from-text/n3.js
       verification: stubbed
     breaking_point:
-      fr: "La fluidité n’est pas l’exactitude. Le modèle rend « 2024-02-31 » en JSON impeccable, et à côté une date qu’il a fabriquée. La vérification calendaire de N0 doit rester, et elle écarte le jour impossible ; la date inventée passe, et rien dans la réponse ne la signale. Sommé de répondre en JSON, il peut aussi répondre en prose : l’extrait lève alors une erreur, plutôt que de rendre une liste vide qui affirmerait qu’il n’y avait pas de date."
-      en: "Fluency is not correctness. The model returns 2024-02-31 in flawless JSON, and next to it a date it made up. The calendar check from N0 has to stay, and it drops the impossible day; the invented one gets through, and nothing in the answer marks it. Asked for JSON, the model can also answer prose: the snippet raises rather than returning an empty list, which would claim there was no date to find."
+      fr: "La fluidité n’est pas l’exactitude. Rien dans la requête n’empêche la réponse de porter « 2024-02-31 » en JSON impeccable, ni une date qui ne figure pas dans le document. La vérification calendaire de N0 doit rester, et elle écarte le jour impossible ; la date absente du document passe, et rien dans la réponse ne la signale. Une réponse qui n’est pas une liste d’objets à date AAAA-MM-JJ — de la prose, une clé mal nommée, une date écrite « 12/03/2024 » — est redemandée, puis l’extrait lève une erreur, plutôt que de rendre une liste vide qui affirmerait qu’il n’y avait pas de date."
+      en: "Fluency is not correctness. Nothing in the request stops the answer from carrying 2024-02-31 in flawless JSON, or a date that appears nowhere in the document. The calendar check from N0 has to stay, and it drops the impossible day; the date missing from the document gets through, and nothing in the answer marks it. An answer that is not a list of objects with a YYYY-MM-DD date — prose, a misnamed key, a date written 12/03/2024 — is asked again, then the snippet raises rather than returning an empty list, which would claim there was no date to find."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0, parce que la difficulté de ce besoin n’est pas de repérer les dates mais de refuser celles qui n’existent pas, et c’est un calendrier qui le fait, pas un modèle : 31/02/2024 et 29/02/1900 sont écartés par une ligne, et le résultat se teste unitairement. Ce que ce niveau ne sait pas faire, il ne le fait pas à moitié, il rend une liste vide. Montez à N1 le jour où un même corpus mêle les conventions jour-mois et mois-jour, en sachant que sa règle ne reconnaît plus que la forme tout en chiffres et qu’il faut garder N0 à côté pour les mois écrits en lettres ; à N3 seulement si les échéances de vos textes s’écrivent en relation avec aujourd’hui, en sachant que vous échangerez un test unitaire contre une réponse à relire."
-  en: "N0, because the hard part of this need is not spotting dates but refusing the ones that do not exist, and a calendar does that, not a model: 31/02/2024 and 29/02/1900 are dropped by a single line, and the result is unit testable. What this level cannot do, it does not do halfway — it returns an empty list. Move up to N1 the day one corpus mixes day-first and month-first conventions, knowing that its rule recognises only the all-numeric shape and that N0 has to stay alongside it for months written in letters; to N3 only if your texts write their deadlines relative to today, knowing you will trade a unit test for an answer that needs reviewing."
+  fr: "N0, parce que la difficulté de ce besoin n’est pas de repérer les dates mais de refuser celles qui n’existent pas, et c’est un calendrier qui le fait, pas un modèle : 31/02/2024 et 29/02/1900 sont écartés par celui de la bibliothèque standard, et le résultat se teste unitairement. Ce que ce niveau ne voit pas, il le rend en liste vide ; ce qu’il lit selon la mauvaise convention, il le rend comme une date plausible, et c’est ce qui décide de monter. Montez à N1 le jour où un même corpus mêle les conventions jour-mois et mois-jour, en sachant que sa règle ne reconnaît plus que la forme tout en chiffres et qu’il faut garder N0 à côté pour les mois écrits en lettres ; à N3 seulement si les échéances de vos textes s’écrivent en relation avec aujourd’hui, en sachant que vous échangerez un test unitaire contre une réponse à relire."
+  en: "N0, because the hard part of this need is not spotting dates but refusing the ones that do not exist, and a calendar does that, not a model: 31/02/2024 and 29/02/1900 are dropped by the standard library's own, and the result is unit testable. What this level cannot see, it returns as an empty list; what it reads with the wrong convention, it returns as a plausible date, and that is what calls for moving up. Move up to N1 the day one corpus mixes day-first and month-first conventions, knowing that its rule recognises only the all-numeric shape and that N0 has to stay alongside it for months written in letters; to N3 only if your texts write their deadlines relative to today, knowing you will trade a unit test for an answer that needs reviewing."
 
 further_reading:
   - label: "Python — module datetime, le calendrier grégorien proleptique et ses années bissextiles"
@@ -130,5 +130,17 @@ further_reading:
   - label: "Unicode CLDR — motifs de date par locale, d’où vient l’ambiguïté jour-mois"
     url: "https://cldr.unicode.org/translation/date-time/date-time-patterns"
 
-sources: []
+sources:
+  - label: "MySQL 8.4 Reference Manual — 2-Digit Years in Dates : 00-69 deviennent 2000-2069, 70-99 deviennent 1970-1999"
+    url: "https://dev.mysql.com/doc/refman/8.4/en/two-digit-years.html"
+  - label: "Python — module time : strptime lit 69-99 comme 1969-1999, selon POSIX, un an plus tôt que MySQL"
+    url: "https://docs.python.org/3/library/time.html"
+  - label: "Python — la lecture ISO des dates accepte aussi 20191204 et 2021-W01-1, d’où la vérification de forme de N3"
+    url: "https://docs.python.org/3/library/datetime.html"
+  - label: "MDN — constructeur Date : report des valeurs hors bornes, années 0 à 99 lues 1900 à 1999"
+    url: "https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Date/Date"
+  - label: "spaCy — glossaire des étiquettes : DATE, « Absolute or relative dates or periods »"
+    url: "https://github.com/explosion/spaCy/blob/master/spacy/glossary.py"
+  - label: "spaCy — API Span : texte, positions et étiquette, aucune valeur de date résolue"
+    url: "https://spacy.io/api/span"
 ---

@@ -84,14 +84,6 @@ def test_point_de_rupture_une_reponse_en_prose_leve_plutot_que_rendre_une_liste_
     assert extract_dates("rien à signaler", client=FakeLLM(response="[]"), today=TODAY) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : une liste dont les éléments n'ont pas la forme demandée (clé "
-        "« day » au lieu de « date », date en « 12/03/2024 », date avec heure) rend "
-        "une liste vide silencieuse, exactement ce que le point de rupture dit éviter"
-    ),
-)
 def test_defaut_une_liste_d_elements_mal_formes_leve_plutot_que_rendre_une_liste_vide():
     for response in (
         '[{"text": "12/03/2024", "day": "2024-03-12"}]',
@@ -193,10 +185,6 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un texte vide ou blanc part quand même chez le fournisseur, un appel payé pour rien",
-)
 def test_defaut_un_texte_vide_ne_coute_aucun_appel():
     for text in ("", "  \n "):
         client = FakeLLM(response="[]")
@@ -240,14 +228,6 @@ def test_production_des_elements_nuls_ou_d_un_autre_type_sont_ecartes_sans_excep
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un « text » nul dans la réponse ressort en None en Python, alors que "
-        "la version JavaScript rend une chaîne vide et que la docstring promet « what "
-        "was written »"
-    ),
-)
 def test_defaut_un_passage_nul_ou_absent_devient_une_chaine_vide():
     client = FakeLLM(response='[{"text": null, "date": "2024-03-12"}, {"date": "2024-03-13"}]')
     assert extract_dates("réunion", client=client, today=TODAY) == [

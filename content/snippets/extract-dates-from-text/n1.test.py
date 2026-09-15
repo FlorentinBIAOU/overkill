@@ -201,14 +201,6 @@ def test_production_texte_vide():
     assert extract_dates(MODEL, "") == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : train suppose une date candidate dans chaque phrase ; une phrase qui "
-        "écrit « 12.03.24 » fait lever AttributeError ('NoneType' object has no "
-        "attribute 'span'), une erreur qui ne dit pas quelle phrase est en cause"
-    ),
-)
 def test_defaut_une_phrase_d_entrainement_sans_date_candidate_fait_planter_l_entrainement():
     model = train(DAY_FIRST + MONTH_FIRST + ["Facture du 12.03.24"], [1] * 8 + [0] * 8 + [1])
     assert extract_dates(model, "Facture émise le 25/12/2024.") == [("25/12/2024", date(2024, 12, 25))]

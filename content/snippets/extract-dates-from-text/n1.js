@@ -4,8 +4,9 @@
  * Rung N1. A rule still finds the candidates: a date is a shape, and a shape
  * is what regular expressions are for. The rule here is narrower than the one
  * in N0, and only covers the all-numeric form with a four-digit year, which is
- * the one form the ambiguity touches. A document writing its months in letters
- * still needs N0 beside this.
+ * the one form it reads. A two-digit year, 03/04/24, is just as ambiguous and
+ * escapes it; so do months written in letters, for which a document still
+ * needs N0 beside this.
  *
  * What no rule can do is read 03/04/2024, because nothing in those digits says
  * which field is the day. N0 answers by asking the caller to pick one
@@ -13,11 +14,11 @@
  * a supplier from abroad.
  *
  * The convention is not in the digits, it is in the prose around them. That is
- * a classification problem, and a few hundred labelled sentences are enough.
+ * a classification problem, and the rules still settle every case they can
+ * settle on their own.
  *
  * Logistic regression on word counts is written out here rather than pulled
- * from a library, because it is short enough to read. That is the whole
- * argument of this rung.
+ * from a library: the whole model is one weight per word and a bias.
  */
 
 const CANDIDATE = /(?<!\d)(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?!\d)/g;

@@ -95,12 +95,10 @@ test('les nombres ordinaires restent intacts', () => {
   assert.deepEqual(days('version 1.2.345'), []);
 });
 
-test('DÉFAUT : un numéro de version à deux chiffres de fin est lu comme une date', async () => {
+test('un numéro de version à deux chiffres de fin est lu comme une date', () => {
   // « version 2.1.24 » rend le 2 janvier 2024, « 10.1.1.24 » le 1er janvier 2024.
-  await assert.rejects(async () => {
-    assert.deepEqual(days('mise à jour vers la version 2.1.24'), []);
-    assert.deepEqual(days('serveur 10.1.1.24'), []);
-  });
+  assert.deepEqual(days('mise à jour vers la version 2.1.24'), []);
+  assert.deepEqual(days('serveur 10.1.1.24'), []);
 });
 
 test('un passage qui chevauche une date retenue n’est pas une seconde date', () => {
@@ -161,28 +159,20 @@ test('production : casse mixte dans le nom du mois', () => {
   assert.deepEqual(pairs('LE 3 AVRIL 2024'), [['3 AVRIL 2024', '2024-04-03']]);
 });
 
-test('DÉFAUT : « 1ER » en capitales n’est pas lu', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(pairs('LE 1ER MARS 2024'), [['1ER MARS 2024', '2024-03-01']]);
-  });
+test('« 1ER » en capitales n’est pas lu', () => {
+  assert.deepEqual(pairs('LE 1ER MARS 2024'), [['1ER MARS 2024', '2024-03-01']]);
 });
 
-test('DÉFAUT : un mois en accents décomposés n’est pas lu', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(pairs('1er fe\u0301vrier 2024'), [['1er fe\u0301vrier 2024', '2024-02-01']]);
-  });
+test('un mois en accents décomposés n’est pas lu', () => {
+  assert.deepEqual(pairs('1er fe\u0301vrier 2024'), [['1er fe\u0301vrier 2024', '2024-02-01']]);
 });
 
-test('DÉFAUT : la forme anglaise mois, jour, année n’est pas lue', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(pairs('Payment due March 3, 2024.'), [['March 3, 2024', '2024-03-03']]);
-  });
+test('la forme anglaise mois, jour, année n’est pas lue', () => {
+  assert.deepEqual(pairs('Payment due March 3, 2024.'), [['March 3, 2024', '2024-03-03']]);
 });
 
-test('DÉFAUT : des chiffres pleine chasse ne sont pas lus en JavaScript, alors que Python les lit', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(pairs('１２/０３/２０２４'), [['１２/０３/２０２４', '2024-03-12']]);
-  });
+test('des chiffres pleine chasse ne sont pas lus en JavaScript, alors que Python les lit', () => {
+  assert.deepEqual(pairs('１２/０３/２０２４'), [['１２/０３/２０２４', '2024-03-12']]);
 });
 
 test('production : valeurs aux limites du calendrier', () => {

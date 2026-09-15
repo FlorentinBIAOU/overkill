@@ -2,12 +2,11 @@
 Extract dates from text: one regular expression per format, then a real
 calendar check.
 
-Rung N0. Deterministic, standard library only, and the whole of it fits on a
-screen.
+Rung N0. Deterministic, standard library only.
 
-The regular expression is the easy half. It finds three groups of digits and
-knows nothing else: 31/02/2024 matches it perfectly, and so does 29/02/2023.
-The second half is what makes the difference, and it is one line long, because
+The regular expression is the easy half. It finds groups of digits and knows
+nothing else: 31/02/2024 matches it perfectly, and so does 29/02/2023. The
+second half is what makes the difference, and it is a single call, because
 `datetime.date` already owns the calendar — month lengths, leap years, and the
 century rule that makes 1900 a common year.
 
@@ -25,12 +24,23 @@ MONTHS = {name: number for number, names in enumerate(
      "juin june", "juillet july", "aout august", "septembre september",
      "octobre october", "novembre november", "decembre december"), 1) for name in names.split()}
 
-# "3 avril 2024", "1er mars 2024".
-TEXTUAL = re.compile(r"(?<!\d)(\d{1,2})(?:er)?\s+([^\W\d_]+)\s+(\d{4})(?!\d)")
+# ASCII digits and full-width digits, read the same way in Python and JavaScript.
+D = "[0-9０-９]"
+# A month name, its accents typed as one character or as a letter plus a mark.
+WORD = r"(?P<month>(?:[^\W\d_]|[̀-ͯ])+)"
+ORDINAL = "(?:er|st|nd|rd|th)?"
 
-# "12/03/2024", "12.03.24", "12-03-2024", and the ISO "2024-03-12". Years are
-# two or four digits, never three: that is what keeps "1.2.3" out.
-NUMERIC = re.compile(r"(?<!\d)(\d{1,2}|\d{4})[/.-](\d{1,2})[/.-](\d{2}|\d{4})(?!\d)")
+# "3 avril 2024", "1er mars 2024", "3rd April 2024", in any case.
+TEXTUAL = re.compile(rf"(?<!{D})(?P<day>{D}{{1,2}}){ORDINAL}\s+{WORD}\s+(?P<year>{D}{{4}})(?!{D})", re.I)
+
+# "March 3, 2024". It only starts at the start of a word, so a long run of
+# letters is read once, not once per letter.
+MONTH_FIRST = re.compile(
+    rf"(?<![^\W\d_]){WORD}\s+(?P<day>{D}{{1,2}}){ORDINAL},?\s+(?P<year>{D}{{4}})(?!{D})", re.I)
+
+# "12/03/2024", "12.03.24", "12-03-2024", and the ISO "2024-03-12". Never a
+# piece of a longer dotted number: in "10.1.1.24", "1.1.24" is not a date.
+NUMERIC = re.compile(rf"(?<!{D})(?<!{D}[/.-])({D}{{1,2}}|{D}{{4}})[/.-]({D}{{1,2}})[/.-]({D}{{2}}|{D}{{4}})(?![/.-]?{D})")
 
 
 def _fold(word: str) -> str:
@@ -52,22 +62,25 @@ def _to_date(year: int, month: int, day: int) -> date | None:
         return None
 
 
-def _full_year(year: int) -> int:
-    """Two-digit years on the usual pivot: 69 reads as 2069, 70 as 1970."""
-    return year if year >= 100 else year + (2000 if year < 70 else 1900)
+def _full_year(written: str) -> int:
+    """Two-digit years as MySQL reads them: 00-69 are 2000-2069, 70-99 are 1970-1999."""
+    year = int(written)
+    return year if len(written) == 4 else year + (2000 if year < 70 else 1900)
 
 
 def _read_textual(match: re.Match) -> date | None:
-    month = MONTHS.get(_fold(match.group(2)))
-    return _to_date(int(match.group(3)), month, int(match.group(1))) if month else None
+    month = MONTHS.get(_fold(match["month"]))
+    return _to_date(int(match["year"]), month, int(match["day"])) if month else None
 
 
 def _read_numeric(match: re.Match, day_first: bool) -> date | None:
-    first, second, third = (int(group) for group in match.groups())
-    if len(match.group(1)) == 4:  # ISO order, whatever the local habit is
-        return _to_date(first, second, third)
+    first, second, third = match.groups()
+    if len(first) == 4:  # ISO order, whatever the local habit is
+        return _to_date(int(first), int(second), int(third))
+    if len(third) == 2 and (len(first) == 1 or len(second) == 1):
+        return None  # a short year only with a padded day and month: "version 2.1.24" is no date
     day, month = (first, second) if day_first else (second, first)
-    return _to_date(_full_year(third), month, day)
+    return _to_date(_full_year(third), int(month), int(day))
 
 
 def extract_dates(text: str, day_first: bool = True) -> list[tuple[str, date]]:
@@ -77,15 +90,17 @@ def extract_dates(text: str, day_first: bool = True) -> list[tuple[str, date]]:
     `day_first` says how to read 03/04/2024. The digits cannot say, so the
     caller decides once, for a whole document, and lives with it.
     """
-    found = []
-    for pattern in (TEXTUAL, NUMERIC):
+    found, taken = [], bytearray(len(text))  # taken: characters already read as a date
+    for pattern in (TEXTUAL, MONTH_FIRST, NUMERIC):
         for match in pattern.finditer(text):
+            start, end = match.span()
             # A match that overlaps an accepted one is a second reading of the
             # same characters, not a second date.
-            if any(start < match.end() and match.start() < end for start, end, _, _ in found):
+            if 1 in taken[start:end]:
                 continue
-            value = _read_textual(match) if pattern is TEXTUAL else _read_numeric(match, day_first)
+            value = _read_numeric(match, day_first) if pattern is NUMERIC else _read_textual(match)
             if value is not None:
-                found.append((match.start(), match.end(), match.group(0), value))
+                found.append((start, match.group(0), value))
+                taken[start:end] = b"\x01" * (end - start)
     found.sort(key=lambda item: item[0])
-    return [(written, value) for _, _, written, value in found]
+    return [(written, value) for _, written, value in found]

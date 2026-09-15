@@ -6,13 +6,12 @@ n0.py: |
   Extraire les dates d'un texte : une expression régulière par format, puis une
   vraie vérification calendaire.
 
-  Niveau N0. Déterministe, bibliothèque standard seule, et l'ensemble tient sur
-  un écran.
+  Niveau N0. Déterministe, bibliothèque standard seule.
 
-  L'expression régulière est la moitié facile. Elle trouve trois groupes de
+  L'expression régulière est la moitié facile. Elle trouve des groupes de
   chiffres et ne sait rien d'autre : 31/02/2024 lui correspond parfaitement, et
   29/02/2023 aussi. La seconde moitié est ce qui fait la différence, et elle
-  tient sur une ligne, parce que `datetime.date` possède déjà le calendrier —
+  tient en un seul appel, parce que `datetime.date` possède déjà le calendrier —
   la longueur des mois, les années bissextiles, et la règle du siècle qui fait
   de 1900 une année commune.
 
@@ -24,9 +23,9 @@ n0.js: |
   Extraire les dates d'un texte : une expression régulière par format, puis une
   vraie vérification calendaire.
 
-  Niveau N0. Déterministe, sans dépendance, et l'ensemble tient sur un écran.
+  Niveau N0. Déterministe, sans dépendance.
 
-  L'expression régulière est la moitié facile. Elle trouve trois groupes de
+  L'expression régulière est la moitié facile. Elle trouve des groupes de
   chiffres et ne sait rien d'autre : 31/02/2024 lui correspond parfaitement, et
   29/02/2023 aussi.
 
@@ -45,8 +44,10 @@ n1.py: |
   Niveau N1. Une règle trouve toujours les candidats : une date est une forme,
   et une forme est ce à quoi servent les expressions régulières. La règle
   employée ici est plus étroite que celle de N0, et ne couvre que la forme tout
-  en chiffres à année sur quatre positions, la seule que l'ambiguïté touche. Un
-  document qui écrit ses mois en lettres a encore besoin de N0 à côté.
+  en chiffres à année sur quatre positions, la seule qu'elle lise. Une année sur
+  deux chiffres, 03/04/24, est tout aussi ambiguë et lui échappe ; les mois
+  écrits en lettres aussi, et un document qui en contient a encore besoin de N0
+  à côté.
 
   Ce qu'aucune règle ne peut faire, c'est lire 03/04/2024, parce que rien dans
   ces chiffres ne dit quel champ est le jour. N0 répond en demandant à
@@ -54,9 +55,8 @@ n1.py: |
   dès l'instant où ce document cite un fournisseur étranger.
 
   La convention n'est pas dans les chiffres, elle est dans la prose autour. Cela
-  relève de la classification, et quelques centaines de phrases étiquetées y
-  suffisent. Le modèle est assez petit pour être gardé à côté du code, et les
-  règles tranchent encore tous les cas qu'elles peuvent trancher seules.
+  relève de la classification, et les règles tranchent encore tous les cas
+  qu'elles peuvent trancher seules.
 
 n1.js: |
   Décider si 03/04/2024 est un 3 avril ou un 4 mars, avec un classifieur léger.
@@ -64,8 +64,10 @@ n1.js: |
   Niveau N1. Une règle trouve toujours les candidats : une date est une forme,
   et une forme est ce à quoi servent les expressions régulières. La règle
   employée ici est plus étroite que celle de N0, et ne couvre que la forme tout
-  en chiffres à année sur quatre positions, la seule que l'ambiguïté touche. Un
-  document qui écrit ses mois en lettres a encore besoin de N0 à côté.
+  en chiffres à année sur quatre positions, la seule qu'elle lise. Une année sur
+  deux chiffres, 03/04/24, est tout aussi ambiguë et lui échappe ; les mois
+  écrits en lettres aussi, et un document qui en contient a encore besoin de N0
+  à côté.
 
   Ce qu'aucune règle ne peut faire, c'est lire 03/04/2024, parce que rien dans
   ces chiffres ne dit quel champ est le jour. N0 répond en demandant à
@@ -73,24 +75,24 @@ n1.js: |
   dès l'instant où ce document cite un fournisseur étranger.
 
   La convention n'est pas dans les chiffres, elle est dans la prose autour. Cela
-  relève de la classification, et quelques centaines de phrases étiquetées y
-  suffisent.
+  relève de la classification, et les règles tranchent encore tous les cas
+  qu'elles peuvent trancher seules.
 
   La régression logistique sur des comptes de mots est écrite ici en entier
-  plutôt que tirée d'une bibliothèque, parce qu'elle est assez courte pour être
-  lue. C'est tout l'argument de ce niveau.
+  plutôt que tirée d'une bibliothèque : tout le modèle tient en un poids par mot
+  et un biais.
 
 n3: |
   Extraire les dates en interrogeant un modèle généraliste.
 
-  Niveau N3. C'est l'option vers laquelle on se tourne d'abord, et la seule de
-  cette fiche qui lise « jeudi prochain ». C'est une vraie capacité, et c'est
-  pour cela que le niveau est là.
+  Niveau N3. C'est le seul niveau de cette fiche dont la requête demande de
+  résoudre les dates relatives, « jeudi prochain » : il envoie la date du jour
+  avec le texte, et demande chaque date sous forme de jour du calendrier.
 
   Voyez ce que le code doit faire et que N0 ne faisait pas : passer une date de
-  référence, parce que le modèle n'a aucune idée du jour qu'il est ; brider la
-  taille de l'entrée ; réessayer en cas d'échec ; analyser une réponse qui
-  n'est que probablement du JSON valide ; et vérifier le calendrier lui-même,
-  parce qu'un modèle répondra 2024-02-31 en JSON impeccable sans sourciller.
-  Cette plomberie est le vrai coût du niveau, et c'est la part que les tests
-  doivent couvrir, puisque le modèle lui-même n'est pas testable.
+  référence, parce que rien d'autre n'indique au modèle le jour qu'il est ;
+  brider la taille de l'entrée ; réessayer en cas d'échec ; analyser une réponse
+  qui n'est que probablement du JSON valide ; et vérifier le calendrier
+  lui-même, parce que rien dans la requête n'empêche la réponse de contenir
+  2024-02-31. Cette plomberie est le vrai coût du niveau, et c'est la part que
+  les tests doivent couvrir, puisque le modèle lui-même n'est pas testable.

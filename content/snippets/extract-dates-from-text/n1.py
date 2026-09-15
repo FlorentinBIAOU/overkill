@@ -4,8 +4,9 @@ Decide whether 03/04/2024 is 3 April or 4 March, with a light classifier.
 Rung N1. A rule still finds the candidates: a date is a shape, and a shape is
 what regular expressions are for. The rule here is narrower than the one in N0,
 and only covers the all-numeric form with a four-digit year, which is the one
-form the ambiguity touches. A document writing its months in letters still
-needs N0 beside this.
+form it reads. A two-digit year, 03/04/24, is just as ambiguous and escapes it;
+so do months written in letters, for which a document still needs N0 beside
+this.
 
 What no rule can do is read 03/04/2024, because nothing in those digits says
 which field is the day. N0 answers by asking the caller to pick one convention
@@ -13,9 +14,8 @@ for a whole document, which is wrong the moment a document quotes a supplier
 from abroad.
 
 The convention is not in the digits, it is in the prose around them. That is a
-classification problem, and a few hundred labelled sentences are enough for it.
-The model is small enough to keep beside the code, and the rules still settle
-every case they can settle on their own.
+classification problem, and the rules still settle every case they can settle
+on their own.
 """
 
 import re
@@ -47,7 +47,9 @@ def train(texts: list[str], labels: list[int]):
         TfidfVectorizer(ngram_range=(1, 2), min_df=1),
         LogisticRegression(class_weight="balanced", max_iter=1000),
     )
-    model.fit([context(t, CANDIDATE.search(t).span()) for t in texts], labels)
+    # A sentence without a candidate trains on an empty context, as in JavaScript.
+    found = (CANDIDATE.search(t) for t in texts)
+    model.fit([context(t, m.span()) if m else "" for t, m in zip(texts, found)], labels)
     return model
 
 

@@ -111,14 +111,6 @@ def test_les_nombres_ordinaires_restent_intacts():
     assert extract_dates("version 1.2.345") == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : une année sur deux chiffres fait lire un numéro de version ou la "
-        "fin d'une adresse IP comme une date : « version 2.1.24 » rend le 2 janvier "
-        "2024, « 10.1.1.24 » le 1er janvier 2024"
-    ),
-)
 def test_defaut_un_numero_de_version_a_deux_chiffres_de_fin_est_lu_comme_une_date():
     assert extract_dates("mise à jour vers la version 2.1.24") == []
     assert extract_dates("serveur 10.1.1.24") == []
@@ -170,14 +162,6 @@ def test_production_chaine_vide_et_texte_sans_chiffre():
     assert extract_dates("   \n\t") == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le test de chevauchement compare chaque passage à toutes les dates "
-        "déjà retenues, un algorithme quadratique ; quinze mille dates (un export de "
-        "journal) prennent une dizaine de secondes"
-    ),
-)
 def test_defaut_quinze_mille_dates_depassent_une_borne_large():
     text = "le 12/03/2024, " * 15_000
     debut = time.perf_counter()
@@ -202,32 +186,14 @@ def test_production_casse_mixte_dans_le_nom_du_mois():
     assert extract_dates("LE 3 AVRIL 2024") == [("3 AVRIL 2024", date(2024, 4, 3))]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : « 1ER MARS 2024 » en capitales n'est pas lu, le suffixe « er » est sensible à la casse",
-)
 def test_defaut_1er_en_capitales_n_est_pas_lu():
     assert extract_dates("LE 1ER MARS 2024") == [("1ER MARS 2024", date(2024, 3, 1))]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un mois en accents décomposés (NFD), « fe\\u0301vrier », n'est pas lu : "
-        "l'accent combinant coupe le mot avant le repli de _fold"
-    ),
-)
 def test_defaut_un_mois_en_accents_decomposes_n_est_pas_lu():
     assert extract_dates("1er fe\u0301vrier 2024") == [("1er fe\u0301vrier 2024", date(2024, 2, 1))]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : « March 3, 2024 », la forme anglaise ordinaire d'un mois en lettres, "
-        "ne rend rien, en silence, alors que l'extrait annonce les mois anglais"
-    ),
-)
 def test_defaut_la_forme_anglaise_mois_jour_annee_n_est_pas_lue():
     assert extract_dates("Payment due March 3, 2024.") == [("March 3, 2024", date(2024, 3, 3))]
 

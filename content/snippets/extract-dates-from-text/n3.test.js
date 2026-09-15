@@ -67,19 +67,17 @@ test('point de rupture : une réponse en prose lève plutôt que rendre une list
   assert.deepEqual(await extractDates('rien à signaler', { client: new FakeLLM({ response: '[]' }), today: TODAY }), []);
 });
 
-test('DÉFAUT : une liste d’éléments mal formés rend une liste vide silencieuse', async () => {
-  await assert.rejects(async () => {
-    for (const response of [
-      '[{"text": "12/03/2024", "day": "2024-03-12"}]',
-      '[{"text": "12/03/2024", "date": "12/03/2024"}]',
-      '[{"text": "12/03/2024", "date": "2024-03-12T09:00:00"}]',
-    ]) {
-      await assert.rejects(
-        () => extractDates('réunion le 12/03/2024', { client: new FakeLLM({ response }), today: TODAY }),
-        ExtractionUnavailable,
-      );
-    }
-  });
+test('une liste d’éléments mal formés rend une liste vide silencieuse', async () => {
+  for (const response of [
+    '[{"text": "12/03/2024", "day": "2024-03-12"}]',
+    '[{"text": "12/03/2024", "date": "12/03/2024"}]',
+    '[{"text": "12/03/2024", "date": "2024-03-12T09:00:00"}]',
+  ]) {
+    await assert.rejects(
+      () => extractDates('réunion le 12/03/2024', { client: new FakeLLM({ response }), today: TODAY }),
+      ExtractionUnavailable,
+    );
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -106,7 +104,7 @@ test('envoie le texte, le jour de référence et la consigne, à température z�
   assert.equal(client.lastRequest.temperature, 0);
 });
 
-test('DÉFAUT : le jour de référence envoyé est le jour UTC, pas le jour de l’appelant', async () => {
+test('le jour de référence envoyé est le jour UTC, pas le jour de l’appelant', async () => {
   // À Paris, le 13 mars 2024 à 0 h 30, l'extrait envoie « 2024-03-12 » :
   // toISOString convertit en UTC. Exécuté dans un processus fils avec TZ
   // positionné, sans toucher à l'environnement de ce test.
@@ -122,9 +120,7 @@ test('DÉFAUT : le jour de référence envoyé est le jour UTC, pas le jour de l
     encoding: 'utf8',
   });
   assert.ok(['local', 'utc'].includes(child.stdout), child.stderr);
-  await assert.rejects(async () => {
-    assert.equal(child.stdout, 'local');
-  });
+  assert.equal(child.stdout, 'local');
 });
 
 test('le document entier part, pas les seules dates', async () => {
@@ -167,14 +163,12 @@ test('DÉFAUT : le client par défaut n’a pas la forme du vrai kit, « complet
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : un texte vide coûte un appel', async () => {
-  await assert.rejects(async () => {
-    for (const text of ['', '  \n ']) {
-      const client = new FakeLLM({ response: '[]' });
-      assert.deepEqual(await extractDates(text, { client, today: TODAY }), []);
-      assert.equal(client.callCount, 0);
-    }
-  });
+test('un texte vide coûte un appel', async () => {
+  for (const text of ['', '  \n ']) {
+    const client = new FakeLLM({ response: '[]' });
+    assert.deepEqual(await extractDates(text, { client, today: TODAY }), []);
+    assert.equal(client.callCount, 0);
+  }
 });
 
 test('production : exactement 8 000 caractères passent et 8 001 sont refusés', async () => {
@@ -184,12 +178,10 @@ test('production : exactement 8 000 caractères passent et 8 001 sont refusés',
   assert.equal(client.callCount, 1);
 });
 
-test('DÉFAUT : cinq mille emoji comptent pour dix mille caractères et sont refusés', async () => {
+test('cinq mille emoji comptent pour dix mille caractères et sont refusés', async () => {
   // text.length compte les unités UTF-16 ; Python compte les caractères et accepte.
-  await assert.rejects(async () => {
-    const client = new FakeLLM({ response: '[]' });
-    assert.deepEqual(await extractDates('📅'.repeat(5000), { client, today: TODAY }), []);
-  });
+  const client = new FakeLLM({ response: '[]' });
+  assert.deepEqual(await extractDates('📅'.repeat(5000), { client, today: TODAY }), []);
 });
 
 test('production : une réponse qui n’est pas une liste lève après trois essais', async () => {
