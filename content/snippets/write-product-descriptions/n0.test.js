@@ -404,7 +404,7 @@ test('production : sans nom, la phrase d’identité disparaît', () => {
   assert.equal(describe({ category: 'sac à dos', material: 'toile', features: ['a'] }), 'Point fort : a.');
 });
 
-test('DÉFAUT : un attribut nul est écrit « null » dans la description', () => {
+test('un attribut nul est écrit « null » dans la description', () => {
   const described = describe({ name: 'X', category: 'sac', material: null, warranty: null });
-  assert.throws(() => assert.ok(!described.includes('null')), assert.AssertionError);
+  assert.ok(!described.includes('null'));
 });

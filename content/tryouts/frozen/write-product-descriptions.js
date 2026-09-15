@@ -119,8 +119,8 @@ export default {
   level: 'N3',
 
   note: {
-    fr: 'Le texte rendu par le modèle est simulé par le double local qui sert aux tests. Ce qui est calculé ici, c’est ce que le code envoie, ce qu’il refuse avant de dépenser, ce qu’il réessaie, et ce que son contrôle contre le dossier attrape. La température envoyée n’est pas nulle : deux appels sur la même fiche ne rendent pas le même texte.',
-    en: 'The copy the model returns is simulated by the local double the tests use. What is computed here is what the code sends, what it refuses before spending, what it retries, and what its check against the record catches. The temperature sent is not zero: two calls on the same record do not return the same copy.',
+    fr: 'Le texte rendu par le modèle est simulé par le double local qui sert aux tests. Ce qui est calculé ici, c’est ce que le code envoie, ce qu’il refuse avant de dépenser, ce qu’il réessaie, et ce que son contrôle contre le dossier attrape. La température envoyée n’est pas nulle, et le kit du fournisseur la décrit comme rendant la sortie plus aléatoire.',
+    en: 'The copy the model returns is simulated by the local double the tests use. What is computed here is what the code sends, what it refuses before spending, what it retries, and what its check against the record catches. The temperature sent is not zero, and the provider’s SDK describes that as making the output more random.',
   },
 
   /* La réponse du fournisseur est portée par le cas : quatre cas partagent la
@@ -223,8 +223,8 @@ export default {
       },
       fails: true,
       why: {
-        fr: 'Le texte promet un sac qui garde le dos sec sous l’averse. Le dossier ne dit rien de tel, et la boutique n’a jamais vendu ce sac comme étanche. Le contrôle ne voit rien : il cherche les termes du catalogue, et « étanche » n’est pas écrit — la promesse est dite autrement. Ce contrôle ne vaut que ce que vaut la liste, et aucune liste de mots ne couvre les façons de dire la même chose. Le texte part en ligne.',
-        en: 'The copy promises a bag that keeps your back dry in a downpour. The record says nothing of the kind, and the shop has never sold this bag as waterproof. The check sees nothing: it looks for the catalogue’s terms, and « étanche » is not written — the promise is made in other words. That check is worth exactly what the list is worth, and no list of words covers the ways of saying the same thing. The copy goes live.',
+        fr: 'Le texte promet un sac qui garde le dos sec sous l’averse. Le dossier ne dit rien de tel, et la boutique n’a jamais vendu ce sac comme étanche. Le contrôle ne voit rien : il cherche les termes du catalogue, et « étanche » n’est pas écrit — la promesse est dite autrement. Ce contrôle ne vaut que ce que vaut la liste. Le texte part en ligne.',
+        en: 'The copy promises a bag that keeps your back dry in a downpour. The record says nothing of the kind, and the shop has never sold this bag as waterproof. The check sees nothing: it looks for the catalogue’s terms, and « étanche » is not written — the promise is made in other words. That check is worth exactly what the list is worth. The copy goes live.',
       },
     },
   ],

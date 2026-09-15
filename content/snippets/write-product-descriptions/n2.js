@@ -2,22 +2,19 @@
  * Write a product description with a small self-hosted generative model.
  *
  * Rung N2. A sequence-to-sequence checkpoint that lives on your own disk,
- * fine-tuned on the descriptions your shop has already published, so that it
- * writes in your voice rather than in the average voice of the web. Nothing
+ * fine-tuned on the descriptions your shop has already published. Nothing
  * leaves your machines and nothing is metered.
  *
- * The prose is freer than a template's, and everything else on this rung is
- * code you now own: the source line the model was fine-tuned to read, the size
- * cap, the retry, the sentence a small model leaves half-finished when its
- * token budget runs out, and the check at the end.
+ * Around the model, everything on this rung is code you now own: the source
+ * line the model was fine-tuned to read, the size cap, the retry, the sentence
+ * a small model leaves half-finished when its token budget runs out, and the
+ * check at the end.
  *
- * That check is the point of this file. A generative model writes what sounds
- * right. Handed a bag, it will sooner or later call it waterproof, because the
- * sentences it learnt from ended that way, and nothing inside it distinguishes
- * an attribute of this product from a plausible attribute. So the copy is read
- * back against the record, term by term, and anything the record does not
- * support is refused. A shop that promises what it does not sell has a legal
- * problem, not a style problem.
+ * That check is the point of this file. The E2E generation challenge found
+ * that sequence-to-sequence models without a semantic control often fail to
+ * express the attributes they are given correctly. So the copy is read back against the record, term by
+ * term, and anything the record does not support is refused. A shop that
+ * promises what it does not sell has a legal problem, not a style problem.
  */
 
 // One product record, written on one line. Longer than that, it is not a
@@ -31,7 +28,10 @@ export class DescriptionUnavailable extends Error {}
 
 export class UngroundedDescription extends DescriptionUnavailable {}
 
-/** The real model: a fine-tuned checkpoint on your disk, loaded once. */
+/**
+ * The real model: a fine-tuned checkpoint on your disk, loaded once.
+ * Transformers.js runs ONNX weights: convert the checkpoint first, with Optimum.
+ */
 export class LocalCopywriter {
   static async load(checkpoint = './models/catalogue-copy') {
     const { pipeline } = await import('@huggingface/transformers'); // a large local install
@@ -65,18 +65,20 @@ export class LocalCopywriter {
  * @param {{vocabulary?: string[], attempts?: number}} [options]
  */
 export async function describe(product, model, { vocabulary = [], attempts = 2 } = {}) {
-  const copywriter = model ?? (await LocalCopywriter.load());
   const source = sourceLine(product);
-  if (source.length > MAX_CHARACTERS) {
+  if (source === '') throw new RangeError('empty product record: nothing to describe');
+  // Characters are counted as code points, as in Python: an emoji is one.
+  if ([...source].length > MAX_CHARACTERS) {
     throw new RangeError(`product record longer than ${MAX_CHARACTERS} characters`);
   }
+  const copywriter = model ?? (await LocalCopywriter.load());
 
   const description = wholeSentences(await generate(copywriter, source, attempts));
   if (description.length < MIN_CHARACTERS) {
     throw new DescriptionUnavailable('the model answered a fragment');
   }
 
-  const invented = vocabulary.filter((term) => says(description, term) && !says(source, term));
+  const invented = vocabulary.filter((term) => states(description, term) && !states(source, term));
   if (invented.length > 0) throw new UngroundedDescription(invented.join(', '));
   return description;
 }
@@ -85,7 +87,8 @@ export async function describe(product, model, { vocabulary = [], attempts = 2 }
 function sourceLine(product) {
   const fields = [];
   for (const [key, value] of Object.entries(product)) {
-    const joined = Array.isArray(value) ? value.join(', ') : String(value);
+    const items = (Array.isArray(value) ? value : [value]).filter((item) => item != null); // null: a NULL column
+    const joined = items.map(String).join(', ');
     if (joined.trim()) fields.push(`${key}: ${joined.trim()}`);
   }
   return fields.join(' | ');
@@ -95,11 +98,15 @@ function sourceLine(product) {
 async function generate(model, source, attempts) {
   let lastError;
   for (let i = 0; i < attempts; i += 1) {
+    let text;
     try {
-      return await model.generate(source, { max_new_tokens: 90, num_beams: 4 });
+      text = await model.generate(source, { max_new_tokens: 90, num_beams: 4 });
     } catch (error) {
       lastError = error;
+      continue;
     }
+    if (typeof text === 'string') return text;
+    lastError = new TypeError('the model returned no text');
   }
   throw new DescriptionUnavailable(String(lastError));
 }
@@ -108,18 +115,38 @@ async function generate(model, source, attempts) {
  * Keep only what the model finished saying.
  *
  * A small model stops when its budget runs out, mid-sentence and sometimes
- * mid-word. Publishing that is worse than publishing nothing at all.
+ * mid-word. Publishing that is worse than publishing nothing at all. A
+ * sentence ends on a mark followed by the end of the text or by a capital, so
+ * « 1.2 kg » is not an end; « M. Dupont » still is.
  */
 function wholeSentences(text) {
-  const tidy = String(text).split(/\s+/).filter(Boolean).join(' ');
-  const end = Math.max(...['.', '!', '?'].map((mark) => tidy.lastIndexOf(mark)));
-  return end >= 0 ? tidy.slice(0, end + 1) : '';
+  const tidy = text.split(/\s+/).filter(Boolean).join(' ');
+  let end = 0;
+  for (const mark of tidy.matchAll(/[.!?]/g)) {
+    const after = tidy.slice(mark.index + 1, mark.index + 3);
+    if (after === '' || /^ \p{Lu}$/u.test(after)) end = mark.index + 1;
+  }
+  return tidy.slice(0, end);
 }
 
-/** Whole-word search, case and accents set aside. */
-function says(text, term) {
-  const escaped = fold(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`\\b${escaped}\\b`).test(fold(text));
+// A term right after one of these words is denied, not stated: « non étanche ».
+const NEGATIONS = new Set(['non', 'pas', 'sans', 'ni', 'aucun', 'aucune']);
+
+/**
+ * Whether the text states the term: whole words, case and accents set aside,
+ * each word allowed the agreement endings e, s and es (« garantie à vie »
+ * states « garanti à vie »), and not right after a negation.
+ */
+function states(text, term) {
+  const folded = fold(text);
+  const words = fold(term).split(/\s+/).filter(Boolean)
+    .map((word) => `${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:e|s|es)?`);
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}_])${words.join('\\s+')}(?![\\p{L}\\p{N}_])`, 'gu');
+  for (const found of folded.matchAll(pattern)) {
+    const before = folded.slice(0, found.index).match(/[\p{L}\p{N}_]+/gu) ?? [];
+    if (!NEGATIONS.has(before.at(-1))) return true;
+  }
+  return false;
 }
 
 /** Lowercase and drop accents, so « Étanche » meets « etanche ». */

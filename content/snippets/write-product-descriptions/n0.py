@@ -29,6 +29,7 @@ What this cannot do is the subject of the breaking-point test next to it.
 from __future__ import annotations
 
 import re
+import unicodedata
 
 # A slot in a wording: an attribute name, or one of the grammar markers.
 SLOT = re.compile(r"\{(\w+)\}")
@@ -84,7 +85,7 @@ def describe(product: dict, *, conjunction: str = "et") -> str:
     for wordings in BLOCKS:
         usable = _usable(wordings, values)
         if usable:
-            drawn = usable[_variant(str(product.get("name", "")), len(usable))]
+            drawn = usable[_variant(str(product.get("name") or ""), len(usable))]
             sentences.append(_fill(drawn, values, plural, feminine))
     return " ".join(sentences)
 
@@ -109,12 +110,19 @@ def _usable(wordings: tuple, values: dict) -> list:
 
 
 def _slots(product: dict, conjunction: str) -> tuple[dict, set]:
-    """Attribute values as insertable text, and the names that are plural."""
+    """
+    Attribute values as insertable text, and the names that are plural.
+
+    A value of None, a NULL column, is an attribute the product does not have:
+    it must not reach a sentence as the word « None ».
+    """
     values: dict[str, str] = {}
     plural: set[str] = set()
     for key, value in product.items():
+        if value is None:
+            continue
         if isinstance(value, (list, tuple)):
-            items = [str(item).strip() for item in value if str(item).strip()]
+            items = [str(item).strip() for item in value if item is not None and str(item).strip()]
             if len(items) > 1:
                 plural.add(key)
             value = _enumerate(items, conjunction)
@@ -150,6 +158,7 @@ def _variant(seed: str, count: int) -> int:
 
     Summing the code points is deliberately crude. It has one job: give the
     same answer as the JavaScript version of this snippet, so a catalogue
-    rendered by either reads identically.
+    rendered by either reads identically. The name is composed first (NFC), so
+    an accent typed as two code points draws the same wording as one.
     """
-    return sum(ord(char) for char in seed) % count
+    return sum(ord(char) for char in unicodedata.normalize("NFC", seed)) % count

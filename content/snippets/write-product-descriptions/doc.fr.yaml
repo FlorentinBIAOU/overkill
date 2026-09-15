@@ -36,38 +36,34 @@ n2: |
 
   Niveau N2. Un point de contrôle de séquence à séquence qui vit sur votre
   propre disque, affiné sur les descriptions que votre boutique a déjà
-  publiées, pour qu'il écrive dans votre voix plutôt que dans la voix moyenne
-  du web. Rien ne sort de vos machines et rien n'est facturé au compteur.
+  publiées. Rien ne sort de vos machines et rien n'est facturé au compteur.
 
-  La prose est plus libre que celle d'un gabarit, et tout le reste de ce niveau
-  est du code dont vous héritez : la ligne de source que le modèle a été affiné
-  à lire, le plafond de taille, la reprise, la phrase qu'un petit modèle laisse
-  à moitié finie quand son budget de jetons s'épuise, et le contrôle final.
+  Autour du modèle, tout ce niveau est du code dont vous héritez : la ligne de
+  source que le modèle a été affiné à lire, le plafond de taille, la reprise,
+  la phrase qu'un petit modèle laisse à moitié finie quand son budget de jetons
+  s'épuise, et le contrôle final.
 
-  Ce contrôle est la raison d'être de ce fichier. Un modèle génératif écrit ce
-  qui sonne juste. Donnez-lui un sac, et tôt ou tard il le dira étanche, parce
-  que les phrases dont il a appris finissaient ainsi, et que rien en lui ne
-  distingue un attribut de ce produit d'un attribut plausible. La copie est
-  donc relue contre le dossier, terme à terme, et tout ce que le dossier
-  n'étaye pas est refusé. Une boutique qui promet ce qu'elle ne vend pas a un
+  Ce contrôle est la raison d'être de ce fichier. Le challenge de génération
+  E2E a trouvé que les modèles de séquence à séquence sans contrôle sémantique
+  rendent souvent mal les attributs qu'on leur donne. La copie est donc relue contre le dossier, terme
+  à terme, et tout ce que le dossier n'étaye pas est refusé. Une boutique qui promet ce qu'elle ne vend pas a un
   problème juridique, pas un problème de style.
 
 n3: |
   Rédiger une description produit en interrogeant un modèle généraliste.
 
   Niveau N3. Sur la plupart des fiches de ce site, ce niveau est la réponse
-  chère à une question qui ne la demandait pas. Ici, c'est lui qui gagne :
-  transformer un sac d'attributs en une prose qui se lit différemment pour
-  chaque produit est précisément ce qu'un modèle généraliste fait mieux que
-  tout ce qui se trouve en dessous, et aucune quantité de gabarits écrits ne
-  comble cet écart.
+  chère à une question qui ne la demandait pas. Ici, c'est lui qui gagne : le
+  gabarit du niveau N0 tire chaque phrase d'une liste écrite d'avance, et son
+  test compte les motifs qui se répètent, quand ce niveau demande une prose
+  nouvelle à chaque appel.
 
   Ce qu'il coûte est visible dans le code, et rien de tout cela n'est le fait
   du modèle : la requête, le plafond de taille, la reprise, une réponse qui
-  n'est que probablement du JSON, et une température supérieure à zéro — parce
-  que c'est la variété qu'on achète ici, donc deux exécutions sur le même
-  produit ne s'accorderont pas, et rien ne peut être relu une fois et tenu pour
-  bon ensuite.
+  n'est que probablement du JSON, et une température supérieure à zéro — c'est
+  la variété qu'on achète ici, et le kit documente une température plus haute
+  comme rendant la sortie plus aléatoire, si bien que rien ne peut être relu
+  une fois et tenu pour bon ensuite.
 
   C'est pourquoi le dernier contrôle est celui du niveau du dessous. Un modèle
   qui écrit librement affirme aussi librement. La copie est relue contre le

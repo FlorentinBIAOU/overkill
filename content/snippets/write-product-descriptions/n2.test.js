@@ -60,22 +60,18 @@ test('point de rupture : un vocabulaire vide laisse passer la même phrase', asy
   assert.equal(await describe(PRODUCT, new FakeSeq2Seq({}, INVENTED), { vocabulary: ['cuir pleine fleur'] }), INVENTED);
 });
 
-test('DÉFAUT : un dossier qui nie l’attribut l’ancre quand même', async () => {
+test('un dossier qui nie l’attribut l’ancre quand même', async () => {
   const record = { ...PRODUCT, features: [...PRODUCT.features, 'non étanche'] };
-  await assert.rejects(async () => {
-    await assert.rejects(() => describe(record, new FakeSeq2Seq({}, INVENTED), { vocabulary: VOCABULARY }), UngroundedDescription);
-  }, assert.AssertionError);
+  await assert.rejects(() => describe(record, new FakeSeq2Seq({}, INVENTED), { vocabulary: VOCABULARY }), UngroundedDescription);
 });
 
-test('DÉFAUT : un terme de la liste accordé passe le contrôle', async () => {
-  await assert.rejects(async () => {
-    for (const copy of [
-      'Aurore 500 est une lampe solide, garantie à vie par la maison qui la fabrique.',
-      'Des coutures étanches et une toile recyclée pour la randonnée du dimanche.',
-    ]) {
-      await assert.rejects(() => describe(PRODUCT, new FakeSeq2Seq({}, copy), { vocabulary: VOCABULARY }), UngroundedDescription);
-    }
-  }, assert.AssertionError);
+test('un terme de la liste accordé passe le contrôle', async () => {
+  for (const copy of [
+    'Aurore 500 est une lampe solide, garantie à vie par la maison qui la fabrique.',
+    'Des coutures étanches et une toile recyclée pour la randonnée du dimanche.',
+  ]) {
+    await assert.rejects(() => describe(PRODUCT, new FakeSeq2Seq({}, copy), { vocabulary: VOCABULARY }), UngroundedDescription);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -202,23 +198,19 @@ test('production : une réponse d’un autre type n’est pas publiée', async (
   await assert.rejects(() => describe(PRODUCT, new FakeSeq2Seq({}, [{ generated_text: 'Aurore 500 accompagne les randonneurs à la journée.' }])), DescriptionUnavailable);
 });
 
-test('DÉFAUT : un terme commençant par une ligature n’est jamais trouvé', async () => {
+test('un terme commençant par une ligature n’est jamais trouvé', async () => {
   // `\b` sans drapeau `u` : « œ » n'est pas un caractère de mot, aucune frontière avant lui.
   const copy = 'Sac aux œillets métalliques, pensé pour les randonneurs de la journée.';
-  await assert.rejects(async () => {
-    await assert.rejects(() => describe(PRODUCT, new FakeSeq2Seq({}, copy), { vocabulary: ['œillets métalliques'] }), UngroundedDescription);
-  }, assert.AssertionError);
+  await assert.rejects(() => describe(PRODUCT, new FakeSeq2Seq({}, copy), { vocabulary: ['œillets métalliques'] }), UngroundedDescription);
 });
 
-test('DÉFAUT : le plafond compte des unités UTF-16', async () => {
+test('le plafond compte des unités UTF-16', async () => {
   // 298 emojis : 304 caractères de source en Python, acceptés ; 602 unités UTF-16 ici.
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await describe({ name: '🙂'.repeat(298) }, new FakeSeq2Seq({}, COPY));
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(out, COPY);
-  }, assert.AssertionError);
+  let out;
+  try {
+    out = await describe({ name: '🙂'.repeat(298) }, new FakeSeq2Seq({}, COPY));
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.equal(out, COPY);
 });

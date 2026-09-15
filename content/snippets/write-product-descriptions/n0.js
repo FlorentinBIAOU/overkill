@@ -114,14 +114,20 @@ function slotsIn(wording) {
   return [...wording.matchAll(SLOT)].map((match) => match[1]);
 }
 
-/** Attribute values as insertable text, and the names that are plural. */
+/**
+ * Attribute values as insertable text, and the names that are plural.
+ *
+ * A value of null, a NULL column, is an attribute the product does not have:
+ * it must not reach a sentence as the word « null ».
+ */
 function slotsOf(product, conjunction) {
   const values = {};
   const plural = new Set();
   for (const [key, raw] of Object.entries(product)) {
     let value = raw;
+    if (value === null || value === undefined) continue;
     if (Array.isArray(value)) {
-      const items = value.map((item) => String(item).trim()).filter(Boolean);
+      const items = value.filter((item) => item !== null && item !== undefined).map((item) => String(item).trim()).filter(Boolean);
       if (items.length > 1) plural.add(key);
       value = enumerate(items, conjunction);
     }
@@ -155,10 +161,11 @@ function fill(wording, values, plural, feminine) {
  *
  * Summing the code points is deliberately crude. It has one job: give the same
  * answer as the Python version of this snippet, so a catalogue rendered by
- * either reads identically.
+ * either reads identically. The name is composed first (NFC), so an accent
+ * typed as two code points draws the same wording as one.
  */
 function variant(seed, count) {
   let total = 0;
-  for (const char of seed) total += char.codePointAt(0);
+  for (const char of seed.normalize('NFC')) total += char.codePointAt(0);
   return total % count;
 }

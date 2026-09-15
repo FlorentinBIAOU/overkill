@@ -112,11 +112,6 @@ def test_point_de_rupture_deux_reponses_differentes_passent_toutes_deux_le_contr
     assert first != second
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un dossier qui dit « non étanche » contient le mot « étanche » ; la copie « étanche » est tenue "
-    "pour ancrée et publiée",
-)
 def test_defaut_un_dossier_qui_nie_l_attribut_ne_l_ancre_pas():
     record = {**PRODUCT, "features": [*PRODUCT["features"], "non étanche"]}
     copy = "Aurore 500 suit les randonneurs par tous les temps, sa toile recyclée est étanche."
@@ -124,11 +119,6 @@ def test_defaut_un_dossier_qui_nie_l_attribut_ne_l_ancre_pas():
         describe(record, FakeLLM(response=answer(copy)), vocabulary=VOCABULARY)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : « garantie à vie » (accord au féminin, pour une lampe) ne rencontre pas « garanti à vie » en mot "
-    "entier, et passe",
-)
 def test_defaut_un_terme_de_la_liste_accorde_est_refuse_aussi():
     lamp = {**PRODUCT, "category": "lampe de bureau", "gender": "f"}
     copy = "Aurore 500 est une lampe de bureau solide, garantie à vie contre les défauts."

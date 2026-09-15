@@ -115,20 +115,16 @@ test('point de rupture : l’essai montre la promesse dite autrement qui passe',
   assert.equal(refused.verdict.label, 'Publication refusée : une promesse absente du dossier');
 });
 
-test('DÉFAUT : un dossier qui nie l’attribut l’ancre quand même', async () => {
+test('un dossier qui nie l’attribut l’ancre quand même', async () => {
   const record = { ...PRODUCT, features: [...PRODUCT.features, 'non étanche'] };
   const copy = 'Aurore 500 suit les randonneurs par tous les temps, sa toile recyclée est étanche.';
-  await assert.rejects(async () => {
-    await assert.rejects(() => describe(record, new FakeLLM({ response: answer(copy) }), { vocabulary: VOCABULARY }), UngroundedDescription);
-  }, assert.AssertionError);
+  await assert.rejects(() => describe(record, new FakeLLM({ response: answer(copy) }), { vocabulary: VOCABULARY }), UngroundedDescription);
 });
 
-test('DÉFAUT : un terme de la liste accordé passe le contrôle', async () => {
+test('un terme de la liste accordé passe le contrôle', async () => {
   const lamp = { ...PRODUCT, category: 'lampe de bureau', gender: 'f' };
   const copy = 'Aurore 500 est une lampe de bureau solide, garantie à vie contre les défauts.';
-  await assert.rejects(async () => {
-    await assert.rejects(() => describe(lamp, new FakeLLM({ response: answer(copy) }), { vocabulary: VOCABULARY }), UngroundedDescription);
-  }, assert.AssertionError);
+  await assert.rejects(() => describe(lamp, new FakeLLM({ response: answer(copy) }), { vocabulary: VOCABULARY }), UngroundedDescription);
 });
 
 // ---------------------------------------------------------------------------
@@ -194,12 +190,10 @@ test('une réponse d’une autre forme lève', async () => {
   }
 });
 
-test('DÉFAUT : une description en liste est publiée, collée par une virgule', async () => {
+test('une description en liste est publiée, collée par une virgule', async () => {
   // Python lève DescriptionUnavailable sur la même réponse.
   const response = answer(['Aurore 500 tient la journée de marche.', 'Sa toile recyclée encaisse les ronces.']);
-  await assert.rejects(async () => {
-    await assert.rejects(() => describe(PRODUCT, new FakeLLM({ response }), { attempts: 1 }), DescriptionUnavailable);
-  }, assert.AssertionError);
+  await assert.rejects(() => describe(PRODUCT, new FakeLLM({ response }), { attempts: 1 }), DescriptionUnavailable);
 });
 
 test('un fragment est refusé', async () => {
@@ -277,15 +271,13 @@ test('production : zéro essai lève sans appel', async () => {
   assert.equal(client.callCount, 0);
 });
 
-test('DÉFAUT : le plafond compte des unités UTF-16', async () => {
+test('le plafond compte des unités UTF-16', async () => {
   // 296 emojis : 305 caractères d'attributs en Python, acceptés ; 601 unités UTF-16 ici.
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await describe({ name: '🙂'.repeat(296) }, new FakeLLM({ response: answer(COPY) }));
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(out, COPY);
-  }, assert.AssertionError);
+  let out;
+  try {
+    out = await describe({ name: '🙂'.repeat(296) }, new FakeLLM({ response: answer(COPY) }));
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.equal(out, COPY);
 });

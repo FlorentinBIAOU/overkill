@@ -3,7 +3,7 @@ id: write-product-descriptions
 family: generate
 status: published
 verdict: N3
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -85,8 +85,8 @@ rungs:
       javascript: snippets/write-product-descriptions/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle affirme ce que le dossier ne dit pas. Le test fait rendre au double local une phrase juste de ton et de grammaire — la toile recyclée du sac y est « entièrement étanche » — pour un article dont aucun attribut ne parle d’étanchéité : rien, dans le modèle, ne sépare un attribut de ce produit d’un attribut qui va bien dans une phrase de cette forme. L’extrait refuse la copie au lieu de la publier, mais seulement pour les termes que vous avez listés : le test suivant montre la même phrase passant intacte avec un vocabulaire vide."
-      en: "The model asserts what the record does not say. The test has the local double hand back a sentence that is right in tone and in grammar — the bag’s recycled canvas is « entièrement étanche », fully waterproof — for an item whose attributes never mention water: nothing inside the model separates an attribute of this product from an attribute that sits well in a sentence of that shape. The snippet refuses the copy instead of publishing it, but only for the terms you listed: the next test shows the same sentence going through untouched on an empty vocabulary."
+      fr: "Le modèle affirme ce que le dossier ne dit pas. Le test fait rendre au double local une phrase juste de ton et de grammaire — la toile recyclée du sac y est « entièrement étanche » — pour un article dont aucun attribut ne parle d’étanchéité. L’extrait refuse la copie au lieu de la publier, y compris quand le dossier dit « non étanche » ou que la copie écrit « étanches », mais seulement pour les termes que vous avez listés : le test suivant montre la même phrase passant intacte avec un vocabulaire vide."
+      en: "The model asserts what the record does not say. The test has the local double hand back a sentence that is right in tone and in grammar — the bag’s recycled canvas is « entièrement étanche », fully waterproof — for an item whose attributes never mention water. The snippet refuses the copy instead of publishing it, including when the record says « non étanche » or the copy writes « étanches », but only for the terms you listed: the next test shows the same sentence going through untouched on an empty vocabulary."
     escalate_when:
       fr: "Une gamme nouvelle arrive, et le corpus de descriptions publiées qu’un nouvel affinage réclamerait n’existe pas encore."
       en: "A new range arrives, and the corpus of published descriptions a fresh fine-tune would call for does not exist yet."
@@ -118,25 +118,25 @@ rungs:
       javascript: snippets/write-product-descriptions/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle promet ce que la boutique ne vend pas, avec l’aplomb de la phrase vraie qui le précède. Le test fait écrire au double local que le sac est « garanti à vie » quand le dossier dit deux ans : aucune consigne, aucune température ne retire ce risque, puisque rien dans le modèle ne sépare un attribut de ce produit d’un attribut qui va bien dans une phrase de cette forme. Ce qui l’attrape est le contrôle du niveau du dessous, terme à terme contre le dossier, et il ne vaut que ce que vaut votre liste. S’y ajoute ce qu’on achète ici : l’extrait demande une température non nulle, donc deux appels sur le même produit ne rendent pas le même texte, et ce que vous avez relu hier n’est pas ce que le client lit aujourd’hui."
-      en: "The model promises what the shop does not sell, with the same confidence as the true sentence before it. The test has the local double write that the bag is « garanti à vie », guaranteed for life, where the record says two years: no instruction and no temperature removes that risk, because nothing in the model separates an attribute of this product from an attribute that sits well in a sentence of that shape. What catches it is the check from the level below, term by term against the record, and it is worth exactly what your list is worth. On top of that comes the thing you are buying: the snippet asks for a non-zero temperature, so two calls on the same product do not return the same text, and what you reviewed yesterday is not what the customer reads today."
+      fr: "Le modèle promet ce que la boutique ne vend pas, avec l’aplomb de la phrase vraie qui le précède. Le test fait écrire au double local que le sac est « garanti à vie » quand le dossier dit deux ans. Ce qui l’attrape est le contrôle du niveau du dessous, terme à terme contre le dossier, et il ne vaut que ce que vaut votre liste. S’y ajoute ce qu’on achète ici : l’extrait demande une température non nulle, que le kit du fournisseur décrit comme rendant la sortie plus aléatoire, et rien ne fait de la copie relue hier celle qu’un nouvel appel écrit aujourd’hui."
+      en: "The model promises what the shop does not sell, with the same confidence as the true sentence before it. The test has the local double write that the bag is « garanti à vie », guaranteed for life, where the record says two years. What catches it is the check from the level below, term by term against the record, and it is worth exactly what your list is worth. On top of that comes the thing you are buying: the snippet asks for a non-zero temperature, which the provider’s SDK describes as making the output more random, and nothing makes the copy you reviewed yesterday the one a new call writes today."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N3, sans détour : ce qu’on achète ici est la variété, et c’est précisément ce que le niveau du bas ne fabrique pas — douze motifs de phrase pour deux cents produits, mesurés par le test de N0, et le vingt-et-unième gabarit s’écrit à la main par quelqu’un qui en a déjà écrit vingt. N2 écrit bien pour les gammes qu’il a vues, mais il réclame d’avoir déjà publié le catalogue qu’on lui demande d’écrire, et il tombe sur le même défaut que N3 : il affirme ce que le dossier ne dit pas. Le prix est réel, un texte facturé au jeton par article, vos dossiers produit chez un tiers, et une copie qui change à chaque appel donc jamais relue une bonne fois ; ce qu’il achète, c’est une boutique qui ne se lit pas comme un formulaire. Si votre catalogue tient sur trente références qu’un rédacteur écrit une fois pour toutes, aucun niveau de cette fiche n’est la réponse."
-  en: "N3, and no apology for it: variety is what you are buying here, and variety is exactly what the bottom level cannot manufacture — twelve sentence frames for two hundred products, measured by the N0 test, and the twenty-first template is written by hand by somebody who has already written twenty. N2 writes well for the ranges it has seen, but it demands that you already published the catalogue you are asking it to write, and it fails the same way N3 does: it asserts what the record does not say. The price is real — copy metered by the token, one item at a time, your product records in a third party’s hands, and text that changes on every call and is therefore never reviewed once and for all — and what it buys is a shop that does not read like a form. If your catalogue is thirty items a copywriter can write once, no level on this entry is the answer."
+  fr: "N3, sans détour : ce qu’on achète ici est la variété, et c’est précisément ce que le niveau du bas ne fabrique pas — douze motifs de phrase pour deux cents produits, mesurés par le test de N0, et la dix-septième formulation s’écrit à la main par quelqu’un qui en a déjà écrit seize. N2 réclame d’avoir déjà publié le catalogue qu’on lui demande d’écrire, et le challenge E2E a trouvé que les modèles de séquence à séquence sans contrôle sémantique rendent souvent mal les attributs qu’on leur donne : il réclame le même contrôle que N3. Le prix est réel, un texte facturé au jeton par article, vos dossiers produit chez un tiers, et une copie tirée à température non nulle donc jamais relue une bonne fois ; ce qu’il achète, c’est une boutique qui ne se lit pas comme un formulaire. Si votre catalogue tient sur trente références qu’un rédacteur écrit une fois pour toutes, aucun niveau de cette fiche n’est la réponse."
+  en: "N3, and no apology for it: variety is what you are buying here, and variety is exactly what the bottom level cannot manufacture — twelve sentence frames for two hundred products, measured by the N0 test, and the seventeenth wording is written by hand by somebody who has already written sixteen. N2 demands that you already published the catalogue you are asking it to write, and the E2E challenge found that sequence-to-sequence models without a semantic control often fail to express the attributes they are given correctly: it needs the same check as N3. The price is real — copy metered by the token, one item at a time, your product records in a third party’s hands, and text drawn at a non-zero temperature and therefore never reviewed once and for all — and what it buys is a shop that does not read like a form. If your catalogue is thirty items a copywriter can write once, no level on this entry is the answer."
 
 further_reading:
   - label: "The E2E Dataset: New Challenges For End-to-End Generation — écrire une description à partir d’attributs, posé comme tâche"
     url: "https://arxiv.org/abs/1706.09254"
-  - label: "Findings of the E2E NLG Challenge — ce que les systèmes évalués font des attributs qu’on leur donne"
-    url: "https://aclanthology.org/W18-6539/"
-  - label: "Hugging Face — les pipelines de transformers, dont text2text-generation employé par l’extrait N2"
-    url: "https://huggingface.co/docs/transformers/main_classes/pipelines"
+  - label: "Evaluating the state-of-the-art of End-to-End Natural Language Generation — les modèles de séquence à séquence rendent souvent mal les attributs qu’on leur donne, et des systèmes écrits à la main produisent des sorties plus variées"
+    url: "https://arxiv.org/abs/1901.07931"
+  - label: "Hugging Face — la génération de texte avec transformers, generate et ses réglages, appelés par l’extrait N2 Python"
+    url: "https://huggingface.co/docs/transformers/main_classes/text_generation"
   - label: "OpenAI — Structured Outputs, sur la réponse JSON que l’extrait N3 doit décoder"
-    url: "https://platform.openai.com/docs/guides/structured-outputs"
+    url: "https://developers.openai.com/api/docs/guides/structured-outputs"
 
 sources: []
 ---

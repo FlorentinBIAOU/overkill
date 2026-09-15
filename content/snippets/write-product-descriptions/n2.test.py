@@ -88,22 +88,12 @@ def test_point_de_rupture_un_vocabulaire_vide_laisse_passer_la_meme_phrase():
     assert describe(PRODUCT, FakeSeq2Seq({}, INVENTED), vocabulary=("cuir pleine fleur",)) == INVENTED
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un dossier qui dit « non étanche » contient le mot « étanche » ; la copie « entièrement étanche » "
-    "est tenue pour ancrée et publiée",
-)
 def test_defaut_un_dossier_qui_nie_l_attribut_ne_l_ancre_pas():
     record = {**PRODUCT, "features": [*PRODUCT["features"], "non étanche"]}
     with pytest.raises(UngroundedDescription):
         describe(record, FakeSeq2Seq({}, INVENTED), vocabulary=VOCABULARY)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le contrôle cherche le terme exact en mot entier ; « garantie à vie » (accord au féminin) et "
-    "« coutures étanches » (pluriel) ne rencontrent pas « garanti à vie » et « étanche », et passent",
-)
 def test_defaut_un_terme_de_la_liste_accorde_est_refuse_aussi():
     for copy in (
         "Aurore 500 est une lampe solide, garantie à vie par la maison qui la fabrique.",
@@ -142,11 +132,6 @@ def test_ne_garde_que_les_phrases_que_le_modele_a_finies():
     assert describe(PRODUCT, model) == "Aurore 500 accompagne les randonneurs à la journée."
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : « Publishing that is worse than publishing nothing at all » ; la coupe se fait au dernier point, "
-    "et le point d'un nombre décimal (« 1.2 kg ») en est un : « … et pèse 1. » est publié",
-)
 def test_defaut_un_point_decimal_n_est_pas_une_fin_de_phrase():
     model = FakeSeq2Seq({}, "Aurore 500 accompagne les randonneurs à la journée et pèse 1.2 kg avec sa toile recy")
     try:
@@ -270,11 +255,6 @@ def test_production_une_longue_reponse_et_des_espaces_en_desordre():
     assert "\n" not in published and "  " not in published
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT (Python) : une réponse qui n'est pas une chaîne (la liste brute du pipeline) passe par str() et "
-    "est publiée telle quelle : « [{'generated_text': 'Aurore 500 … journée. »",
-)
 def test_defaut_une_reponse_d_un_autre_type_n_est_pas_publiee():
     raw = [{"generated_text": "Aurore 500 accompagne les randonneurs à la journée."}]
     with pytest.raises(DescriptionUnavailable):

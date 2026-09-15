@@ -463,11 +463,6 @@ def test_production_sans_nom_la_phrase_d_identite_disparait():
     assert describe({"category": "sac à dos", "material": "toile", "features": ["a"]}) == "Point fort : a."
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un attribut à None (une colonne NULL de la base) est écrit « None » dans la page : « X : un sac "
-    "en None. La garantie court sur None. » — une phrase que personne n'a écrite ni relue",
-)
 def test_defaut_un_attribut_nul_n_est_pas_ecrit_dans_la_description():
     described = describe({"name": "X", "category": "sac", "material": None, "warranty": None})
     assert "None" not in described
