@@ -1,22 +1,20 @@
 /**
- * These tests inject a local double instead of calling a provider.
+ * Ces tests injectent un double local au lieu d'appeler un fournisseur.
  *
- * What they prove: the record reaches the prompt, the temperature asked for is
- * the one sent, an oversized record is refused before a token is spent, a
- * failure is retried, an unusable answer raises instead of returning
- * something, and copy that claims an attribute the record does not carry is
- * refused.
+ * Ce qu'ils prouvent : le dossier arrive dans l'invite, la température demandée
+ * est celle envoyée, un dossier trop grand est refusé avant toute dépense, une
+ * panne est retentée, une réponse inutilisable lève, et une copie qui affirme
+ * un attribut absent du dossier est refusée.
  *
- * What they do not prove: that the model writes well, and that it writes the
- * same way tomorrow. That is why this snippet is declared `verification:
- * stubbed` on the entry, and why the page says so next to the code.
+ * Ce qu'ils ne prouvent pas : que le modèle écrit bien, ni qu'il écrit
+ * autrement demain.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { MAX_CHARACTERS, DescriptionUnavailable, UngroundedDescription, describe } from './n3.js';
+import essai from '../../tryouts/frozen/write-product-descriptions.js';
+import { MAX_CHARACTERS, MIN_CHARACTERS, DescriptionUnavailable, UngroundedDescription, describe } from './n3.js';
 
-// An invented product: no existing brand, no existing catalogue.
 const PRODUCT = {
   name: 'Aurore 500',
   category: 'sac à dos',
@@ -27,125 +25,267 @@ const PRODUCT = {
   warranty: 'deux ans',
 };
 
-// The words the shop's catalogue uses, gathered from the attribute values of
-// every product on the shelf. The grounding check is exactly as good as this
-// list: a claim it does not contain is a claim nobody is watching.
-const VOCABULARY = [
-  'toile recyclée',
-  'cuir pleine fleur',
-  'étanche',
-  'poche pour ordinateur',
-  'garanti à vie',
-];
+const VOCABULARY = ['toile recyclée', 'cuir pleine fleur', 'étanche', 'poche pour ordinateur', 'garanti à vie'];
 
 const COPY =
   'Aurore 500 tient la journée de marche sans se rappeler à vous. Sa toile ' +
   'recyclée encaisse les ronces, et sa poche pour ordinateur rentre au bureau le lundi.';
 
-const INVENTED =
+const FOR_LIFE =
   'Aurore 500 tient la journée de marche sans se rappeler à vous. Sa toile ' +
   'recyclée encaisse les ronces, et le sac est garanti à vie contre les défauts de couture.';
 
 const answer = (description) => JSON.stringify({ description });
 
-test('writes the copy the model returned', async () => {
-  const client = new FakeLLM({ response: answer(COPY) });
-  assert.equal(await describe(PRODUCT, client, { vocabulary: VOCABULARY }), COPY);
+/** Les lignes d'attributs que l'extrait envoie pour une fiche de l'essai (valeurs sans virgule interne). */
+const attributeText = (fiche) =>
+  fiche
+    .split('\n')
+    .map((line) => {
+      const [key, ...rest] = line.split(' : ');
+      return `- ${key.trim()} : ${rest.join(' : ').trim()}`;
+    })
+    .join('\n');
+
+const PROMPT = [
+  "Tu rédiges la présentation d'un article pour une boutique en ligne.",
+  "Écris deux phrases en français, sans superlatif, et n'affirme rien qui ne",
+  'figure pas dans les caractéristiques ci-dessous.',
+  'Réponds par un objet JSON et rien d\'autre : {"description": "…"}.',
+  '',
+  'Caractéristiques :',
+].join('\n');
+
+/**
+ * Imite la surface du kit `openai` publié (7.x) : `client.chat.completions.create({ model, messages })`,
+ * réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
+ */
+function realShapedClient(content) {
+  const requests = [];
+  return {
+    requests,
+    chat: { completions: { async create(body) { requests.push(body); return { choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] }; } } },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
+
+test('point de rupture : le modèle promet ce que la boutique ne vend pas', async () => {
+  await assert.rejects(() => describe(PRODUCT, new FakeLLM({ response: answer(FOR_LIFE) }), { vocabulary: VOCABULARY }), (error) => {
+    assert.ok(error instanceof UngroundedDescription);
+    assert.equal(error.message, 'garanti à vie');
+    return true;
+  });
+  const forLife = { ...PRODUCT, warranty: 'garanti à vie' };
+  assert.equal(await describe(forLife, new FakeLLM({ response: answer(FOR_LIFE) }), { vocabulary: VOCABULARY }), FOR_LIFE);
 });
 
-test('sends the attributes and the temperature asked for', async () => {
+test('point de rupture : et il ne vaut que ce que vaut votre liste', async () => {
+  assert.equal(await describe(PRODUCT, new FakeLLM({ response: answer(FOR_LIFE) }), { vocabulary: ['étanche'] }), FOR_LIFE);
+});
+
+test('point de rupture : l’extrait demande une température non nulle', async () => {
   const client = new FakeLLM({ response: answer(COPY) });
+  await describe(PRODUCT, client);
+  assert.equal(client.lastRequest.temperature, 0.7);
   await describe(PRODUCT, client, { temperature: 0.4 });
-  const { prompt } = client.lastRequest;
-  // Everything the copy may talk about has to be in the prompt.
-  assert.ok(prompt.includes('- category : sac à dos'));
-  assert.ok(prompt.includes('- material : toile recyclée'));
-  assert.ok(prompt.includes('- features : poche pour ordinateur, sangle ventrale'));
-  // Variety is what this rung is bought for, so the temperature is not zero by
-  // default — and whatever the caller asked for is what is sent.
   assert.equal(client.lastRequest.temperature, 0.4);
 });
 
-test('collapses the line breaks a model leaves in its prose', async () => {
-  const client = new FakeLLM({ response: answer(`  ${COPY}\n\n  `) });
-  assert.equal(await describe(PRODUCT, client), COPY);
+test('point de rupture : deux réponses différentes passent toutes deux le contrôle', async () => {
+  // Ne démontre rien sur la variation du modèle : les deux copies sont écrites par le double.
+  const first = await describe(PRODUCT, new FakeLLM({ response: answer(COPY) }), { vocabulary: VOCABULARY });
+  const secondCopy =
+    'Aurore 500 part en week-end sans y penser. Sa toile recyclée passe la pluie ' +
+    'et les ronces, et son ardoise discrète se fait oublier en réunion.';
+  const second = await describe(PRODUCT, new FakeLLM({ response: answer(secondCopy) }), { vocabulary: VOCABULARY });
+  assert.notEqual(first, second);
 });
 
-test('refuses an oversized record before spending anything', async () => {
+test('point de rupture : l’essai montre la promesse dite autrement qui passe', async () => {
+  const cas = essai.cases[5];
+  assert.equal(cas.fails, true);
+  const out = await essai.run(cas.input, 'fr', cas);
+  assert.equal(out.verdict, undefined);
+  assert.ok(out.output.includes('votre dos reste sec sous l’averse'));
+  // Témoin : la promesse écrite avec le terme de la liste est refusée (cas 5).
+  const refused = await essai.run(essai.cases[4].input, 'fr', essai.cases[4]);
+  assert.equal(refused.verdict.label, 'Publication refusée : une promesse absente du dossier');
+});
+
+test('DÉFAUT : un dossier qui nie l’attribut l’ancre quand même', async () => {
+  const record = { ...PRODUCT, features: [...PRODUCT.features, 'non étanche'] };
+  const copy = 'Aurore 500 suit les randonneurs par tous les temps, sa toile recyclée est étanche.';
+  await assert.rejects(async () => {
+    await assert.rejects(() => describe(record, new FakeLLM({ response: answer(copy) }), { vocabulary: VOCABULARY }), UngroundedDescription);
+  }, assert.AssertionError);
+});
+
+test('DÉFAUT : un terme de la liste accordé passe le contrôle', async () => {
+  const lamp = { ...PRODUCT, category: 'lampe de bureau', gender: 'f' };
+  const copy = 'Aurore 500 est une lampe de bureau solide, garantie à vie contre les défauts.';
+  await assert.rejects(async () => {
+    await assert.rejects(() => describe(lamp, new FakeLLM({ response: answer(copy) }), { vocabulary: VOCABULARY }), UngroundedDescription);
+  }, assert.AssertionError);
+});
+
+// ---------------------------------------------------------------------------
+// Docstring et commentaires
+// ---------------------------------------------------------------------------
+
+test('écrit la copie que le modèle a rendue', async () => {
+  assert.equal(await describe(PRODUCT, new FakeLLM({ response: answer(COPY) }), { vocabulary: VOCABULARY }), COPY);
+});
+
+test('envoie des consignes en français et le dossier entier', async () => {
   const client = new FakeLLM({ response: answer(COPY) });
-  const oversized = { name: 'Aurore 500', features: ['détail interminable '.repeat(40)] };
-  assert.ok(oversized.features[0].length > MAX_CHARACTERS);
-  await assert.rejects(() => describe(oversized, client), RangeError);
-  assert.equal(client.callCount, 0);
+  await describe(PRODUCT, client);
+  assert.equal(
+    client.lastRequest.prompt,
+    `${PROMPT}\n${[
+      '- name : Aurore 500',
+      '- category : sac à dos',
+      '- material : toile recyclée',
+      '- audience : les randonneurs',
+      '- features : poche pour ordinateur, sangle ventrale',
+      '- colours : ardoise, sable',
+      '- warranty : deux ans',
+    ].join('\n')}`,
+  );
 });
 
-test('retries a provider failure', async () => {
-  const client = new FakeLLM({ response: answer(COPY), failTimes: 2 });
+test('replie les retours à la ligne que le modèle laisse', async () => {
+  assert.equal(await describe(PRODUCT, new FakeLLM({ response: answer(`  ${COPY}\n\n  `) })), COPY);
+});
+
+test('refuse un dossier trop grand avant de dépenser quoi que ce soit', async () => {
+  const client = new FakeLLM({ response: answer(COPY) });
+  await assert.rejects(() => describe({ name: 'Aurore 500', features: ['détail interminable '.repeat(40)] }, client), RangeError);
+  assert.equal(client.callCount, 0);
+  assert.equal(await describe({ n: 'x'.repeat(MAX_CHARACTERS - 6) }, client), COPY);
+  await assert.rejects(() => describe({ n: 'x'.repeat(MAX_CHARACTERS - 5) }, client), RangeError);
+  assert.equal(client.callCount, 1);
+});
+
+test('une panne est retentée le nombre de fois annoncé', async () => {
+  let client = new FakeLLM({ response: answer(COPY), failTimes: 2 });
   assert.equal(await describe(PRODUCT, client, { attempts: 3 }), COPY);
+  assert.equal(client.callCount, 3);
+  client = new FakeLLM({ response: answer(COPY), failTimes: 5 });
+  await assert.rejects(() => describe(PRODUCT, client), (error) => {
+    assert.ok(error instanceof DescriptionUnavailable);
+    assert.match(error.message, /simulated provider failure/);
+    return true;
+  });
   assert.equal(client.callCount, 3);
 });
 
-test('an answer that is not JSON raises rather than being published', async () => {
-  // The model can answer anything, including a polite preamble where JSON was
-  // asked for. Publishing that on a product page is worse than an empty page.
+test('une réponse qui n’est pas du JSON lève plutôt que d’être publiée', async () => {
   const client = new FakeLLM({ response: 'Bien sûr ! Voici une proposition de description :' });
   await assert.rejects(() => describe(PRODUCT, client, { attempts: 2 }), DescriptionUnavailable);
   assert.equal(client.callCount, 2);
 });
 
-test('JSON without a description raises too', async () => {
-  const client = new FakeLLM({ response: JSON.stringify({ titre: 'Aurore 500' }) });
-  await assert.rejects(() => describe(PRODUCT, client, { attempts: 1 }), DescriptionUnavailable);
+test('une réponse d’une autre forme lève', async () => {
+  for (const response of [JSON.stringify({ titre: 'Aurore 500' }), answer(''), answer(42), 'null', `\`\`\`json\n${answer(COPY)}\n\`\`\``]) {
+    await assert.rejects(() => describe(PRODUCT, new FakeLLM({ response }), { attempts: 1 }), DescriptionUnavailable);
+  }
 });
 
-test('a fragment is refused', async () => {
-  const client = new FakeLLM({ response: answer('Un sac à dos.') });
-  await assert.rejects(() => describe(PRODUCT, client), DescriptionUnavailable);
+test('DÉFAUT : une description en liste est publiée, collée par une virgule', async () => {
+  // Python lève DescriptionUnavailable sur la même réponse.
+  const response = answer(['Aurore 500 tient la journée de marche.', 'Sa toile recyclée encaisse les ronces.']);
+  await assert.rejects(async () => {
+    await assert.rejects(() => describe(PRODUCT, new FakeLLM({ response }), { attempts: 1 }), DescriptionUnavailable);
+  }, assert.AssertionError);
 });
 
-test('breaking point: the model promises what the shop does not sell', async () => {
-  // The breaking point of this rung: fluency is not truthfulness.
-  //
-  // The copy below is better than anything the template rung can write. It is
-  // also a commercial commitment the shop never made — the record says two
-  // years, the sentence says for life — and it is written with exactly the same
-  // confidence as the true sentence beside it. There is no wording, no
-  // temperature and no instruction that removes this risk, because the model has
-  // no way of telling an attribute of this product from an attribute that
-  // belongs in a sentence of this shape.
-  //
-  // So the code checks. Every term of the catalogue vocabulary found in the copy
-  // has to be found in the record too, or the description does not ship.
+test('un fragment est refusé', async () => {
+  await assert.rejects(() => describe(PRODUCT, new FakeLLM({ response: answer('Un sac à dos.') })), DescriptionUnavailable);
+  assert.equal(await describe(PRODUCT, new FakeLLM({ response: answer('A'.repeat(MIN_CHARACTERS)) })), 'A'.repeat(MIN_CHARACTERS));
+  await assert.rejects(() => describe(PRODUCT, new FakeLLM({ response: answer('A'.repeat(MIN_CHARACTERS - 1)) })), DescriptionUnavailable);
+});
+
+test('la recherche ignore casse et accents', async () => {
   await assert.rejects(
-    () => describe(PRODUCT, new FakeLLM({ response: answer(INVENTED) }), { vocabulary: VOCABULARY }),
-    (error) => error instanceof UngroundedDescription && error.message.includes('garanti à vie'),
+    () => describe(PRODUCT, new FakeLLM({ response: answer(FOR_LIFE.replace('garanti à vie', 'GARANTI A VIE')) }), { vocabulary: VOCABULARY }),
+    UngroundedDescription,
   );
-
-  // The check reads the record, not the wording: the same sentence goes through
-  // for a product whose warranty really is unlimited.
-  const forLife = { ...PRODUCT, warranty: 'garanti à vie' };
-  assert.equal(
-    await describe(forLife, new FakeLLM({ response: answer(INVENTED) }), { vocabulary: VOCABULARY }),
-    INVENTED,
-  );
+  const record = { ...PRODUCT, warranty: 'Garanti À VIE'.normalize('NFD') };
+  assert.equal(await describe(record, new FakeLLM({ response: answer(FOR_LIFE) }), { vocabulary: VOCABULARY }), FOR_LIFE);
 });
 
-test('the same product gets a different description at each run', async () => {
-  // The other half of the bargain, and what the rungs below give you in
-  // exchange for their limits.
-  //
-  // Two calls, two answers, both acceptable. That is what is being bought here,
-  // and it is also what makes review impossible: nothing you approved yesterday
-  // is what a customer reads today. The double stands in for the model, so what
-  // this test shows is the shape of the problem, not its frequency.
-  const first = await describe(PRODUCT, new FakeLLM({ response: answer(COPY) }), {
-    vocabulary: VOCABULARY,
+test('le client est injecté pour tester sans réseau', async () => {
+  await assert.rejects(() => describe(PRODUCT), (error) => {
+    assert.equal(error.code, 'ERR_MODULE_NOT_FOUND');
+    assert.match(error.message, /openai/);
+    return true;
   });
-  const secondCopy =
-    'Aurore 500 part en week-end sans y penser. Sa toile recyclée passe la pluie ' +
-    'et les ronces, et son ardoise discrète se fait oublier en réunion.';
-  const second = await describe(PRODUCT, new FakeLLM({ response: answer(secondCopy) }), {
-    vocabulary: VOCABULARY,
-  });
-  assert.notEqual(first, second);
+});
+
+test('DÉFAUT : le client par défaut a la forme du vrai kit ; `client.complete` n’existe pas', async () => {
+  await assert.rejects(async () => {
+    let out;
+    try {
+      out = await describe(PRODUCT, realShapedClient(answer(COPY)));
+    } catch (error) {
+      assert.fail(`${error.name}: ${error.message}`);
+    }
+    assert.equal(out, COPY);
+  }, assert.AssertionError);
+});
+
+test('l’essai rend ses cinq premiers cas comme il les annonce', async () => {
+  const run = (i, lang = 'fr') => essai.run(essai.cases[i].input, lang, essai.cases[i]);
+  const first = await run(0);
+  assert.equal(first.output, COPY);
+  assert.equal(first.note, `1 appel facturé, ${PROMPT.length + 1 + attributeText(essai.cases[0].input).length} caractères partis chez le fournisseur, consignes et fiche comprises.`);
+  assert.equal(first.note, '1 appel facturé, 490 caractères partis chez le fournisseur, consignes et fiche comprises.');
+  const second = await run(1);
+  assert.equal(second.verdict.label, 'Refusé avant le premier appel');
+  assert.equal(second.note, 'Rien n’est parti chez le fournisseur, rien n’est dû.');
+  assert.equal((await run(2)).note, '3 appels facturés : les deux premiers ont échoué, le troisième a répondu.');
+  const prose = await run(3);
+  assert.equal(prose.verdict.label, 'Réponse rejetée');
+  assert.equal(prose.note, '3 appels envoyés et facturés, aucune réponse publiable.');
+  assert.equal((await run(4)).verdict.detail, 'Le contrôle terme à terme a trouvé « garanti à vie » dans le texte et nulle part dans le dossier.');
+});
+
+test('l’essai compte bien 702 caractères d’attributs dans la fiche encombrée', async () => {
+  // `shown` : « 702 caractères d’attributs, 102 de trop ».
+  assert.equal(attributeText(essai.cases[1].input).length, 702);
+  assert.equal(702 - MAX_CHARACTERS, 102);
+  assert.ok(essai.cases[1].shown.fr.includes('702 caractères d’attributs, 102 de trop'));
+});
+
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
+
+test('production : un dossier vide part quand même chez le fournisseur', async () => {
+  const client = new FakeLLM({ response: answer(COPY) });
+  assert.equal(await describe({}, client), COPY);
+  assert.equal(client.callCount, 1);
+  assert.equal(client.lastRequest.prompt, `${PROMPT}\n`);
+});
+
+test('production : zéro essai lève sans appel', async () => {
+  const client = new FakeLLM({ response: answer(COPY) });
+  await assert.rejects(() => describe(PRODUCT, client, { attempts: 0 }), DescriptionUnavailable);
+  assert.equal(client.callCount, 0);
+});
+
+test('DÉFAUT : le plafond compte des unités UTF-16', async () => {
+  // 296 emojis : 305 caractères d'attributs en Python, acceptés ; 601 unités UTF-16 ici.
+  await assert.rejects(async () => {
+    let out;
+    try {
+      out = await describe({ name: '🙂'.repeat(296) }, new FakeLLM({ response: answer(COPY) }));
+    } catch (error) {
+      assert.fail(`${error.name}: ${error.message}`);
+    }
+    assert.equal(out, COPY);
+  }, assert.AssertionError);
 });
