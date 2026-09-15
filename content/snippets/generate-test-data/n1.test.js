@@ -7,7 +7,7 @@ import { syncBuiltinESMExports } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { generateRows } from './n0.js';
-import { pick, sampleRows } from './n1.js';
+import { draw, pick, sampleRows } from './n1.js';
 
 // The distributions live in the test, never in the snippet. These are the
 // shape a `GROUP BY city` and a bucketed count would return: raw observed
@@ -112,7 +112,8 @@ test('Python et JavaScript produisent les mêmes lignes pour la même table obse
 });
 
 test('les deux langages s’accordent sur des libellés emoji et pleine chasse', () => {
-  // Python trie les libellés par point de code, JavaScript par unité UTF-16.
+  // Commentaire du tri : « `sort` orders by UTF-16 code unit, and the Python version
+  // sorts the same way ».
   const appel = [{ x: { type: 'categorical', counts: { '🍕 restauration': 1, 'Ｚ': 1 } } }, 6, SEED];
   assert.deepEqual(sampleRowsEnPython([appel]), [sampleRows(...appel)]);
 });
@@ -227,9 +228,21 @@ test('production : cinquante mille lignes sur quatre colonnes terminent vite', (
   assert.equal(rows.length, 50_000);
 });
 
+test('les libellés sont triés par unité UTF-16 et non par point de code', () => {
+  // Un emoji (U+1F355, unités D83C DF55) passe avant U+E000 et « Ｚ » en UTF-16.
+  // L'ordre se lit dans les lignes : avec trois effectifs de 1, la ligne r reçoit le
+  // libellé de rang draw(graine, champ, r) % 3 dans l'ordre trié.
+  const counts = { '\ue000': 1, 'Ｚ': 1, '🍕': 1 };
+  const ordreUtf16 = ['🍕', '\ue000', 'Ｚ'];
+  const rows = sampleRows({ x: { type: 'categorical', counts } }, 30, SEED);
+  assert.deepEqual(rows.map((r) => r.x), rows.map((_, r) => ordreUtf16[draw(SEED, 'x', r) % 3]));
+  const appel = [{ x: { type: 'categorical', counts: { '\ue000': 1, 'Ｚ': 2, '🍕': 3, a: 1 } } }, 40, SEED];
+  assert.deepEqual(sampleRowsEnPython([appel]), [sampleRows(...appel)]);
+});
+
 test('les libellés sont triés une fois par colonne et non à chaque cellule', () => {
-  // Coût lignes × libellés × log(libellés) : un GROUP BY code_postal de 6 000
-  // codes sur 10 000 lignes prend environ 5 s ici.
+  // Commentaire : « Sorting once per column, not once per cell, keeps thousands of
+  // postcodes cheap ».
   const vraiSort = Array.prototype.sort;
   let tris = 0;
   // eslint-disable-next-line no-extend-native
@@ -264,4 +277,23 @@ test('production : valeurs aux limites des tranches', () => {
 test('production : des bornes flottantes de moins d’une unité ne rendent que les bornes basses', () => {
   const rows = sampleRows({ v: { type: 'histogram', edges: [0, 0.5, 1], counts: [1, 1] } }, 200, SEED);
   assert.deepEqual(new Set(rows.map((r) => r.v)), new Set([0, 0.5]));
+});
+
+test('production : une spécification fausse est refusée même pour zéro ligne', () => {
+  // Docstring de sampler : la distribution d'une colonne est lue une fois, avant tout tirage.
+  for (const spec of [{ type: 'inconnu' }, { type: 'histogram', edges: [0, 1], counts: [1, 1] }]) {
+    assert.throws(() => sampleRows({ x: spec }, 0, SEED), RangeError);
+  }
+  assert.deepEqual(sampleRows(SESSIONS, 0, SEED), []);
+});
+
+test('production : un champ nommé __proto__ est une colonne ordinaire', () => {
+  // Object.fromEntries crée une propriété propre, là où une affectation aurait touché au prototype.
+  const rows = sampleRows(JSON.parse('{"__proto__": {"type": "categorical", "counts": {"x": 1}}}'), 2, SEED);
+  assert.equal(rows.length, 2);
+  for (const row of rows) {
+    assert.ok(Object.hasOwn(row, '__proto__'));
+    assert.equal(Object.getOwnPropertyDescriptor(row, '__proto__').value, 'x');
+    assert.equal(Object.getPrototypeOf(row), Object.prototype);
+  }
 });

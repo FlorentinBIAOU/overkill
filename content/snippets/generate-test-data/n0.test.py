@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from _harness.fake_llm import hash_word
+import n0
 from n0 import UNIT, draw, generate_rows, stable_hash
 
 ICI = Path(__file__).parent
@@ -245,18 +246,56 @@ def test_le_hash_natif_de_python_change_dun_processus_a_lautre():
 
 
 def test_le_separateur_napparait_dans_aucune_partie_de_la_cle():
+    """
+    Commentaires : UNIT « separates the parts of a cell key, and appears in none
+    of them » ; ESCAPE « stands in for UNIT inside a part, and is escaped itself » ;
+    docstring de _part : « two different cells never share a key ».
+    """
     assert draw("a\x1fb", "c", 0) != draw("a", "b\x1fc", 0)
+    assert draw("a\x1e1", "c", 0) != draw("a\x1f", "c", 0)
+    assert draw("a\x1e", "1c", 0) != draw("a", "\x1e1c", 0)
+    # Aucune partie échappée ne contient UNIT, et la clé est injective : toutes
+    # les paires (graine, champ) de trois caractères au plus sur {a, 0, 1, U+001E,
+    # U+001F} donnent des clés distinctes.
+    alphabet = ["a", "0", "1", "\x1e", "\x1f"]
+    textes = [""] + ["".join(p) for n in (1, 2, 3) for p in __import__("itertools").product(alphabet, repeat=n)]
+    assert all(UNIT not in n0._part(t) for t in textes)
+    cles = {n0._part(s) + UNIT + n0._part(f) for s in textes for f in textes}
+    assert len(cles) == len(textes) ** 2
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : risks.regulatory dit « chaque cellule est dérivée de la graine » ; "
-    "une colonne sequence ne dépend que du rang de la ligne, deux graines donnent "
-    "les mêmes identifiants et les mêmes adresses"
-))
-def test_infirme_chaque_cellule_est_derivee_de_la_graine():
-    a = generate_rows(ORDERS, 20, "orders-2024")
-    b = generate_rows(ORDERS, 20, "orders-2025")
-    assert [r["email"] for r in a] != [r["email"] for r in b]
+def test_l_echappement_est_sans_effet_sur_une_graine_et_un_champ_ordinaires():
+    """Corrections : sans U+001E ni U+001F, la clé est celle d'avant ; les jeux épinglés (GOLDEN, essai) sont inchangés."""
+    for graine, champ, ligne in [("orders-2024", "city", 0), ("", "", 7), ("🧪 été", "montant", 49_999)]:
+        assert draw(graine, champ, ligne) == stable_hash(f"{graine}{UNIT}{champ}{UNIT}{ligne}")
+    assert generate_rows(ORDERS, 3, "orders-2024") == GOLDEN
+
+
+def test_le_generateur_ne_lit_que_le_schema_et_la_graine_et_une_valeur_reelle_du_schema_ressort_telle_quelle():
+    """
+    risks.regulatory : « le générateur ne lit que le schéma et la graine, et une
+    valeur réelle écrite dans le schéma, choix ou préfixe, ressort telle quelle
+    dans les lignes ».
+    """
+    schema = {
+        "client": {"type": "choice", "values": ["Jeanne Dupont"]},
+        "email": {"type": "sequence", "prefix": "jeanne.dupont+", "suffix": "@exemple.fr", "width": 2},
+        "ville": {"type": "choice", "values": ["Paris", "Lyon"]},
+    }
+    rows = generate_rows(schema, 5, "recette")
+    assert {r["client"] for r in rows} == {"Jeanne Dupont"}
+    assert [r["email"] for r in rows] == [f"jeanne.dupont+{i:02d}@exemple.fr" for i in range(1, 6)]
+    # Schéma et graine seuls : mêmes entrées, mêmes lignes ; une colonne de
+    # séquence ne lit même que le schéma, elle est identique sous deux graines.
+    assert generate_rows(schema, 5, "recette") == rows
+    assert [r["email"] for r in generate_rows(schema, 5, "autre")] == [r["email"] for r in rows]
+
+
+def test_le_random_de_python_accepte_une_graine():
+    """Docstring : « Python's `random` takes a seed » (le témoin JavaScript est dans n0.test.js)."""
+    import random
+
+    assert [random.Random("s").random() for _ in range(3)] == [random.Random("s").random() for _ in range(3)]
 
 
 def test_agrandir_le_jeu_le_prolonge_au_lieu_de_le_retirer():
@@ -395,11 +434,12 @@ def test_production_valeurs_aux_limites():
     assert dates == {"2024-02-28", "2024-02-29"}
 
 
-def test_une_duree_nulle_ou_negative_est_refusee():
-    with pytest.raises(ValueError):
-        generate_rows({"d": {"type": "date", "start": "2024-01-01", "days": 0}}, 1, "s")
-    with pytest.raises(ValueError):
-        generate_rows({"d": {"type": "date", "start": "2024-01-01", "days": -5}}, 3, "s")
+def test_production_une_duree_nulle_negative_ou_non_entiere_est_refusee():
+    """Refus nommé : « a date field needs a whole number of days from 1 » ; `days` à 1 accepté."""
+    for days in (0, -5, 1.5, "3"):
+        with pytest.raises(ValueError, match="whole number of days from 1"):
+            generate_rows({"d": {"type": "date", "start": "2024-01-01", "days": days}}, 3, "s")
+    assert generate_rows({"d": {"type": "date", "start": "2024-01-01", "days": 1}}, 2, "s") == [{"d": "2024-01-01"}] * 2
 
 
 def test_production_un_champ_sans_type_leve_une_erreur():

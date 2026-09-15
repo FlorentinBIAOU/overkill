@@ -12,13 +12,15 @@ page says so next to the code.
 """
 
 import json
+import sys
 import time
 from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_ROWS, GenerationUnavailable, build_prompt, check, write_rows
+from _harness.fake_sdk import FakeSDK
+from n3 import MAX_ROWS, MODEL, GenerationUnavailable, ProviderClient, build_prompt, check, write_rows
 
 FIELDS = ["display_name", "job_title", "support_message"]
 
@@ -52,24 +54,6 @@ class ReponsesSuccessives:
         if isinstance(reponse, Exception):
             raise reponse
         return reponse
-
-
-class ClientALaFormeDuKitOpenAI:
-    """
-    Imite la surface publiée du kit `openai` (3.14.0) : `chat.completions.create`
-    et la réponse lue dans `choices[0].message.content`. Il n'a pas de méthode
-    `complete`, parce que le vrai client n'en a pas.
-    """
-
-    def __init__(self, content):
-        self.requests = []
-
-        def create(**kwargs):
-            self.requests.append(kwargs)
-            message = SimpleNamespace(content=content)
-            return SimpleNamespace(choices=[SimpleNamespace(message=message)])
-
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
 
 
 # ---------------------------------------------------------------------------
@@ -124,18 +108,63 @@ def test_point_de_rupture_sans_exigence_dunicite_la_meme_reponse_est_acceptee():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle "
-    "`client.complete(prompt=..., temperature=...)` ; cette méthode n'existe pas "
-    "dans le kit `openai` (3.14.0), dont la surface est "
-    "`client.chat.completions.create(model=..., messages=[...])`, réponse dans "
-    "`choices[0].message.content`. En production, chaque tentative lève "
-    "AttributeError, avalée par `except Exception`, et l'appelant reçoit "
-    "GenerationUnavailable sans qu'aucune requête soit partie"
-))
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    client = ClientALaFormeDuKitOpenAI(TWO_ROWS)
-    assert write_rows(FIELDS, 2, unique_field="display_name", client=client) == ROWS
+def test_production_l_adaptateur_par_defaut_appelle_la_surface_du_vrai_kit():
+    """
+    docstring de write_rows : « In production it defaults to a real provider
+    client ». `ProviderClient` sur le double du harnais, à la forme du kit
+    `openai` publié et sans méthode `complete`. docstring : « the request
+    carries a prompt and a temperature, and nothing that would make a second
+    call repeat the first » : ni `seed`, ni `response_format`.
+    """
+    sdk = FakeSDK(content=TWO_ROWS)
+    assert not hasattr(sdk, "complete")
+    assert write_rows(FIELDS, 2, unique_field="display_name", client=ProviderClient(sdk=sdk)) == ROWS
+    request = sdk.last_request
+    assert request == {
+        "endpoint": "chat.completions",
+        "model": MODEL,
+        "messages": [{"role": "user", "content": build_prompt(FIELDS, 2, "display_name")}],
+        "temperature": 1.0,
+    }
+    assert MODEL == "gpt-4.1-mini"
+    write_rows(FIELDS, 2, client=ProviderClient(sdk=sdk, model="autre-modele"), temperature=0.3)
+    assert sdk.last_request["model"] == "autre-modele"
+    assert sdk.last_request["temperature"] == 0.3
+
+
+def test_production_l_adaptateur_un_contenu_nul_leve_apres_les_essais_sans_passer_par_json():
+    """commentaire : « a refusal comes back with no content » ; `content` vaut None."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(GenerationUnavailable, match="the model returned no text"):
+        write_rows(FIELDS, 2, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content=TWO_ROWS, fail_times=2)
+    assert write_rows(FIELDS, 2, client=ProviderClient(sdk=sdk)) == ROWS
+    assert len(sdk.requests) == 3
+    sdk = FakeSDK(content=TWO_ROWS, fail_times=3)
+    with pytest.raises(GenerationUnavailable):
+        write_rows(FIELDS, 2, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_sans_client_le_kit_openai_est_construit_apres_les_gardes(monkeypatch):
+    """Corrections : « le client par défaut n'est construit qu'après » les gardes d'entrée."""
+    construits = []
+
+    def construire():
+        construits.append(1)
+        return FakeSDK(content=TWO_ROWS)
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=construire))
+    for count, unique_field in ((0, None), (MAX_ROWS + 1, None), (2.5, None), (2, "email")):
+        with pytest.raises(ValueError):
+            write_rows(FIELDS, count, unique_field=unique_field)
+    assert construits == []
+    assert write_rows(FIELDS, 2) == ROWS
+    assert construits == [1]
 
 
 def test_rend_les_lignes_ecrites_par_le_modele():
@@ -159,7 +188,8 @@ def test_demande_ce_quil_verifie():
 def test_la_requete_ne_transmet_que_des_noms_de_champs_et_aucune_graine():
     """
     risks.regulatory : « l'extrait ne transmet que des noms de champs, aucune
-    valeur réelle » ; docstring : « There is no seed here ».
+    valeur réelle » ; docstring : « There is no seed here: the request carries a
+    prompt and a temperature ».
     """
     client = FakeLLM(response=TWO_ROWS)
     write_rows(FIELDS, 2, unique_field="display_name", client=client)
@@ -292,8 +322,10 @@ def test_production_zero_tentative_leve_sans_appeler():
     assert client.call_count == 0
 
 
-def test_une_demande_impossible_a_satisfaire_est_refusee_avant_lappel():
-    for kwargs in ({"count": 2.5}, {"count": 2, "unique_field": "email"}):
+def test_production_une_demande_impossible_a_satisfaire_est_refusee_avant_lappel():
+    """commentaire : « Refusing a batch no answer can satisfy before calling is not an optimisation, it is a cost control »."""
+    for kwargs in ({"count": 2.5}, {"count": "2"}, {"count": 0}, {"count": MAX_ROWS + 1},
+                   {"count": 2, "unique_field": "email"}):
         client = FakeLLM(response=TWO_ROWS)
         with pytest.raises(ValueError):
             write_rows(FIELDS, kwargs.pop("count"), client=client, **kwargs)
@@ -302,3 +334,30 @@ def test_une_demande_impossible_a_satisfaire_est_refusee_avant_lappel():
 
 def test_check_seul_accepte_une_reponse_conforme():
     check(ROWS, FIELDS, 2, "display_name")
+
+
+def test_l_extrait_demande_des_valeurs_inventees_mais_ne_verifie_pas_qu_elles_le_sont():
+    """
+    risks.regulatory N3 : « L'extrait demande des valeurs inventées mais ne
+    vérifie pas qu'un nom, une adresse ou une entreprise ne coïncide pas avec
+    une personne ou une société existante ».
+    """
+    reels = [
+        {"display_name": "Emmanuel Macron", "job_title": "président", "support_message": "55 rue du Faubourg-Saint-Honoré"},
+        {"display_name": "Apple Inc.", "job_title": "One Apple Park Way, Cupertino", "support_message": "support"},
+    ]
+    client = FakeLLM(response=json.dumps(reels))
+    assert write_rows(FIELDS, 2, unique_field="display_name", client=client) == reels
+    assert "Invent every value: it must match no real person, company or address." in client.last_request["prompt"]
+
+
+def test_le_seul_niveau_qui_redige_du_texte_libre():
+    """
+    docstring : « the only rung of this entry that writes free text rather than
+    picking from values the caller listed » : la requête ne liste aucune valeur,
+    et toute chaîne non vide est acceptée. Ce que le modèle écrit n'est pas testable.
+    """
+    libre = [dict(ROWS[0], support_message="texte que personne n'a listé ✎"), ROWS[1]]
+    client = FakeLLM(response=json.dumps(libre))
+    assert write_rows(FIELDS, 2, client=client) == libre
+    assert "values:" not in client.last_request["prompt"].replace("string values:", "")

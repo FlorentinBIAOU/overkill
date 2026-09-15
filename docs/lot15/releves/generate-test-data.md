@@ -143,3 +143,54 @@ Les tests d'origine sont tous conservés. Un seul ne démontrait pas ce qu'il di
 - La charte demande de « vérifier contre la version publiée du kit » la forme du client par défaut, mais le double à imiter n'existe pas dans `_harness/` : chaque testeur l'écrit dans son test. Un double `FakeOpenAIClient` (Python et JS) dans le harnais éviterait vingt-cinq variantes.
 - Une affirmation d'attribution au modèle (« le modèle a renommé ») ne peut pas porter de test marqué `INFIRMÉ`. La charte pourrait prévoir le statut « INFIRMÉE (sans test) » pour ce cas, ou dire explicitement que le relevé suffit.
 - Une affirmation « identique dans les deux langages » ne se démontre qu'en exécutant l'autre langage : la charte pourrait l'exiger, et lister les pièges connus (tri UTF-16 contre points de code, modulo négatif, `padStart` sur un nombre négatif).
+
+## Tour 2 — contre-épreuve
+
+Après `cbe3338` (corrections du rédacteur, tour 1). Tests : n0.py 29 → 31,
+n0.js 31 → 34, n1.py 24 → 27, n1.js 24 → 27, n3.py 21 → 26, n3.js 20 → 25 ;
+19 tests ajoutés, 3 marqués réécrits sur la nouvelle phrase ou le correctif
+(n0 rang 20, n3 rang 66, en Python et en JavaScript), 6 renommés, aucun retiré.
+Les doubles locaux `ClientALaFormeDuKitOpenAI` sont remplacés par
+`_harness/fake_sdk.py` / `fake-sdk.mjs`. **Plus aucun marquage.**
+`node scripts/test-snippets.mjs generate-test-data` : vert.
+
+### Lignes « À retester »
+
+| # | Ligne du tour 1 | Désormais | Test |
+|---|---|---|---|
+| 15 | N0 commentaires `UNIT` / `ESCAPE`, docstring de `_part` : « two different cells never share a key » | démontrée : py, aucune partie échappée ne contient U+001F, et les 156² paires (graine, champ) de trois caractères au plus sur {a, 0, 1, U+001E, U+001F} donnent 156² clés distinctes ; js (`part` non exporté), les 31² paires de deux caractères au plus donnent 31² tirages distincts ; cas nommés : « a␟b »/« c » contre « a »/« b␟c », U+001E dans une graine contre U+001F | test_le_separateur_napparait_dans_aucune_partie_de_la_cle |
+| 15 | corrections : « sans effet sur toute graine ou tout champ qui ne contient ni l'un ni l'autre : les jeux attendus […] sont inchangés » | démontrée (py, js) : `draw` égale le hachage de la clé non échappée sur trois cas ordinaires, et `GOLDEN` est rendu tel quel | test_l_echappement_est_sans_effet_sur_une_graine_et_un_champ_ordinaires |
+| 19, 20 | N0 risks.regulatory : « le générateur ne lit que le schéma et la graine, et une valeur réelle écrite dans le schéma, choix ou préfixe, ressort telle quelle dans les lignes » | démontrée (py, js) : « Jeanne Dupont » en `choice` et « jeanne.dupont+ » en `prefix` ressortent tels quels ; mêmes schéma et graine, mêmes lignes ; une colonne `sequence` est identique sous deux graines (elle ne lit que le schéma). L'ancien test marqué affirmait l'inverse de la phrase retirée : remplacé. « aucun fichier » reste démontré par test_aucun_fichier_ecrit | test_le_generateur_ne_lit_que_le_schema_et_la_graine_et_une_valeur_reelle_du_schema_ressort_telle_quelle |
+| 10, 11 | N0 docstring : « Python's `random` takes a seed, JavaScript's `Math.random` does not » | démontrée : py, `random.Random("s")` rejoue la même suite ; js, `Math.random.length === 0` et deux suites appelées avec le même argument diffèrent | test_le_random_de_python_accepte_une_graine / Math.random de JavaScript ne prend pas de graine |
+| 6 | N0 docstring : « in Python as in JavaScript, for as long as this code is left unchanged » ; verdict « en Python comme en JavaScript » | démontrée (py, js) par l'exécution croisée existante | test_python_et_javascript_produisent_les_memes_lignes_pour_la_meme_graine |
+| 33 | N0 `days` | démontrée (py, js) : 0, -5, 1,5 et « 3 » refusés par l'erreur nommée « a whole number of days from 1 » ; 1 accepté ; renommé `production : …` | test_production_une_duree_nulle_negative_ou_non_entiere_est_refusee |
+| — | N0 breaking_point reformulé : « Le générateur n'émet que les formes que le schéma a prévues » | démontrée (py, js) par le témoin existant (un schéma qui porte la forme réelle fait tomber la suite) | test_point_de_rupture_temoin_la_meme_suite_tombe_des_que_le_schema_porte_la_forme_reelle |
+| — | essai, note : « en JavaScript comme en Python, tant que le code de la fiche ne change pas » | démontrée (js) : la note le dit en français et en anglais ; l'accord entre langages est le test de la ligne 6 | l'essai : la note dit « en JavaScript comme en Python, tant que le code de la fiche ne change pas » |
+| 47 | N1 commentaire du tri : « The key sorts by UTF-16 code unit, as JavaScript's `sort` does » | démontrée (py, js) : avec U+E000, « Ｚ » et « 🍕 », la ligne r reçoit le libellé de rang `draw % 3` dans l'ordre UTF-16 (🍕, U+E000, Ｚ), qui n'est pas l'ordre des points de code ; les deux langages rendent le même jeu | test_les_libelles_sont_tries_par_unite_utf_16_et_non_par_point_de_code, test_les_deux_langages_saccordent_sur_des_libelles_emoji_et_pleine_chasse |
+| 58 | N1 commentaire : « Sorting once per column, not once per cell, keeps thousands of postcodes cheap » | démontrée (py, js) : un seul tri pour 6 000 libellés et 1 000 lignes | test_les_libelles_sont_tries_une_fois_par_colonne_et_non_a_chaque_cellule |
+| — | N1 : une erreur de spécification est levée même pour `count = 0` | démontrée (py, js) : type inconnu et histogramme mal formé refusés à zéro ligne ; témoin : une spécification juste rend `[]` | test_production_une_specification_fausse_est_refusee_meme_pour_zero_ligne |
+| — | N1 js : un champ nommé `__proto__` | démontrée (py, js) : colonne ordinaire, propriété propre, prototype intact | test_production_un_champ_nomme_proto_est_une_colonne_ordinaire |
+| — | N1 docstring de `sample_rows` : « the edges are integers » | démontrée comme contrat : le test existant montre ce qui arrive hors contrat (bornes flottantes, borne basse seule) | test_production_des_bornes_flottantes_de_moins_dune_unite_ne_rendent_que_les_bornes_basses |
+| 66 | N3 client par défaut | démontrée (py, js) contre le double du harnais, sans méthode `complete` : requête exactement `{endpoint: chat.completions, model: "gpt-4.1-mini", messages: [{role: user, content: prompt exact}], temperature: 1.0}`, ni `seed` ni `response_format` ; modèle et température passés sont ceux envoyés ; `content` nul → `GenerationUnavailable` « the model returned no text » après trois appels au kit ; pannes du kit retentées. Python : sans client, `OpenAI()` n'est construit qu'après les gardes (module remplacé), puis appelé ; JavaScript : sans client, les gardes refusent avant l'import, une demande valide va jusqu'à l'import | test_production_l_adaptateur_par_defaut_appelle_la_surface_du_vrai_kit, test_production_l_adaptateur_un_contenu_nul_leve_apres_les_essais_sans_passer_par_json, test_production_l_adaptateur_une_panne_du_kit_est_retentee, test_production_sans_client_le_kit_openai_est_construit_apres_les_gardes (py) / sans client, les gardes refusent avant toute construction du kit (js) |
+| 85 | N3 demande insatisfaisable ; commentaire « Refusing a batch no answer can satisfy before calling is not an optimisation, it is a cost control » | démontrée (py, js) : 2,5, « 2 », 0, 51 et un `unique_field` absent refusés sans appel ; renommé `production : …` | test_production_une_demande_impossible_a_satisfaire_est_refusee_avant_lappel |
+| 69, 71 | N3 docstring : « There is no seed here: the request carries a prompt and a temperature, and nothing that would make a second call repeat the first » | démontrée (py, js) côté requête : `{prompt, temperature}` pour le client injecté, `{model, messages, temperature}` pour le kit ; qu'un second appel diffère est le comportement du modèle, non testable | test_la_requete_ne_transmet_que_des_noms_de_champs_et_aucune_graine, test_production_l_adaptateur_par_defaut_appelle_la_surface_du_vrai_kit |
+| 72 | N3 docstring : « a prompt is only a request: nothing in it holds the model to the keys […] » ; `check` : « Verify what the model was asked for: the row count, exactly the keys, non-empty strings, and the uniqueness requested » | démontrée (py, js) : aucune contrainte de format dans la requête (pas de `response_format`), et chaque vérification annoncée a son test hors format existant | test_production_une_reponse_hors_format_leve_lerreur_nommee, points de rupture N3 |
+| 78 | N3 risks.regulatory : « L'extrait demande des valeurs inventées mais ne vérifie pas qu'un nom, une adresse ou une entreprise ne coïncide pas avec une personne ou une société existante » | démontrée (py, js) : la consigne contient « Invent every value », et une réponse « Emmanuel Macron », « Apple Inc. », adresse réelle, est rendue telle quelle | test_l_extrait_demande_des_valeurs_inventees_mais_ne_verifie_pas_qu_elles_le_sont |
+| 68 | N3 docstring : « the only rung of this entry that writes free text rather than picking from values the caller listed » | démontrée pour la part du code (py, js) : la requête ne liste aucune valeur et toute chaîne non vide est acceptée ; ce que rédige le modèle est non testable | test_le_seul_niveau_qui_redige_du_texte_libre |
+| 63, 64 | N3 breaking_point : « Le test rejoue deux réponses de ce genre » | démontrée (py, js) par les trois tests de point de rupture existants ; l'attribution au modèle a disparu | test_point_de_rupture_… (n3) |
+| 74 | N3 commentaire `MAX_ROWS` : « A cap chosen for this snippet, not a measured limit » | non testable pour la raison ; le plafond lui-même est démontré (50 accepté, 51 refusé) | test_refuse_un_lot_trop_grand_avant_de_rien_depenser, test_production_exactement_max_rows_est_accepte |
+| 52, 88 | N1 regulatory (G29), scenario (non-déterminisme « de l'aveu même du fournisseur ») | non testable : faits sourcés ; « Une catégorie d'effectif 1 ressort telle quelle » reste démontrée | test_une_categorie_observee_une_seule_fois_finit_dans_le_jeu_de_test |
+
+### Constats sans marquage, pour le relecteur
+
+- **N1 n'échappe pas la clé** : `n1.draw("a␟b", "c", 0) == n1.draw("a", "b␟c", 0)`.
+  Le rédacteur a retiré de n1.js la phrase « appears in none of them », et n1.py
+  n'en dit rien : aucune affirmation n'est fausse, mais N0 et N1 ne partagent
+  plus la même clé, alors que la docstring N1 dit « Determinism works exactly as
+  in N0 » (vrai pour le déterminisme, pas pour l'injectivité).
+- **Entrées que les deux langages ne lisent pas pareil**, sans phrase de la
+  fiche qui le couvre : `days: null` vaut 1 en JavaScript (`??`) et est refusé en
+  Python ; `days: True` et `count=True` passent en Python (`bool` est un `int`)
+  et sont refusés en JavaScript ; `days: 1.0` passe en JavaScript et est refusé
+  en Python. Les tests n'emploient que des valeurs sur lesquelles les deux
+  s'accordent.

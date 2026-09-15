@@ -14,7 +14,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { MAX_ROWS, GenerationUnavailable, buildPrompt, check, writeRows } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import { MAX_ROWS, MODEL, GenerationUnavailable, buildPrompt, check, providerClient, writeRows } from './n3.js';
 
 const FIELDS = ['display_name', 'job_title', 'support_message'];
 
@@ -45,26 +46,6 @@ class ReponsesSuccessives {
     this.requests.push(request);
     return this.reponses.shift();
   }
-}
-
-/**
- * Imite la surface publiée du kit `openai` (7.15.0) : `chat.completions.create`
- * et la réponse lue dans `choices[0].message.content`. Il n'a pas de méthode
- * `complete`, parce que le vrai client n'en a pas.
- */
-function clientALaFormeDuKitOpenAI(content) {
-  const requests = [];
-  return {
-    requests,
-    chat: {
-      completions: {
-        async create(request) {
-          requests.push(request);
-          return { choices: [{ message: { role: 'assistant', content } }] };
-        },
-      },
-    },
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -114,16 +95,51 @@ test('point de rupture : sans exigence d’unicité, la même réponse est accep
 // Les autres affirmations du niveau
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit', async () => {
-  // Le client par défaut est `new OpenAI()`, et l'extrait appelle
-  // `client.complete({ prompt, temperature })` : cette méthode n'existe pas dans
-  // le kit `openai` (7.15.0), dont la surface est
-  // `client.chat.completions.create({ model, messages })`, réponse dans
-  // `choices[0].message.content`. Chaque tentative lève TypeError, avalée.
-  await assert.rejects(async () => {
-    const client = clientALaFormeDuKitOpenAI(TWO_ROWS);
-    assert.deepEqual(await writeRows(FIELDS, 2, { uniqueField: 'display_name', client }), ROWS);
+test('production : l’adaptateur par défaut appelle la surface du vrai kit', async () => {
+  // providerClient sur le double du harnais, à la forme du kit `openai` publié et sans
+  // méthode `complete`. docstring : « the request carries a prompt and a temperature, and
+  // nothing that would make a second call repeat the first » : ni seed, ni response_format.
+  const sdk = new FakeSDK({ content: TWO_ROWS });
+  assert.equal('complete' in sdk, false);
+  assert.deepEqual(await writeRows(FIELDS, 2, { uniqueField: 'display_name', client: await providerClient(sdk) }), ROWS);
+  assert.deepEqual(sdk.lastRequest, {
+    endpoint: 'chat.completions',
+    model: MODEL,
+    messages: [{ role: 'user', content: buildPrompt(FIELDS, 2, 'display_name') }],
+    temperature: 1,
   });
+  assert.equal(MODEL, 'gpt-4.1-mini');
+  await writeRows(FIELDS, 2, { client: await providerClient(sdk, 'autre-modele'), temperature: 0.3 });
+  assert.equal(sdk.lastRequest.model, 'autre-modele');
+  assert.equal(sdk.lastRequest.temperature, 0.3);
+});
+
+test('production : l’adaptateur, un contenu nul lève après les essais sans passer par JSON', async () => {
+  // Commentaire : « A refusal comes back with no content » ; content vaut null.
+  const sdk = new FakeSDK({ content: null });
+  await assert.rejects(
+    async () => writeRows(FIELDS, 2, { client: await providerClient(sdk) }),
+    (error) => error instanceof GenerationUnavailable && /the model returned no text/.test(error.message),
+  );
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  let sdk = new FakeSDK({ content: TWO_ROWS, failTimes: 2 });
+  assert.deepEqual(await writeRows(FIELDS, 2, { client: await providerClient(sdk) }), ROWS);
+  assert.equal(sdk.requests.length, 3);
+  sdk = new FakeSDK({ content: TWO_ROWS, failTimes: 3 });
+  await assert.rejects(async () => writeRows(FIELDS, 2, { client: await providerClient(sdk) }), GenerationUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : sans client, les gardes refusent avant toute construction du kit', async () => {
+  // Le kit n'est pas installé ici : une construction avant les gardes échouerait sur
+  // l'import. Témoin : une demande valide sans client va jusqu'à l'import.
+  for (const [count, options] of [[0, {}], [MAX_ROWS + 1, {}], [2.5, {}], [2, { uniqueField: 'email' }]]) {
+    await assert.rejects(() => writeRows(FIELDS, count, options), RangeError);
+  }
+  await assert.rejects(() => writeRows(FIELDS, 2), /openai/i);
 });
 
 test('rend les lignes écrites par le modèle', async () => {
@@ -273,10 +289,10 @@ test('production : zéro tentative lève sans appeler', async () => {
   assert.equal(client.callCount, 0);
 });
 
-test('une demande impossible à satisfaire est refusée avant l’appel', async () => {
-  // Un nombre de lignes non entier passe la garde, un uniqueField absent des
-  // champs fait échouer chaque vérification : `attempts` appels facturés perdus.
-  for (const [count, options] of [[2.5, {}], [2, { uniqueField: 'email' }]]) {
+test('production : une demande impossible à satisfaire est refusée avant l’appel', async () => {
+  // Commentaire : « Refusing a batch no answer can satisfy before calling is not an
+  // optimisation, it is a cost control ».
+  for (const [count, options] of [[2.5, {}], ['2', {}], [0, {}], [MAX_ROWS + 1, {}], [2, { uniqueField: 'email' }]]) {
     const client = new FakeLLM({ response: TWO_ROWS });
     await assert.rejects(() => writeRows(FIELDS, count, { ...options, client }), RangeError);
     assert.equal(client.callCount, 0);
@@ -285,4 +301,27 @@ test('une demande impossible à satisfaire est refusée avant l’appel', async 
 
 test('check seul accepte une réponse conforme', () => {
   check(ROWS, FIELDS, 2, 'display_name');
+});
+
+test('l’extrait demande des valeurs inventées mais ne vérifie pas qu’elles le sont', async () => {
+  // risks.regulatory N3 : « L'extrait demande des valeurs inventées mais ne vérifie pas
+  // qu'un nom, une adresse ou une entreprise ne coïncide pas avec une personne ou une
+  // société existante ».
+  const reels = [
+    { display_name: 'Emmanuel Macron', job_title: 'président', support_message: '55 rue du Faubourg-Saint-Honoré' },
+    { display_name: 'Apple Inc.', job_title: 'One Apple Park Way, Cupertino', support_message: 'support' },
+  ];
+  const client = new FakeLLM({ response: JSON.stringify(reels) });
+  assert.deepEqual(await writeRows(FIELDS, 2, { uniqueField: 'display_name', client }), reels);
+  assert.ok(client.lastRequest.prompt.includes('Invent every value: it must match no real person, company or address.'));
+});
+
+test('le seul niveau qui rédige du texte libre', async () => {
+  // docstring : « the only rung of this entry that writes free text rather than picking
+  // from values the caller listed » : la requête ne liste aucune valeur, et toute chaîne
+  // non vide est acceptée. Ce que le modèle écrit n'est pas testable.
+  const libre = [{ ...ROWS[0], support_message: 'texte que personne n’a listé ✎' }, ROWS[1]];
+  const client = new FakeLLM({ response: JSON.stringify(libre) });
+  assert.deepEqual(await writeRows(FIELDS, 2, { client }), libre);
+  assert.ok(!client.lastRequest.prompt.replace('string values:', '').includes('values:'));
 });

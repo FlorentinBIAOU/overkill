@@ -220,17 +220,47 @@ test('une multiplication ordinaire dériverait là où Math.imul reste exact', (
 });
 
 test('le séparateur n’apparaît dans aucune partie de la clé', () => {
-  // Le commentaire dit que U+001F « appears in none of them » ; rien ne l'empêche.
+  // Commentaires : UNIT « joins the parts of a cell key, and appears in none of
+  // them » ; ESCAPE « stands in for UNIT inside a part, and is escaped itself ».
   assert.notEqual(draw('a\u001fb', 'c', 0), draw('a', 'b\u001fc', 0));
+  assert.notEqual(draw('a\u001e1', 'c', 0), draw('a\u001f', 'c', 0));
+  assert.notEqual(draw('a\u001e', '1c', 0), draw('a', '\u001e1c', 0));
+  // part n'est pas exporté : toutes les paires (graine, champ) de deux caractères
+  // au plus sur {a, 0, 1, U+001E, U+001F} donnent des tirages distincts.
+  const alphabet = ['a', '0', '1', '\u001e', '\u001f'];
+  const textes = ['', ...alphabet, ...alphabet.flatMap((x) => alphabet.map((y) => x + y))];
+  const tirages = new Set(textes.flatMap((s) => textes.map((f) => draw(s, f, 0))));
+  assert.equal(tirages.size, textes.length ** 2);
 });
 
-test('INFIRMÉ : chaque cellule est dérivée de la graine', () => {
-  // risks.regulatory ; une colonne sequence ne dépend que du rang de la ligne.
-  assert.throws(() => {
-    const a = generateRows(ORDERS, 20, 'orders-2024').map((r) => r.email);
-    const b = generateRows(ORDERS, 20, 'orders-2025').map((r) => r.email);
-    assert.notDeepEqual(a, b);
-  });
+test('l’échappement est sans effet sur une graine et un champ ordinaires', () => {
+  for (const [graine, champ, ligne] of [['orders-2024', 'city', 0], ['', '', 7], ['🧪 été', 'montant', 49_999]]) {
+    assert.equal(draw(graine, champ, ligne), stableHash(`${graine}${UNIT}${champ}${UNIT}${ligne}`));
+  }
+  assert.deepEqual(generateRows(ORDERS, 3, 'orders-2024'), GOLDEN);
+});
+
+test('le générateur ne lit que le schéma et la graine, et une valeur réelle du schéma ressort telle quelle', () => {
+  // risks.regulatory : « le générateur ne lit que le schéma et la graine, et une valeur
+  // réelle écrite dans le schéma, choix ou préfixe, ressort telle quelle dans les lignes ».
+  const schema = {
+    client: { type: 'choice', values: ['Jeanne Dupont'] },
+    email: { type: 'sequence', prefix: 'jeanne.dupont+', suffix: '@exemple.fr', width: 2 },
+    ville: { type: 'choice', values: ['Paris', 'Lyon'] },
+  };
+  const rows = generateRows(schema, 5, 'recette');
+  assert.deepEqual(new Set(rows.map((r) => r.client)), new Set(['Jeanne Dupont']));
+  assert.deepEqual(rows.map((r) => r.email), [1, 2, 3, 4, 5].map((i) => `jeanne.dupont+0${i}@exemple.fr`));
+  assert.deepEqual(generateRows(schema, 5, 'recette'), rows);
+  assert.deepEqual(generateRows(schema, 5, 'autre').map((r) => r.email), rows.map((r) => r.email));
+});
+
+test('Math.random de JavaScript ne prend pas de graine', () => {
+  // Docstring : « JavaScript's `Math.random` does not » (take a seed). Il ne déclare
+  // aucun paramètre, et un argument ne le rend pas répétable.
+  assert.equal(Math.random.length, 0);
+  const tirage = () => Array.from({ length: 3 }, () => Math.random(42));
+  assert.notDeepEqual(tirage(), tirage());
 });
 
 test('agrandir le jeu le prolonge au lieu de le retirer', () => {
@@ -325,6 +355,11 @@ test('l’essai : sur cinq cents lignes, aucune étiquette, aucune majuscule, au
   }
 });
 
+test('l’essai : la note dit « en JavaScript comme en Python, tant que le code de la fiche ne change pas »', () => {
+  assert.match(essai.run('incident-4471', 'fr').note, /en JavaScript comme en Python, tant que le code de la fiche ne change pas/);
+  assert.match(essai.run('incident-4471', 'en').note, /in JavaScript as in Python, for as long as this entry’s code is left unchanged/);
+});
+
 test('l’essai : le tableau est celui de l’extrait, et la graine le redonne identique', () => {
   const { rows } = essai.run('incident-4471', 'fr');
   const attendu = generateRows(ORDERS, 5, 'incident-4471');
@@ -386,14 +421,15 @@ test('production : valeurs aux limites', () => {
   assert.deepEqual(valeurs({ type: 'date', start: '2024-02-28', days: 2 }), new Set(['2024-02-28', '2024-02-29']));
 });
 
-test('une durée nulle ou négative est refusée', () => {
-  // days=0 lève RangeError « Invalid time value » (ZeroDivisionError en Python) ;
-  // days=-5 rend des dates postérieures au début ici, antérieures en Python.
-  assert.throws(
-    () => generateRows({ d: { type: 'date', start: '2024-01-01', days: 0 } }, 1, 's'),
-    /days|duration|durée/,
-  );
-  assert.throws(() => generateRows({ d: { type: 'date', start: '2024-01-01', days: -5 } }, 3, 's'), RangeError);
+test('production : une durée nulle, négative ou non entière est refusée', () => {
+  // Refus nommé : « a date field needs a whole number of days from 1 » ; days à 1 accepté.
+  for (const days of [0, -5, 1.5, '3']) {
+    assert.throws(
+      () => generateRows({ d: { type: 'date', start: '2024-01-01', days } }, 3, 's'),
+      { name: 'RangeError', message: /whole number of days from 1/ },
+    );
+  }
+  assert.deepEqual(generateRows({ d: { type: 'date', start: '2024-01-01', days: 1 } }, 2, 's'), [{ d: '2024-01-01' }, { d: '2024-01-01' }]);
 });
 
 test('production : un champ sans type lève une erreur', () => {

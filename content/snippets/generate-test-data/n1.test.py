@@ -131,7 +131,28 @@ def test_python_et_javascript_produisent_les_memes_lignes_pour_la_meme_table_obs
 
 
 def test_les_deux_langages_saccordent_sur_des_libelles_emoji_et_pleine_chasse():
+    """
+    Commentaire du tri : « It is also what keeps the two languages together […]
+    The key sorts by UTF-16 code unit, as JavaScript's `sort` does, or an emoji
+    and a full-width letter would come out in a different order ».
+    """
     appel = [{"x": {"type": "categorical", "counts": {"🍕 restauration": 1, "Ｚ": 1}}}, 6, SEED]
+    assert sample_rows_en_javascript([appel]) == [sample_rows(*appel)]
+
+
+def test_les_libelles_sont_tries_par_unite_utf_16_et_non_par_point_de_code():
+    """
+    Un emoji (U+1F355, unités D83C DF55) passe avant U+E000 et « Ｚ » (U+FF3A)
+    en UTF-16, après eux en points de code. L'ordre se lit dans les lignes :
+    avec trois effectifs de 1, la ligne r reçoit le libellé de rang
+    draw(graine, champ, r) % 3 dans l'ordre trié.
+    """
+    counts = {"\ue000": 1, "Ｚ": 1, "🍕": 1}
+    ordre_utf16 = ["🍕", "\ue000", "Ｚ"]
+    assert sorted(counts) != ordre_utf16  # témoin : l'ordre des points de code diffère
+    rows = sample_rows({"x": {"type": "categorical", "counts": counts}}, 30, SEED)
+    assert [r["x"] for r in rows] == [ordre_utf16[n1.draw(SEED, "x", r) % 3] for r in range(30)]
+    appel = [{"x": {"type": "categorical", "counts": {"\ue000": 1, "Ｚ": 2, "🍕": 3, "a": 1}}}, 40, SEED]
     assert sample_rows_en_javascript([appel]) == [sample_rows(*appel)]
 
 
@@ -260,6 +281,7 @@ def test_production_cinquante_mille_lignes_sur_quatre_colonnes_terminent_vite():
 
 
 def test_les_libelles_sont_tries_une_fois_par_colonne_et_non_a_chaque_cellule(monkeypatch):
+    """Commentaire : « Sorting once per column, not once per cell, keeps thousands of postcodes cheap »."""
     appels = []
     vrai_sorted = builtins.sorted
 
@@ -295,6 +317,24 @@ def test_production_valeurs_aux_limites_des_tranches():
 
 
 def test_production_des_bornes_flottantes_de_moins_dune_unite_ne_rendent_que_les_bornes_basses():
-    """`max(high - low, 1)` : une tranche de largeur 0,5 rend toujours sa borne basse."""
+    """
+    Docstring de sample_rows : « the edges are integers » ; hors de ce contrat,
+    `max(high - low, 1)` fait qu'une tranche de largeur 0,5 rend toujours sa borne basse.
+    """
     rows = sample_rows({"v": {"type": "histogram", "edges": [0, 0.5, 1], "counts": [1, 1]}}, 200, SEED)
     assert {r["v"] for r in rows} == {0, 0.5}
+
+
+def test_production_une_specification_fausse_est_refusee_meme_pour_zero_ligne():
+    """Docstring de _sampler : la distribution d'une colonne est lue une fois, avant tout tirage."""
+    for spec in ({"type": "inconnu"}, {"type": "histogram", "edges": [0, 1], "counts": [1, 1]}):
+        with pytest.raises(ValueError):
+            sample_rows({"x": spec}, 0, SEED)
+    # Témoin : une spécification juste et zéro ligne rend une liste vide.
+    assert sample_rows(SESSIONS, 0, SEED) == []
+
+
+def test_production_un_champ_nomme_proto_est_une_colonne_ordinaire():
+    """Le jumeau JavaScript lit la table par JSON.parse ; en Python la clé est ordinaire."""
+    rows = sample_rows(json.loads('{"__proto__": {"type": "categorical", "counts": {"x": 1}}}'), 2, SEED)
+    assert rows == [{"__proto__": "x"}, {"__proto__": "x"}]
