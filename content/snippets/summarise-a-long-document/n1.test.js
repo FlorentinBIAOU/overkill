@@ -1,11 +1,13 @@
+/**
+ * Quatre documents dont quelqu'un a coché les phrases de résumé. Les poids
+ * comparés ici sont ceux que scikit-learn trouve dans n1.test.py.
+ */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { summarise as summariseN0 } from './n0.js';
 import { sentenceFeatures, splitSentences, summarise, train } from './n1.js';
 
-// Four documents whose summary sentences someone has ticked off. A real corpus
-// is a few dozen of these; four is enough to show what the model learns, which
-// here is that the opening, the sentence carrying a figure, and the wrap-up are
-// what a reader keeps.
 const DOCUMENTS = [
   [
     'The payment service was unavailable for most of Tuesday morning.',
@@ -32,8 +34,6 @@ const DOCUMENTS = [
     'In conclusion the archive migration is complete.',
   ],
   [
-    // This one opens on a formality, so the model cannot simply learn
-    // "the first sentence is always in".
     'The committee met on Thursday in the small room.',
     'The budget for the next year was presented to the committee.',
     'Three members asked about the training line.',
@@ -43,12 +43,7 @@ const DOCUMENTS = [
   ],
 ];
 
-const LABELS = [
-  [1, 1, 0, 0, 0, 1],
-  [1, 1, 0, 0, 0, 1],
-  [1, 1, 0, 0, 0, 1],
-  [0, 1, 0, 1, 0, 1],
-];
+const LABELS = [[1, 1, 0, 0, 0, 1], [1, 1, 0, 0, 0, 1], [1, 1, 0, 0, 0, 1], [0, 1, 0, 1, 0, 1]];
 
 const model = train(DOCUMENTS, LABELS);
 
@@ -64,7 +59,6 @@ const AUDIT = [
   AUDIT_WRAP_UP,
 ].join(' ');
 
-// The same two-ended document the N0 test uses.
 const SUPPLY = 'The Rouen plant supplies every battery cell used on the Lyon assembly line.';
 const CLOSURE = 'The Rouen plant will close at the end of March.';
 const FACTORY = [
@@ -81,91 +75,152 @@ const FACTORY = [
   CLOSURE,
 ].join(' ');
 
-test('features read position, length, figures, cues and echo', () => {
+const DECOY = 'Overall the warehouse audit ordered 6 new clipboards for counting stock.';
+const FINDING = 'The spare parts aisle has been miscounted every month since the spring.';
+const DRESSED_UP = [
+  'The warehouse audit looked at how stock is counted.',
+  DECOY,
+  FINDING,
+  'Nobody has reconciled the spare parts aisle against the supplier notes.',
+  'The counting staff work on the last Friday of each month.',
+  'The clipboards will be delivered next week.',
+];
+
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
+
+test('point de rupture : la phrase leurre a les quatre signes et est retenue', () => {
+  const [position, , figure, cue, echo] = sentenceFeatures(DRESSED_UP, 1);
+  assert.deepEqual([position, figure, cue, echo], [0.5, 1, 1, 0.375]);
+  assert.ok(summarise(model, DRESSED_UP.join(' '), 2).includes(DECOY));
+});
+
+test('point de rupture : la vraie trouvaille n’a aucun de ces signes et reste dehors', () => {
+  const [position, , figure, cue, echo] = sentenceFeatures(DRESSED_UP, 2);
+  assert.deepEqual([Math.round(position * 1e4) / 1e4, figure, cue, echo], [0.3333, 0, 0, 0]);
+  assert.ok(!summarise(model, DRESSED_UP.join(' '), 2).includes(FINDING));
+});
+
+test('point de rupture : étiqueter davantage n’y change rien', () => {
+  const relabelled = train([...DOCUMENTS, ...Array(5).fill(DRESSED_UP)], [...LABELS, ...Array(5).fill([1, 0, 1, 1, 0, 0])]);
+  const summary = summarise(relabelled, DRESSED_UP.join(' '), 2);
+  assert.ok(summary.includes(DECOY) && !summary.includes(FINDING));
+});
+
+test('point de rupture : il retrouve les deux prémisses et n’énonce pas la conclusion', () => {
+  const both = summarise(model, FACTORY, 2);
+  assert.ok(both.includes(SUPPLY) && both.includes(CLOSURE));
+  assert.ok(!splitSentences(both).some((s) => s.includes('assembly') && s.includes('March')));
+  assert.ok(!summariseN0(FACTORY, 2).includes(CLOSURE));
+});
+
+// ---------------------------------------------------------------------------
+// Autres affirmations du niveau
+// ---------------------------------------------------------------------------
+
+test('cinq traits : position, longueur, chiffre, mot-signal et reprise', () => {
   const sentences = DOCUMENTS[0];
   const [lead, length, figure, cue, echo] = sentenceFeatures(sentences, 0);
-  assert.equal(lead, 1);
-  assert.equal(figure, 0);
-  assert.equal(cue, 0);
+  assert.deepEqual([lead, figure, cue, echo], [1, 0, 0, 1]);
   assert.ok(length > 0 && length < 1);
-  assert.equal(echo, 1); // the opening echoes itself entirely
-
-  assert.equal(sentenceFeatures(sentences, 1)[2], 1); // "8" and "11" are figures
-  assert.equal(sentenceFeatures(sentences, 5)[3], 1); // "Overall"
+  assert.equal(sentenceFeatures(sentences, 1)[2], 1);
+  assert.equal(sentenceFeatures(sentences, 5)[3], 1);
+  assert.equal(sentenceFeatures(sentences, 3).length, 5);
 });
 
-test('the length feature saturates on a very long sentence', () => {
-  // A single rambling sentence must not stretch the scale for the rest.
-  const longOne = ['Short one.', `${new Array(200).fill('word').join(' ')}.`];
-  assert.equal(sentenceFeatures(longOne, 1)[1], 1);
+test('le trait de longueur sature sur une phrase très longue', () => {
+  assert.equal(sentenceFeatures(['Short one.', `${new Array(200).fill('word').join(' ')}.`], 1)[1], 1);
+  assert.equal(sentenceFeatures(['Short one.', `${new Array(24).fill('word').join(' ')}.`], 1)[1], 0.96);
 });
 
-test('keeps the wrap-up a fixed lead bonus would drop', () => {
+test('la descente de gradient atterrit sur l’optimum de scikit-learn', () => {
+  // docstring : « the objective minimised below is the same one » ; « enough
+  // steps land on the one optimum whichever language walks towards it ».
+  const sklearn = [0.496, 0.134, 1.281, 1.246, 1.061];
+  model.weights.forEach((w, j) => assert.ok(Math.abs(w - sklearn[j]) < 2e-3, `${j}: ${w}`));
+  assert.ok(Math.abs(model.bias - -0.944) < 2e-3);
+  const longer = train(DOCUMENTS, LABELS, { epochs: 20000 });
+  longer.weights.forEach((w, j) => assert.ok(Math.abs(w - model.weights[j]) < 1e-9));
+});
+
+test('INFIRMÉ : la régression logistique « is a dozen lines », train en compte 28', async () => {
+  const lines = readFileSync(new URL('./n1.js', import.meta.url), 'utf8').split('\n');
+  const start = lines.findIndex((l) => l.startsWith('export function train'));
+  const end = lines.indexOf('}', start);
+  const code = lines.slice(start, end + 1).filter((l) => l.trim() && !l.trim().startsWith('//'));
+  assert.equal(code.length, 28);
+  await assert.rejects(async () => assert.ok(code.length <= 12));
+});
+
+test('garde l’ouverture, le chiffre et la conclusion de l’audit', () => {
   const summary = summarise(model, AUDIT, 3);
-  assert.ok(summary.includes(AUDIT_LEAD));
-  assert.ok(summary.includes(AUDIT_FIGURE));
-  // The last sentence of the document, and the one a reader would keep.
-  assert.ok(summary.includes(AUDIT_WRAP_UP));
-});
-
-test('the two best sentences are the opening and the wrap-up', () => {
+  assert.ok(summary.includes(AUDIT_LEAD) && summary.includes(AUDIT_FIGURE) && summary.includes(AUDIT_WRAP_UP));
   assert.equal(summarise(model, AUDIT, 2), `${AUDIT_LEAD} ${AUDIT_WRAP_UP}`);
 });
 
-test('the summary is still made of the document own sentences', () => {
-  for (const sentence of splitSentences(summarise(model, AUDIT, 3))) {
-    assert.ok(AUDIT.includes(sentence), sentence);
+test('INFIRMÉ : le modèle découvre que la conclusion compte, et N0 jamais', async () => {
+  await assert.rejects(async () => {
+    const withoutCue = AUDIT.replace(AUDIT_WRAP_UP, 'The audit recommends counting the spare parts aisle weekly.');
+    assert.ok(summarise(model, withoutCue, 3).includes('The audit recommends counting'));
+    assert.ok(!summariseN0(AUDIT, 3).includes(AUDIT_WRAP_UP));
+  });
+});
+
+test('le résumé est toujours fait des phrases du document', () => {
+  for (let width = 1; width < 7; width += 1) {
+    assert.ok(splitSentences(summarise(model, AUDIT, width)).every((s) => AUDIT.includes(s)));
   }
 });
 
-test('keeps document order', () => {
+test('garde l’ordre du document', () => {
   const all = splitSentences(AUDIT);
   const positions = splitSentences(summarise(model, AUDIT, 4)).map((s) => all.indexOf(s));
   assert.deepEqual(positions, [...positions].sort((a, b) => a - b));
 });
 
-test('a single-sentence document is its own summary', () => {
-  const text = 'The plant will close at the end of March.';
-  assert.equal(summarise(model, text, 3), text);
+test('l’extrait n’importe rien', () => {
+  assert.doesNotMatch(readFileSync(new URL('./n1.js', import.meta.url), 'utf8'), /^\s*import\s/m);
 });
 
-test('an empty document gives an empty summary', () => {
+test('deux entraînements rendent les mêmes poids', () => {
+  assert.deepEqual(train(DOCUMENTS, LABELS), model);
+});
+
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
+
+test('production : document vide et d’une phrase', () => {
   assert.equal(summarise(model, '', 3), '');
   assert.equal(summarise(model, '   \n ', 3), '');
+  assert.equal(summarise(model, 'The plant will close at the end of March.', 3), 'The plant will close at the end of March.');
+  assert.equal(summarise(model, AUDIT, 0), '');
 });
 
-test('breaking point: surface features score the look, not the content', () => {
-  // The ceiling of this rung, in two parts.
-  //
-  // First, the features describe a sentence from the outside. A sentence that
-  // is early, carries a figure, opens with a cue word and repeats the words of
-  // the title looks exactly like a summary sentence, and is picked, even when
-  // what it says is that somebody ordered clipboards. The real finding of the
-  // audit — an aisle miscounted for months — has none of those markers and is
-  // left out. No amount of extra labelling fixes this: the model is not being
-  // shown the meaning of the sentence, so it cannot weigh it.
-  const decoy = 'Overall the warehouse audit ordered 6 new clipboards for counting stock.';
-  const finding = 'The spare parts aisle has been miscounted every month since the spring.';
-  const dressedUp = [
-    'The warehouse audit looked at how stock is counted.',
-    decoy,
-    finding,
-    'Nobody has reconciled the spare parts aisle against the supplier notes.',
-    'The counting staff work on the last Friday of each month.',
-    'The clipboards will be delivered next week.',
-  ].join(' ');
-  const summary = summarise(model, dressedUp, 2);
-  assert.ok(summary.includes(decoy));
-  assert.ok(!summary.includes(finding));
+test('production : cinq mille phrases', () => {
+  const big = Array.from({ length: 5000 }, (_, i) => `Sentence ${i} is about the warehouse stock.`).join(' ');
+  const started = Date.now();
+  assert.equal(splitSentences(summarise(model, big, 3)).length, 3);
+  assert.ok(Date.now() - started < 10_000);
+});
 
-  // Second, this rung is still extractive. On the two-ended document it does
-  // better than N0, retrieving both premises. It still does not state the
-  // conclusion they imply, because stating it would mean writing a sentence
-  // nobody wrote, and nothing in this file writes anything.
-  const bothPremises = summarise(model, FACTORY, 2);
-  assert.ok(bothPremises.includes(SUPPLY));
-  assert.ok(bothPremises.includes(CLOSURE));
-  assert.ok(
-    !splitSentences(bothPremises).some((s) => s.includes('assembly') && s.includes('March')),
-  );
+test('DÉFAUT : un document sans ponctuation finale est rendu entier', async () => {
+  await assert.rejects(async () => {
+    const transcript = 'the meeting started late\nwe discussed the budget\n'.repeat(500);
+    assert.ok(summarise(model, transcript, 3).length < transcript.length / 2);
+  });
+});
+
+test('DÉFAUT : un nombre de phrases négatif n’est pas refusé', async () => {
+  await assert.rejects(async () => {
+    let result;
+    try {
+      result = summarise(model, AUDIT, -1);
+    } catch (error) {
+      if (error instanceof RangeError) return;
+      throw error;
+    }
+    assert.equal(result, '');
+  });
 });
