@@ -56,10 +56,16 @@ test('point de rupture : une rupture de tendance laisse la prévision loin au-de
 });
 
 test('point de rupture : la prévision reste au-dessus tant que le recul continue', () => {
-  // « — elle y restera. » Huit semaines de recul de plus, huit prévisions trop hautes.
+  // « — elle y reste tant que le recul continue. » Seize semaines de recul de plus,
+  // seize prévisions trop hautes. Témoin : si le niveau se stabilise après huit
+  // semaines de recul, l'écart retombe sous quinze pour cent dès la quatrième.
   const series = Array.from({ length: 172 }, (_, w) => (w < 148 ? steadyShop(w) : steadyShop(w) * 0.95 ** (w - 147)));
   for (let end = 156; end < 172; end += 1) {
     assert.ok(forecast(series.slice(0, end))[0] > 1.2 * series[end]);
+  }
+  const stable = Array.from({ length: 172 }, (_, w) => (w < 148 ? steadyShop(w) : steadyShop(w) * 0.95 ** Math.min(w - 147, 8)));
+  for (let end = 160; end < 172; end += 1) {
+    assert.ok(forecast(stable.slice(0, end))[0] < 1.15 * stable[end]);
   }
 });
 
@@ -214,17 +220,26 @@ test('production : trois cents ans de semaines terminent vite et juste', () => {
   assert.ok(Math.abs(predicted - steadyShop(history.length)) / steadyShop(history.length) < 0.03);
 });
 
-test('une valeur manquante ou non numérique ne lève aucune erreur', () => {
-  // NaN rend NaN, null est compté comme zéro, "1000" rend NaN : aucun ne lève.
-  for (const bad of [NaN, null, '1000']) {
-    assert.throws(() => forecast([...HISTORY.slice(0, -1), bad]));
+test('production : une valeur manquante ou non numérique est refusée', () => {
+  // Commentaire : « A missing week must be refused, not averaged into a NaN forecast or counted as zero ».
+  for (const bad of [NaN, null, '1000', Infinity, undefined]) {
+    assert.throws(() => forecast([...HISTORY.slice(0, -1), bad]), { name: 'TypeError', message: /finite number/ });
   }
 });
 
-test('une semaine fermée chaque année fait tomber la prévision à NaN', () => {
-  // Fermeture annuelle la dernière semaine de l'année : coefficient nul, 0 / 0 dans la fenêtre.
+test('production : une semaine fermée chaque année ne fait pas tomber la prévision', () => {
+  // Commentaire : « A week closed every year has a zero coefficient and says nothing
+  // about the level ». La dernière semaine de l'historique est fermée : le niveau
+  // est la moyenne des quatre semaines ouvertes qui la précèdent.
   const history = Array.from({ length: 3 * SEASON }, (_, week) => (week % SEASON === 51 ? 0 : steadyShop(week)));
-  assert.ok(forecast(history, { horizon: 2 }).every(Number.isFinite));
+  const coefficients = seasonalCoefficients(history, SEASON);
+  assert.equal(coefficients[51], 0);
+  let level = 0;
+  for (let w = 151; w < 155; w += 1) level += history[w] / coefficients[w % SEASON] / 4;
+  const predicted = forecast(history, { horizon: SEASON });
+  assert.ok(predicted.every(Number.isFinite));
+  assert.ok(close(predicted[0], level * coefficients[0], 1e-9));
+  assert.equal(predicted[51], 0);
 });
 
 test('production : un historique entièrement nul prévoit zéro', () => {
@@ -239,6 +254,10 @@ test("production : une fenêtre d'une semaine ne garde que la dernière", () => 
   assert.ok(close(forecast(history, { window: 4 })[0], 1178.571429, 1e-6));
 });
 
-test("window=0 fait la moyenne de tout l'historique, sans erreur", () => {
-  assert.throws(() => forecast(HISTORY, { window: 0 }), RangeError);
+test('production : une fenêtre nulle ou négative est refusée', () => {
+  // Une fenêtre de zéro semaine faisait la moyenne de tout l'historique (slice(-0)).
+  for (const window of [0, -1, -4]) {
+    assert.throws(() => forecast(HISTORY, { window }), { name: 'RangeError', message: /at least one week/ });
+  }
+  assert.equal(forecast(HISTORY, { window: 1 }).length, 1);
 });

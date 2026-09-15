@@ -130,3 +130,44 @@ ajoutés (103 au total).
 - **Les marquages `INFIRMÉ`/`DÉFAUT` en JavaScript** : le modèle `assert.rejects(async () => { … })` passe aussi si le code lève une erreur sans rapport (un `TypeError` d'implémentation). J'ai ajouté `assert.AssertionError` en second argument pour que seul l'échec de l'assertion compte. À porter dans le modèle de la charte.
 - **Les essais en JavaScript seulement** : pour tester leurs affirmations en Python sans recopier les données, le test Python lit les chaînes `input: '…'` du fichier d'essai. La charte pourrait fixer cette pratique.
 - **« Encodage inattendu » pour une entrée numérique** : la charte ne dit pas quoi en faire. J'ai pris valeurs manquantes (`None`, `NaN`, `null`) et nombres en chaîne ; à écrire.
+
+## Tour 2 — contre-épreuve
+
+Après `21c53cd` (corrections du rédacteur, tour 1), qui laissait la suite rouge
+sur trois tests. Tests : n0.py 26, n0.js 25 (inchangés en nombre), n1.py 26 → 29,
+n1.js 26 → 30 ; 7 tests ajoutés, 2 marqués et 3 rouges réécrits sur les
+nouvelles phrases, 12 renommés `production : …` ou sur la nouvelle phrase, aucun
+retiré. **Plus aucun marquage.** `node scripts/test-snippets.mjs
+forecast-weekly-sales` : vert.
+
+### Lignes « À retester »
+
+| # | Ligne du tour 1 | Désormais | Test |
+|---|---|---|---|
+| 2 | N0 breaking_point : « elle y reste tant que le recul continue » | démontrée (py, js) : seize prévisions glissantes > 1,2 × le réalisé pendant le recul ; témoin ajouté : si le niveau se stabilise après huit semaines de recul, chaque prévision dès la quatrième semaine est < 1,15 × le réalisé | test_point_de_rupture_la_prevision_reste_au_dessus_tant_que_le_recul_continue |
+| 17 | N0 docstring : « `window` trades reactivity for stability » | démontrée (py, js) par le test de #16 (fenêtre courte plus réactive, longue plus stable) | test_une_fenetre_courte_reagit_vite_une_fenetre_longue_est_plus_stable |
+| 29 | N0 semaine manquante ; commentaire « A missing week must be refused, not averaged into a NaN forecast (or counted as zero) » | démontrée : py `NaN`, `inf` → `ValueError` « finite number » (`None`, `"1000"` → `TypeError`, #28) ; js `NaN`, `null`, `"1000"`, `Infinity`, `undefined` → `TypeError` « finite number » | test_production_une_semaine_manquante_nan_ou_infinie_est_refusee / production : une valeur manquante ou non numérique est refusée |
+| 30 | N0 semaine fermée chaque année ; commentaire « A week closed every year has a zero coefficient and says nothing about the level » | démontrée (py, js) : coefficient 51 nul ; la dernière semaine de l'historique est fermée, le niveau est exactement la moyenne désaisonnalisée des semaines 151 à 154 ; prévision finie sur un cycle, et nulle pour la semaine fermée | test_production_une_semaine_fermee_chaque_annee_ne_fait_pas_tomber_la_prevision |
+| 33 | N0 `window < 1` | démontrée (py, js) : 0, -1, -4 refusés (« at least one week ») ; témoin : 1 accepté | test_production_une_fenetre_nulle_ou_negative_est_refusee |
+| 45 | N1 docstring py : « Two pairs are enough to place a Christmas peak and a summer dip; a peak only a few weeks wide needs more pairs to reach its full height » | démontrée (py, js) : deux paires placent le pic (semaine 49) et le creux (32) ; hauteur 1 239 à deux paires, 1 325 à quatre, 1 362 à six pour un pic à 1 350 ; erreur 36,5 > 14,6 > 7,8 | test_deux_paires_placent_un_pic_de_noel_et_un_creux_d_ete, test_un_pic_de_quelques_semaines_demande_plus_de_paires_pour_atteindre_toute_sa_hauteur |
+| 47 | N1 docstring : « it is the growth per cycle, per year with the default 52-week season » | démontrée (py, js) : une unité par semaine donne 13 avec une saison de 13 semaines, 52 avec la saison par défaut | test_le_coefficient_est_la_croissance_par_cycle_donc_par_an_avec_la_saison_de_52_semaines |
+| 58 | verdict_rationale : « la même prévision, à l'erreur d'arrondi près » | démontrée (py, js), écart < 1e-9 ; renommé | test_sur_une_serie_plate_n0_et_n1_rendent_la_meme_prevision_a_l_erreur_d_arrondi_pres |
+| 60 | N1 escalate_when : « réajuster sur la période qui suit la rupture dès qu'elle couvre un cycle complet » | démontrée (py, js) sur une série de quatre ans, rupture au début de la quatrième année : la prévision réajustée sur 52 semaines est à 2,6 % du réalisé (1 180,8 pour 1 212,4), l'ajustement sur tout l'historique à 6,8 %. Série et bornes changées : l'ancien test réajustait sur vingt semaines, désormais refusées ; la borne « quatre fois plus près » devient « deux fois » | test_reajuster_sur_un_cycle_complet_apres_la_rupture_rapproche_la_prevision |
+| 61 | N1 escalate_when : « puis relire le coefficient de croissance » | démontrée (py, js) : 138,8 lu pour +145,6 (à 5 %) | test_apres_reajustement_sur_un_cycle_complet_le_coefficient_de_croissance_se_relit |
+| 61 | N1 escalate_when : « Plus tôt, l'extrait refuse l'ajustement : sur vingt semaines, la tendance et la saison se confondent, et le coefficient de croissance ne se relit plus » | démontrée (py, js) : `fit` refuse les vingt semaines ; les mêmes moindres carrés résolus hors de l'extrait (numpy en Python, équations normales et Gauss écrites dans le test JavaScript) lisent -7 759,7 par an | test_sur_vingt_semaines_l_extrait_refuse_et_la_tendance_se_confond_avec_la_saison |
+| 67 | N1 entrée vide | démontrée (py, js) : refus nommé « fewer weeks » | test_production_une_entree_vide_est_refusee_par_une_erreur_nommee |
+| 69 | N1 semaine manquante | démontrée : py `None`, `NaN`, `inf` → `ValueError` « finite number » ; js `NaN`, `null`, `Infinity`, `"1000"` → `TypeError` | test_production_une_semaine_manquante_est_refusee |
+| 70 | N1 moins d'un cycle ; docstring « Less than one full cycle of history cannot tell the trend from the season, so it is refused » | démontrée (py, js) : 6, 10, 20, 26, 51 semaines refusées (« less than one full cycle »), 52 acceptées ; le cycle est celui qu'on passe (13 acceptées, 12 refusées pour une saison de 13). Le test d'origine « six semaines acceptées » décrivait le défaut réparé : réécrit. L'ancien test de production (`try/continue`) passait aussi sur un refus ; il exige désormais le refus nommé | test_refuse_moins_d_un_cycle_complet_et_accepte_exactement_un_cycle, test_production_un_historique_de_moins_d_un_cycle_ne_rend_pas_une_croissance_absurde |
+| — | garde « fewer weeks than features » encore atteignable | démontrée (py, js) : 52 semaines et 30 paires (62 variables) → « fewer weeks » ; témoin : 25 paires (52 variables) accepté | test_refuse_un_historique_plus_court_que_le_nombre_de_variables |
+| — | essai, libellé de refus « Refusé : historique trop court » / « Refused: history too short » | démontrée (js) : cinq semaines → message « fewer weeks » de l'extrait, 51 semaines → « less than one full cycle » ; témoin : 52 semaines affichent le tableau | essai : un historique refusé s'affiche « historique trop court », avec le message de l'extrait |
+
+### Phrases nouvelles ou modifiées, non testables
+
+| # | Où | Affirmation (citée) | Statut |
+|---|---|---|---|
+| T2-1 | scenario | « Par défaut, la même question posée deux fois peut recevoir deux réponses : la documentation d'un fournisseur le dit en toutes lettres » | non testable : pas de N3, fait sourcé (OpenAI Cookbook) |
+| T2-2 | scenario | « tient dans les deux extraits ci-dessous, se rejoue à l'identique, et livre au passage un coefficient qui se relit » | « se rejoue à l'identique » et « un coefficient qui se relit » démontrés (test_n0_est_deterministe, test_n1_est_deterministe, test_relit_la_croissance_annuelle_dans_la_serie) ; « tient dans » : appréciation |
+| T2-3 | N2 unavailable_reason | DeepAR « tire sa force de l'apprentissage sur un grand nombre de séries apparentées » ; « Le modèle serait à entraîner, à conserver et à réentraîner » | non testable : pas de code N2 ; « cent cinquante-six nombres, six coefficients » reste démontré (test_six_coefficients_lisibles_un_par_un_sur_cent_cinquante_six_nombres) |
+| T2-4 | N3 unavailable_reason | « Par défaut, un fournisseur ne garantit pas la même réponse d'un appel à l'autre » | non testable : pas de code N3, fait sourcé |
+| T2-5 | N1 docstring js | « short enough that no dependency is worth it » | « no dependency » démontré (aucun import) ; plus aucun nombre de lignes affirmé, aucun test n'en épingle |
+| T2-6 | N0 docstrings | « it still carries most small businesses », « short enough to read in one sitting » retirés | plus d'affirmation (#10, #11 clos) |

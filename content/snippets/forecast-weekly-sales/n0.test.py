@@ -62,10 +62,18 @@ def test_point_de_rupture_une_rupture_de_tendance_laisse_la_prevision_loin_au_de
 
 
 def test_point_de_rupture_la_prevision_reste_au_dessus_tant_que_le_recul_continue():
-    """« — elle y restera. » Huit semaines de recul de plus, huit prévisions trop hautes d'un quart."""
+    """
+    « — elle y reste tant que le recul continue. » Seize semaines de recul de
+    plus, seize prévisions trop hautes de plus de vingt pour cent. Témoin : si le
+    niveau se stabilise après les huit semaines de recul, l'écart retombe sous
+    quinze pour cent dès la quatrième semaine.
+    """
     series = [steady_shop(w) if w < 148 else steady_shop(w) * 0.95 ** (w - 147) for w in range(172)]
     for end in range(156, 172):
         assert forecast(series[:end])[0] > 1.2 * series[end]
+    stable = [steady_shop(w) if w < 148 else steady_shop(w) * 0.95 ** min(w - 147, 8) for w in range(172)]
+    for end in range(160, 172):
+        assert forecast(stable[:end])[0] < 1.15 * stable[end]
 
 
 def test_point_de_rupture_une_semaine_de_promotion_gonfle_la_prevision_suivante():
@@ -264,19 +272,28 @@ def test_production_une_valeur_non_numerique_leve_une_erreur_de_type():
         forecast(HISTORY[:-1] + ["1000"])
 
 
-def test_defaut_une_semaine_manquante_ne_rend_pas_une_prevision_nan():
-    try:
-        predicted = forecast(HISTORY[:-1] + [float("nan")])
-    except ValueError:
-        return
-    assert all(math.isfinite(x) for x in predicted)
+def test_production_une_semaine_manquante_nan_ou_infinie_est_refusee():
+    """commentaire : « A missing week must be refused, not averaged into a NaN forecast »."""
+    for missing in (float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="finite number"):
+            forecast(HISTORY[:-1] + [missing])
 
 
-def test_defaut_une_semaine_fermee_chaque_annee_ne_fait_pas_tomber_la_prevision():
-    # Fermeture annuelle la dernière semaine de l'année : coefficient nul.
+def test_production_une_semaine_fermee_chaque_annee_ne_fait_pas_tomber_la_prevision():
+    """
+    commentaire : « A week closed every year has a zero coefficient and says
+    nothing about the level ». La dernière semaine de l'historique est fermée :
+    le niveau est la moyenne des quatre semaines ouvertes qui la précèdent, et
+    la prévision de la semaine fermée vaut zéro.
+    """
     history = [0.0 if week % SEASON == 51 else steady_shop(week) for week in range(3 * SEASON)]
-    predicted = forecast(history, horizon=2)
+    coefficients = seasonal_coefficients(history, SEASON)
+    assert coefficients[51] == 0
+    level = sum(history[w] / coefficients[w % SEASON] for w in range(151, 155)) / 4
+    predicted = forecast(history, horizon=SEASON)
     assert all(math.isfinite(x) for x in predicted)
+    assert predicted[0] == pytest.approx(level * coefficients[0], rel=1e-12)
+    assert predicted[51] == 0
 
 
 def test_production_un_historique_entierement_nul_prevoit_zero():
@@ -291,6 +308,9 @@ def test_production_une_fenetre_d_une_semaine_ne_garde_que_la_derniere():
     assert forecast(history, window=4)[0] == pytest.approx(1178.571429, abs=1e-6)
 
 
-def test_defaut_une_fenetre_nulle_est_refusee():
-    with pytest.raises(ValueError):
-        forecast(HISTORY, window=0)
+def test_production_une_fenetre_nulle_ou_negative_est_refusee():
+    """Une fenêtre de zéro semaine faisait la moyenne de tout l'historique (`[-0:]`)."""
+    for window in (0, -1, -4):
+        with pytest.raises(ValueError, match="at least one week"):
+            forecast(HISTORY, window=window)
+    assert len(forecast(HISTORY, window=1)) == 1

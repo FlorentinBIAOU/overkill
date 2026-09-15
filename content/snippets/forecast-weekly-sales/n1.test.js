@@ -46,6 +46,8 @@ const argmin = (values) => values.indexOf(Math.min(...values));
 const HISTORY = Array.from({ length: 3 * SEASON }, (_, week) => growingShop(week));
 const NEXT_WEEK_IN_TRUTH = growingShop(3 * SEASON);
 const REGIME_CHANGE = HISTORY.map((value, week) => (week >= 136 ? value * 0.7 : value));
+// Quatre ans, rupture au début de la quatrième année : un cycle complet d'après rupture.
+const REGIME_CHANGE_ONE_CYCLE_AFTER = Array.from({ length: 4 * SEASON }, (_, week) => growingShop(week) * (week >= 156 ? 0.7 : 1));
 
 // ---------------------------------------------------------------------------
 // Point de rupture
@@ -117,6 +119,13 @@ test('relit la croissance annuelle dans la série', () => {
   assert.ok(close(fit(HISTORY).coefficients[1], 208, 2));
 });
 
+test('le coefficient est la croissance par cycle, donc par an avec la saison de 52 semaines', () => {
+  // docstring : « it is the growth per cycle, per year with the default 52-week season ».
+  const series = Array.from({ length: 104 }, (_, w) => w + 10 * Math.sin((2 * Math.PI * w) / 13));
+  assert.ok(close(fit(series, { seasonLength: 13 }).coefficients[1], 13, 1e-6));
+  assert.ok(close(fit(Array.from({ length: 104 }, (_, w) => w)).coefficients[1], 52, 1e-6));
+});
+
 test('estime la pente que N0 ignore', () => {
   // Sur la même série qui grandit, N0 se trompe toujours par défaut ; N1 des deux côtés, et moins.
   const errorsN0 = [];
@@ -135,7 +144,7 @@ test('prolonge la tendance sur six mois', () => {
   assert.ok(sixMonths.at(-1) - sixMonths[0] > 80);
 });
 
-test('sur une série plate N0 et N1 rendent le même nombre', () => {
+test('sur une série plate N0 et N1 rendent la même prévision, à l’erreur d’arrondi près', () => {
   const flat = new Array(2 * SEASON).fill(750);
   const model = fit(flat);
   assert.ok(close(forecast(model)[0], forecastN0(flat)[0], 1e-9));
@@ -143,9 +152,23 @@ test('sur une série plate N0 et N1 rendent le même nombre', () => {
 });
 
 test('refuse un historique plus court que le nombre de variables', () => {
+  // Garde « fewer weeks of history than features », atteinte en premier : cinq
+  // semaines pour six variables, ou un cycle quand harmonics demande 62 variables.
   assert.throws(() => fit(HISTORY.slice(0, 5)), { name: 'RangeError', message: /fewer weeks/ });
-  // Exactement six semaines, six variables : accepté.
-  assert.equal(fit(HISTORY.slice(0, 6)).coefficients.length, 6);
+  assert.throws(() => fit(HISTORY.slice(0, SEASON), { harmonics: 30 }), { name: 'RangeError', message: /fewer weeks/ });
+  // Témoin : 25 paires, 52 variables pour 52 semaines, accepté.
+  assert.equal(fit(HISTORY.slice(0, SEASON), { harmonics: 25 }).coefficients.length, 52);
+});
+
+test('refuse moins d’un cycle complet et accepte exactement un cycle', () => {
+  // docstring : « Less than one full cycle of history cannot tell the trend from
+  // the season, so it is refused ». Six semaines passaient ; désormais refusées.
+  for (const weeks of [6, 10, 20, 26, SEASON - 1]) {
+    assert.throws(() => fit(HISTORY.slice(0, weeks)), { name: 'RangeError', message: /less than one full cycle/ });
+  }
+  assert.equal(fit(HISTORY.slice(0, SEASON)).coefficients.length, 6);
+  assert.equal(fit(HISTORY.slice(0, 13), { seasonLength: 13 }).coefficients.length, 6);
+  assert.throws(() => fit(HISTORY.slice(0, 12), { seasonLength: 13 }), { name: 'RangeError', message: /less than one full cycle/ });
 });
 
 test('la ligne de la matrice est tout le modèle', () => {
@@ -192,21 +215,27 @@ function peakAndDip(harmonics, weeks = 156) {
   return { ahead, error };
 }
 
-test("deux paires dessinent un pic de Noël et un creux d'été", () => {
+test("deux paires placent un pic de Noël et un creux d'été", () => {
+  // Docstring Python : « Two pairs are enough to place a Christmas peak and a summer dip ».
   const { ahead } = peakAndDip(2);
   // L'horizon commence en position 0 du cycle : l'indice est la semaine de l'année.
   assert.ok(argmax(ahead) >= 47 && argmax(ahead) <= 51);
   assert.ok(argmin(ahead) >= 27 && argmin(ahead) <= 33);
 });
 
-test("INFIRMÉ : au-delà de deux paires on commence à dessiner le bruit ; sur un pic de Noël de trois semaines, quatre paires divisent l'erreur par 2,5", async () => {
-  await assert.rejects(async () => {
-    assert.ok(peakAndDip(4).error >= peakAndDip(2).error);
-  }, assert.AssertionError);
+test('un pic de quelques semaines demande plus de paires pour atteindre toute sa hauteur', () => {
+  // Docstring Python : « a peak only a few weeks wide needs more pairs to reach its
+  // full height ». Pic de trois semaines à 1 350 : 1 239 à deux paires, 1 325 à
+  // quatre, atteint à six ; erreur moyenne 36,5, 14,6, 7,8.
+  const [two, four, six] = [2, 4, 6].map((h) => peakAndDip(h));
+  assert.ok(Math.max(...two.ahead) < 1350 - 80);
+  assert.ok(Math.max(...two.ahead) < Math.max(...four.ahead) && Math.max(...four.ahead) < Math.max(...six.ahead));
+  assert.ok(Math.max(...six.ahead) > 1350 - 20);
+  assert.ok(six.error < four.error && four.error < two.error);
 });
 
 test("n1 n'emploie aucune dépendance", () => {
-  // Docstring JS : « vingt lignes qui ne valent aucune dépendance ».
+  // Docstring JS : « short enough that no dependency is worth it ». Plus aucun nombre de lignes n'est affirmé.
   const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /^\s*import\s|require\(/m);
 });
@@ -226,18 +255,46 @@ test("un ajustement et une prévision prennent moins d'une milliseconde", () => 
   assert.ok(Math.min(...runs) < 1);
 });
 
-test('réajuster après la rupture rapproche la prévision', () => {
-  const truth = growingShop(156) * 0.7;
-  const refit = forecast(fit(REGIME_CHANGE.slice(-20)))[0];
-  assert.ok(Math.abs(refit - truth) / truth < 0.07);
-  assert.ok(Math.abs(refit - truth) < Math.abs(forecast(fit(REGIME_CHANGE))[0] - truth) / 4);
+test('réajuster sur un cycle complet après la rupture rapproche la prévision', () => {
+  // escalate_when : « réajuster sur la période qui suit la rupture dès qu'elle couvre
+  // un cycle complet ». Série et bornes refaites : vingt semaines sont refusées.
+  const truth = growingShop(4 * SEASON) * 0.7;
+  const refit = forecast(fit(REGIME_CHANGE_ONE_CYCLE_AFTER.slice(-SEASON)))[0];
+  const whole = forecast(fit(REGIME_CHANGE_ONE_CYCLE_AFTER))[0];
+  assert.ok(Math.abs(refit - truth) / truth < 0.03);
+  assert.ok(Math.abs(refit - truth) < Math.abs(whole - truth) / 2);
 });
 
-test("INFIRMÉ : escalate_when dit de relire le coefficient de croissance après réajustement ; sur les vingt semaines d'après la rupture il vaut -7760 par an, pour +146", async () => {
-  await assert.rejects(async () => {
-    const growth = fit(REGIME_CHANGE.slice(-20)).coefficients[1];
-    assert.ok(growth > 0.5 * 145.6 && growth < 1.5 * 145.6);
-  }, assert.AssertionError);
+test('après réajustement sur un cycle complet, le coefficient de croissance se relit', () => {
+  // escalate_when : « puis relire le coefficient de croissance » : 138,8 lu pour +145,6.
+  const growth = fit(REGIME_CHANGE_ONE_CYCLE_AFTER.slice(-SEASON)).coefficients[1];
+  assert.ok(close(growth, 138.8, 0.1));
+  assert.ok(growth > 0.9 * 145.6 && growth < 1.1 * 145.6);
+});
+
+test('sur vingt semaines, l’extrait refuse, et la tendance se confond avec la saison', () => {
+  // escalate_when : « Plus tôt, l'extrait refuse l'ajustement : sur vingt semaines, la
+  // tendance et la saison se confondent, et le coefficient de croissance ne se relit
+  // plus ». Le refus, puis la raison : les mêmes moindres carrés, résolus ici hors de
+  // l'extrait (équations normales, Gauss), lisent -7 760 par an pour +145,6.
+  const recent = REGIME_CHANGE.slice(-20);
+  assert.throws(() => fit(recent), { name: 'RangeError', message: /less than one full cycle/ });
+  const design = recent.map((_, w) => calendarFeatures(w, SEASON, 2));
+  const rows = design[0].map((_, i) => [
+    ...design[0].map((__, j) => sum(design.map((r) => r[i] * r[j]))),
+    sum(design.map((r, w) => r[i] * recent[w])),
+  ]);
+  for (let c = 0; c < 6; c += 1) {
+    const p = rows.slice(c).reduce((best, r, k) => (Math.abs(r[c]) > Math.abs(rows[best][c]) ? c + k : best), c);
+    [rows[c], rows[p]] = [rows[p], rows[c]];
+    for (let r = 0; r < 6; r += 1) {
+      if (r !== c) {
+        const f = rows[r][c] / rows[c][c];
+        for (let k = c; k <= 6; k += 1) rows[r][k] -= f * rows[c][k];
+      }
+    }
+  }
+  assert.ok(close(rows[1][6] / rows[1][1], -7759.68, 0.5));
 });
 
 test("l'essai lit la croissance des boulangeries et refuse cinq semaines", () => {
@@ -250,12 +307,26 @@ test("l'essai lit la croissance des boulangeries et refuse cinq semaines", () =>
   assert.throws(() => fit(five), { name: 'RangeError', message: /fewer weeks of history than features/ });
 });
 
+test('essai : un historique refusé s’affiche « historique trop court », avec le message de l’extrait', () => {
+  // Libellé de refus (tour 2) : « Refusé : historique trop court » / « Refused: history too short ».
+  const [up, , five] = essaiHistories();
+  const cinq = essai.run(five.join(' '), 'fr');
+  assert.equal(cinq.verdict.label, 'Refusé : historique trop court');
+  assert.match(cinq.verdict.detail, /fewer weeks of history than features/);
+  const unCycleMoinsUne = essai.run(up.slice(0, SEASON - 1).join(' '), 'en');
+  assert.equal(unCycleMoinsUne.verdict.label, 'Refused: history too short');
+  assert.match(unCycleMoinsUne.verdict.detail, /less than one full cycle/);
+  // Témoin : un cycle complet est ajusté et affiché.
+  assert.equal(essai.run(up.slice(0, SEASON).join(' '), 'fr').rows.rows.length, 8);
+});
+
 // ---------------------------------------------------------------------------
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('une entrée vide lève TypeError (design[0]) au lieu du refus nommé', () => {
-  assert.throws(() => fit([]), RangeError);
+test('production : une entrée vide est refusée par une erreur nommée', () => {
+  // Le nombre de variables est calculé avant la matrice : plus de TypeError sur design[0].
+  assert.throws(() => fit([]), { name: 'RangeError', message: /fewer weeks/ });
 });
 
 test('production : trois cents ans de semaines terminent vite et juste', () => {
@@ -267,22 +338,17 @@ test('production : trois cents ans de semaines terminent vite et juste', () => {
   assert.ok(close(predicted, 63259.968239, 1e-5));
 });
 
-test('une semaine manquante rend une prévision NaN (NaN) ou fausse (null compté zéro), sans erreur', () => {
-  for (const missing of [NaN, null]) {
-    assert.throws(() => fit([...HISTORY.slice(0, -1), missing]));
+test('production : une semaine manquante est refusée', () => {
+  // Commentaire : « A missing week must be refused: null would be multiplied as zero, NaN would spread ».
+  for (const missing of [NaN, null, Infinity, '1000']) {
+    assert.throws(() => fit([...HISTORY.slice(0, -1), missing]), { name: 'TypeError', message: /finite number/ });
   }
 });
 
-test("dix semaines d'historique sont acceptées et rendent une croissance de +899 850 par an pour 208", () => {
+test('production : un historique de moins d’un cycle ne rend pas une croissance absurde', () => {
+  // Dix semaines rendaient +899 850 par an pour 208 : elles sont refusées, par une erreur nommée.
   for (const weeks of [10, 20, 26]) {
-    let model;
-    try {
-      model = fit(HISTORY.slice(0, weeks));
-    } catch (error) {
-      if (error instanceof RangeError) continue;
-      throw error;
-    }
-    assert.ok(model.coefficients[1] > 104 && model.coefficients[1] < 312);
+    assert.throws(() => fit(HISTORY.slice(0, weeks)), { name: 'RangeError', message: /less than one full cycle/ });
   }
 });
 
