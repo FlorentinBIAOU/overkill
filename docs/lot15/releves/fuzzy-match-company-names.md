@@ -1,5 +1,16 @@
 # fuzzy-match-company-names — relevé du testeur
 
+> **Contre-épreuve du tour 1 : deux marquages `DÉFAUT` restent, dans les deux langages.**
+> 1. `test_defaut_une_forme_juridique_en_tete_de_nom_ne_fusionne_pas` — défaut #28
+>    traité pour « spa » seulement : « Sa Nostra » / « Nostra » et « NV Energy » /
+>    « Energy Ltd » valent toujours 1,0.
+> 2. `test_defaut_deux_noms_qui_ne_different_que_par_une_voyelle_devanagari_ou_thai_ne_sont_pas_identiques`
+>    — nouveau, issu de la réparation #27 : retirer toutes les marques de catégorie
+>    `M` efface les voyelles du devanagari et du thaï ; « कमल उद्योग » / « कोमल उद्योग »
+>    et « กินดี » / « กันดี » valent 1,0.
+>
+> Aucune correction du rédacteur n'est infirmée.
+
 Passe 1 du lot 15. Tests : `content/snippets/fuzzy-match-company-names/n{0,1,2}.test.{py,js}`.
 Un test nommé ci-dessous existe dans les deux langages, sauf mention « py seul » ou « js seul ».
 
@@ -128,3 +139,58 @@ Marquages : N0 — 3 `INFIRMÉ` et 2 `DÉFAUT` dans chaque langage ; N1 — 1 `I
 - **Essai contre fiche** : l'essai et la fiche ont dit deux choses différentes du même exemple (#4). La charte pourrait exiger que le `why` d'un essai reprenne mot pour mot le point de rupture, ou soit testé comme lui.
 - **Double qui fait le travail de l'extrait** : `FakeEncoder` met en minuscules et découpe les mots ; un test N2 s'appuyait dessus pour conclure que « l'encodeur replie la casse ». La charte devrait dire qu'un test d'un niveau `stubbed` n'a pas le droit de conclure sur une propriété que le double fournit.
 - **Unités UTF-16** : même remarque que pour la fiche précédente ; tout extrait JS qui découpe une chaîne par indices diverge de Python hors du plan de base. Un cas emoji devrait figurer dans « encodage inattendu » avec une valeur épinglée des deux côtés.
+
+## Tour 1 — contre-épreuve
+
+Tests repris après `ac02584`. `node scripts/test-snippets.mjs fuzzy-match-company-names` : vert.
+Compte : n0 26 → 32 tests par langage ; n1 21 → 22 (py), 22 → 23 (js) ; n2 15 → 16 (py), 15 (js).
+
+### « À retester », ligne par ligne
+
+| # | Ligne du rédacteur | Statut désormais | Test |
+|---|---|---|---|
+| R1 | liste des formes sans `spa` ; « Nordic Spa » garde « spa » | démontrée : `ltd`, `gmbh`, `llc`, `bv` retirés ; `spa` absent ; `normalise("Nordic Spa") == "nordic spa"` ; 0,92 contre « Nordic SA » ; témoin « Nordic SA » / « Nordic » à 1,0 | test_la_liste_des_formes_juridiques_est_francaise_et_etrangere, test_spa_n_est_pas_une_forme_et_nordic_spa_ne_fusionne_pas_avec_nordic_sa |
+| R2 | « Ø », « ß » gardés, non repliés ; Ørsted/Orsted 0,8889 | démontrée dans les deux langages | test_production_une_lettre_sans_decomposition_est_gardee_pas_repliee |
+| R3 | essai « trois lettres sur quatre » | démontrée : texte fr/en de l'essai, et {s, n, f} | test_l_essai_sanofi_partage_avec_sncf_trois_lettres_sur_quatre |
+| R3 | commentaire « a tenth of the score Jaro withheld for each of them that both names share » | démontrée : rendu exact de 0,1 × k pour k = 1 à 4 caractères communs en tête, plafonné à 0,4 pour 5 et 6 | test_winkler_rend_un_dixieme_du_score_retenu_par_caractere_commun_en_tete |
+| R3 | docstring « less than half the length […] at most that half, minus one » | démontrée : « abcdef », jumeau à distance 2 trouvé (0,444), à distance 3 non (0) | test_la_fenetre_vaut_la_moitie_de_la_longueur_moins_un |
+| R3 | retrait des trois tests `INFIRMÉ` | fait : remplacés par les trois tests ci-dessus | — |
+| R4 | renommer les tests démarqués | fait : `production : deux noms non latins différents restent sous le seuil` (0,4365 et 0,0, py/js) ; le test « Nordic Spa » est fondu dans R1 ; n1 JS : `la même arithmétique que scikit-learn, hors du plan multilingue de base aussi` | — |
+| R5 | n2 JS : `@huggingface/transformers`, `dtype: 'fp32'` | démontrée par un double du module (crochet de résolution `module.register`) : `pipeline('feature-extraction', 'Xenova/…', { dtype: 'fp32' })` appelé une fois, extracteur appelé avec `{ pooling: 'mean' }` pour le registre puis pour chaque requête, `.tolist()` lu. Le cas « module absent » n'est plus testé en JS (le crochet s'applique à tout le fichier) ; il reste en Python | l'encodeur est injecté, et par défaut c'est le vrai, chargé une fois en pleine précision |
+| R6 | noms grecs, arabes, chinois ; `jaroWinkler('𠀀𠀁x', '𠀀𠀁y')` | démontrée, mêmes valeurs py/js : identiques à 1,0 ; différents 0,5556 (grec), 0,5881 (arabe), 0,7333 (chinois, sous le seuil) ; 0,8222 | test_production_grec_arabe_chinois_identiques_a_un_et_differents_sous_le_seuil, test_production_des_caracteres_hors_du_plan_de_base_comptent_pour_un |
+| R6 | formes homographes restantes (« Sa Nostra ») | **DÉFAUT maintenu** : jugé réaliste. « Sa Nostra » (caisse d'épargne des Baléares) normalise en « nostra » ; « NV Energy » (distributeur d'électricité du Nevada) en « energy » : 1,0 contre « Nostra », « Energy Ltd ». Le retrait porte sur tout mot du nom, pas sur la fin | test_defaut_une_forme_juridique_en_tete_de_nom_ne_fusionne_pas |
+| R7 | n1 JS « 🍞🥐 Boulangerie » | démontrée : 0,76304806389 dans les deux langages (arrondi à 12 décimales) | la même arithmétique que scikit-learn, hors du plan multilingue de base aussi / test_valeurs_epinglees_pour_le_jumeau_javascript |
+| R8 | N2 breaking_point : ne plus présenter le test du double comme point de rupture | fait : `le double seul : une autre boulangerie passe devant le même nom sous sa forme courte` (0,75 contre 0,577) et `le double seul : la paire de sigles marque zéro` | — |
+| R9 | essai, libellé cas 2 et `why` cas 4 | démontrée : « tout reste au-dessus du seuil » (≥ 0,85 pour les deux variantes) ; `why` voir R3 | test_l_essai_trois_premiers_cas, test_l_essai_sanofi_… |
+
+### Phrases nouvelles ou modifiées
+
+| Où | Phrase | Statut | Test |
+|---|---|---|---|
+| N0 docstring py/js + doc.fr | « which suits names that differ at the tail: a form, a city, a scrap of punctuation after the same brand » | démontrée : ville en queue 0,9565, « (ex-Dupuis) » en queue 0,9286 ; témoin : la ville en tête 0,7794, sous le seuil ; la forme, voir #10 | test_jaro_winkler_recompense_un_debut_commun |
+| N0 commentaire py/js | « Letters and digits of every script: a Cyrillic or Japanese name is kept, not emptied » | démontrée (R4, R6) ; voir le défaut devanagari ci-dessous | test_production_deux_noms_non_latins_… |
+| N0 commentaire js | « Code points, as Python counts them, not UTF-16 units » | démontrée (R6) | test_production_des_caracteres_hors_du_plan_de_base_comptent_pour_un |
+| N0 docstring js | « the algorithm is thirty lines » | démontrée : `jaro` + `jaroWinkler` ≤ 30 lignes de code. Test gardé : c'est une phrase de la fiche, pas la limite des quarante lignes de la charte | n0 n'emploie aucune dépendance, et l'algorithme tient en trente lignes |
+| N1 commentaire js | « Code points, as scikit-learn counts them: an emoji is one character » | démontrée (R7) | idem R7 |
+| N2 docstring py/js + doc.fr | « The encoder maps each name to a vector built for semantic search, where closeness is meant to follow meaning […] Whether it brings that pair together, nothing here measures. » | non testable : propriété du modèle réel, absent | — |
+| N2 docstring py/js + doc.fr | « model weights to download and keep, a process that holds them in memory » | démontrée pour la plomberie : l'encodeur par défaut est chargé une fois (`SentenceTransformer(MODEL_NAME)` en py, `pipeline(...)` en js, doublés), gardé dans l'index, et réutilisé par chaque requête | test_par_defaut_sentence_transformers_est_charge_une_fois_et_garde_pour_les_requetes ; l'encodeur est injecté, et par défaut c'est le vrai, chargé une fois en pleine précision |
+| N2 docstring py/js + doc.fr | « a score that cannot be explained fragment by fragment, as N1's can » | démontrée pour N1 : le score « Boulangerie Dupont » → « Boulangerie Martin SARL » (0,467) est la somme de 33 contributions positives, une par fragment partagé, toutes tirées du mot « boulangerie » ; même somme en JS. Pour N2, non testable (encodeur réel) | test_le_score_s_explique_fragment_par_fragment (n1) |
+| N2 docstring py/js + doc.fr | « vectors from two models are not interchangeable » | non testable : propriété des modèles réels (source : LlamaIndex) | — |
+| N2 commentaire js | « Full precision, the weights Python loads: a quantised default would give other vectors » | démontrée pour l'option passée (`dtype: 'fp32'`) ; l'égalité des vecteurs py/js est non testable (modèle absent) | idem R5 |
+| N2 breaking_point | « Non mesuré […] Où casse l'encodeur réel, et ce qu'il gagne sur les sigles, rien dans cette fiche ne le mesure » | non testable, par construction ; les deux faits sur le double sont démontrés (R8) | — |
+| N2 escalate_when | « les paires que le score laisse en suspens vont à quelqu'un qui tranche » | non testable : organisation | — |
+| N3 unavailable_reason | « cinquante millions de paires, donc cinquante millions d'appels » ; « le fournisseur pris en exemple ne garantit pas le déterminisme, même à graine fixée » | démontrée par le calcul (49 995 000) ; la seconde, non testable : fournisseur (source : OpenAI Cookbook) | — |
+| verdict_rationale | « chacun de ses scores se vérifie par un test unitaire » | démontrée : chaque score de N0 cité par la fiche et l'essai a son test épinglé | suite n0 |
+| scenario | « On peut soumettre chaque paire à un modèle généraliste » | non testable : possibilité d'usage | — |
+
+### Code modifié : cas de production
+
+- **n0 `normalise`, écritures non latines** : démontrés ci-dessus (cyrillique, grec, arabe, chinois, japonais).
+- **DÉFAUT nouveau — voyelles effacées.** `unicodedata.category(c).startswith("M")` / `\p{M}` retire aussi les voyelles dépendantes (`Mc`, `Mn`) du devanagari, du bengali, du thaï, etc., qui ne sont pas des accents : « कमल उद्योग » (Kamal) et « कोमल उद्योग » (Komal) normalisent tous deux en « कमल उदयग » ; « กินดี » et « กันดี » en « กนด ». Deux sociétés différentes à 1,0, dans les deux langages. Piste : ne retirer que les marques qui suivent une lettre latine, grecque ou cyrillique, ou les seules marques `Mn` après NFD pour ces écritures.
+- **Noms faits seulement d'emoji ou de ponctuation** : « 🍞 » et « 🚗 » valent 1,0 (chaîne vide des deux côtés). Décision du rédacteur, non marqué ; test qui fixe le comportement. Le commentaire du code qualifie ce cas de « worse than useless » pour les noms faits d'une forme : **au relecteur de trancher** si cette décision tient.
+- **Formes pointées, largeur nulle** : décision du rédacteur, non marqué ; 0,9385 et 0,9561, au-dessus du seuil.
+- **n0.js, points de code** : 0,8222 py/js ; noms de 2 470 caractères toujours < 2 s.
+- **n1.js, points de code** : valeurs épinglées sur emoji et lettres mathématiques ; requête de 95 Ko < 2 s.
+- **n2.js, chargement** : voir R5.
+
+### Aucun marquage retiré sans test ; aucun ajouté hors des deux `DÉFAUT` signalés en tête.

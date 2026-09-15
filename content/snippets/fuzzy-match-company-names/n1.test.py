@@ -161,6 +161,23 @@ def test_valeurs_epinglees_pour_le_jumeau_javascript():
     assert round(ranked("İstanbul Ltd")["Boulangerie Martin SARL"], 12) == 0.178184011082
     emoji = build_index(["🍞🥐 Boulangerie Martin", "Boulangerie Dupont", "𝔄𝔅 Conseil"])
     assert round(match(emoji, "𝔄𝔅", top_k=1)[0][1], 12) == 0.475128643566
+    assert round(match(emoji, "🍞🥐 Boulangerie", top_k=1)[0][1], 12) == 0.76304806389
+
+
+def test_le_score_s_explique_fragment_par_fragment():
+    """
+    Docstring N2 : « a score that cannot be explained fragment by fragment, as N1's can ».
+    Le score de N1 est la somme, fragment par fragment, du poids du fragment dans
+    la requête par son poids dans le nom. Mêmes fragments et même somme en JavaScript.
+    """
+    fragments = INDEX["vectoriser"].get_feature_names_out()
+    requete = INDEX["vectoriser"].transform(["Boulangerie Dupont"]).toarray().ravel()
+    nom = INDEX["matrix"][0].toarray().ravel()  # « Boulangerie Martin SARL »
+    parts = {fragments[k]: requete[k] * nom[k] for k in np.flatnonzero(requete * nom)}
+    assert sum(parts.values()) == pytest.approx(ranked("Boulangerie Dupont")["Boulangerie Martin SARL"], abs=1e-12)
+    assert len(parts) == 33 and all(p > 0 for p in parts.values())
+    # L'explication se lit : tout le score partagé vient du mot « boulangerie ».
+    assert all(fragment in " boulangerie " for fragment in parts)
 
 
 # ---------------------------------------------------------------------------

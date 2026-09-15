@@ -50,13 +50,13 @@ def test_point_de_rupture_sanofi_partage_trois_lettres_sur_quatre_avec_le_sigle(
     assert _jaro("sncf", "sanofi") == pytest.approx((m / 4 + m / 6 + (m - 0) / m) / 3)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : l'essai dit que Sanofi « ne partage avec SNCF qu'une première lettre » ; "
-    "il en partage trois (s, n, f), et Jaro les compte toutes",
-)
-def test_l_essai_sanofi_ne_partage_avec_sncf_qu_une_premiere_lettre():
-    assert set("sncf") & set(normalise("Sanofi")) == {"s"}
+def test_l_essai_sanofi_partage_avec_sncf_trois_lettres_sur_quatre():
+    """Essai, cas 4 (why) : « Sanofi, qui partage avec SNCF trois lettres sur quatre »."""
+    source = ESSAI.read_text(encoding="utf-8")
+    assert "qui partage avec SNCF trois lettres sur quatre" in source
+    assert "which shares three of the four letters of SNCF" in source
+    partagees = set("sncf") & set(normalise("Sanofi"))
+    assert partagees == {"s", "n", "f"} and len(partagees) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -102,14 +102,31 @@ def test_un_nom_fait_seulement_d_une_forme_juridique_la_garde():
 
 
 def test_la_liste_des_formes_juridiques_est_francaise_et_etrangere():
+    """Commentaire : « Legal forms, French and foreign. »"""
     assert {"sarl", "sas", "sasu", "eurl", "sci", "snc"} <= LEGAL_FORMS
-    assert {"ltd", "gmbh", "llc", "bv", "spa"} <= LEGAL_FORMS
+    assert {"ltd", "gmbh", "llc", "bv"} <= LEGAL_FORMS
+
+
+def test_spa_n_est_pas_une_forme_et_nordic_spa_ne_fusionne_pas_avec_nordic_sa():
+    """Commentaire : « No "spa": it is also a word of trading names, and dropping it would merge "Nordic Spa" with "Nordic SA". »"""
+    assert "spa" not in LEGAL_FORMS
+    assert normalise("Nordic Spa") == "nordic spa"
+    assert similarity("Nordic Spa", "Nordic SA") == pytest.approx(0.92, abs=1e-9)
+    # Témoin : « SA » est bien retiré, « Nordic SA » et « Nordic » sont un seul nom.
+    assert similarity("Nordic SA", "Nordic") == 1.0
 
 
 def test_jaro_winkler_recompense_un_debut_commun():
-    """« Il récompense un début commun […] la tête est la marque, la queue est une forme, une ville. »"""
+    """
+    « It rewards a shared opening, which suits names that differ at the tail:
+    a form, a city, a scrap of punctuation after the same brand. »
+    """
     assert jaro_winkler("martin", "martix") > jaro_winkler("nartin", "xartin")
-    assert similarity("Boulangerie Martin Lyon", "Boulangerie Martin") > THRESHOLD
+    # Une ville, un reste de ponctuation après la même marque : au-dessus du seuil.
+    assert similarity("Boulangerie Martin Lyon", "Boulangerie Martin") == pytest.approx(0.9565, abs=1e-4)
+    assert similarity("Boulangerie Martin (ex-Dupuis)", "Boulangerie Martin") == pytest.approx(0.9286, abs=1e-4)
+    # Témoin : la même ville en tête coûte bien plus, sous le seuil.
+    assert similarity("Lyon Boulangerie Martin", "Boulangerie Martin") == pytest.approx(0.7794, abs=1e-4)
 
 
 def test_winkler_ne_regarde_que_les_quatre_premiers_caracteres():
@@ -118,14 +135,15 @@ def test_winkler_ne_regarde_que_les_quatre_premiers_caracteres():
     assert jaro_winkler("martinxy", "martinzw") == pytest.approx(base + 4 * PREFIX_SCALING * (1 - base))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le commentaire dit que Winkler ne rend jamais plus d'un dixième du score retenu par Jaro ; "
-    "avec quatre caractères communs il en rend quatre dixièmes",
-)
-def test_winkler_ne_rend_jamais_plus_d_un_dixieme_du_score_retenu():
-    base = _jaro("martinxy", "martinzw")
-    assert jaro_winkler("martinxy", "martinzw") - base <= 0.1 * (1 - base) + 1e-12
+def test_winkler_rend_un_dixieme_du_score_retenu_par_caractere_commun_en_tete():
+    """Commentaire : « gives back a tenth of the score Jaro withheld for each of them that both names share »."""
+    for commun in range(7):
+        a = "abcdefgh"
+        b = a[:commun] + "XYZWVUTS"[commun:]
+        base = _jaro(a, b)
+        rendu = (jaro_winkler(a, b) - base) / (1 - base) if base < 1 else 0.0
+        # Un dixième par caractère commun, et quatre au plus.
+        assert rendu == pytest.approx(min(commun, 4) / 10, abs=1e-12), commun
 
 
 def test_la_fenetre_separe_jaro_d_un_simple_compte_de_lettres():
@@ -133,14 +151,11 @@ def test_la_fenetre_separe_jaro_d_un_simple_compte_de_lettres():
     assert _jaro("abcdefgh", "hgfedcba") == 0.5  # huit lettres communes, quatre trouvées
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring dit « within half the length of the longer name » ; la fenêtre vaut la moitié "
-    "moins un (définition standard), un jumeau à exactement la moitié n'est pas trouvé",
-)
-def test_un_jumeau_a_la_moitie_de_la_longueur_est_trouve():
-    # « abcdef » : six caractères, moitié 3. Le « a » est à distance 3.
-    assert _jaro("abcdef", "xxxaxx") > 0.0
+def test_la_fenetre_vaut_la_moitie_de_la_longueur_moins_un():
+    """_jaro : « its twin sits less than half the length of the longer name away: at most that half, minus one »."""
+    # « abcdef » : six caractères, moitié 3, fenêtre 2.
+    assert _jaro("abcdef", "xxaxxx") == pytest.approx((1 / 6 + 1 / 6 + 1) / 3)  # distance 2 : trouvé
+    assert _jaro("abcdef", "xxxaxx") == 0.0  # distance 3, la moitié : pas trouvé
 
 
 def test_un_nom_vide_ne_rapproche_rien():
@@ -185,8 +200,8 @@ def test_l_ordre_des_mots_coute_presque_tout_a_n0():
 
 def test_l_essai_trois_premiers_cas():
     """
-    « La même maison sous trois statuts » ; « Accents, esperluette, pluriel : rien
-    de tout cela ne compte » ; « Deux boulangeries qui n'ont rien à voir, au-dessus du seuil ».
+    « La même maison sous trois statuts » ; « Accents, esperluette, pluriel : tout
+    reste au-dessus du seuil » ; « Deux boulangeries qui n'ont rien à voir, au-dessus du seuil ».
     """
     statuts, accents, boulangeries, sigle = essai_inputs()
     reference, *candidats = statuts
@@ -218,17 +233,63 @@ def test_production_marque_d_ordre_espace_insecable_nfd_emoji():
     assert similarity("🍞 Boulangerie Martin", "BOULANGERIE MARTIN") == 1.0
 
 
-def test_defaut_deux_noms_non_latins_differents_ne_sont_pas_identiques():
-    assert similarity("Газпром", "Лукойл") < THRESHOLD
-    assert similarity("東京電力", "日立製作所") < THRESHOLD
+def test_production_deux_noms_non_latins_differents_restent_sous_le_seuil():
+    """Commentaire : « Letters and digits of every script: a Cyrillic or Japanese name is kept, not emptied ». Valeurs identiques en JavaScript."""
+    assert normalise("Газпром") == "газпром"
+    assert similarity("Газпром", "Лукойл") == pytest.approx(0.4365, abs=1e-4)
+    assert similarity("東京電力", "日立製作所") == 0.0
 
 
-def test_defaut_une_forme_juridique_homographe_d_un_mot_ordinaire_ne_fusionne_pas():
-    assert similarity("Nordic Spa", "Nordic SA") < 1.0
+def test_production_grec_arabe_chinois_identiques_a_un_et_differents_sous_le_seuil():
+    """Les mêmes nombres en JavaScript."""
+    assert similarity("Αθηναϊκή Ζυθοποιία", "ΑΘΗΝΑΪΚΗ ΖΥΘΟΠΟΙΙΑ") == 1.0
+    assert similarity("Αθηναϊκή Ζυθοποιία", "Ελληνικά Πετρέλαια") == pytest.approx(0.5556, abs=1e-4)
+    assert similarity("شركة أرامكو", "شركة أرامكو") == 1.0
+    assert similarity("أرامكو السعودية", "مصرف الراجحي") == pytest.approx(0.5881, abs=1e-4)
+    assert similarity("東京電力", "東京電力") == 1.0
+    assert similarity("中国石油", "中国银行") == pytest.approx(0.7333, abs=1e-4)
 
 
-def test_production_une_lettre_sans_decomposition_est_perdue():
-    """« Ø » et « ß » ne se décomposent pas : ils sont retirés, pas repliés. Le score reste au-dessus du seuil."""
-    assert normalise("Ørsted") == "rsted"
-    assert normalise("Großmann") == "gro mann"
+@pytest.mark.xfail(
+    strict=True,
+    reason="DÉFAUT : toutes les marques de catégorie M sont retirées, y compris les voyelles du devanagari et du thaï, "
+    "qui ne sont pas des accents ; « कमल उद्योग » et « कोमल उद्योग », « กินดี » et « กันดี » obtiennent 1,0",
+)
+def test_defaut_deux_noms_qui_ne_different_que_par_une_voyelle_devanagari_ou_thai_ne_sont_pas_identiques():
+    assert similarity("कमल उद्योग", "कोमल उद्योग") < 1.0
+    assert similarity("กินดี", "กันดี") < 1.0
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="DÉFAUT (#28, non traité hors « spa ») : une forme est retirée où qu'elle soit dans le nom ; "
+    "« Sa Nostra » et « Nostra », « NV Energy » et « Energy Ltd » obtiennent 1,0",
+)
+def test_defaut_une_forme_juridique_en_tete_de_nom_ne_fusionne_pas():
+    assert similarity("Sa Nostra", "Nostra") < 1.0
+    assert similarity("NV Energy", "Energy Ltd") < 1.0
+
+
+def test_production_un_nom_fait_seulement_d_emoji_ou_de_ponctuation_est_vide():
+    """Non réparé, décision du rédacteur : deux tels noms valent 1,0, comme deux noms vides."""
+    assert normalise("🍞") == "" and normalise("!!!") == ""
+    assert similarity("🍞", "🚗") == 1.0
+
+
+def test_production_une_lettre_sans_decomposition_est_gardee_pas_repliee():
+    """« Ø » et « ß » ne se décomposent pas : ils sont désormais gardés tels quels. Le score reste au-dessus du seuil."""
+    assert normalise("Ørsted") == "ørsted"
+    assert normalise("Großmann") == "großmann"
+    assert similarity("Ørsted", "Orsted") == pytest.approx(0.8889, abs=1e-4)
     assert similarity("Ørsted", "Orsted") > THRESHOLD
+
+
+def test_production_des_caracteres_hors_du_plan_de_base_comptent_pour_un():
+    """Jumeau de la réparation JavaScript : « Code points, as Python counts them ». Même valeur en JavaScript."""
+    assert jaro_winkler("𠀀𠀁x", "𠀀𠀁y") == pytest.approx(0.8222, abs=1e-4)
+
+
+def test_production_formes_pointees_et_largeur_nulle_restent_au_dessus_du_seuil():
+    """Non réparé, décision du rédacteur : « S.A.R.L. » n'est pas retiré, un caractère de largeur nulle coupe le mot."""
+    assert similarity("Boulangerie Martin S.A.R.L.", "Boulangerie Martin") == pytest.approx(0.9385, abs=1e-4)
+    assert similarity("Boulan\u200bgerie Martin", "Boulangerie Martin") == pytest.approx(0.9561, abs=1e-4)

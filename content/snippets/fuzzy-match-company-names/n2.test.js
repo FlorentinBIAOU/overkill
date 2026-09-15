@@ -10,6 +10,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { register } from 'node:module';
 import { FakeEncoder } from '../_harness/fake-model.mjs';
 import { similarity } from './n0.js';
 import { buildIndex as buildIndexN1, match as matchN1 } from './n1.js';
@@ -31,11 +32,25 @@ const makeIndex = () => buildIndex(REGISTER, new FakeEncoder(DIMENSIONS));
 const ranked = async (query) => Object.fromEntries(await match(await makeIndex(), query, REGISTER.length));
 const close = (a, b, tolerance = 1e-12) => Math.abs(a - b) <= tolerance;
 
+// Double du module « @huggingface/transformers » : l'extrait l'importe à
+// l'appel ; ce crochet de résolution le remplace par un module qui délègue à
+// une fonction posée par le test. Surface imitée : `pipeline(tâche, modèle,
+// options)` rend un extracteur, `extracteur(textes, { pooling })` un tenseur
+// dont `.tolist()` rend un tableau de vecteurs.
+const FAUX_TRANSFORMERS = 'export async function pipeline(...args) { return globalThis.fauxPipeline(...args); }';
+const CROCHET = `export async function resolve(specifier, context, next) {
+  if (specifier === '@huggingface/transformers') {
+    return { url: 'data:text/javascript,' + encodeURIComponent(${JSON.stringify(FAUX_TRANSFORMERS)}), shortCircuit: true };
+  }
+  return next(specifier, context);
+}`;
+register(`data:text/javascript,${encodeURIComponent(CROCHET)}`);
+
 // ---------------------------------------------------------------------------
-// Point de rupture (contre le double)
+// Point de rupture : « Non mesuré ». Ce que montre le double, et lui seul.
 // ---------------------------------------------------------------------------
 
-test('point de rupture : avec le double, des mots ordinaires partagés l’emportent sur l’identité', async () => {
+test('le double seul : une autre boulangerie passe devant le même nom sous sa forme courte', async () => {
   const scores = await ranked('Boulangerie du Vieux Moulin');
   assert.ok(close(scores['Boulangerie du Vieux Port'], 0.75));
   assert.ok(close(scores['Le Vieux Moulin'], 1 / Math.sqrt(3)));
@@ -46,7 +61,7 @@ test('point de rupture : avec le double, des mots ordinaires partagés l’empor
   assert.ok(close(score, 1));
 });
 
-test('point de rupture : le double score à zéro la paire de sigles', async () => {
+test('le double seul : la paire de sigles marque zéro', async () => {
   assert.equal((await ranked('SNCF'))[SNCF_DEVELOPPEE], 0);
 });
 
@@ -104,9 +119,35 @@ test("les égalités reviennent dans l'ordre du registre", async () => {
   assert.deepEqual((await match(index, 'Dupont', 5)).map(([n]) => n), ['Dupont', 'Dupont', 'Dupont', 'Martin', 'Garage']);
 });
 
-test("l'encodeur est injecté, et par défaut c'est le vrai", async () => {
-  await assert.rejects(() => buildIndex(['Boulangerie Martin']), { code: 'ERR_MODULE_NOT_FOUND', message: /@xenova\/transformers/ });
-  assert.equal(MODEL_NAME, 'Xenova/paraphrase-multilingual-MiniLM-L12-v2');
+test("l'encodeur est injecté, et par défaut c'est le vrai, chargé une fois en pleine précision", async () => {
+  // « Left alone, it is the real one above » ; « fetched once, then held in memory » ;
+  // « Full precision, the weights Python loads ».
+  const appels = [];
+  globalThis.fauxPipeline = async (...args) => {
+    appels.push(['pipeline', ...args]);
+    const inner = new FakeEncoder(DIMENSIONS);
+    return async (texts, options) => {
+      appels.push(['extract', texts, options]);
+      const vectors = await inner.encode(texts);
+      return { tolist: () => vectors };
+    };
+  };
+  try {
+    const index = await buildIndex(['Boulangerie Martin', 'Le Vieux Moulin']);
+    await match(index, 'Le Vieux Moulin');
+    const [name, score] = (await match(index, 'Boulangerie Martin'))[0];
+    assert.equal(name, 'Boulangerie Martin');
+    assert.ok(close(score, 1));
+    assert.deepEqual(appels, [
+      ['pipeline', 'feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2', { dtype: 'fp32' }],
+      ['extract', ['Boulangerie Martin', 'Le Vieux Moulin'], { pooling: 'mean' }],
+      ['extract', ['Le Vieux Moulin'], { pooling: 'mean' }],
+      ['extract', ['Boulangerie Martin'], { pooling: 'mean' }],
+    ]);
+    assert.equal(MODEL_NAME, 'Xenova/paraphrase-multilingual-MiniLM-L12-v2');
+  } finally {
+    delete globalThis.fauxPipeline;
+  }
 });
 
 test('un encodeur qui rend des Float32Array, comme Tensor.tolist en amont, est accepté', async () => {

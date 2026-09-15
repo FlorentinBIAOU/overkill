@@ -10,7 +10,9 @@ est un sac de mots ; sur la paire pour laquelle ce niveau existe, un sigle contr
 sa raison sociale, il rend exactement zéro.
 """
 
+import sys
 import time
+import types
 
 import numpy as np
 import pytest
@@ -52,15 +54,15 @@ class RealShapedEncoder:
 
 
 # ---------------------------------------------------------------------------
-# Point de rupture (contre le double)
+# Point de rupture : « Non mesuré ». Ce que montre le double, et lui seul.
 # ---------------------------------------------------------------------------
 
 
-def test_point_de_rupture_avec_le_double_des_mots_ordinaires_partages_l_emportent_sur_l_identite():
+def test_le_double_seul_une_autre_boulangerie_passe_devant_le_meme_nom_sous_sa_forme_courte():
     """
-    « Dans le test, « Boulangerie du Vieux Port », qui est une autre société, passe
-    devant « Le Vieux Moulin », qui est la même société sous son nom court, et
-    aucun seuil ne démêle les deux. » Démontré pour le double seulement.
+    breaking_point : « Non mesuré. […] ce que montre ce double ne vaut que pour lui :
+    il […] classe « Boulangerie du Vieux Port », une autre société, devant « Le Vieux
+    Moulin », la même sous son nom court. »
     """
     scores = ranked("Boulangerie du Vieux Moulin")
     assert scores["Boulangerie du Vieux Port"] == pytest.approx(0.75, abs=1e-12)
@@ -71,8 +73,8 @@ def test_point_de_rupture_avec_le_double_des_mots_ordinaires_partages_l_emporten
     assert match(make_index(), "Boulangerie du Vieux Moulin")[0] == ("Boulangerie du Vieux Moulin", pytest.approx(1.0))
 
 
-def test_point_de_rupture_le_double_score_a_zero_la_paire_de_sigles():
-    """« un double local, qui score à zéro la paire de sigles pour laquelle ce niveau existe »."""
+def test_le_double_seul_la_paire_de_sigles_marque_zero():
+    """breaking_point : « il score à zéro la paire de sigles pour laquelle ce niveau existe »."""
     assert ranked("SNCF")[SNCF_DEVELOPPEE] == 0.0
 
 
@@ -138,6 +140,27 @@ def test_l_encodeur_est_injecte_et_par_defaut_c_est_le_vrai():
     with pytest.raises(ModuleNotFoundError, match="sentence_transformers"):
         build_index(["Boulangerie Martin"])
     assert MODEL_NAME == "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+
+
+def test_par_defaut_sentence_transformers_est_charge_une_fois_et_garde_pour_les_requetes(monkeypatch):
+    """
+    « The real encoder: fetched once, then held in memory and run locally » ; docstring :
+    « a process that holds them in memory ». Double du module `sentence_transformers`.
+    """
+    chargements = []
+
+    class FauxSentenceTransformer(RealShapedEncoder):
+        def __init__(self, name):
+            super().__init__()
+            chargements.append(name)
+
+    monkeypatch.setitem(sys.modules, "sentence_transformers", types.SimpleNamespace(SentenceTransformer=FauxSentenceTransformer))
+    index = build_index(["Boulangerie Martin", "Le Vieux Moulin"])
+    match(index, "Le Vieux Moulin")
+    name, score = match(index, "Boulangerie Martin")[0]
+    assert (name, score) == ("Boulangerie Martin", pytest.approx(1.0, abs=1e-6))
+    assert chargements == [MODEL_NAME]
+    assert index["encoder"].inner.calls == [["Boulangerie Martin", "Le Vieux Moulin"], ["Le Vieux Moulin"], ["Boulangerie Martin"]]
 
 
 def test_un_encodeur_a_la_forme_de_sentence_transformers_est_accepte():

@@ -130,10 +130,24 @@ test('la même arithmétique que scikit-learn : valeurs épinglées en Python', 
   assert.equal(round12(ranked('İstanbul Ltd')['Boulangerie Martin SARL']), 0.178184011082);
 });
 
-test('« la même arithmétique que scikit-learn » ; hors du plan multilingue de base, les n-grammes sont découpés en unités UTF-16', async () => {
-  // Python : 0,475128643566 ; JavaScript : 0,606912036982.
+test('la même arithmétique que scikit-learn, hors du plan multilingue de base aussi', () => {
+  // « Code points, as scikit-learn counts them » : valeurs épinglées en Python.
   const emoji = buildIndex(['🍞🥐 Boulangerie Martin', 'Boulangerie Dupont', '𝔄𝔅 Conseil']);
   assert.equal(round12(match(emoji, '𝔄𝔅', 1)[0][1]), 0.475128643566);
+  assert.equal(round12(match(emoji, '🍞🥐 Boulangerie', 1)[0][1]), 0.76304806389);
+});
+
+test("le score s'explique fragment par fragment", () => {
+  // Docstring N2 : « a score that cannot be explained fragment by fragment, as N1's can ».
+  // Une requête identique à un nom du registre a le vecteur de ce nom.
+  const [requete, nom] = [INDEX.vectors[1], INDEX.vectors[0]]; // « Boulangerie Dupont », « Boulangerie Martin SARL »
+  const parts = new Map([...requete].filter(([g]) => nom.has(g)).map(([g, w]) => [g, w * nom.get(g)]));
+  const somme = [...parts.values()].reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(somme - ranked('Boulangerie Dupont')['Boulangerie Martin SARL']) < 1e-12);
+  assert.equal(parts.size, 33);
+  assert.ok([...parts.values()].every((p) => p > 0));
+  // L'explication se lit : tout le score partagé vient du mot « boulangerie ».
+  assert.ok([...parts.keys()].every((g) => ' boulangerie '.includes(g)));
 });
 
 // ---------------------------------------------------------------------------

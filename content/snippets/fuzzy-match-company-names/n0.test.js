@@ -32,10 +32,11 @@ test('point de rupture : Sanofi partage trois lettres sur quatre avec le sigle',
   assert.ok(close(jaroWinkler('sncf', 'sanofi'), jaro + 0.1 * (1 - jaro)));
 });
 
-test("INFIRMÉ : l'essai dit que Sanofi « ne partage avec SNCF qu'une première lettre » ; il en partage trois", async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual([...'sncf'].filter((c) => normalise('Sanofi').includes(c)), ['s']);
-  }, assert.AssertionError);
+test("l'essai : Sanofi partage avec SNCF trois lettres sur quatre", () => {
+  const why = essai.cases[3].why;
+  assert.match(why.fr, /qui partage avec SNCF trois lettres sur quatre/);
+  assert.match(why.en, /which shares three of the four letters of SNCF/);
+  assert.deepEqual([...'sncf'].filter((c) => normalise('Sanofi').includes(c)), ['s', 'n', 'f']);
 });
 
 // ---------------------------------------------------------------------------
@@ -72,14 +73,25 @@ test("un nom fait seulement d'une forme juridique la garde", () => {
 });
 
 test('la liste des formes juridiques est française et étrangère', () => {
-  for (const form of ['sarl', 'sas', 'sasu', 'eurl', 'sci', 'snc', 'ltd', 'gmbh', 'llc', 'bv', 'spa']) {
+  for (const form of ['sarl', 'sas', 'sasu', 'eurl', 'sci', 'snc', 'ltd', 'gmbh', 'llc', 'bv']) {
     assert.equal(normalise(`Dupont ${form.toUpperCase()}`), 'dupont', form);
   }
 });
 
+test("« spa » n'est pas une forme, et « Nordic Spa » ne fusionne pas avec « Nordic SA »", () => {
+  assert.equal(normalise('Nordic Spa'), 'nordic spa');
+  assert.ok(close(similarity('Nordic Spa', 'Nordic SA'), 0.92));
+  // Témoin : « SA » est bien retiré, « Nordic SA » et « Nordic » sont un seul nom.
+  assert.equal(similarity('Nordic SA', 'Nordic'), 1);
+});
+
 test('Jaro-Winkler récompense un début commun', () => {
   assert.ok(jaroWinkler('martin', 'martix') > jaroWinkler('nartin', 'xartin'));
-  assert.ok(similarity('Boulangerie Martin Lyon', 'Boulangerie Martin') > THRESHOLD);
+  // Une ville, un reste de ponctuation après la même marque : au-dessus du seuil.
+  assert.ok(close(similarity('Boulangerie Martin Lyon', 'Boulangerie Martin'), 0.9565, 1e-4));
+  assert.ok(close(similarity('Boulangerie Martin (ex-Dupuis)', 'Boulangerie Martin'), 0.9286, 1e-4));
+  // Témoin : la même ville en tête coûte bien plus, sous le seuil.
+  assert.ok(close(similarity('Lyon Boulangerie Martin', 'Boulangerie Martin'), 0.7794, 1e-4));
 });
 
 test('Winkler ne regarde que les quatre premiers caractères', () => {
@@ -88,11 +100,15 @@ test('Winkler ne regarde que les quatre premiers caractères', () => {
   assert.ok(close(jaroWinkler('martinxy', 'martinzw'), jaro + 4 * 0.1 * (1 - jaro)));
 });
 
-test("INFIRMÉ : le commentaire dit que Winkler ne rend jamais plus d'un dixième du score retenu ; il en rend quatre dixièmes", async () => {
-  const jaro = 5 / 6;
-  await assert.rejects(async () => {
-    assert.ok(jaroWinkler('martinxy', 'martinzw') - jaro <= 0.1 * (1 - jaro) + 1e-12);
-  }, assert.AssertionError);
+test('Winkler rend un dixième du score retenu par caractère commun en tête', () => {
+  // « abcdefgh » contre une chaîne qui en garde les « commun » premiers caractères : Jaro sans transposition.
+  for (let commun = 1; commun < 7; commun += 1) {
+    const jaro = (commun / 8 + commun / 8 + 1) / 3;
+    const b = 'abcdefgh'.slice(0, commun) + 'XYZWVUTS'.slice(commun);
+    const rendu = (jaroWinkler('abcdefgh', b) - jaro) / (1 - jaro);
+    assert.ok(close(rendu, Math.min(commun, 4) / 10, 1e-12), String(commun));
+  }
+  assert.equal(jaroWinkler('abcdefgh', 'XYZWVUTS'), 0);
 });
 
 test('la fenêtre sépare Jaro d’un simple compte de lettres', () => {
@@ -100,10 +116,10 @@ test('la fenêtre sépare Jaro d’un simple compte de lettres', () => {
   assert.equal(jaroWinkler('abcdefgh', 'hgfedcba'), 0.5);
 });
 
-test('INFIRMÉ : « within half the length of the longer name » ; un jumeau à exactement la moitié n’est pas trouvé', async () => {
-  await assert.rejects(async () => {
-    assert.ok(jaroWinkler('abcdef', 'xxxaxx') > 0);
-  }, assert.AssertionError);
+test('la fenêtre vaut la moitié de la longueur moins un', () => {
+  // « abcdef » : six caractères, moitié 3, fenêtre 2. Aucun début commun.
+  assert.ok(close(jaroWinkler('abcdef', 'xxaxxx'), (1 / 6 + 1 / 6 + 1) / 3)); // distance 2 : trouvé
+  assert.equal(jaroWinkler('abcdef', 'xxxaxx'), 0); // distance 3, la moitié : pas trouvé
 });
 
 test('un nom vide ne rapproche rien', () => {
@@ -168,17 +184,56 @@ test("production : marque d'ordre, espace insécable, NFD, emoji", () => {
   assert.equal(similarity('🍞 Boulangerie Martin', 'BOULANGERIE MARTIN'), 1);
 });
 
-test('un nom sans lettre latine est vidé ; « Газпром » et « Лукойл » obtiennent 1,0', async () => {
-  assert.ok(similarity('Газпром', 'Лукойл') < THRESHOLD);
-  assert.ok(similarity('東京電力', '日立製作所') < THRESHOLD);
+test('production : deux noms non latins différents restent sous le seuil', () => {
+  assert.equal(normalise('Газпром'), 'газпром');
+  assert.ok(close(similarity('Газпром', 'Лукойл'), 0.4365, 1e-4));
+  assert.equal(similarity('東京電力', '日立製作所'), 0);
 });
 
-test('« Nordic Spa » et « Nordic SA » obtiennent 1,0', async () => {
-  assert.ok(similarity('Nordic Spa', 'Nordic SA') < 1);
+test('production : grec, arabe, chinois identiques à 1 et différents sous le seuil', () => {
+  assert.equal(similarity('Αθηναϊκή Ζυθοποιία', 'ΑΘΗΝΑΪΚΗ ΖΥΘΟΠΟΙΙΑ'), 1);
+  assert.ok(close(similarity('Αθηναϊκή Ζυθοποιία', 'Ελληνικά Πετρέλαια'), 0.5556, 1e-4));
+  assert.equal(similarity('شركة أرامكو', 'شركة أرامكو'), 1);
+  assert.ok(close(similarity('أرامكو السعودية', 'مصرف الراجحي'), 0.5881, 1e-4));
+  assert.equal(similarity('東京電力', '東京電力'), 1);
+  assert.ok(close(similarity('中国石油', '中国银行'), 0.7333, 1e-4));
 });
 
-test('production : une lettre sans décomposition est perdue', () => {
-  assert.equal(normalise('Ørsted'), 'rsted');
-  assert.equal(normalise('Großmann'), 'gro mann');
+test('DÉFAUT : toutes les marques de catégorie M sont retirées, voyelles du devanagari et du thaï comprises ; « कमल उद्योग » et « कोमल उद्योग » obtiennent 1,0', async () => {
+  await assert.rejects(async () => {
+    assert.ok(similarity('कमल उद्योग', 'कोमल उद्योग') < 1);
+    assert.ok(similarity('กินดี', 'กันดี') < 1);
+  }, assert.AssertionError);
+});
+
+test('DÉFAUT : une forme juridique en tête de nom est retirée ; « Sa Nostra » et « Nostra », « NV Energy » et « Energy Ltd » obtiennent 1,0', async () => {
+  await assert.rejects(async () => {
+    assert.ok(similarity('Sa Nostra', 'Nostra') < 1);
+    assert.ok(similarity('NV Energy', 'Energy Ltd') < 1);
+  }, assert.AssertionError);
+});
+
+test("production : un nom fait seulement d'emoji ou de ponctuation est vidé", () => {
+  // Non réparé, décision du rédacteur : deux tels noms valent 1, comme deux noms vides.
+  assert.equal(normalise('🍞'), '');
+  assert.equal(normalise('!!!'), '');
+  assert.equal(similarity('🍞', '🚗'), 1);
+});
+
+test('production : une lettre sans décomposition est gardée, pas repliée', () => {
+  assert.equal(normalise('Ørsted'), 'ørsted');
+  assert.equal(normalise('Großmann'), 'großmann');
+  assert.ok(close(similarity('Ørsted', 'Orsted'), 0.8889, 1e-4));
   assert.ok(similarity('Ørsted', 'Orsted') > THRESHOLD);
+});
+
+test('production : des caractères hors du plan de base comptent pour un', () => {
+  // « Code points, as Python counts them, not UTF-16 units. » Même valeur en Python.
+  assert.ok(close(jaroWinkler('𠀀𠀁x', '𠀀𠀁y'), 0.8222, 1e-4));
+});
+
+test('production : formes pointées et largeur nulle restent au-dessus du seuil', () => {
+  // Non réparé, décision du rédacteur.
+  assert.ok(close(similarity('Boulangerie Martin S.A.R.L.', 'Boulangerie Martin'), 0.9385, 1e-4));
+  assert.ok(close(similarity('Boulan\u200bgerie Martin', 'Boulangerie Martin'), 0.9561, 1e-4));
 });
