@@ -7,8 +7,7 @@
  * Two properties carry the whole approach.
  *
  * It is deterministic. The same identifier always yields exactly the same
- * image, on every machine, in every language, for ever. A placeholder that
- * changed on each render would flicker in a grid and defeat every HTTP cache.
+ * image, in JavaScript as in Python, for as long as this code is left unchanged.
  *
  * Its arithmetic is integer. Hue, chroma and cell positions are computed
  * without a single division that could round differently from one runtime to
@@ -21,11 +20,16 @@
 const FNV_OFFSET = 2166136261;
 const FNV_PRIME = 16777619;
 
+// Characters XML 1.0 does not allow anywhere in a document, escaped or not: C0
+// controls other than tab and line breaks, lone surrogates, U+FFFE and U+FFFF.
+const NOT_XML = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\ud800-\udfff\ufffe\uffff]/gu;
+
 const GRID = 5; // cells per side
 const COLUMNS = 3; // independent columns; the remaining two mirror them
 
 /**
- * FNV-1a on 32 bits.
+ * FNV-1a on 32 bits, fed code points rather than UTF-8 bytes: identical to
+ * the reference on ASCII, different from it on any other character.
  *
  * Math.imul is what keeps it exact: a plain multiplication on numbers this
  * large loses precision past 2^53 and would silently drift away from the
@@ -53,10 +57,12 @@ function hexColour(hue, saturation, lightness) {
 /**
  * The identifier ends up inside an attribute, so it is markup until escaped.
  *
- * The ampersand goes first, or it would escape the escapes.
+ * Escaping is not enough: a control character pasted from a spreadsheet has
+ * no escaped form in XML 1.0 and would make the whole SVG unreadable, so it
+ * is dropped. The ampersand goes first, or it would escape the escapes.
  */
 function escape(text) {
-  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+  return text.replace(NOT_XML, '').replaceAll('&', '&amp;').replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 

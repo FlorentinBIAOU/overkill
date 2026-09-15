@@ -3,7 +3,7 @@ id: generate-placeholder-images
 family: generate
 status: published
 verdict: N0
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -59,14 +59,14 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Un modèle de diffusion auto-hébergé pour produire quelques rectangles colorés est l’exemple même du sur-dimensionnement : un service permanent, un accélérateur graphique, et une image dont on ne retrouve pas l’exacte réplique en changeant de version de bibliothèque ou de pilote. Il produit en plus ce qu’un remplaçant ne doit pas être — une image vraisemblable de l’objet absent, que le lecteur prendra pour la vraie."
-      en: "A self-hosted diffusion model to draw a few coloured rectangles is oversizing in its purest form: a permanent service, a graphics accelerator, and an image you cannot reproduce byte for byte after a library or driver upgrade. It also produces exactly what a stand-in must not be — a plausible picture of the missing object, which readers will take for the real one."
+      fr: "Un modèle de diffusion auto-hébergé pour produire quelques rectangles colorés est l’exemple même du sur-dimensionnement, et il perd la propriété dont cette fiche a besoin : PyTorch, sur lequel repose la bibliothèque de diffusion publiée par huggingface, ne garantit pas des résultats reproductibles d’une version à l’autre, d’une plateforme à l’autre, ni entre processeur et carte graphique, même à graine identique. Il produit en plus ce qu’un remplaçant ne doit pas être : une image vraisemblable de l’objet absent."
+      en: "A self-hosted diffusion model to draw a few coloured rectangles is oversizing in its purest form, and it loses the one property this entry needs: PyTorch, which Hugging Face’s diffusion library runs on, does not guarantee reproducible results across its releases, across platforms, or between CPU and GPU, even with the same seed. It also produces exactly what a stand-in must not be: a plausible picture of the missing object."
 
   - level: N3
     available: false
     unavailable_reason:
-      fr: "Même disproportion, et deux défauts de plus : chaque vignette manquante devient un appel facturé chez un tiers, et rien ne garantit que le même identifiant redonnera la même image, le modèle du fournisseur changeant sous vos pieds. Un catalogue rendu de nouveau le mois suivant n’aurait plus les mêmes remplaçants."
-      en: "The same disproportion, with two extra faults: every missing tile becomes a billed call to a third party, and nothing guarantees the same identifier gives back the same image, the provider’s model shifting under your feet. Re-render the catalogue a month later and its stand-ins have all changed."
+      fr: "Même disproportion, et deux défauts de plus : chaque vignette manquante devient un appel facturé chez un tiers, et le modèle qui la dessine a une date de fin. Le fournisseur pris en exemple a arrêté DALL·E 2 et DALL·E 3 le 12 mai 2026 : un catalogue dont les remplaçants venaient de ces modèles ne peut plus les redemander."
+      en: "The same disproportion, with two extra faults: every missing tile becomes a billed call to a third party, and the model drawing it has an end date. The provider used as an example shut down DALL·E 2 and DALL·E 3 on 12 May 2026: a catalogue whose stand-ins came from those models can no longer ask for them again."
 
 verdict_rationale:
   fr: "L’échelle de cette fiche n’a qu’un seul niveau, et c’est son intérêt : le besoin est décoratif et arbitraire, ce qui est précisément le cas où une fonction de hachage donne la réponse exacte plutôt qu’une approximation. Rien ne sort du processus, le coût marginal est nul, et le résultat se teste unitairement au caractère près — le même balisage attendu figure en toutes lettres dans le test Python et dans le test JavaScript, ce qui épingle les deux implémentations l’une à l’autre. La sortie de cette fiche ne se fait pas par le haut : elle se fait en obtenant la vraie image."
@@ -82,5 +82,15 @@ further_reading:
   - label: "Wikipédia — Identicon, l’image dérivée d’un hachage"
     url: "https://en.wikipedia.org/wiki/Identicon"
 
-sources: []
+sources:
+  - label: "PyTorch — Reproducibility"
+    url: "https://docs.pytorch.org/docs/stable/notes/randomness.html"
+  - label: "Hugging Face — Diffusers, Reproducibility"
+    url: "https://huggingface.co/docs/diffusers/using-diffusers/reusing_seeds"
+  - label: "OpenAI — Deprecations"
+    url: "https://developers.openai.com/api/docs/deprecations"
+  - label: "OpenAI — Pricing, image generation models"
+    url: "https://developers.openai.com/api/docs/pricing"
+  - label: "W3C — Extensible Markup Language (XML) 1.0"
+    url: "https://www.w3.org/TR/xml/"
 ---

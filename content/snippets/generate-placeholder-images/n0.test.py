@@ -357,13 +357,7 @@ def test_production_insecables_largeur_nulle_emoji_et_bom_sont_recopies_tels_que
     assert placeholder_svg("SKU-1") != placeholder_svg("sku-1")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : un identifiant qui contient un caractère de contrôle (tabulation "
-    "verticale collée depuis un tableur, U+0000 à U+001F hors tabulation et fins "
-    "de ligne) est recopié tel quel dans aria-label : le SVG n'est plus du XML "
-    "bien formé et ne s'affiche pas servi en image/svg+xml"
-))
-def test_defaut_un_caractere_de_controle_rend_le_svg_mal_forme():
+def test_un_caractere_de_controle_rend_le_svg_mal_forme():
     ElementTree.fromstring(placeholder_svg("canapé\x0b4501"))
 
 

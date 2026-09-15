@@ -13,9 +13,7 @@ n0: |
   Deux propriétés portent toute l'approche.
 
   Elle est déterministe. Le même identifiant donne toujours exactement la même
-  image, sur chaque machine, dans chaque langage, pour toujours. Un remplaçant
-  qui changerait à chaque rendu scintillerait dans une grille et mettrait en
-  échec tous les caches HTTP.
+  image, en Python comme en JavaScript, tant que ce code reste inchangé.
 
   Son arithmétique est entière. La teinte, le chroma et les positions des
   cellules sont calculés sans une seule division qui pourrait arrondir

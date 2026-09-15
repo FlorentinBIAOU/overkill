@@ -349,12 +349,10 @@ test('production : insécables, largeur nulle, emoji et BOM sont recopiés tels 
   assert.notEqual(placeholderSvg('SKU-1'), placeholderSvg('sku-1'));
 });
 
-test('DÉFAUT : un caractère de contrôle est recopié tel quel et rend le SVG mal formé', () => {
+test('un caractère de contrôle est recopié tel quel et rend le SVG mal formé', () => {
   // Une tabulation verticale collée depuis un tableur passe dans aria-label :
   // XML 1.0 l'interdit, le SVG servi en image/svg+xml ne s'affiche plus.
-  assert.throws(() => {
-    assert.doesNotMatch(placeholderSvg('canapé\u000b4501'), CONTROLE_INTERDIT_EN_XML);
-  });
+  assert.doesNotMatch(placeholderSvg('canapé\u000b4501'), CONTROLE_INTERDIT_EN_XML);
 });
 
 test('production : tailles aux limites', () => {

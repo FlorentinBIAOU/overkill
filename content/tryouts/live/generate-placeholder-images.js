@@ -35,7 +35,7 @@ const T = {
       `${carres} rectangles pleins en ${couleurs} couleurs, et rien à télécharger : le balisage entier tient dans la page.`,
     alt: (identifiant) => `Image de remplacement pour « ${identifiant} »`,
     stable: (identifiant) =>
-      `« ${identifiant} » donnera cette image-là sur toutes les machines, aujourd’hui et dans dix ans.`,
+      `« ${identifiant} » donnera cette image-là, en JavaScript comme en Python, tant que ce code ne change pas.`,
   },
   en: {
     label: (famille, teinte) => `Hue ${teinte}° — ${famille}`,
@@ -43,7 +43,7 @@ const T = {
       `${carres} flat rectangles in ${couleurs} colours, and nothing to download: the whole markup sits in the page.`,
     alt: (identifiant) => `Placeholder image for “${identifiant}”`,
     stable: (identifiant) =>
-      `“${identifiant}” will give this same image on every machine, today and in ten years.`,
+      `“${identifiant}” will give this same image, in JavaScript as in Python, for as long as this code is left unchanged.`,
   },
 };
 

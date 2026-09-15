@@ -7,8 +7,7 @@ string of markup that a template can inline or a handler can serve.
 Two properties carry the whole approach.
 
 It is deterministic. The same identifier always yields exactly the same image,
-on every machine, in every language, for ever. A placeholder that changed on
-each render would flicker in a grid and defeat every HTTP cache.
+in Python as in JavaScript, for as long as this code is left unchanged.
 
 Its arithmetic is integer. Hue, chroma and cell positions are computed without
 a single division that could round differently from one runtime to another,
@@ -16,11 +15,17 @@ which is what lets the Python and the JavaScript version agree character for
 character.
 """
 
+import re
+
 # FNV-1a, the same constants as the rest of the catalogue, so that identifiers
 # hash identically wherever they are hashed.
 FNV_OFFSET = 2166136261
 FNV_PRIME = 16777619
 MASK32 = 0xFFFFFFFF
+
+# Characters XML 1.0 does not allow anywhere in a document, escaped or not: C0
+# controls other than tab and line breaks, lone surrogates, U+FFFE and U+FFFF.
+NOT_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
 
 GRID = 5  # cells per side
 COLUMNS = 3  # independent columns; the remaining two mirror them
@@ -28,7 +33,8 @@ COLUMNS = 3  # independent columns; the remaining two mirror them
 
 def stable_hash(text: str) -> int:
     """
-    FNV-1a on 32 bits.
+    FNV-1a on 32 bits, fed code points rather than UTF-8 bytes: identical to
+    the reference on ASCII, different from it on any other character.
 
     Not the built-in hash: that one is salted per process, so it would give a
     different image every time the server restarted.
@@ -54,8 +60,11 @@ def _escape(text: str) -> str:
     """
     The identifier ends up inside an attribute, so it is markup until escaped.
 
-    The ampersand goes first, or it would escape the escapes.
+    Escaping is not enough: a control character pasted from a spreadsheet has
+    no escaped form in XML 1.0 and would make the whole SVG unreadable, so it
+    is dropped. The ampersand goes first, or it would escape the escapes.
     """
+    text = NOT_XML.sub("", text)
     text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     return text.replace('"', "&quot;")
 
