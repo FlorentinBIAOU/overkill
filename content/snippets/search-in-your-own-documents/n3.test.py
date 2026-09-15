@@ -15,12 +15,15 @@ import sys
 import time
 import types
 import unicodedata
-from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_CHARACTERS, MAX_PASSAGES, NO_ANSWER, AnswerNotGrounded, AnswerUnavailable, answer
+from _harness.fake_sdk import FakeSDK
+from n3 import (
+    MAX_CHARACTERS, MAX_PASSAGES, MAX_QUESTION, MODEL, NO_ANSWER, AnswerNotGrounded, AnswerUnavailable,
+    ProviderClient, answer,
+)
 
 # Ce qu'une recherche dans le règlement a rendu pour la question ci-dessous.
 PASSAGES = [
@@ -42,24 +45,24 @@ def dont_know():
     return llm({"answer": NO_ANSWER, "sources": []})
 
 
+GOOD_REPLY = json.dumps({"answer": "Deux jours et demi par mois.", "sources": ["conges"]})
+
+
 @pytest.fixture
 def openai_kit(monkeypatch):
     """
-    Un module `openai` à la surface du kit publié (3.x) : `OpenAI()` a
-    `chat.completions.create(model=..., messages=[...])`, la réponse se lit dans
-    `choices[0].message.content`. Il n'a pas de méthode `complete`.
+    Un module `openai` dont `OpenAI()` rend le double du harnais à la forme du
+    kit publié (`_harness/fake_sdk.py` : `chat.completions.create`, réponse dans
+    `choices[0].message.content`, pas de méthode `complete`). Il garde les
+    clients construits.
     """
     module = types.ModuleType("openai")
-    module.calls = []
+    module.clients = []
 
-    class OpenAI:
-        def __init__(self, **_):
-            self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-        def _create(self, **request):
-            module.calls.append(request)
-            content = json.dumps({"answer": "Deux jours et demi par mois.", "sources": ["conges"]})
-            return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+    def OpenAI(**_):
+        sdk = FakeSDK(content=GOOD_REPLY)
+        module.clients.append(sdk)
+        return sdk
 
     module.OpenAI = OpenAI
     monkeypatch.setitem(sys.modules, "openai", module)
@@ -73,10 +76,10 @@ def openai_kit(monkeypatch):
 
 def test_point_de_rupture_une_vraie_citation_sur_une_phrase_inventee():
     """
-    breaking_point : « le modèle cite le passage qu'on lui a bel et bien donné,
-    et écrit une phrase que ce passage contredit : le manuel dit deux jours et
-    demi par mois, la réponse annonce trente jours ouvrés dès l'embauche. Tous
-    les contrôles de l'extrait passent ».
+    breaking_point : « la réponse du double cite le passage qu'on a bel et bien
+    envoyé, et porte une phrase que ce passage contredit : le manuel dit deux
+    jours et demi par mois, la réponse annonce trente jours ouvrés dès
+    l'embauche. Tous les contrôles de l'extrait passent ».
     """
     client = llm({"answer": INVENTED, "sources": ["conges"]})
     assert answer(QUESTION, PASSAGES, client=client) == {"answer": INVENTED, "sources": ["conges"]}
@@ -98,7 +101,10 @@ def test_point_de_rupture_le_controle_lit_les_citations_pas_la_reponse():
 
 
 def test_point_de_rupture_il_faut_ouvrir_le_passage_la_reponse_ne_porte_que_son_identifiant():
-    """breaking_point : « il faut ouvrir le passage pour le savoir »."""
+    """
+    breaking_point : « le résultat ne porte que l'identifiant du passage : il
+    faut ouvrir le passage pour voir la contradiction ».
+    """
     result = answer(QUESTION, PASSAGES, client=llm({"answer": INVENTED, "sources": ["conges"]}))
     assert set(result) == {"answer", "sources"}
     assert PASSAGES[0]["text"] not in json.dumps(result, ensure_ascii=False)
@@ -120,7 +126,9 @@ def test_rend_la_reponse_et_ses_sources():
 def test_chaque_passage_retrouve_voyage_dans_la_consigne():
     """
     regulatory : « Transfert à un sous-traitant de la question posée et du
-    contenu des passages retrouvés » ; commentaire : température zéro.
+    contenu des passages retrouvés » ; commentaire : « Temperature zero narrows
+    the sampling » (la température part à zéro ; « It does not make the call
+    deterministic » est un fait du fournisseur, non testable ici).
     """
     client = dont_know()
     answer(QUESTION, PASSAGES, client=client)
@@ -215,20 +223,85 @@ def test_une_reponse_qui_ne_cite_rien_est_refusee():
         answer(QUESTION, PASSAGES, client=llm({"answer": "Trente jours ouvrés.", "sources": []}))
 
 
-def test_defaut_une_reponse_en_cloture_de_code_n_est_pas_decodee():
-    reply = '```json\n{"answer": "Deux jours et demi par mois.", "sources": ["conges"]}\n```'
-    assert answer(QUESTION, PASSAGES, client=llm(reply))["sources"] == ["conges"]
+def test_production_une_reponse_enveloppee_d_une_seule_cloture_json_est_decodee():
+    """
+    docstring de _decode : « JSON, possibly wrapped in a ```json fence ». Une
+    clôture qui enveloppe toute la réponse, avec ou sans langue : un seul appel.
+    """
+    for reply in (f"```json\n{GOOD_REPLY}\n```", f"```\n{GOOD_REPLY}\n```", f"  ```json\n{GOOD_REPLY}\n```\n"):
+        client = llm(reply)
+        assert answer(QUESTION, PASSAGES, client=client)["sources"] == ["conges"]
+        assert client.call_count == 1
 
 
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
+def test_production_un_autre_ecart_autour_de_la_cloture_leve():
+    """Texte avant la clôture, deux blocs, clôture sur une seule ligne : AnswerUnavailable."""
+    for reply in (
+        f"Voici :\n```json\n{GOOD_REPLY}\n```",
+        f"```json\n{GOOD_REPLY}\n```\n```json\n{GOOD_REPLY}\n```",
+        f"```json {GOOD_REPLY}```",
+    ):
+        with pytest.raises(AnswerUnavailable):
+            answer(QUESTION, PASSAGES, client=llm(reply))
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "DÉFAUT : charte (décision 12) « tout autre écart — texte avant ou après, deux "
+        "blocs, clôture non refermée — lève ». _decode coupe au dernier ``` et décode "
+        "une réponse suivie de texte après la clôture ; une clôture jamais refermée est "
+        "décodée aussi"
+    ),
+)
+def test_defaut_du_texte_apres_la_cloture_ou_une_cloture_non_refermee_est_decode():
+    for reply in (f"```json\n{GOOD_REPLY}\n```\nVoilà, bonne journée.", f"```json\n{GOOD_REPLY}"):
+        with pytest.raises(AnswerUnavailable):
+            answer(QUESTION, PASSAGES, client=llm(reply))
+
+
+def test_l_adaptateur_appelle_chat_completions_create_avec_le_modele_et_la_consigne():
+    """
+    ProviderClient : « The one call this snippet makes, on top of the provider's
+    SDK ». Contre le double à la forme du kit publié.
+    """
+    sdk = FakeSDK(content=GOOD_REPLY)
+    assert answer(QUESTION, PASSAGES, client=ProviderClient(sdk=sdk)) == {
+        "answer": "Deux jours et demi par mois.", "sources": ["conges"]
+    }
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL == "gpt-4.1-mini"
+    assert request["temperature"] == 0
+    [message] = request["messages"]
+    assert message["role"] == "user"
+    assert QUESTION in message["content"] and PASSAGES[0]["text"] in message["content"]
+    assert not hasattr(sdk, "complete")
+
+
+def test_l_adaptateur_un_content_nul_est_une_reponse_inutilisable_retentee():
+    """
+    Commentaire de _decode : « No text at all (a refusal) is unusable ». Deux
+    tentatives, puis AnswerUnavailable, jamais un résultat.
+    """
+    sdk = FakeSDK(content=None)
+    with pytest.raises(AnswerUnavailable, match="no text"):
+        answer(QUESTION, PASSAGES, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 2
+
+
+def test_l_adaptateur_une_panne_du_kit_est_retentee_une_fois():
+    sdk = FakeSDK(content=GOOD_REPLY, fail_times=1)
+    assert answer(QUESTION, PASSAGES, client=ProviderClient(sdk=sdk))["sources"] == ["conges"]
+    assert len(sdk.requests) == 2
+
+
+def test_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
+    """« defaults to a real provider client » : `OpenAI()` enveloppé dans l'adaptateur."""
     assert answer(QUESTION, PASSAGES) == {"answer": "Deux jours et demi par mois.", "sources": ["conges"]}
-
-
-def test_le_client_par_defaut_echoue_en_service_indisponible_sans_appel(openai_kit):
-    """Ce que fait réellement le défaut ci-dessus : aucune requête, AnswerUnavailable."""
-    with pytest.raises(AnswerUnavailable, match="complete"):
-        answer(QUESTION, PASSAGES)
-    assert openai_kit.calls == []
+    [sdk] = openai_kit.clients
+    assert sdk.last_request["endpoint"] == "chat.completions"
+    assert sdk.last_request["model"] == MODEL
 
 
 # ---------------------------------------------------------------------------
@@ -236,43 +309,73 @@ def test_le_client_par_defaut_echoue_en_service_indisponible_sans_appel(openai_k
 # ---------------------------------------------------------------------------
 
 
-def test_defaut_je_ne_sais_pas_avec_majuscule_et_point_est_refuse_comme_non_ancre():
-    assert answer(QUESTION, PASSAGES, client=llm({"answer": "Je ne sais pas.", "sources": []}))["sources"] == []
+def test_production_je_ne_sais_pas_avec_majuscule_et_ponctuation_est_la_reponse_de_repli():
+    """Commentaire : « "Je ne sais pas." is the same answer » ; la réponse rendue est NO_ANSWER."""
+    for said in ("Je ne sais pas.", "JE NE SAIS PAS !", "je ne sais pas  "):
+        assert answer(QUESTION, PASSAGES, client=llm({"answer": said, "sources": []})) == {
+            "answer": NO_ANSWER, "sources": []
+        }
+    # Témoin : une phrase qui commence pareil reste une réponse, et doit citer.
+    with pytest.raises(AnswerNotGrounded):
+        answer(QUESTION, PASSAGES, client=llm({"answer": "Je ne sais pas, trente jours ?", "sources": []}))
 
 
-def test_defaut_un_identifiant_entier_fait_refuser_une_citation_juste():
-    passages = [{"id": 1, "text": PASSAGES[0]["text"]}]
-    assert answer(QUESTION, passages, client=llm({"answer": "Deux jours et demi.", "sources": [1]}))["answer"]
+def test_production_un_identifiant_entier_est_accepte_et_rendu_entier():
+    """Commentaire : « ids may be integers: compare as text » ; les sources rendues gardent leur type."""
+    passages = [{"id": 1, "text": PASSAGES[0]["text"]}, {"id": 2, "text": PASSAGES[1]["text"]}]
+    assert answer(QUESTION, passages, client=llm({"answer": "Deux jours et demi.", "sources": [1]})) == {
+        "answer": "Deux jours et demi.", "sources": [1]
+    }
+    assert answer(QUESTION, passages, client=llm({"answer": "Deux jours et demi.", "sources": ["1"]}))["sources"] == [1]
+    with pytest.raises(AnswerNotGrounded):
+        answer(QUESTION, passages, client=llm({"answer": "Deux jours et demi.", "sources": [3]}))
 
 
-def test_defaut_une_reponse_d_un_autre_type_leve_une_erreur_nommee():
+def test_production_une_reponse_d_un_autre_type_leve_une_erreur_nommee_apres_les_tentatives():
+    """`sources` chaîne, nul, nombre, booléen ; `answer` nul : réponse inutilisable, retentée."""
     for reply in (
         {"answer": "x", "sources": "conges"},
         {"answer": "x", "sources": None},
         {"answer": "x", "sources": 42},
+        {"answer": "x", "sources": [True]},
+        {"answer": "x", "sources": [["conges"]]},
         {"answer": None, "sources": []},
+        {"sources": ["conges"]},
     ):
-        with pytest.raises(AnswerUnavailable):
-            answer(QUESTION, PASSAGES, client=llm(reply))
+        client = llm(reply)
+        with pytest.raises(AnswerUnavailable, match="not the object asked for"):
+            answer(QUESTION, PASSAGES, client=client)
+        assert client.call_count == 2
 
 
-def test_defaut_une_question_vide_ne_coute_aucun_appel():
+def test_production_une_question_vide_ou_blanche_rend_le_repli_sans_appel():
+    """Commentaire : « Nothing retrieved, or nothing asked […] no reason to pay for a call »."""
     client = dont_know()
-    for question in ("", "   "):
-        try:
+    for question in ("", "   ", "\u00a0\n"):
+        assert answer(question, PASSAGES, client=client) == {"answer": NO_ANSWER, "sources": []}
+    assert client.call_count == 0
+
+
+def test_production_une_question_trop_longue_est_refusee_avant_l_appel_et_avant_le_client(openai_kit):
+    """
+    Commentaire : « The provider bills every character of the prompt: refuse
+    before any call ». 1 000 caractères passent, 1 001 non ; le client par
+    défaut n'est même pas construit.
+    """
+    assert MAX_QUESTION == 1000
+    client = dont_know()
+    answer("é" * MAX_QUESTION, PASSAGES, client=client)
+    assert client.call_count == 1
+    for question in ("x" * (MAX_QUESTION + 1), "x" * 1_000_000):
+        with pytest.raises(ValueError, match="question longer than 1000 characters"):
             answer(question, PASSAGES, client=client)
-        except (AnswerUnavailable, AnswerNotGrounded, ValueError):
-            pass
-    assert client.call_count == 0
-
-
-def test_defaut_une_question_enorme_est_refusee_avant_l_appel():
-    client = dont_know()
-    try:
-        answer("x" * 1_000_000, PASSAGES, client=client)
-    except ValueError:
-        pass
-    assert client.call_count == 0
+        with pytest.raises(ValueError):
+            answer(question, PASSAGES)
+    assert client.call_count == 1
+    assert openai_kit.clients == []
+    # En points de code, comme en JavaScript : mille emoji passent.
+    answer("😀" * MAX_QUESTION, PASSAGES, client=client)
+    assert client.call_count == 2
 
 
 def test_production_mille_passages_d_un_megaoctet():

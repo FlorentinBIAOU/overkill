@@ -15,11 +15,14 @@ import sys
 import time
 import types
 
+import dataclasses
+
 import numpy as np
 import pytest
 
 from _harness.fake_model import FakeEncoder
 from n0 import build_index as build_index_n0, search as search_n0
+import n2
 from n2 import MODEL_NAME, EncodingFailed, hybrid_search, unit, vector_ranking
 
 HANDBOOK = [
@@ -112,9 +115,13 @@ def sentence_transformers(monkeypatch):
     """
     module = types.ModuleType("sentence_transformers")
     module.loads = []
+    module.fail_next = False
 
     class SentenceTransformer:
         def __init__(self, name):
+            if module.fail_next:
+                module.fail_next = False
+                raise OSError("could not download the weights")
             module.loads.append(name)
             self._fake = FakeEncoder(dimensions=1024)
 
@@ -123,7 +130,9 @@ def sentence_transformers(monkeypatch):
 
     module.SentenceTransformer = SentenceTransformer
     monkeypatch.setitem(sys.modules, "sentence_transformers", module)
-    return module
+    n2.default_encoder.cache_clear()
+    yield module
+    n2.default_encoder.cache_clear()
 
 
 # ---------------------------------------------------------------------------
@@ -163,15 +172,15 @@ def test_point_de_rupture_c_est_le_double_qui_designe_la_page_en_tete():
 
 def test_point_de_rupture_aucun_seuil_ne_peut_se_poser_sur_le_score_fusionne():
     """
-    breaking_point : « sauf si vous posez un seuil et le tenez ». L'extrait n'en
-    pose aucun, et le score qu'il rend ne permet pas d'en poser : la page de tête
-    d'une question hors sujet a exactement le score de la page de tête d'une
-    question à laquelle le fonds répond. Le seuil devrait porter sur le cosinus,
-    que la fonction ne rend pas.
+    breaking_point : « le score fusionné ne permet pas de poser un seuil : la
+    page de tête a le même score pour cette question que pour une question à
+    laquelle le manuel répond. Un seuil devrait porter sur le cosinus, que
+    l'extrait ne rend pas ». Le résultat ne porte que `id` et `score`.
     """
     off_topic = hybrid_search(WALLS, HANDBOOK, [], encoder=encoder())[0]["score"]
     on_topic = hybrid_search("notes de frais", HANDBOOK, [], encoder=encoder())[0]["score"]
     assert off_topic == on_topic == round(1 / 61, 6)
+    assert {key for r in hybrid_search(WALLS, HANDBOOK, [], encoder=encoder()) for key in r} == {"id", "score"}
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +243,7 @@ def test_les_egalites_sont_departagees_par_l_identifiant():
 
 
 def test_le_fonds_et_la_requete_partent_en_un_seul_appel():
-    """Commentaire : « One batched call: the query travels with the documents »."""
+    """Commentaire : « One batched call: the query travels with the documents not yet encoded »."""
     fake = encoder()
     hybrid_search("notes de frais", HANDBOOK, [], encoder=fake)
     texts = [f"{d['title']} {d['body']}" for d in HANDBOOK]
@@ -263,18 +272,44 @@ def test_un_modele_qui_ne_peut_pas_tourner_leve():
         hybrid_search("frais", HANDBOOK, [], encoder=BrokenEncoder())
 
 
-def test_infirme_des_vecteurs_inutilisables_levent():
+def test_des_vecteurs_inutilisables_levent_encoding_failed():
+    """
+    docstring d'EncodingFailed : « returned something unusable » ; message :
+    « vectors of different sizes, or values that are not finite numbers ».
+    NaN, infini, dimensions incohérentes, valeur non numérique.
+    """
     nan = TableEncoder({}, [float("nan")] * 3)
+    infinite = TableEncoder({}, [float("inf"), 0.0])
     ragged = TableEncoder({"quoi": [1.0, 0.0, 5.0]}, [1.0, 0.0])
-    for bad in (nan, ragged):
+    text = TableEncoder({"quoi": [1.0, 0.0]}, [1.0, "beaucoup"])
+    for bad in (nan, infinite, ragged, text):
         with pytest.raises(EncodingFailed):
             hybrid_search("quoi", HANDBOOK, [], encoder=bad)
+
+
+def test_un_encodeur_qui_a_rendu_des_vecteurs_inutilisables_ne_garde_rien_en_cache():
+    """Témoin de la précédente : l'appel suivant, sain, rend un classement complet."""
+    class Flaky(FakeEncoder):
+        broken = True
+
+        def encode(self, texts):
+            vectors = super().encode(texts)
+            if self.broken:
+                self.broken = False
+                vectors[0] = [float("nan")] * self.dimensions
+            return vectors
+
+    flaky = Flaky(dimensions=1024)
+    with pytest.raises(EncodingFailed):
+        hybrid_search("frais", HANDBOOK, [], encoder=flaky)
+    assert len(hybrid_search("frais", HANDBOOK, [], encoder=flaky)) == 4
+    assert len(flaky.calls[1]) == 5
 
 
 def test_la_jambe_vectorielle_trouve_ce_que_les_mots_ne_trouvaient_pas():
     """
     docstring : « that gap is what this rung exists to close » ; « borrows the
-    reach of the second ». « maison » n'est dans aucune page ; un encodeur qui le
+    reach of the vectors ». « maison » n'est dans aucune page ; un encodeur qui le
     relie à « télétravail » fait monter les deux pages qui en parlent.
     """
     question = "puis-je rester à la maison"
@@ -286,19 +321,21 @@ def test_la_jambe_vectorielle_trouve_ce_que_les_mots_ne_trouvaient_pas():
 
 def test_la_tete_du_plein_texte_reste_devant_tout_document_qu_il_n_a_pas_trouve():
     """
-    docstring : « Fusing the two rankings keeps the precision of the first ».
-    Démontré pour la tête : la page que le plein texte met en premier, même
-    classée dernière par la jambe vectorielle, reste devant une page que la
-    jambe vectorielle met en premier et que le plein texte n'a pas trouvée.
+    docstring : « Fusing the two rankings keeps the first keyword result ahead
+    of any page the keywords did not find ». La page que le plein texte met en
+    premier, même classée dernière par la jambe vectorielle, reste devant une
+    page que la jambe vectorielle met en premier et que le plein texte n'a pas
+    trouvée.
     """
     table = TableEncoder({"informatique": [-1.0, 0.0], "Congés": [1.0, 0.0], "QUESTION": [1.0, 0.0]}, [0.0, 1.0])
     found = hybrid_search("QUESTION", HANDBOOK, ["materiel"], encoder=table)
     assert ids(found)[:2] == ["materiel", "conges"]
 
 
-def test_constat_plus_bas_dans_la_liste_un_document_sans_aucun_mot_passe_devant_un_document_trouve():
+def test_plus_bas_dans_la_liste_chaque_jambe_pese_autant_que_l_autre():
     """
-    Constat, pour la même phrase : sur 300 pages, le 14e résultat du plein texte,
+    docstring : « further down the list, each leg weighs as much as the
+    other ». Sur 300 pages, le 14e résultat du plein texte,
     classé dernier par la jambe vectorielle, passe derrière une page qui ne porte
     aucun mot de la requête mais que la jambe vectorielle met en tête ; le 13e
     reste devant. Chaque jambe pèse autant que l'autre.
@@ -312,7 +349,10 @@ def test_constat_plus_bas_dans_la_liste_un_document_sans_aucun_mot_passe_devant_
 
 
 def test_le_modele_nomme_est_multilingue():
-    """Commentaire : « A multilingual model »."""
+    """
+    Commentaire : « A multilingual model: its card lists French among its
+    languages » : le nom seul est vérifiable ici, la carte ne l'est pas.
+    """
     assert MODEL_NAME == "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
 
@@ -327,26 +367,111 @@ def test_le_modele_par_defaut_a_la_surface_de_sentence_transformers(sentence_tra
     assert sentence_transformers.loads[0] == MODEL_NAME
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : sans encodeur injecté, chaque appel à hybrid_search construit "
-        "SentenceTransformer(MODEL_NAME), donc recharge quelque 470 Mo de poids à "
-        "chaque recherche ; la docstring parle d'« a process kept warm »"
-    ),
-)
-def test_defaut_le_modele_par_defaut_est_recharge_a_chaque_recherche(sentence_transformers):
+def test_production_un_vecteur_refuse_n_empoisonne_pas_le_cache_d_un_encodeur_deja_servi():
+    """
+    Un encodeur a déjà servi une recherche ; à la suivante, le vecteur d'une
+    page nouvelle est refusé (NaN). La recherche d'après ré-encode cette page
+    et répond. Jumeau JavaScript marqué DÉFAUT.
+    """
+    class FlakyOnSecondCall(FakeEncoder):
+        count = 0
+
+        def encode(self, texts):
+            vectors = super().encode(texts)
+            self.count += 1
+            if self.count == 2:
+                vectors[0] = [float("nan")] * self.dimensions
+            return vectors
+
+    flaky = FlakyOnSecondCall(dimensions=1024)
+    hybrid_search("frais", HANDBOOK[:1], [], encoder=flaky)
+    with pytest.raises(EncodingFailed):
+        hybrid_search("frais", HANDBOOK[:2], [], encoder=flaky)
+    assert len(hybrid_search("frais", HANDBOOK[:2], [], encoder=flaky)) == 2
+    assert flaky.calls[2] == [f"{HANDBOOK[1]['title']} {HANDBOOK[1]['body']}", "frais"]
+
+
+def test_production_le_modele_par_defaut_est_charge_une_fois_par_processus(sentence_transformers):
+    """docstring de default_encoder : « Loaded once per process, then kept warm »."""
     hybrid_search("notes de frais", HANDBOOK, ["frais"])
     hybrid_search("télétravail", HANDBOOK, ["teletravail"])
-    assert len(sentence_transformers.loads) == 1
+    assert sentence_transformers.loads == [MODEL_NAME]
 
 
-def test_defaut_le_fonds_est_reencode_a_chaque_requete():
+def test_production_un_chargement_qui_echoue_est_retente_a_la_recherche_suivante(sentence_transformers):
+    """
+    `functools.cache` ne retient pas une exception. Constat : l'échec du
+    chargement sort tel quel (ici `OSError`), pas en `EncodingFailed`.
+    """
+    sentence_transformers.fail_next = True
+    with pytest.raises(OSError):
+        hybrid_search("notes de frais", HANDBOOK, ["frais"])
+    assert len(hybrid_search("notes de frais", HANDBOOK, ["frais"])) == 4
+    assert sentence_transformers.loads == [MODEL_NAME]
+
+
+def test_production_le_fonds_n_est_pas_reencode_a_chaque_requete():
+    """
+    Commentaire : « a document is encoded again only once its text has
+    changed » ; docstring : « document vectors to recompute when a document
+    changes ». La seconde requête part seule.
+    """
     fake = encoder()
     hybrid_search("notes de frais", HANDBOOK, [], encoder=fake)
     hybrid_search("télétravail", HANDBOOK, [], encoder=fake)
     encoded = [text for call in fake.calls for text in call]
     assert encoded.count(f"{HANDBOOK[0]['title']} {HANDBOOK[0]['body']}") == 1
+    assert fake.calls[1] == ["télétravail"]
+
+
+def test_production_un_document_modifie_est_reencode_et_lui_seul():
+    fake = encoder()
+    hybrid_search("frais", HANDBOOK, [], encoder=fake)
+    changed = [dict(HANDBOOK[0], body="Vingt-cinq jours ouvrés par an."), *HANDBOOK[1:]]
+    found = hybrid_search("frais", changed, [], encoder=fake)
+    assert fake.calls[1] == ["Congés payés Vingt-cinq jours ouvrés par an.", "frais"]
+    # Le classement est celui d'un encodeur neuf sur le fonds modifié.
+    assert found == hybrid_search("frais", changed, [], encoder=encoder())
+
+
+def test_production_deux_documents_au_meme_texte_ne_partent_qu_une_fois():
+    fake = encoder()
+    twins = HANDBOOK + [dict(HANDBOOK[2], id="frais-copie")]
+    found = hybrid_search("frais", twins, [], encoder=fake)
+    assert len(fake.calls[0]) == 5
+    assert {"frais", "frais-copie"} <= set(ids(found))
+
+
+def test_production_le_cache_ne_garde_que_les_textes_de_la_derniere_recherche():
+    """
+    Commentaire : « the unit vector of each document text seen in the last
+    search ». Une page retirée puis remise est encodée de nouveau.
+    """
+    fake = encoder()
+    hybrid_search("frais", HANDBOOK, [], encoder=fake)
+    hybrid_search("frais", HANDBOOK[1:], [], encoder=fake)
+    hybrid_search("frais", HANDBOOK, [], encoder=fake)
+    first = f"{HANDBOOK[0]['title']} {HANDBOOK[0]['body']}"
+    assert fake.calls[1] == ["frais"]
+    assert fake.calls[2] == [first, "frais"]
+
+
+def test_production_constat_un_encodeur_non_hachable_leve_type_error():
+    """
+    Constat : le cache par encodeur est un `WeakKeyDictionary`, qui exige un
+    encodeur hachable. Un encodeur injecté écrit en dataclass (non hachable)
+    fait lever `TypeError` avant tout encodage. `SentenceTransformer` et les
+    doubles du harnais sont hachables.
+    """
+    @dataclasses.dataclass
+    class DataclassEncoder:
+        dimensions: int = 8
+
+        def encode(self, texts):
+            return FakeEncoder(self.dimensions).encode(texts)
+
+    with pytest.raises(TypeError, match="unhashable"):
+        hybrid_search("frais", HANDBOOK, [], encoder=DataclassEncoder())
 
 
 def test_deux_executions_rendent_le_meme_classement():

@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { buildIndex, search, tokenise } from './n0.js';
+import { buildIndex, queryTerms, search, tokenise } from './n0.js';
 import { buildIndex as buildIndexN1, search as searchN1 } from './n1.js';
 import essai from '../../tryouts/live/search-in-your-own-documents.js';
 
@@ -122,13 +122,18 @@ test('les scores de FTS5 que le fichier JavaScript doit reproduire', () => {
   assert.deepEqual(search(manuel, 'trois jours'), [{ id: 'arret', score: 1.2796 }]);
 });
 
-test('Node 22 n’a pas node:sqlite sans drapeau, et sa version embarquée n’a pas FTS5', () => {
-  // docstring : « Node 22 does ship `node:sqlite`, but it needs
-  // --experimental-sqlite and the bundled build has no FTS5 module ».
-  assert.match(process.version, /^v22\./);
+test('Node 22 livre node:sqlite, derrière un drapeau avant 22.13.0, et sa version embarquée n’a pas FTS5', () => {
+  // docstring : « Node 22 ships `node:sqlite` (behind --experimental-sqlite
+  // before 22.13.0), but its bundled SQLite has no FTS5 module ».
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  assert.equal(major, 22);
   const plain = spawnSync(process.execPath, ['-e', "require('node:sqlite')"], { encoding: 'utf8' });
-  assert.notEqual(plain.status, 0);
-  assert.match(plain.stderr, /ERR_UNKNOWN_BUILTIN_MODULE/);
+  if (minor < 13) {
+    assert.notEqual(plain.status, 0);
+    assert.match(plain.stderr, /ERR_UNKNOWN_BUILTIN_MODULE/);
+  } else {
+    assert.equal(plain.status, 0, plain.stderr);
+  }
   const flagged = spawnSync(process.execPath, [
     '--experimental-sqlite', '-e',
     "const { DatabaseSync } = require('node:sqlite'); new DatabaseSync(':memory:').exec('CREATE VIRTUAL TABLE t USING fts5(a)')",
@@ -180,11 +185,32 @@ test('accents et casse ne comptent pas', () => {
   assert.deepEqual(search(index(), 'conges'), search(index(), 'CONGÉS'));
 });
 
-test('le docstring dit « the same tokenizer » que FTS5, la ligature « ﬁ » est repliée ici et pas dans la table', async () => {
-  // FTS5 (unicode61) indexe « ﬁchier » tel quel et ne le trouve ni par
-  // « fichier » ni par « ﬁchier » depuis search() ; ce fichier le trouve.
-  const connection = buildIndex([{ id: 'pdf', title: 'Envoyer un ﬁchier', body: '' }]);
-  assert.deepEqual(search(connection, 'fichier'), []);
+// Les jetons que la vraie table FTS5 tire de ces mots (fts5vocab, lu dans
+// n0.test.py, qui affirme le même échantillon).
+const ECHANTILLON_DE_REPLI = {
+  'ﬁchier': ['ﬁchier'],
+  'Ｇｅｓｔｉｏｎ': ['ｇｅｓｔｉｏｎ'],
+  'm²': ['m²'],
+  'ἀθήνα': ['ἀθήνα'],
+  'ёлка': ['ёлка'],
+  'йогурт': ['йогурт'],
+  'ǖber': ['uber'],
+  'ệ': ['e'],
+  'Ǻ': ['a'],
+  'résumé': ['resume'],
+  'œuvre': ['œuvre'],
+  'straße': ['straße'],
+};
+
+test('le repli de la requête est celui de l’index : une ligature est gardée', () => {
+  // docstring : « the same tokenizer (lower case, accents off Latin letters) » ;
+  // « A ligature such as "ﬁ" or a full-width letter is kept as it is, as FTS5 does ».
+  for (const [word, expected] of Object.entries(ECHANTILLON_DE_REPLI)) {
+    assert.deepEqual(tokenise(word), expected, word);
+  }
+  const pdf = buildIndex([{ id: 'pdf', title: 'Envoyer un ﬁchier', body: '' }]);
+  assert.deepEqual(ids(search(pdf, 'ﬁchier')), ['pdf']);
+  assert.deepEqual(search(pdf, 'fichier'), []);
 });
 
 test('un mot présent dans la moitié des documents ou plus n’ajoute rien au score', () => {
@@ -254,9 +280,25 @@ test('production : une espace de largeur nulle coupe le mot en deux', () => {
   assert.deepEqual(search(index(), 'con​gés'), []);
 });
 
-test('une élision dans la requête vide les résultats', async () => {
+test('production : une élision dans la requête ne vide plus les résultats', () => {
+  // Commentaire de queryTerms : « A one-letter token is what an elision
+  // ("l'accord") or a possessive ("manager's") leaves behind […] it is dropped ».
   assert.deepEqual(ids(search(index(), 'accord')), ['teletravail']);
   assert.deepEqual(ids(search(index(), 'l\'accord')), ['teletravail']);
+  const managers = buildIndex([{ id: 'm', title: 'Le manager', body: 'Valide.' }, { id: 'x', title: 'Autre', body: 'Rien.' }]);
+  assert.deepEqual(queryTerms("manager's"), ['manager']);
+  assert.deepEqual(ids(search(managers, "manager's")), ['m']);
+});
+
+test('production : une requête d’une seule lettre est encore cherchée', () => {
+  // « unless the query holds nothing else ».
+  const connection = buildIndex([{ id: 'a', title: 'Vitamine a', body: '' }, { id: 'b', title: 'Vitamine b', body: '' }]);
+  assert.deepEqual(queryTerms('a'), ['a']);
+  assert.deepEqual(ids(search(connection, 'a')), ['a']);
+  // « code points, as in Python » : une lettre hors du plan de base compte pour une.
+  assert.equal('𝐀'.length, 2);
+  assert.deepEqual(queryTerms('𝐀'), ['𝐀']);
+  assert.deepEqual(queryTerms('𝐀 accord'), ['accord']);
 });
 
 test('production : limites zéro et un', () => {
@@ -264,16 +306,9 @@ test('production : limites zéro et un', () => {
   assert.deepEqual(ids(search(index(), 'le', 1)), ['conges']);
 });
 
-test('une limite négative n’est pas refusée', async () => {
-  // Deux pages pour « le » ici, trois en Python (LIMIT -1 de SQLite).
-  let result;
-  try {
-    result = search(index(), 'le', -1);
-  } catch (error) {
-    if (error instanceof RangeError) return;
-    throw error;
-  }
-  assert.deepEqual(result, []);
+test('production : une limite négative est refusée', () => {
+  // Commentaire : « A negative slice would silently drop the last results: refuse it ».
+  assert.throws(() => search(index(), 'le', -1), { name: 'RangeError', message: 'limit must be zero or more' });
 });
 
 // ---------------------------------------------------------------------------
@@ -316,7 +351,7 @@ test('essai : la question dans les mots du lecteur ne trouve rien, et le dit', (
   });
   assert.deepEqual(essai.run(input(cas, 'en'), 'en').verdict, {
     label: 'No result',
-    detail: 'No page contains: how, much, holiday, can, i, book.',
+    detail: 'No page contains: how, many, holiday, can, take.',
   });
 });
 
@@ -337,20 +372,24 @@ const PAGES_EN = [
   { id: 'Sick notes', title: 'Sick notes', body: 'The medical certificate reaches payroll within forty-eight hours. The waiting period is three days.' },
 ];
 
-test('INFIRMÉ : le why anglais dit « The implicit AND finishes the job », aucun mot de la question n’est dans l’index', async () => {
-  // Même fonds que l'essai : une requête ordinaire rend le score affiché.
+test('essai : en anglais aussi, le ET implicite finit bien le travail', () => {
+  // why en : « The implicit AND finishes the job: one single page would have
+  // had to carry every word of the sentence ». Question : « how many days of
+  // holiday can I take » ; « days » et « of » sont dans l'index.
   assert.deepEqual(search(buildIndex(PAGES_EN), 'expense claims'), [{ id: 'Expense claims', score: 5.1365 }]);
   const question = input(essai.cases[3], 'en');
-  // Aucun des six mots n'est dans le règlement anglais : une règle OU ne
-  // trouve rien non plus, le ET n'y est pour rien.
-  assert.deepEqual(searchN1(buildIndexN1(PAGES_EN), question), []);
-  await assert.rejects(async () => {
-    assert.ok(searchN1(buildIndexN1(PAGES_EN), question).length > 0);
-  });
+  assert.equal(question, 'how many days of holiday can I take');
+  assert.deepEqual(search(buildIndex(PAGES_EN), question), []);
+  assert.ok(search(buildIndex(PAGES_EN), 'days of').length > 0);
+  // Témoin : avec une règle OU, la même question ramène des pages.
+  assert.ok(searchN1(buildIndexN1(PAGES_EN), question).length > 0);
 });
 
 test('essai : un mot présent dans la moitié des pages s’affiche à 0,00 partout', () => {
-  // Constat : « paie » est dans trois pages sur six ; le poids plancher de
-  // FTS5 fait afficher 0,00 sur chaque ligne.
+  // note : « Le score monte quand les mots cherchés sont rares dans le
+  // règlement ; un mot présent dans la moitié des pages ou plus n’y ajoute
+  // rien ». « paie » est dans trois pages sur six.
   assert.deepEqual(essai.run('paie', 'fr').rows.rows.map((r) => r[1].v), ['0,00', '0,00', '0,00']);
+  // Témoin : « responsable », dans deux pages sur six, ajoute au score.
+  assert.deepEqual(essai.run('responsable', 'fr').rows.rows.map((r) => r[1].v), ['0,72', '0,64']);
 });

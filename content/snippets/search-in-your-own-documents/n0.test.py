@@ -252,13 +252,50 @@ def test_sans_les_poids_de_colonne_le_titre_ne_l_emporte_plus(monkeypatch):
 
 
 def test_accents_et_casse_ne_comptent_pas():
-    """docstring de tokenise : « Lower case, strip accents, keep letters and digits »."""
+    """docstring de tokenise : « Lower case, strip accents from Latin letters, keep letters and digits »."""
     assert ids(search(index(), "CONGÉS")) == ids(search(index(), "conges")) == ["conges"]
 
 
-def test_infirme_le_repli_de_la_requete_est_celui_de_l_index():
-    connection = build_index([{"id": "pdf", "title": "Envoyer un ﬁchier", "body": ""}])
-    assert ids(search(connection, "ﬁchier")) == ["pdf"]
+# Mots dont la table FTS5 garde ou replie les signes, et les jetons qu'elle en
+# tire (lus dans fts5vocab ci-dessous). `n0.test.js` affirme les mêmes jetons.
+ECHANTILLON_DE_REPLI = {
+    "ﬁchier": ["ﬁchier"],          # ligature gardée
+    "Ｇｅｓｔｉｏｎ": ["ｇｅｓｔｉｏｎ"],  # pleine chasse gardée
+    "m²": ["m²"],                  # exposant gardé
+    "ἀθήνα": ["ἀθήνα"],            # grec accentué gardé
+    "ёлка": ["ёлка"],              # cyrillique accentué gardé
+    "йогурт": ["йогурт"],
+    "ǖber": ["uber"],              # lettre latine à deux diacritiques repliée
+    "ệ": ["e"],
+    "Ǻ": ["a"],
+    "résumé": ["resume"],
+    "œuvre": ["œuvre"],
+    "straße": ["straße"],
+}
+
+
+def test_le_repli_de_la_requete_est_celui_de_l_index_une_ligature_est_gardee():
+    """
+    docstring de tokenise : « The folding of the tokenizer declared above, so
+    what we look up is spelled the way the index stored it: accents come off
+    Latin letters only, and a ligature such as "ﬁ" or a full-width letter is
+    kept as it is ». Les jetons de la vraie table (fts5vocab) sont ceux de
+    `tokenise`, mot par mot. Témoin : « fichier » sans ligature ne trouve pas
+    la page, qui ne porte que « ﬁchier ».
+    """
+    connection = sqlite3.connect(":memory:")
+    connection.execute(n0.CREATE)
+    connection.execute("CREATE VIRTUAL TABLE vocab USING fts5vocab(documents, 'instance')")
+    for number, word in enumerate(ECHANTILLON_DE_REPLI):
+        connection.execute("INSERT INTO documents VALUES (?, ?, '')", (str(number), word))
+    stored = {}
+    for term, doc, _col, _off in connection.execute("SELECT term, doc, col, offset FROM vocab"):
+        stored.setdefault(doc, []).append(term)
+    for number, (word, expected) in enumerate(ECHANTILLON_DE_REPLI.items(), start=1):
+        assert stored[number] == expected == tokenise(word), word
+    pdf = build_index([{"id": "pdf", "title": "Envoyer un ﬁchier", "body": ""}])
+    assert ids(search(pdf, "ﬁchier")) == ["pdf"]
+    assert search(pdf, "fichier") == []
 
 
 def test_un_mot_present_dans_la_moitie_des_documents_ou_plus_n_ajoute_rien_au_score():
@@ -300,6 +337,47 @@ def test_l_index_suit_les_suppressions_et_les_sauvegardes_de_la_base():
     connection.execute("DELETE FROM documents WHERE doc_id = 'conges'")
     assert search(connection, "congés") == []
     assert ids(search(backup, "congés")) == ["conges"]
+
+
+def test_une_table_a_contenu_externe_tenue_par_triggers_change_dans_la_meme_transaction():
+    """
+    docstring de build_index : « an external-content table kept in step by
+    triggers: either way it changes in the transaction that changes the
+    document ». Déclencheurs tels que la documentation FTS5 les donne ; une
+    insertion annulée dans la table des documents ne laisse rien dans l'index.
+    """
+    connection = sqlite3.connect(":memory:")
+    connection.executescript(
+        """
+        CREATE TABLE pages (rowid INTEGER PRIMARY KEY, doc_id TEXT, title TEXT, body TEXT);
+        CREATE VIRTUAL TABLE documents USING fts5(
+            doc_id UNINDEXED, title, body, content='pages', content_rowid='rowid',
+            tokenize='unicode61 remove_diacritics 2');
+        CREATE TRIGGER pages_ai AFTER INSERT ON pages BEGIN
+            INSERT INTO documents (rowid, doc_id, title, body) VALUES (new.rowid, new.doc_id, new.title, new.body);
+        END;
+        """
+    )
+    connection.execute("INSERT INTO pages (doc_id, title, body) VALUES ('conges', 'Congés payés', 'Deux jours et demi.')")
+    connection.commit()
+    connection.execute("INSERT INTO pages (doc_id, title, body) VALUES ('mutuelle', 'Mutuelle', 'Adhésion')")
+    assert ids(search(connection, "mutuelle")) == ["mutuelle"]
+    connection.rollback()
+    assert search(connection, "mutuelle") == []
+    assert ids(search(connection, "congés")) == ["conges"]
+
+
+def test_l_extrait_cherche_dans_tout_le_fonds_et_ne_connait_aucun_droit_d_acces():
+    """
+    regulatory : « l'extrait cherche dans tout le fonds et n'en connaît
+    aucun ». Un champ de droits sur le document n'est ni stocké ni filtré.
+    """
+    docs = [dict(document, acl=["rh"]) for document in HANDBOOK]
+    connection = build_index(docs)
+    assert ids(search(connection, "congés")) == ["conges"]
+    assert search(connection, "rh") == []
+    columns = [row[1] for row in connection.execute("PRAGMA table_info(documents)")]
+    assert columns == ["doc_id", "title", "body"]
 
 
 def test_l_index_se_met_a_jour_dans_la_transaction_du_document():
@@ -366,9 +444,31 @@ def test_production_une_espace_de_largeur_nulle_coupe_le_mot_en_deux():
     assert search(index(), "con​gés") == []
 
 
-def test_defaut_une_elision_dans_la_requete_vide_les_resultats():
+def test_production_une_elision_dans_la_requete_ne_vide_plus_les_resultats():
+    """
+    Commentaire de query_terms : « A one-letter token is what an elision
+    ("l'accord") or a possessive ("manager's") leaves behind. The implicit AND
+    would require it, and empty the results: it is dropped, unless the query
+    holds nothing else ». Témoin : la table, interrogée avec le « l », ne rend
+    rien.
+    """
     assert ids(search(index(), "accord")) == ["teletravail"]
     assert ids(search(index(), "l'accord")) == ["teletravail"]
+    raw = "SELECT doc_id FROM documents WHERE documents MATCH ?"
+    assert index().execute(raw, ('"l" "accord"',)).fetchall() == []
+    managers = build_index([{"id": "m", "title": "Le manager", "body": "Valide."}, {"id": "x", "title": "Autre", "body": "Rien."}])
+    assert n0.query_terms("manager's") == ["manager"]
+    assert ids(search(managers, "manager's")) == ["m"]
+
+
+def test_production_une_requete_d_une_seule_lettre_est_encore_cherchee():
+    """« unless the query holds nothing else » : « a » seul reste une requête."""
+    connection = build_index([{"id": "a", "title": "Vitamine a", "body": ""}, {"id": "b", "title": "Vitamine b", "body": ""}])
+    assert n0.query_terms("a") == ["a"]
+    assert ids(search(connection, "a")) == ["a"]
+    # Une lettre hors du plan de base compte pour une lettre, comme en JavaScript.
+    assert n0.query_terms("𝐀") == ["𝐀"]
+    assert n0.query_terms("𝐀 accord") == ["accord"]
 
 
 def test_production_limites_zero_et_un():
@@ -376,8 +476,9 @@ def test_production_limites_zero_et_un():
     assert ids(search(index(), "le", limit=1)) == ["conges"]
 
 
-def test_defaut_une_limite_negative_n_est_pas_refusee():
-    try:
-        assert search(index(), "le", limit=-1) == []
-    except ValueError:
-        pass
+def test_production_une_limite_negative_est_refusee():
+    """Commentaire : « SQLite reads LIMIT -1 as "no limit": refuse it rather than return everything »."""
+    raw = "SELECT doc_id FROM documents WHERE documents MATCH '\"le\"' LIMIT -1"
+    assert len(index().execute(raw).fetchall()) == 3  # témoin : SQLite rend tout
+    with pytest.raises(ValueError, match="limit must be zero or more"):
+        search(index(), "le", limit=-1)

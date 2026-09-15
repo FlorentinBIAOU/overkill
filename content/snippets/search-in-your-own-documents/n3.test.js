@@ -10,27 +10,30 @@
  * Ce qu'ils ne prouvent pas : que la réponse est vraie.
  *
  * Le client par défaut importe 'openai'. Un crochet de résolution, posé pour ce
- * seul processus de test, remplace ce paquet par un module à la surface du kit
- * publié (7.x) : `new OpenAI()` a `chat.completions.create`, la réponse se lit
- * dans `choices[0].message.content`, et il n'y a pas de `complete`.
+ * seul processus de test, remplace ce paquet par un module dont `new OpenAI()`
+ * est le double du harnais à la forme du kit publié (`_harness/fake-sdk.mjs` :
+ * `chat.completions.create`, réponse dans `choices[0].message.content`, pas de
+ * `complete`).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
 import {
-  MAX_CHARACTERS, MAX_PASSAGES, NO_ANSWER, AnswerNotGrounded, AnswerUnavailable, answer,
+  MAX_CHARACTERS, MAX_PASSAGES, MAX_QUESTION, MODEL, NO_ANSWER, AnswerNotGrounded, AnswerUnavailable, answer,
+  providerClient,
 } from './n3.js';
 
-globalThis.__openaiCalls = [];
+const GOOD_REPLY = JSON.stringify({ answer: 'Deux jours et demi par mois.', sources: ['conges'] });
+
+globalThis.__openaiClients = [];
 const FAKE_OPENAI = `
-  export class OpenAI {
+  import { FakeSDK } from ${JSON.stringify(new URL('../_harness/fake-sdk.mjs', import.meta.url).href)};
+  export class OpenAI extends FakeSDK {
     constructor() {
-      this.chat = { completions: { create: async (request) => {
-        globalThis.__openaiCalls.push(request);
-        const content = JSON.stringify({ answer: 'Deux jours et demi par mois.', sources: ['conges'] });
-        return { choices: [{ message: { content } }] };
-      } } };
+      super({ content: ${JSON.stringify(GOOD_REPLY)} });
+      globalThis.__openaiClients.push(this);
     }
   }`;
 const HOOKS = `export async function resolve(specifier, context, next) {
@@ -179,59 +182,137 @@ test('une réponse qui ne cite rien est refusée', async () => {
   await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm({ answer: 'Trente jours ouvrés.', sources: [] }) }), AnswerNotGrounded);
 });
 
-test('une réponse en clôture de code n’est pas décodée', async () => {
-  const reply = '```json\n{"answer": "Deux jours et demi par mois.", "sources": ["conges"]}\n```';
-  assert.deepEqual((await answer(QUESTION, PASSAGES, { client: llm(reply) })).sources, ['conges']);
+test('production : une réponse enveloppée d’une seule clôture json est décodée', async () => {
+  // docstring de decode : « JSON, possibly wrapped in a ```json fence ».
+  for (const reply of [`\`\`\`json\n${GOOD_REPLY}\n\`\`\``, `\`\`\`\n${GOOD_REPLY}\n\`\`\``, `  \`\`\`json\n${GOOD_REPLY}\n\`\`\`\n`]) {
+    const client = llm(reply);
+    assert.deepEqual((await answer(QUESTION, PASSAGES, { client })).sources, ['conges']);
+    assert.equal(client.callCount, 1);
+  }
+});
+
+test('production : un autre écart autour de la clôture lève', async () => {
+  for (const reply of [
+    `Voici :\n\`\`\`json\n${GOOD_REPLY}\n\`\`\``,
+    `\`\`\`json\n${GOOD_REPLY}\n\`\`\`\n\`\`\`json\n${GOOD_REPLY}\n\`\`\``,
+    `\`\`\`json ${GOOD_REPLY}\`\`\``,
+  ]) {
+    await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm(reply) }), AnswerUnavailable);
+  }
+});
+
+test('DÉFAUT : du texte après la clôture, ou une clôture non refermée, est décodé', async () => {
+  // Charte (décision 12) : « tout autre écart — texte avant ou après, deux
+  // blocs, clôture non refermée — lève ». decode coupe au dernier ``` et
+  // décode la réponse suivie de texte ; sans ``` final, il décode aussi.
+  await assert.rejects(async () => {
+    for (const reply of [`\`\`\`json\n${GOOD_REPLY}\n\`\`\`\nVoilà, bonne journée.`, `\`\`\`json\n${GOOD_REPLY}`]) {
+      await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm(reply) }), AnswerUnavailable);
+    }
+  });
+});
+
+test('l’adaptateur appelle chat.completions.create avec le modèle et la consigne', async () => {
+  const sdk = new FakeSDK({ content: GOOD_REPLY });
+  assert.deepEqual(await answer(QUESTION, PASSAGES, { client: await providerClient(sdk) }), {
+    answer: 'Deux jours et demi par mois.', sources: ['conges'],
+  });
+  const request = sdk.lastRequest;
+  assert.equal(request.endpoint, 'chat.completions');
+  assert.equal(request.model, MODEL);
+  assert.equal(MODEL, 'gpt-4.1-mini');
+  assert.equal(request.temperature, 0);
+  assert.equal(request.messages.length, 1);
+  assert.equal(request.messages[0].role, 'user');
+  assert.ok(request.messages[0].content.includes(QUESTION) && request.messages[0].content.includes(PASSAGES[0].text));
+  assert.equal(sdk.complete, undefined);
+});
+
+test('l’adaptateur : un content nul est une réponse inutilisable, retentée', async () => {
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  await assert.rejects(() => answer(QUESTION, PASSAGES, { client }), (error) => error instanceof AnswerUnavailable && /no text/.test(error.message));
+  assert.equal(sdk.requests.length, 2);
+});
+
+test('l’adaptateur : une panne du kit est retentée une fois', async () => {
+  const sdk = new FakeSDK({ content: GOOD_REPLY, failTimes: 1 });
+  assert.deepEqual((await answer(QUESTION, PASSAGES, { client: await providerClient(sdk) })).sources, ['conges']);
+  assert.equal(sdk.requests.length, 2);
 });
 
 test('le client par défaut a la forme du vrai kit', async () => {
+  // « defaults to a real provider client » : `new OpenAI()` enveloppé dans l’adaptateur.
+  globalThis.__openaiClients.length = 0;
   assert.deepEqual(await answer(QUESTION, PASSAGES), { answer: 'Deux jours et demi par mois.', sources: ['conges'] });
-});
-
-test('le client par défaut échoue en service indisponible sans appel', async () => {
-  globalThis.__openaiCalls.length = 0;
-  await assert.rejects(() => answer(QUESTION, PASSAGES), (error) => error instanceof AnswerUnavailable && /complete/.test(error.message));
-  assert.deepEqual(globalThis.__openaiCalls, []);
+  assert.equal(globalThis.__openaiClients.length, 1);
+  assert.equal(globalThis.__openaiClients[0].lastRequest.endpoint, 'chat.completions');
+  assert.equal(globalThis.__openaiClients[0].lastRequest.model, MODEL);
 });
 
 // ---------------------------------------------------------------------------
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('« Je ne sais pas. » avec majuscule et point est refusé comme non ancré', async () => {
-  assert.deepEqual((await answer(QUESTION, PASSAGES, { client: llm({ answer: 'Je ne sais pas.', sources: [] }) })).sources, []);
+test('production : « Je ne sais pas. » avec majuscule et ponctuation est la réponse de repli', async () => {
+  // Commentaire : « "Je ne sais pas." is the same answer ».
+  for (const said of ['Je ne sais pas.', 'JE NE SAIS PAS !', 'je ne sais pas  ']) {
+    assert.deepEqual(await answer(QUESTION, PASSAGES, { client: llm({ answer: said, sources: [] }) }), { answer: NO_ANSWER, sources: [] });
+  }
+  await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm({ answer: 'Je ne sais pas, trente jours ?', sources: [] }) }), AnswerNotGrounded);
 });
 
-test('un identifiant entier fait refuser une citation juste', async () => {
-  const passages = [{ id: 1, text: PASSAGES[0].text }];
-  assert.ok((await answer(QUESTION, passages, { client: llm({ answer: 'Deux jours et demi.', sources: [1] }) })).answer);
+test('production : un identifiant entier est accepté et rendu entier', async () => {
+  // Commentaire : « ids may be numbers: compare as text ».
+  const passages = [{ id: 1, text: PASSAGES[0].text }, { id: 2, text: PASSAGES[1].text }];
+  assert.deepEqual(await answer(QUESTION, passages, { client: llm({ answer: 'Deux jours et demi.', sources: [1] }) }), {
+    answer: 'Deux jours et demi.', sources: [1],
+  });
+  assert.deepEqual((await answer(QUESTION, passages, { client: llm({ answer: 'Deux jours et demi.', sources: ['1'] }) })).sources, [1]);
+  await assert.rejects(() => answer(QUESTION, passages, { client: llm({ answer: 'Deux jours et demi.', sources: [3] }) }), AnswerNotGrounded);
 });
 
-test('une réponse d’un autre type lève une erreur nommée', async () => {
-  // « sources » en chaîne ou en nombre : TypeError ; à null : lu comme [] et
-  // refusé en AnswerNotGrounded.
+test('production : une réponse d’un autre type lève une erreur nommée après les tentatives', async () => {
   for (const reply of [
     { answer: 'x', sources: 'conges' },
     { answer: 'x', sources: null },
     { answer: 'x', sources: 42 },
+    { answer: 'x', sources: [true] },
+    { answer: 'x', sources: [['conges']] },
+    { answer: 'x', sources: [1.5] },
     { answer: null, sources: [] },
+    { sources: ['conges'] },
   ]) {
-    await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm(reply) }), AnswerUnavailable);
+    const client = llm(reply);
+    await assert.rejects(() => answer(QUESTION, PASSAGES, { client }), (error) => error instanceof AnswerUnavailable && /not the object asked for/.test(error.message));
+    assert.equal(client.callCount, 2);
   }
 });
 
-test('une question vide ne coûte aucun appel', async () => {
+test('production : une question vide ou blanche rend le repli sans appel', async () => {
   const client = dontKnow();
-  for (const question of ['', '   ']) {
-    await answer(question, PASSAGES, { client }).catch(() => {});
+  for (const question of ['', '   ', '\u00a0\n']) {
+    assert.deepEqual(await answer(question, PASSAGES, { client }), { answer: NO_ANSWER, sources: [] });
   }
   assert.equal(client.callCount, 0);
 });
 
-test('une question énorme est refusée avant l’appel', async () => {
+test('production : une question trop longue est refusée avant l’appel et avant le client', async () => {
+  // Commentaire : « The provider bills every character of the prompt: refuse before any call ».
+  assert.equal(MAX_QUESTION, 1000);
   const client = dontKnow();
-  await answer('x'.repeat(1_000_000), PASSAGES, { client }).catch(() => {});
-  assert.equal(client.callCount, 0);
+  await answer('é'.repeat(MAX_QUESTION), PASSAGES, { client });
+  assert.equal(client.callCount, 1);
+  globalThis.__openaiClients.length = 0;
+  for (const question of ['x'.repeat(MAX_QUESTION + 1), 'x'.repeat(1_000_000)]) {
+    await assert.rejects(() => answer(question, PASSAGES, { client }), { name: 'RangeError', message: 'question longer than 1000 characters' });
+    await assert.rejects(() => answer(question, PASSAGES), RangeError);
+  }
+  assert.equal(client.callCount, 1);
+  assert.equal(globalThis.__openaiClients.length, 0);
+  // En points de code, comme en Python : mille emoji (deux mille unités UTF-16) passent.
+  await answer('😀'.repeat(MAX_QUESTION), PASSAGES, { client });
+  assert.equal(client.callCount, 2);
 });
 
 test('production : mille passages d’un mégaoctet', async () => {
@@ -250,12 +331,14 @@ test('production : NFD et espace insécable partent tels quels', async () => {
   assert.ok(client.lastRequest.prompt.includes(nfd));
 });
 
-test('un emoji à la frontière de coupe est coupé en deux', async () => {
-  // La coupe compte en unités UTF-16 : il reste une demi-paire de substitution,
-  // \ud83d, dans la consigne. Le Python coupe en points de code et garde l'emoji.
+test('production : un emoji à la frontière de coupe reste entier', async () => {
+  // Commentaire de head : « counted in code points as Python does, so no emoji is cut in two ».
   const client = dontKnow();
-  await answer(QUESTION, [{ id: 'b', text: `${'x'.repeat(MAX_CHARACTERS - 1)}😀` }], { client });
-  assert.ok(client.lastRequest.prompt.includes(`${'x'.repeat(MAX_CHARACTERS - 1)}😀`));
+  await answer(QUESTION, [{ id: 'b', text: `${'x'.repeat(MAX_CHARACTERS - 1)}😀😀` }], { client });
+  const { prompt } = client.lastRequest;
+  assert.ok(prompt.includes(`${'x'.repeat(MAX_CHARACTERS - 1)}😀\n`));
+  assert.ok(!prompt.includes('😀😀'));
+  assert.ok(!/\p{Surrogate}/u.test(prompt));
 });
 
 test('production : une injection dans un passage part telle quelle et une fausse source est refusée', async () => {

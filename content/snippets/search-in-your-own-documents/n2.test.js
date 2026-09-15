@@ -9,10 +9,13 @@
  * Ce qu'ils ne prouvent pas : qu'un vrai encodeur rapproche « vacances » de
  * « congés payés ». C'est pourquoi la fiche déclare `verification: stubbed`.
  *
- * Le chargement par défaut importe '@xenova/transformers'. Un crochet de
+ * Le chargement par défaut importe '@huggingface/transformers'. Un crochet de
  * résolution, posé ci-dessous pour ce seul processus de test, remplace ce
  * paquet par un module à la surface de la bibliothèque publiée : `pipeline`
- * rend une fonction dont le résultat a `.tolist()`. Il compte les chargements.
+ * rend une fonction dont le résultat (un tenseur) a `.tolist()`. Il compte les
+ * chargements réussis et les tentatives ; le chargement est gardé au niveau du
+ * module de l'extrait, donc les tests qui l'exercent s'enchaînent dans l'ordre
+ * du fichier.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,18 +25,27 @@ import { buildIndex as buildIndexN0, search as searchN0 } from './n0.js';
 import { EncodingFailed, MODEL_NAME, hybridSearch, unit, vectorRanking } from './n2.js';
 
 globalThis.__transformersLoads = [];
+globalThis.__transformersAttempts = 0;
+globalThis.__transformersFailNext = false;
+globalThis.__transformersOptions = [];
 const FAKE_TRANSFORMERS = `
   import { FakeEncoder } from ${JSON.stringify(new URL('../_harness/fake-model.mjs', import.meta.url).href)};
   export async function pipeline(task, model) {
+    globalThis.__transformersAttempts += 1;
+    if (globalThis.__transformersFailNext) {
+      globalThis.__transformersFailNext = false;
+      throw new Error('could not download the weights');
+    }
     globalThis.__transformersLoads.push([task, model]);
     const fake = new FakeEncoder(1024);
     return async (batch, options) => {
+      globalThis.__transformersOptions.push(options);
       const vectors = await fake.encode(batch);
       return { options, tolist: () => vectors };
     };
   }`;
 const HOOKS = `export async function resolve(specifier, context, next) {
-  if (specifier === '@xenova/transformers') {
+  if (specifier === '@huggingface/transformers') {
     return { url: 'data:text/javascript,' + encodeURIComponent(${JSON.stringify(FAKE_TRANSFORMERS)}), shortCircuit: true };
   }
   return next(specifier, context);
@@ -131,7 +143,12 @@ test('point de rupture : c’est le double qui désigne la page en tête', async
 });
 
 test('point de rupture : aucun seuil ne peut se poser sur le score fusionné', async () => {
+  // « la page de tête a le même score pour cette question que pour une question
+  // à laquelle le manuel répond. Un seuil devrait porter sur le cosinus, que
+  // l’extrait ne rend pas ».
   const offTopic = (await hybridSearch(WALLS, HANDBOOK, [], { encoder: encoder() }))[0].score;
+  const keys = new Set((await hybridSearch(WALLS, HANDBOOK, [], { encoder: encoder() })).flatMap(Object.keys));
+  assert.deepEqual([...keys], ['id', 'score']);
   const onTopic = (await hybridSearch('notes de frais', HANDBOOK, [], { encoder: encoder() }))[0].score;
   assert.equal(offTopic, onTopic);
   assert.equal(offTopic, Math.round(1e6 / 61) / 1e6);
@@ -215,12 +232,34 @@ test('un modèle qui ne peut pas tourner lève', async () => {
 });
 
 test('des vecteurs inutilisables lèvent EncodingFailed', async () => {
-  // NaN, ou dimensions incohérentes : un classement complet revient sans erreur.
+  // « vectors of different sizes, or values that are not finite numbers » :
+  // NaN, infini, dimensions incohérentes, valeur non numérique.
   const nan = tableEncoder({}, [NaN, NaN, NaN]);
+  const infinite = tableEncoder({}, [Infinity, 0]);
   const ragged = tableEncoder({ quoi: [1, 0, 5] }, [1, 0]);
-  for (const bad of [nan, ragged]) {
+  const text = tableEncoder({ quoi: [1, 0] }, [1, 'beaucoup']);
+  for (const bad of [nan, infinite, ragged, text]) {
     await assert.rejects(() => hybridSearch('quoi', HANDBOOK, [], { encoder: bad }), EncodingFailed);
   }
+});
+
+test('un encodeur qui a rendu des vecteurs inutilisables ne garde rien en cache', async () => {
+  class Flaky extends FakeEncoder {
+    broken = true;
+
+    async encode(texts) {
+      const vectors = await super.encode(texts);
+      if (this.broken) {
+        this.broken = false;
+        vectors[0] = new Array(this.dimensions).fill(NaN);
+      }
+      return vectors;
+    }
+  }
+  const flaky = new Flaky(1024);
+  await assert.rejects(() => hybridSearch('frais', HANDBOOK, [], { encoder: flaky }), EncodingFailed);
+  assert.equal((await hybridSearch('frais', HANDBOOK, [], { encoder: flaky })).length, 4);
+  assert.equal(flaky.calls[1].length, 5);
 });
 
 test('la jambe vectorielle trouve ce que les mots ne trouvaient pas', async () => {
@@ -237,7 +276,8 @@ test('la tête du plein texte reste devant tout document qu’il n’a pas trouv
   assert.deepEqual(ids(found).slice(0, 2), ['materiel', 'conges']);
 });
 
-test('constat : plus bas dans la liste, un document sans aucun mot passe devant un document trouvé', async () => {
+test('plus bas dans la liste, chaque jambe pèse autant que l’autre', async () => {
+  // docstring : « further down the list, each leg weighs as much as the other ».
   const documents = [];
   for (let i = 0; i < 285; i += 1) documents.push({ id: `autre${String(i).padStart(3, '0')}`, title: 'autre', body: '' });
   const keywordIds = [];
@@ -257,28 +297,91 @@ test('le modèle nommé est multilingue', () => {
   assert.equal(MODEL_NAME, 'Xenova/paraphrase-multilingual-MiniLM-L12-v2');
 });
 
-test('le modèle par défaut a la surface de @xenova/transformers', async () => {
-  globalThis.__transformersLoads.length = 0;
+test('production : un chargement du modèle qui échoue est retenté à la recherche suivante', async () => {
+  // Commentaire : « a failed load is tried again on the next search ». Premier
+  // test du fichier à charger le modèle par défaut. Constat : l’échec sort tel
+  // quel, pas en EncodingFailed.
+  assert.equal(globalThis.__transformersAttempts, 0);
+  globalThis.__transformersFailNext = true;
+  await assert.rejects(() => hybridSearch('notes de frais', HANDBOOK, ['frais']), (error) => !(error instanceof EncodingFailed) && /could not download/.test(error.message));
+  assert.equal((await hybridSearch('notes de frais', HANDBOOK, ['frais'])).length, 4);
+  assert.equal(globalThis.__transformersAttempts, 2);
+  assert.equal(globalThis.__transformersLoads.length, 1);
+});
+
+test('le modèle par défaut a la surface de @huggingface/transformers', async () => {
   const found = await hybridSearch('notes de frais', HANDBOOK, ['frais']);
   assert.deepEqual(found, await hybridSearch('notes de frais', HANDBOOK, ['frais'], { encoder: encoder() }));
   assert.deepEqual(globalThis.__transformersLoads[0], ['feature-extraction', MODEL_NAME]);
+  assert.deepEqual(globalThis.__transformersOptions.at(-1), { pooling: 'mean' });
 });
 
-test('DÉFAUT : le modèle par défaut est rechargé à chaque recherche', async () => {
-  await assert.rejects(async () => {
-    globalThis.__transformersLoads.length = 0;
-    await hybridSearch('notes de frais', HANDBOOK, ['frais']);
-    await hybridSearch('télétravail', HANDBOOK, ['teletravail']);
-    assert.equal(globalThis.__transformersLoads.length, 1);
-  });
+test('production : le modèle par défaut est chargé une fois par processus', async () => {
+  // docstring : « Loaded once per process, then kept warm ».
+  await hybridSearch('notes de frais', HANDBOOK, ['frais']);
+  await hybridSearch('télétravail', HANDBOOK, ['teletravail']);
+  assert.equal(globalThis.__transformersLoads.length, 1);
 });
 
-test('le fonds est ré-encodé à chaque requête', async () => {
+test('production : le fonds n’est pas ré-encodé à chaque requête', async () => {
+  // « a document is encoded again only once its text has changed ».
   const fake = encoder();
   await hybridSearch('notes de frais', HANDBOOK, [], { encoder: fake });
   await hybridSearch('télétravail', HANDBOOK, [], { encoder: fake });
   const first = `${HANDBOOK[0].title} ${HANDBOOK[0].body}`;
   assert.equal(fake.calls.flat().filter((text) => text === first).length, 1);
+  assert.deepEqual(fake.calls[1], ['télétravail']);
+});
+
+test('DÉFAUT : un vecteur refusé empoisonne le cache d’un encodeur déjà servi', async () => {
+  // Un encodeur a déjà servi une recherche ; à la suivante, le vecteur d’une
+  // page nouvelle est refusé (NaN). vectorRanking a déjà écrit ce vecteur dans
+  // la Map gardée pour l’encodeur (known.set avant la vérification) : la page
+  // n’est plus jamais ré-encodée, et chaque recherche qui la contient lève
+  // EncodingFailed. Le Python construit un nouveau dictionnaire et répond.
+  class FlakyOnSecondCall extends FakeEncoder {
+    count = 0;
+
+    async encode(texts) {
+      const vectors = await super.encode(texts);
+      this.count += 1;
+      if (this.count === 2) vectors[0] = new Array(this.dimensions).fill(NaN);
+      return vectors;
+    }
+  }
+  const flaky = new FlakyOnSecondCall(1024);
+  await hybridSearch('frais', HANDBOOK.slice(0, 1), [], { encoder: flaky });
+  await assert.rejects(() => hybridSearch('frais', HANDBOOK.slice(0, 2), [], { encoder: flaky }), EncodingFailed);
+  await assert.rejects(async () => {
+    assert.equal((await hybridSearch('frais', HANDBOOK.slice(0, 2), [], { encoder: flaky })).length, 2);
+    assert.deepEqual(flaky.calls[2], [`${HANDBOOK[1].title} ${HANDBOOK[1].body}`, 'frais']);
+  });
+});
+
+test('production : un document modifié est ré-encodé, et lui seul', async () => {
+  const fake = encoder();
+  await hybridSearch('frais', HANDBOOK, [], { encoder: fake });
+  const changed = [{ ...HANDBOOK[0], body: 'Vingt-cinq jours ouvrés par an.' }, ...HANDBOOK.slice(1)];
+  const found = await hybridSearch('frais', changed, [], { encoder: fake });
+  assert.deepEqual(fake.calls[1], ['Congés payés Vingt-cinq jours ouvrés par an.', 'frais']);
+  assert.deepEqual(found, await hybridSearch('frais', changed, [], { encoder: encoder() }));
+});
+
+test('production : deux documents au même texte ne partent qu’une fois', async () => {
+  const fake = encoder();
+  const twins = [...HANDBOOK, { ...HANDBOOK[2], id: 'frais-copie' }];
+  const found = await hybridSearch('frais', twins, [], { encoder: fake });
+  assert.equal(fake.calls[0].length, 5);
+  assert.ok(ids(found).includes('frais') && ids(found).includes('frais-copie'));
+});
+
+test('production : le cache ne garde que les textes de la dernière recherche', async () => {
+  const fake = encoder();
+  await hybridSearch('frais', HANDBOOK, [], { encoder: fake });
+  await hybridSearch('frais', HANDBOOK.slice(1), [], { encoder: fake });
+  await hybridSearch('frais', HANDBOOK, [], { encoder: fake });
+  assert.deepEqual(fake.calls[1], ['frais']);
+  assert.deepEqual(fake.calls[2], [`${HANDBOOK[0].title} ${HANDBOOK[0].body}`, 'frais']);
 });
 
 test('deux exécutions rendent le même classement', async () => {

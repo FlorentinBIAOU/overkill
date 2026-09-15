@@ -1,5 +1,17 @@
 # search-in-your-own-documents — relevé du testeur
 
+> **Contre-épreuve (tour 2) — deux défauts restent marqués, introduits par les
+> réparations** (détail en fin de relevé) :
+> - **N3 (py, js)** : `_decode` décode une réponse suivie de texte après la
+>   clôture ```` ``` ```` et une clôture jamais refermée ; la charte (décision
+>   12) veut que tout écart autre qu'une clôture unique lève.
+>   `DÉFAUT : du texte après la clôture, ou une clôture non refermée, est décodé`.
+> - **N2 (js seul)** : un vecteur refusé par la validation reste écrit dans la
+>   `Map` gardée pour l'encodeur (`known.set` avant la vérification) ; la page
+>   n'est plus jamais ré-encodée et chaque recherche qui la contient lève
+>   `EncodingFailed`. Python correct.
+>   `DÉFAUT : un vecteur refusé empoisonne le cache d'un encodeur déjà servi`.
+
 Passe 1 du lot 15. Tests : `content/snippets/search-in-your-own-documents/n{0,1,2,3}.test.{py,js}`.
 Avant : 80 tests. Après : 233 (n0.py 29, n0.js 34, n1.py 28, n1.js 28, n2.py 28,
 n2.js 28, n3.py 29, n3.js 30). Les tests d'origine sont renommés en français,
@@ -164,3 +176,79 @@ Deux outils de test à connaître pour la relecture :
   moment.
 - La charte pourrait nommer le cas « limite négative » parmi les valeurs aux
   limites : il fait diverger SQLite et les tranches JavaScript/Python.
+
+## Tour 2 — contre-épreuve
+
+Après `d621b6a` (corrections du rédacteur, tour 1). Tests : n0.py 31, n0.js 35,
+n1.py 27, n1.js 27, n2.py 35, n2.js 34, n3.py 33, n3.js 34 (256 ; 233 avant).
+`node scripts/test-snippets.mjs search-in-your-own-documents` vert, avec les
+deux marquages `DÉFAUT` ci-dessous et eux seuls.
+
+### Lignes « À retester » du rédacteur
+
+| # | Ligne | Désormais | Test |
+|---|---|---|---|
+| 9, 10 | repli de `tokenise` = `unicode61` | démontrée (py, js) : douze mots (ligature, pleine chasse, exposant, grec et cyrillique accentués gardés ; latin à deux diacritiques, « résumé » repliés ; « œuvre », « straße » gardés) — jetons lus dans `fts5vocab` de la vraie table, identiques à `tokenise` en Python et en JavaScript. « ﬁchier » trouve la page, « fichier » non, dans les deux langages | test_le_repli_de_la_requete_est_celui_de_l_index_une_ligature_est_gardee / le repli de la requête est celui de l’index : une ligature est gardée |
+| 11 | « Node 22 ships `node:sqlite` (behind --experimental-sqlite before 22.13.0), but its bundled SQLite has no FTS5 module » | démontrée sur 22.12.0 : sans drapeau `ERR_UNKNOWN_BUILTIN_MODULE`, avec drapeau `no such module: fts5`. Le test prend désormais les deux branches (avant/après 22.13) et ne tombera plus au changement de mineure | Node 22 livre node:sqlite, derrière un drapeau avant 22.13.0… |
+| 15 | docstring de `build_index` : table des documents, ou table à contenu externe tenue par triggers, « either way it changes in the transaction that changes the document » | démontrée (py) pour les deux montages : insertion annulée, rien dans l'index. Sans objet en js | test_l_index_se_met_a_jour_dans_la_transaction_du_document, test_une_table_a_contenu_externe_tenue_par_triggers_change_dans_la_meme_transaction |
+| 14 | regulatory : « l'extrait cherche dans tout le fonds et n'en connaît aucun » | démontrée (py) : un champ `acl` n'est ni stocké ni filtré ; la table n'a que `doc_id, title, body`. L'obligation reste non testable | test_l_extrait_cherche_dans_tout_le_fonds_et_ne_connait_aucun_droit_d_acces |
+| 16, 17 | scenario : « SQLite a FTS5 et son classement BM25, PostgreSQL a tsvector et ses fonctions de classement, MySQL a FULLTEXT » | démontrée pour SQLite (5) ; PostgreSQL, MySQL : non testable ici (sources citées par le rédacteur) | — |
+| 18 | scenario : « vos journaux de recherche, avec leurs requêtes sans résultat, le disent » | non testable : conseil d'exploitation ; le mécanisme (requête sans résultat) est 1 à 3 | — |
+| 23 | élision : un jeton d'une lettre est écarté « unless the query holds nothing else » | démontrée (py, js) : « l'accord » trouve Télétravail (témoin py : la table interrogée avec « l » ne rend rien) ; « manager's » → `["manager"]` et trouve la page ; « a » seul est cherché et trouve ; « 𝐀 » (deux unités UTF-16) compte pour une lettre dans les deux langages | test_production_une_elision_dans_la_requete_ne_vide_plus_les_resultats, test_production_une_requete_d_une_seule_lettre_est_encore_cherchee |
+| 24, 44 | limite négative | démontrée (py `ValueError`, js `RangeError`, message « limit must be zero or more ») pour N0 et N1 ; témoin py : `LIMIT -1` rend les trois pages | test_production_une_limite_negative_est_refusee |
+| 25 | note de l'essai : « Le score monte quand les mots cherchés sont rares […] un mot présent dans la moitié des pages ou plus n'y ajoute rien » | démontrée : « paie » (3 pages sur 6) 0,00 partout ; témoin « responsable » (2 sur 6) 0,72 et 0,64 | essai : un mot présent dans la moitié des pages s’affiche à 0,00 partout |
+| 27, 29 | essai anglais : « how many days of holiday can I take » ; why « The implicit AND finishes the job » | démontrée : détail « No page contains: how, many, holiday, can, take. » ; N0 rien, « days of » trouve, la règle OU de N1 ramène des pages | essai : la question dans les mots du lecteur…, essai : en anglais aussi, le ET implicite finit bien le travail |
+| 31 | N1 breaking_point : « « congé » au singulier ne trouve rien non plus […] — pas plus qu'à N0 » | démontrée (py, js), témoin : le pluriel trouve aux deux niveaux | test_point_de_rupture_le_singulier_ne_trouve_rien_pas_plus_qu_a_n0 |
+| 33 | « quarante lignes » | retiré de la fiche et des docstrings ; test retiré (py, js), conformément à la décision 10 | — |
+| 34 | N1 docstring : « It does not reproduce FTS5 to the decimal: the matching rule, the idf, the length and the title weight all differ » ; verdict : « ne rend pas les scores de FTS5 » | démontrée (py, js), écart par écart : poids 3 contre 10 ; aux poids de N0, 2,3173 contre 1,5938 ; « le » garde un poids positif ici, 0 dans FTS5 ; longueur en occurrences pondérées ; OU contre ET | test_n1_ne_reproduit_pas_fts5_a_la_decimale_regle_idf_longueur_et_poids_different |
+| 40 | verdict : « N1 coûte en plus un index à reconstruire hors de la base » | démontrée par 38 ; « prenez-le le jour où… » non testable | — |
+| 43 | N1 champ `None` | démontrée (py, js) : indexé comme vide, `None` ne devient pas le mot « none » | test_production_un_champ_nul_est_indexe_comme_vide |
+| 47 | N2 breaking_point : « le score fusionné ne permet pas de poser un seuil […] le cosinus, que l'extrait ne rend pas » | démontrée (py, js) : même score 1/61 ; les résultats n'ont que `id` et `score` | test_point_de_rupture_aucun_seuil_ne_peut_se_poser_sur_le_score_fusionne |
+| 49 | N2 docstring : « a self-hosted sentence encoder, built for semantic search, maps each text to a dense vector » ; « vector search ranks every document, always » | premier membre non testable (modèle réel) ; second démontré par 45 | — |
+| 50 | N2 docstring : « keeps the first keyword result ahead of any page the keywords did not find […] further down the list, each leg weighs as much as the other » | démontrée (py, js) ; l'ancien « constat » devient la démonstration du second membre | test_la_tete_du_plein_texte_reste_devant_…, test_plus_bas_dans_la_liste_chaque_jambe_pese_autant_que_l_autre |
+| 52 | « Loaded once per process, then kept warm » | démontrée (py : `cache_clear` au début, un seul `SentenceTransformer` pour deux recherches ; js : un seul chargement réussi sur tout le fichier). Un chargement qui échoue est retenté à la recherche suivante (py : `functools.cache` ne retient pas l'exception ; js : « a failed load is tried again »). Constat (py, js) : l'échec du chargement sort tel quel (`OSError`, `Error`), pas en `EncodingFailed` | test_production_le_modele_par_defaut_est_charge_une_fois_par_processus, test_production_un_chargement_qui_echoue_est_retente_… |
+| 53 | « a document is encoded again only once its text has changed » ; « the unit vector of each document text seen in the last search » | démontrée (py, js) : la seconde requête part seule ; un document modifié part seul, et le classement est celui d'un encodeur neuf ; deux documents au même texte partent une fois ; une page retirée puis remise est ré-encodée | test_production_le_fonds_n_est_pas_reencode_…, …un_document_modifie_…, …deux_documents_au_meme_texte_…, …le_cache_ne_garde_que_… |
+| 53 bis | cache après un vecteur refusé | py : démontrée, rien n'est gardé, la recherche suivante ré-encode et répond. **js : DÉFAUT**, voir en tête | test_production_un_vecteur_refuse_n_empoisonne_pas_… / DÉFAUT : un vecteur refusé empoisonne… |
+| 55 | N2 js : `@huggingface/transformers`, `pipeline('feature-extraction', MODEL_NAME)`, `extract(batch, { pooling: 'mean' })` puis `.tolist()` | démontrée contre un module à cette surface (crochet sur le nouveau nom ; options `{ pooling: 'mean' }` vérifiées). Surface vérifiée par le rédacteur (context7) : l'appel existe | le modèle par défaut a la surface de @huggingface/transformers |
+| 56 | commentaire : « its card lists French among its languages » | nom du modèle démontré ; la carte : non testable ici | test_le_modele_nomme_est_multilingue |
+| 58 | `EncodingFailed` pour des vecteurs inutilisables | démontrée (py, js) : NaN, infini, tailles différentes, valeur non numérique (« beaucoup ») | test_des_vecteurs_inutilisables_levent_encoding_failed |
+| 63, 65 | N3 breaking_point : « la réponse du double cite le passage qu'on a bel et bien envoyé » ; « le résultat ne porte que l'identifiant du passage » | démontrée (py, js), formulation désormais exacte | test_point_de_rupture_une_vraie_citation_…, …il_faut_ouvrir_le_passage_… |
+| 67 | « The model only knows of your handbook what the prompt carries » ; « it compares identifiers, and never reads the sentence » | premier membre non testable (modèle) ; second démontré par 64 | — |
+| 69 | clôture ```json | démontrée (py, js) : clôture unique avec ou sans langue, blancs autour → décodée, un seul appel ; texte avant, deux blocs, clôture sur une ligne → `AnswerUnavailable`. **DÉFAUT (py, js)** : texte après la clôture et clôture non refermée décodés, voir en tête | test_production_une_reponse_enveloppee_…, test_production_un_autre_ecart_…, DÉFAUT : du texte après la clôture… |
+| 71 | « Temperature zero narrows the sampling. It does not make the call deterministic » | `temperature=0` envoyé : démontré ; le reste non testable (fournisseur) | test_chaque_passage_retrouve_voyage_dans_la_consigne |
+| 72 | adaptateur `ProviderClient` / `providerClient` | démontrée (py, js) avec `_harness/fake_sdk` : `chat.completions.create`, `model="gpt-4.1-mini"`, un message `user` qui porte la consigne, `temperature=0`, pas de `complete` ; `content` nul → `AnswerUnavailable` (« no text ») après deux requêtes ; panne du kit retentée une fois ; client par défaut (`OpenAI()` remplacé par le double du harnais) → réponse décodée. Le double local de `openai` à la main est remplacé par celui du harnais ; « échoue en service indisponible sans appel » retiré (py, js) | test_l_adaptateur_…, test_le_client_par_defaut_a_la_forme_du_vrai_kit |
+| 75 | « Je ne sais pas. » | démontrée (py, js) : « Je ne sais pas. », « JE NE SAIS PAS ! », blancs finaux → `NO_ANSWER` ; témoin : « Je ne sais pas, trente jours ? » sans source → `AnswerNotGrounded` | test_production_je_ne_sais_pas_avec_majuscule_et_ponctuation_… |
+| 76 | identifiants entiers | démontrée (py, js) : source `1` ou `"1"` → `[1]` rendu entier ; `3` → `AnswerNotGrounded` | test_production_un_identifiant_entier_est_accepte_et_rendu_entier |
+| 77 | types inattendus | démontrée (py, js) : `sources` chaîne, nulle, nombre, `[true]`, liste imbriquée (js : `1.5`), `answer` nul ou absent → `AnswerUnavailable` « not the object asked for », deux appels | test_production_une_reponse_d_un_autre_type_… |
+| 78 | question vide ; question longue | démontrée (py, js) : "", blancs, insécable + saut de ligne → `NO_ANSWER` sans appel ; 1 000 caractères passent, 1 001 et 1 000 000 → `ValueError`/`RangeError` sans appel et sans construire `OpenAI()` ; mille emoji passent (points de code dans les deux langages) | test_production_une_question_vide_ou_blanche_…, test_production_une_question_trop_longue_… |
+| 79 | js : emoji à la frontière de 1 500 | démontrée : l'emoji reste entier, le suivant est coupé, aucune demi-paire dans la consigne | production : un emoji à la frontière de coupe reste entier |
+
+### Constats nouveaux, non marqués
+
+- **N2 py** : le cache par encodeur est un `WeakKeyDictionary` ; un encodeur
+  injecté non hachable (une `dataclass` ordinaire) fait lever `TypeError`
+  avant tout encodage. `SentenceTransformer` et les doubles sont hachables.
+  Test : `test_production_constat_un_encodeur_non_hachable_leve_type_error`. À
+  trancher par l'orchestrateur (le rédacteur l'a signalé).
+- **N2 py, js** : un chargement du modèle par défaut qui échoue sort en
+  exception de la bibliothèque, pas en `EncodingFailed`.
+
+### Toujours non testable
+
+14 (obligation), 18, 19, 20, 40 (en partie), 41, 49 (en partie), 56 (carte),
+60, 67 (en partie), 71 (en partie), 74, 82 : inchangés, mêmes raisons qu'au
+tour 1.
+
+### Défauts restants (marqués)
+
+- **N3 py, js — clôture** : `_decode` fait `split("\n", 1)[-1].rsplit("```", 1)[0]`
+  (py) ; `lastIndexOf('```')`, et le texte entier si aucune clôture finale
+  (js). Sortie : ```` ```json\n{…}\n```\nVoilà, bonne journée. ```` → décodé,
+  ```` ```json\n{…} ```` (non refermée) → décodé. Attendu (charte, décision
+  12) : `AnswerUnavailable`.
+- **N2 js — cache empoisonné** : `missing.forEach((text, i) => known.set(text, vectors[i]))`
+  écrit dans la `Map` déjà gardée par `documentVectors` avant la vérification
+  `usable`. Scénario : recherche 1 sur la page A ; recherche 2 sur A et B, le
+  vecteur de B est NaN → `EncodingFailed` (juste) ; recherche 3 sur A et B →
+  B n'est pas ré-encodée, `EncodingFailed` de nouveau, et ainsi de suite. Le
+  Python construit un nouveau dictionnaire et répond à la recherche 3.

@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildIndex as buildIndexN0, search as searchN0 } from './n0.js';
-import { buildIndex, search, tokenise } from './n1.js';
+import { FIELD_WEIGHTS, buildIndex, search, tokenise } from './n1.js';
 
 const HANDBOOK = [
   {
@@ -41,13 +41,6 @@ const HANDBOOK = [
 const INDEX = buildIndex(HANDBOOK);
 const ids = (results) => results.map((result) => result.id);
 
-/** Lignes de code utiles : ni vides, ni commentaires. */
-function codeLines(name) {
-  const source = readFileSync(new URL(name, import.meta.url), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ''));
-  return source.split('\n').filter((line) => line.trim() && !line.trim().startsWith('//'));
-}
-
 // ---------------------------------------------------------------------------
 // Point de rupture
 // ---------------------------------------------------------------------------
@@ -58,10 +51,13 @@ test('point de rupture : le découpage en mots devient votre problème', () => {
   assert.deepEqual(ids(search(INDEX, 'congés')), ['conges']);
 });
 
-test('INFIRMÉ : « désormais « congé » ne trouve rien », N0 ne le trouvait pas non plus', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(ids(searchN0(buildIndexN0(HANDBOOK), 'congé')), ['conges']);
-  });
+test('point de rupture : le singulier ne trouve rien, pas plus qu’à N0', () => {
+  // breaking_point : « « congé » au singulier ne trouve rien non plus […] — pas plus qu’à N0 ».
+  const n0Index = buildIndexN0(HANDBOOK);
+  assert.deepEqual(searchN0(n0Index, 'congé'), []);
+  assert.deepEqual(search(INDEX, 'congé'), []);
+  assert.deepEqual(ids(searchN0(n0Index, 'congés')), ['conges']);
+  assert.deepEqual(ids(search(INDEX, 'congés')), ['conges']);
 });
 
 test('point de rupture : désuffixation, synonymes et mots vides ne sont pas traités', () => {
@@ -80,12 +76,6 @@ test('point de rupture : l’élision laisse un mot « l » qui pèse plus que l
   assert.deepEqual(result.terms, { l: 1.9377, accord: 1.6844 });
 });
 
-test('INFIRMÉ : l’extrait tient en quarante lignes, n1.js en compte 46', async () => {
-  await assert.rejects(async () => {
-    assert.ok(codeLines('./n1.js').length <= 40);
-  });
-});
-
 // ---------------------------------------------------------------------------
 // Autres affirmations du niveau
 // ---------------------------------------------------------------------------
@@ -101,11 +91,19 @@ test('un seul terme suffit là où N0 les voulait tous', () => {
   assert.deepEqual(searchN0(buildIndexN0(HANDBOOK), 'congés responsable'), []);
 });
 
-test('INFIRMÉ : aux mêmes poids, N1 rendrait les scores de la base', async () => {
-  await assert.rejects(async () => {
-    const sameWeights = buildIndex(HANDBOOK, { title: 10, body: 1 });
-    assert.equal(search(sameWeights, 'congés')[0].score, searchN0(buildIndexN0(HANDBOOK), 'congés')[0].score);
-  });
+test('N1 ne reproduit pas FTS5 à la décimale : règle, IDF, longueur et poids diffèrent', () => {
+  // docstring : « It does not reproduce FTS5 to the decimal: the matching rule,
+  // the idf, the length and the title weight all differ ».
+  const n0Index = buildIndexN0(HANDBOOK);
+  assert.deepEqual(FIELD_WEIGHTS, { title: 3, body: 1 });
+  const sameWeights = buildIndex(HANDBOOK, { title: 10, body: 1 });
+  assert.equal(search(sameWeights, 'congés')[0].score, 2.3173);
+  assert.equal(searchN0(n0Index, 'congés')[0].score, 1.5938);
+  assert.ok(search(sameWeights, 'le').every((r) => r.score > 0));
+  assert.deepEqual([...new Set(searchN0(n0Index, 'le').map((r) => r.score))], [0]);
+  assert.equal(sameWeights.lengths.get('teletravail'), 10 + tokenise(HANDBOOK[1].body).length);
+  assert.notDeepEqual(search(sameWeights, 'congés responsable'), []);
+  assert.deepEqual(searchN0(n0Index, 'congés responsable'), []);
 });
 
 test('un titre l’emporte sur deux occurrences dans le corps', () => {
@@ -195,7 +193,8 @@ test('production : fonds vide et documents sans texte', () => {
   assert.deepEqual(search(buildIndex([{ id: 'vide', title: '', body: '' }]), 'congés'), []);
 });
 
-test('production : un champ nul est indexé comme vide (le Python lève)', () => {
+test('production : un champ nul est indexé comme vide', () => {
+  assert.deepEqual(search(buildIndex([{ id: 'nul', title: null, body: undefined }]), 'null'), []);
   assert.deepEqual(ids(search(buildIndex([{ id: 'nul', title: null, body: 'congés' }]), 'congés')), ['nul']);
 });
 
@@ -233,13 +232,6 @@ test('production : limites zéro et un, k1 nul, b à un', () => {
   assert.deepEqual(ids(search(INDEX, 'jours', { b: 1 })), ['teletravail', 'conges']);
 });
 
-test('une limite négative n’est pas refusée', async () => {
-  let result;
-  try {
-    result = search(INDEX, 'le', { limit: -1 });
-  } catch (error) {
-    if (error instanceof RangeError) return;
-    throw error;
-  }
-  assert.deepEqual(result, []);
+test('production : une limite négative est refusée', () => {
+  assert.throws(() => search(INDEX, 'le', { limit: -1 }), { name: 'RangeError', message: 'limit must be zero or more' });
 });

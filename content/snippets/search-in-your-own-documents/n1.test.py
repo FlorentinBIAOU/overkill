@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from n0 import build_index as build_index_n0, search as search_n0
-from n1 import build_index, search, tokenise
+from n1 import FIELD_WEIGHTS, build_index, search, tokenise
 
 HANDBOOK = [
     {
@@ -53,21 +53,6 @@ def ids(results):
     return [result["id"] for result in results]
 
 
-def code_lines(path):
-    """Lignes de code utiles : ni vides, ni commentaires, ni docstrings."""
-    source = path.read_text(encoding="utf-8")
-    docstrings = set()
-    for node in ast.walk(ast.parse(source)):
-        if isinstance(node, (ast.Module, ast.FunctionDef, ast.ClassDef)) and node.body:
-            first = node.body[0]
-            if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) and isinstance(first.value.value, str):
-                docstrings.update(range(first.lineno, first.end_lineno + 1))
-    return [
-        line for number, line in enumerate(source.splitlines(), start=1)
-        if line.strip() and not line.strip().startswith("#") and number not in docstrings
-    ]
-
-
 # ---------------------------------------------------------------------------
 # Point de rupture
 # ---------------------------------------------------------------------------
@@ -75,26 +60,25 @@ def code_lines(path):
 
 def test_point_de_rupture_le_decoupage_en_mots_devient_votre_probleme():
     """
-    breaking_point : « « vacances » ne trouve toujours rien, et désormais
-    « congé » au singulier ne trouve rien non plus, là où le manuel écrit
-    « congés » ». Témoin : le pluriel du manuel trouve la page.
+    breaking_point : « « vacances » ne trouve toujours rien, et « congé » au
+    singulier ne trouve rien non plus, là où le manuel écrit « congés » ».
+    Témoin : le pluriel du manuel trouve la page.
     """
     assert search(INDEX, "vacances") == []
     assert search(INDEX, "congé") == []
     assert ids(search(INDEX, "congés")) == ["conges"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : « et désormais « congé » au singulier ne trouve rien non plus » "
-        "présente l'échec comme nouveau à N1 ; N0 (FTS5, unicode61, sans "
-        "désuffixation) ne trouve rien non plus pour « congé ». Ce n'est pas un "
-        "recul de N1, c'est le même trou"
-    ),
-)
-def test_infirme_le_singulier_trouvait_la_page_a_n0():
-    assert ids(search_n0(build_index_n0(HANDBOOK), "congé")) == ["conges"]
+def test_point_de_rupture_le_singulier_ne_trouve_rien_pas_plus_qu_a_n0():
+    """
+    breaking_point : « « congé » au singulier ne trouve rien non plus […] — pas
+    plus qu'à N0 : rien dans ce code ne connaît la morphologie du français ».
+    Témoin : le pluriel trouve la page aux deux niveaux.
+    """
+    n0_index = build_index_n0(HANDBOOK)
+    assert search_n0(n0_index, "congé") == []
+    assert search(INDEX, "congé") == []
+    assert [r["id"] for r in search_n0(n0_index, "congés")] == ids(search(INDEX, "congés")) == ["conges"]
 
 
 def test_point_de_rupture_desuffixation_synonymes_et_mots_vides_ne_sont_pas_traites():
@@ -124,17 +108,6 @@ def test_point_de_rupture_l_elision_laisse_un_mot_l_qui_pese_plus_que_le_vrai_mo
     assert result["terms"]["l"] > result["terms"]["accord"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : « ces quarante lignes » ; n1.py compte 42 lignes de code utile "
-        "(ni vides, ni commentaires, ni docstrings), n1.js 46"
-    ),
-)
-def test_infirme_l_extrait_tient_en_quarante_lignes():
-    assert len(code_lines(Path(__file__).with_name("n1.py"))) <= 40
-
-
 # ---------------------------------------------------------------------------
 # Autres affirmations du niveau
 # ---------------------------------------------------------------------------
@@ -152,20 +125,27 @@ def test_un_seul_terme_suffit_la_ou_n0_les_voulait_tous():
     assert search_n0(build_index_n0(HANDBOOK), "congés responsable") == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring dit « the forty lines below are what the database "
-        "does », le verdict « le même algorithme avec les molettes sorties ». Aux "
-        "poids de N0 (titre 10, corps 1), « congés » vaut 2,3173 ici et 1,5938 dans "
-        "FTS5 : l'IDF est log(1 + …) au lieu du log plancher de FTS5, la longueur est "
-        "comptée en jetons pondérés au lieu de jetons, et « le » garde un poids "
-        "positif là où FTS5 le ramène à zéro"
-    ),
-)
-def test_infirme_aux_memes_poids_n1_rend_les_scores_de_la_base():
+def test_n1_ne_reproduit_pas_fts5_a_la_decimale_regle_idf_longueur_et_poids_different():
+    """
+    docstring : « It does not reproduce FTS5 to the decimal: the matching rule,
+    the idf, the length and the title weight all differ » ; verdict_rationale :
+    « ne rend pas les scores de FTS5 ». Chaque écart, un par un.
+    """
+    n0_index = build_index_n0(HANDBOOK)
+    # Poids du titre : 3 ici, 10 dans N0.
+    assert FIELD_WEIGHTS == {"title": 3.0, "body": 1.0}
+    # Même aux poids de N0, le score diffère.
     same_weights = build_index(HANDBOOK, {"title": 10.0, "body": 1.0})
-    assert search(same_weights, "congés")[0]["score"] == search_n0(build_index_n0(HANDBOOK), "congés")[0]["score"]
+    assert search(same_weights, "congés")[0]["score"] == 2.3173
+    assert search_n0(n0_index, "congés")[0]["score"] == 1.5938
+    # IDF : « le », dans trois pages sur quatre, garde un poids ici, pas dans FTS5.
+    assert all(r["score"] > 0 for r in search(same_weights, "le"))
+    assert {r["score"] for r in search_n0(n0_index, "le")} == {0.0}
+    # Longueur : comptée en occurrences pondérées ici (un titre d'un mot pèse 10).
+    assert same_weights["lengths"]["teletravail"] == 10 + len(tokenise(HANDBOOK[1]["body"]))
+    # Règle d'appariement : OU ici, ET dans FTS5.
+    assert ids(search(same_weights, "congés responsable")) != []
+    assert search_n0(n0_index, "congés responsable") == []
 
 
 def test_un_titre_l_emporte_sur_deux_occurrences_dans_le_corps():
@@ -271,7 +251,9 @@ def test_production_fonds_vide_et_documents_sans_texte():
     assert search(build_index([{"id": "vide", "title": "", "body": ""}]), "congés") == []
 
 
-def test_defaut_un_champ_nul_fait_lever_l_indexation():
+def test_production_un_champ_nul_est_indexe_comme_vide():
+    """Commentaire : « a NULL column is empty »."""
+    assert search(build_index([{"id": "nul", "title": None, "body": None}]), "none") == []
     assert ids(search(build_index([{"id": "nul", "title": None, "body": "congés"}]), "congés")) == ["nul"]
 
 
@@ -311,8 +293,6 @@ def test_production_limites_zero_et_un_k1_nul_b_un():
     assert ids(search(INDEX, "jours", b=1)) == ["teletravail", "conges"]
 
 
-def test_defaut_une_limite_negative_n_est_pas_refusee():
-    try:
-        assert search(INDEX, "le", limit=-1) == []
-    except ValueError:
-        pass
+def test_production_une_limite_negative_est_refusee():
+    with pytest.raises(ValueError, match="limit must be zero or more"):
+        search(INDEX, "le", limit=-1)
