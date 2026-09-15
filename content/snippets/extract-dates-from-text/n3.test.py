@@ -11,33 +11,18 @@ so next to the code.
 """
 
 import json
+import sys
 from datetime import date
 from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_CHARACTERS, ExtractionUnavailable, extract_dates
+from _harness.fake_sdk import FakeSDK
+from n3 import MAX_CHARACTERS, MODEL, PROMPT, ExtractionUnavailable, ProviderClient, extract_dates
 
 TODAY = date(2024, 3, 12)
-
-
-class RealShapedClient:
-    """
-    A double with the surface of the published `openai` kit (3.x):
-    `client.chat.completions.create(model=..., messages=[...])`, answer read
-    from `choices[0].message.content`. It has no `complete` method.
-    """
-
-    def __init__(self, content):
-        self.calls = []
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-        self._content = content
-
-    def _create(self, **request):
-        self.calls.append(request)
-        message = SimpleNamespace(content=self._content)
-        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+ANSWER = '[{"text": "12/03/2024", "date": "2024-03-12"}]'
 
 
 # ---------------------------------------------------------------------------
@@ -47,9 +32,9 @@ class RealShapedClient:
 
 def test_point_de_rupture_2024_02_31_en_json_impeccable_est_ecarte_et_la_date_inventee_passe():
     """
-    breaking_point : « Le modèle rend « 2024-02-31 » en JSON impeccable, et à côté
-    une date qu'il a fabriquée. La vérification calendaire […] écarte le jour
-    impossible ; la date inventée passe ».
+    breaking_point : « Rien dans la requête n'empêche la réponse de porter « 2024-02-31 » en JSON
+    impeccable, ni une date qui ne figure pas dans le document. La vérification calendaire de N0 doit
+    rester, et elle écarte le jour impossible ». Témoin : le jour réel de la même réponse passe.
     """
     client = FakeLLM(
         response=json.dumps(
@@ -65,7 +50,7 @@ def test_point_de_rupture_2024_02_31_en_json_impeccable_est_ecarte_et_la_date_in
 
 
 def test_point_de_rupture_rien_dans_la_reponse_ne_signale_une_date_absente_du_document():
-    """breaking_point : « la date inventée passe, et rien dans la réponse ne la signale » : même un passage qui n'est pas dans le texte."""
+    """breaking_point : « la date absente du document passe, et rien dans la réponse ne la signale »."""
     client = FakeLLM(response='[{"text": "15 mars", "date": "2024-03-15"}]')
     document = "Merci pour votre retour, nous revenons vers vous."
     assert "15 mars" not in document
@@ -74,24 +59,43 @@ def test_point_de_rupture_rien_dans_la_reponse_ne_signale_une_date_absente_du_do
 
 def test_point_de_rupture_une_reponse_en_prose_leve_plutot_que_rendre_une_liste_vide():
     """
-    breaking_point : « Sommé de répondre en JSON, il peut aussi répondre en
-    prose : l'extrait lève alors une erreur, plutôt que de rendre une liste vide ».
+    breaking_point : « Une réponse qui n'est pas une liste d'objets à date AAAA-MM-JJ — de la prose […] —
+    est redemandée, puis l'extrait lève une erreur, plutôt que de rendre une liste vide ».
     Témoin : une vraie liste vide rend une liste vide.
     """
     prose = FakeLLM(response="Sure! Here are the dates I found:")
     with pytest.raises(ExtractionUnavailable):
         extract_dates("réunion le 12/03/2024", client=prose, today=TODAY)
+    assert prose.call_count == 3
     assert extract_dates("rien à signaler", client=FakeLLM(response="[]"), today=TODAY) == []
 
 
-def test_defaut_une_liste_d_elements_mal_formes_leve_plutot_que_rendre_une_liste_vide():
+def test_point_de_rupture_une_cle_mal_nommee_ou_une_date_ecrite_12_03_2024_est_redemandee_puis_leve():
+    """
+    breaking_point : « une clé mal nommée, une date écrite « 12/03/2024 » — est redemandée, puis l'extrait
+    lève une erreur ». Aussi les formes que `date.fromisoformat` accepterait (20240312, 2024-W11-2).
+    """
     for response in (
         '[{"text": "12/03/2024", "day": "2024-03-12"}]',
         '[{"text": "12/03/2024", "date": "12/03/2024"}]',
         '[{"text": "12/03/2024", "date": "2024-03-12T09:00:00"}]',
+        '[{"text": "12/03/2024", "date": "20240312"}]',
+        '[{"text": "12/03/2024", "date": "2024-W11-2"}]',
+        '[{"text": "12/03/2024", "date": "2024-3-12"}]',
+        '[{"text": "12/03/2024", "date": "２０２４-03-12"}]',
+        '[{"text": "ok", "date": "2024-03-12"}, {"text": "12/03/2024", "date": "12/03/2024"}]',
     ):
-        with pytest.raises(ExtractionUnavailable):
-            extract_dates("réunion le 12/03/2024", client=FakeLLM(response=response), today=TODAY)
+        client = FakeLLM(response=response)
+        with pytest.raises(ExtractionUnavailable, match="list of ISO days"):
+            extract_dates("réunion le 12/03/2024", client=client, today=TODAY)
+        assert client.call_count == 3, response
+
+
+def test_point_de_rupture_rien_dans_la_requete_n_empeche_la_reponse_de_porter_2024_02_31():
+    """« Rien dans la requête n'empêche la réponse… » : l'adaptateur n'envoie que le modèle, le message et la température."""
+    sdk = FakeSDK(content="[]")
+    extract_dates("réunion le 12/03/2024", client=ProviderClient(sdk=sdk), today=TODAY)
+    assert set(sdk.last_request) == {"endpoint", "model", "messages", "temperature"}
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +112,7 @@ def test_decode_ce_que_le_modele_annonce():
 
 
 def test_une_date_relative_resolue_par_le_modele_est_rendue():
-    """docstring : « the only one on this entry that reads "jeudi prochain" » : la plomberie rend ce que le modèle résout."""
+    """Docstring : « whose request asks for relative dates, "jeudi prochain", to be resolved » : la plomberie rend ce que le modèle résout."""
     client = FakeLLM(response='[{"text": "jeudi prochain", "date": "2024-03-14"}]')
     assert extract_dates("on se voit jeudi prochain", client=client, today=TODAY) == [
         ("jeudi prochain", date(2024, 3, 14))
@@ -116,13 +120,18 @@ def test_une_date_relative_resolue_par_le_modele_est_rendue():
 
 
 def test_envoie_le_texte_le_jour_de_reference_et_la_consigne_a_temperature_zero():
-    """docstring : « pass a reference date, because the model has no idea what day it is » ; commentaire « Temperature zero »."""
+    """
+    Docstring : « it sends today's date along with the text, and asks for every date as a calendar day » ;
+    « pass a reference date, because the model is not told what day it is otherwise » ; commentaire « Temperature zero ».
+    """
     client = FakeLLM(response="[]")
     extract_dates("on se voit jeudi prochain", client=client, today=TODAY)
     prompt = client.last_request["prompt"]
-    assert "on se voit jeudi prochain" in prompt
-    assert "today, which is 2024-03-12" in prompt
+    assert prompt == PROMPT.format(text="on se voit jeudi prochain", today="2024-03-12")
+    assert "Resolve relative dates" in prompt and "today, which is 2024-03-12" in prompt
     assert "JSON only" in prompt and "YYYY-MM-DD" in prompt
+    # Le jour de référence est la seule date de la requête : rien d'autre ne dit au modèle quel jour il est.
+    assert prompt.count("2024") == 1
     assert client.last_request["temperature"] == 0
 
 
@@ -163,21 +172,63 @@ def test_une_panne_persistante_est_retentee_trois_fois_pas_une_de_plus():
     assert client.call_count == 3
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle "
-        "`client.complete(prompt=..., temperature=0)`, absent du kit `openai` publié "
-        "(surface réelle : chat.completions.create(model=..., messages=[...]), réponse "
-        "dans choices[0].message.content). L'AttributeError est avalée par la boucle de "
-        "réessai et ressort en ExtractionUnavailable"
-    ),
-)
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    client = RealShapedClient('[{"text": "12/03/2024", "date": "2024-03-12"}]')
-    assert extract_dates("réunion le 12/03/2024", client=client, today=TODAY) == [
+def test_production_l_adaptateur_parle_au_kit_par_chat_completions_create():
+    """
+    Docstring : « In production it defaults to a real provider client. » `ProviderClient` sur le double du
+    harnais, à la forme du kit `openai` publié, sans méthode `complete`.
+    """
+    sdk = FakeSDK(content=ANSWER)
+    assert not hasattr(sdk, "complete")
+    assert extract_dates("réunion le 12/03/2024", client=ProviderClient(sdk=sdk), today=TODAY) == [
         ("12/03/2024", date(2024, 3, 12))
     ]
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL == "gpt-4.1-mini"
+    assert request["messages"] == [
+        {"role": "user", "content": PROMPT.format(text="réunion le 12/03/2024", today="2024-03-12")}
+    ]
+    assert request["temperature"] == 0
+    assert len(sdk.requests) == 1
+    other = FakeSDK(content="[]")
+    extract_dates("hello", client=ProviderClient(sdk=other, model="another-model"), today=TODAY)
+    assert other.last_request["model"] == "another-model"
+
+
+def test_production_sans_client_le_kit_openai_est_construit_et_appele(monkeypatch):
+    """`client = client or ProviderClient()` : `from openai import OpenAI`, puis `OpenAI()`."""
+    sdk = FakeSDK(content=ANSWER)
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=lambda: sdk))
+    assert extract_dates("réunion le 12/03/2024", today=TODAY) == [("12/03/2024", date(2024, 3, 12))]
+    assert sdk.last_request["endpoint"] == "chat.completions"
+
+
+def test_production_le_client_par_defaut_n_est_construit_qu_apres_les_refus_de_taille_et_de_texte_vide(monkeypatch):
+    """Commentaires : « nothing to read, so nothing to pay for » ; « Refusing oversized input before the call »."""
+    def interdit():
+        raise AssertionError("client construit avant les contrôles d'entrée")
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=interdit))
+    assert extract_dates("", today=TODAY) == []
+    assert extract_dates(" \n\t", today=TODAY) == []
+    with pytest.raises(ValueError):
+        extract_dates("x" * (MAX_CHARACTERS + 1), today=TODAY)
+
+
+def test_production_un_content_nul_est_une_reponse_inutilisable_redemandee_puis_levee():
+    """Commentaire : « a refusal carries no content: unusable, not empty »."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(ExtractionUnavailable, match="no content"):
+        extract_dates("réunion le 12/03/2024", client=ProviderClient(sdk=sdk), today=TODAY)
+    assert len(sdk.requests) == 3
+
+
+def test_production_une_panne_du_kit_est_retentee_par_l_adaptateur():
+    sdk = FakeSDK(content=ANSWER, fail_times=2)
+    assert extract_dates("réunion le 12/03/2024", client=ProviderClient(sdk=sdk), today=TODAY) == [
+        ("12/03/2024", date(2024, 3, 12))
+    ]
+    assert len(sdk.requests) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +236,7 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-def test_defaut_un_texte_vide_ne_coute_aucun_appel():
+def test_production_un_texte_vide_ou_blanc_ne_coute_aucun_appel():
     for text in ("", "  \n "):
         client = FakeLLM(response="[]")
         assert extract_dates(text, client=client, today=TODAY) == []
@@ -200,16 +251,19 @@ def test_production_exactement_8000_caracteres_passent_et_8001_sont_refuses():
     assert client.call_count == 1
 
 
-def test_production_cinq_mille_emoji_font_cinq_mille_caracteres_pas_dix_mille():
+def test_production_le_plafond_compte_des_caracteres_pas_des_jetons():
+    """Commentaire : « the cap counts characters, not tokens » : 8 000 emoji passent, 8 001 sont refusés sans appel."""
     client = FakeLLM(response="[]")
     assert extract_dates("📅" * 5000, client=client, today=TODAY) == []
-    assert client.call_count == 1
+    assert extract_dates("📅" * MAX_CHARACTERS, client=client, today=TODAY) == []
+    with pytest.raises(ValueError):
+        extract_dates("📅" * (MAX_CHARACTERS + 1), client=client, today=TODAY)
+    assert client.call_count == 2
 
 
 def test_production_une_reponse_qui_n_est_pas_une_liste_leve_apres_trois_essais():
-    """JSON entouré de balises Markdown, tronqué, vide, objet au lieu de liste, nul."""
+    """JSON tronqué, vide, objet au lieu de liste, nul."""
     for response in (
-        '```json\n[{"text": "12/03/2024", "date": "2024-03-12"}]\n```',
         '[{"text": "12/03/2024", "date": "2024-03-12"}',
         "",
         '{"dates": [{"text": "12/03/2024", "date": "2024-03-12"}]}',
@@ -221,18 +275,45 @@ def test_production_une_reponse_qui_n_est_pas_une_liste_leve_apres_trois_essais(
         assert client.call_count == 3, response
 
 
-def test_production_des_elements_nuls_ou_d_un_autre_type_sont_ecartes_sans_exception():
-    client = FakeLLM(response='[null, "2024-03-12", 42, {"text": "12/03/2024", "date": "2024-03-12"}]')
-    assert extract_dates("réunion le 12/03/2024", client=client, today=TODAY) == [
-        ("12/03/2024", date(2024, 3, 12))
-    ]
+@pytest.mark.xfail(
+    strict=True,
+    reason="DÉFAUT : une réponse entièrement enveloppée dans une seule clôture ```json est passée telle quelle à "
+    "json.loads, échoue, est redemandée et sort en ExtractionUnavailable après trois appels payés "
+    "(charte des tests et DECISIONS n° 12 : elle doit être décodée)",
+)
+def test_defaut_une_reponse_enveloppee_dans_une_seule_cloture_json_est_decodee():
+    for response in (f"```json\n{ANSWER}\n```", f"```\n{ANSWER}\n```"):
+        client = FakeLLM(response=response)
+        assert extract_dates("réunion le 12/03/2024", client=client, today=TODAY) == [("12/03/2024", date(2024, 3, 12))]
+        assert client.call_count == 1
 
 
-def test_defaut_un_passage_nul_ou_absent_devient_une_chaine_vide():
-    client = FakeLLM(response='[{"text": null, "date": "2024-03-12"}, {"date": "2024-03-13"}]')
+def test_production_une_cloture_entouree_de_texte_double_ou_non_refermee_leve():
+    for response in (
+        f"Here you go:\n```json\n{ANSWER}\n```",
+        f"```json\n{ANSWER}\n```\nHope this helps.",
+        f"```json\n{ANSWER}\n```\n```json\n[]\n```",
+        f"```json\n{ANSWER}",
+    ):
+        with pytest.raises(ExtractionUnavailable):
+            extract_dates("réunion le 12/03/2024", client=FakeLLM(response=response), today=TODAY)
+
+
+def test_production_des_elements_nuls_ou_d_un_autre_type_rendent_la_reponse_inutilisable():
+    """`_is_usable` : « A list of objects, each with a `date` written YYYY-MM-DD » ; plus de liste vide trompeuse."""
+    for response in ('[null, "2024-03-12", 42, {"text": "12/03/2024", "date": "2024-03-12"}]', "[null]", '["2024-03-12"]', "[[]]"):
+        client = FakeLLM(response=response)
+        with pytest.raises(ExtractionUnavailable):
+            extract_dates("réunion le 12/03/2024", client=client, today=TODAY)
+        assert client.call_count == 3, response
+
+
+def test_production_un_passage_nul_absent_ou_non_textuel_devient_une_chaine_vide():
+    client = FakeLLM(response='[{"text": null, "date": "2024-03-12"}, {"date": "2024-03-13"}, {"text": 5, "date": "2024-03-14"}]')
     assert extract_dates("réunion", client=client, today=TODAY) == [
         ("", date(2024, 3, 12)),
         ("", date(2024, 3, 13)),
+        ("", date(2024, 3, 14)),
     ]
 
 
@@ -260,12 +341,15 @@ def test_production_valeurs_aux_limites_du_calendrier_dans_la_reponse():
                 {"text": "c", "date": "1900-02-29"},
                 {"text": "d", "date": "9999-12-31"},
                 {"text": "e", "date": "2024-13-01"},
+                {"text": "f", "date": "0024-01-01"},
+                {"text": "g", "date": "0000-01-01"},
             ]
         )
     )
     assert extract_dates("x", client=client, today=TODAY) == [
         ("a", date(2024, 2, 29)),
         ("d", date(9999, 12, 31)),
+        ("f", date(24, 1, 1)),
     ]
 
 

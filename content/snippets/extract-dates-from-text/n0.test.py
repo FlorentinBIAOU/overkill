@@ -39,13 +39,39 @@ def test_point_de_rupture_l_echec_est_silencieux_une_liste_vide_et_non_une_erreu
 
 
 def test_point_de_rupture_une_date_relative_avec_des_chiffres_ne_rend_rien_non_plus():
-    """Au-delà de la fiche : « dans 15 jours » a des chiffres, et rien n'est trouvé pour autant."""
+    """breaking_point : « « dans 15 jours », qui a des chiffres, ne rend rien non plus »."""
     assert extract_dates("livraison dans 15 jours") == []
+    assert extract_dates("delivery in 15 days") == []
+
+
+def test_point_de_rupture_une_date_abregee_3_4_24_est_ecartee_expres():
+    """
+    breaking_point : « une date abrégée comme « 3/4/24 » est écartée exprès : une année sur deux chiffres
+    n'est lue qu'avec un jour et un mois sur deux chiffres, sans quoi « version 2.1.24 » deviendrait un
+    2 janvier ». Témoin : « 03/04/24 » est lu.
+    """
+    assert extract_dates("rendez-vous le 3/4/24") == []
+    assert extract_dates("mise à jour vers la version 2.1.24") == []
+    assert extract_dates("rendez-vous le 03/04/24") == [("03/04/24", date(2024, 4, 3))]
+    # Limites : un seul des deux champs non complété suffit à écarter ; une année sur quatre chiffres, non.
+    assert extract_dates("le 03/4/24") == [] and extract_dates("le 3/04/24") == []
+    assert extract_dates("le 3/4/2024") == [("3/4/2024", date(2024, 4, 3))]
 
 
 # ---------------------------------------------------------------------------
 # Autres affirmations du niveau
 # ---------------------------------------------------------------------------
+
+
+def test_lit_les_motifs_enumeres_du_scenario():
+    """scenario : « des motifs que l'on peut énumérer (12/03/2024, 2024-03-12, 3 avril 2024) », en : « March 3, 2024 »."""
+    text = "Réunion le 12/03/2024, specs 2024-03-12, livraison le 3 avril 2024, invoice March 3, 2024."
+    assert extract_dates(text) == [
+        ("12/03/2024", date(2024, 3, 12)),
+        ("2024-03-12", date(2024, 3, 12)),
+        ("3 avril 2024", date(2024, 4, 3)),
+        ("March 3, 2024", date(2024, 3, 3)),
+    ]
 
 
 def test_lit_les_trois_formats_dans_une_phrase():
@@ -66,8 +92,10 @@ def test_lit_les_mois_en_lettres_avec_et_sans_accents_en_francais_et_en_anglais(
         assert extract_dates(f"à compter du {written}") == [(written, date(2024, month, day))], written
 
 
-def test_les_annees_sur_deux_chiffres_suivent_le_pivot_69_2069_70_1970():
-    """commentaire : « Two-digit years on the usual pivot: 69 reads as 2069, 70 as 1970 »."""
+def test_les_annees_sur_deux_chiffres_se_lisent_comme_mysql_00_69_en_2000_70_99_en_1900():
+    """_full_year : « Two-digit years as MySQL reads them: 00-69 are 2000-2069, 70-99 are 1970-1999 »."""
+    assert extract_dates("01/01/00") == [("01/01/00", date(2000, 1, 1))]
+    assert extract_dates("31/12/99") == [("31/12/99", date(1999, 12, 31))]
     assert extract_dates("facture du 12.03.24") == [("12.03.24", date(2024, 3, 12))]
     assert extract_dates("archive du 12.03.97") == [("12.03.97", date(1997, 3, 12))]
     assert extract_dates("01/01/69") == [("01/01/69", date(2069, 1, 1))]
@@ -106,14 +134,21 @@ def test_l_ordre_iso_ne_depend_pas_de_la_convention():
 
 
 def test_les_nombres_ordinaires_restent_intacts():
-    """commentaire : « Years are two or four digits, never three: that is what keeps "1.2.3" out »."""
     assert extract_dates("version 1.2.3, ticket 4512, salle 4, 192.168.1.1") == []
     assert extract_dates("version 1.2.345") == []
 
 
-def test_defaut_un_numero_de_version_a_deux_chiffres_de_fin_est_lu_comme_une_date():
-    assert extract_dates("mise à jour vers la version 2.1.24") == []
-    assert extract_dates("serveur 10.1.1.24") == []
+def test_jamais_un_morceau_d_un_nombre_pointe_plus_long():
+    """
+    Commentaire de NUMERIC : « Never a piece of a longer dotted number: in "10.1.1.24", "1.1.24" is not
+    a date » ; commentaire : « a short year only with a padded day and month: "version 2.1.24" is no date ».
+    """
+    for text in ("serveur 10.1.1.24", "serveur 10.01.01.24", "réf. 12/03/2024/5", "réf. 1.12.03.2024", "v2.1.24"):
+        assert extract_dates(text) == [], text
+    # Témoin : la même date seule, et en fin de phrase suivie d'un point, est lue.
+    assert extract_dates("le 01.01.24") == [("01.01.24", date(2024, 1, 1))]
+    assert extract_dates("facture du 12.03.24.") == [("12.03.24", date(2024, 3, 12))]
+    assert extract_dates("facture du 12/03/2024.") == [("12/03/2024", date(2024, 3, 12))]
 
 
 def test_un_passage_qui_chevauche_une_date_retenue_n_est_pas_une_seconde_date():
@@ -130,16 +165,19 @@ def test_escalate_when_une_convention_unique_rend_des_dates_plausibles_mais_faus
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : verdict_rationale dit « Ce que ce niveau ne sait pas faire, il ne le "
-        "fait pas à moitié, il rend une liste vide » ; sur une date mois-jour lue en "
-        "jour-mois, il rend une date plausible et fausse, comme le dit escalate_when"
-    ),
-)
-def test_infirme_ce_que_n0_ne_sait_pas_faire_il_rend_une_liste_vide():
-    assert extract_dates("Invoice issued 04/05/2024, net thirty days.", day_first=True) == []
+def test_verdict_ce_qu_il_ne_voit_pas_est_une_liste_vide_ce_qu_il_lit_a_l_envers_une_date_plausible():
+    """
+    verdict_rationale : « Ce que ce niveau ne voit pas, il le rend en liste vide ; ce qu'il lit selon la
+    mauvaise convention, il le rend comme une date plausible ».
+    """
+    assert extract_dates("Relance jeudi prochain.") == []
+    assert extract_dates("Invoice issued 04/05/2024, net thirty days.", day_first=True) == [
+        ("04/05/2024", date(2024, 5, 4))
+    ]
+    # Témoin : lue selon sa convention, la facture américaine donne le 5 avril.
+    assert extract_dates("Invoice issued 04/05/2024, net thirty days.", day_first=False) == [
+        ("04/05/2024", date(2024, 4, 5))
+    ]
 
 
 def test_l_extrait_est_deterministe_et_n_importe_que_la_bibliotheque_standard():
@@ -162,7 +200,7 @@ def test_production_chaine_vide_et_texte_sans_chiffre():
     assert extract_dates("   \n\t") == []
 
 
-def test_defaut_quinze_mille_dates_depassent_une_borne_large():
+def test_production_quinze_mille_dates_tiennent_dans_une_borne_large():
     text = "le 12/03/2024, " * 15_000
     debut = time.perf_counter()
     assert len(extract_dates(text)) == 15_000
@@ -173,7 +211,32 @@ def test_production_un_motif_pathologique_termine_dans_une_borne_large():
     debut = time.perf_counter()
     assert extract_dates(("1 " + "a" * 1000 + " ") * 1000) == []
     assert extract_dates("1" + " " * 200_000 + "avril") == []
+    assert extract_dates("March" + " " * 200_000 + "3") == []
+    assert extract_dates("1." * 100_000) == [] and extract_dates("12/" * 60_000) == []
     assert time.perf_counter() - debut < 5
+
+
+def test_une_longue_suite_de_lettres_est_lue_une_fois_pas_une_fois_par_lettre():
+    """
+    Commentaire de MONTH_FIRST : « It only starts at the start of a word, so a long run of letters is
+    read once, not once per letter. » 100 000 lettres, puis 1 000 mots de 100 lettres, dans une borne large.
+    """
+    debut = time.perf_counter()
+    assert extract_dates("March" + "a" * 100_000 + " 3, 2024") == []
+    assert extract_dates(("a" * 100 + " ") * 1000 + "March 3, 2024") == [("March 3, 2024", date(2024, 3, 3))]
+    assert time.perf_counter() - debut < 1
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="DÉFAUT : une longue suite de marques combinantes est lue une fois par marque : le regard arrière de "
+    "MONTH_FIRST n'exclut que les lettres, et WORD accepte les marques, donc chaque marque ouvre une tentative "
+    "qui relit toute la suite. 5 000 marques : 0,6 s ; 10 000 : 2,3 s ; 20 000 : 9 s (JavaScript : 0,3, 1,1, 4,3 s)",
+)
+def test_defaut_une_longue_suite_de_marques_combinantes_termine_vite():
+    debut = time.perf_counter()
+    assert extract_dates("a" + "\u0301" * 10_000) == []
+    assert time.perf_counter() - debut < 0.5
 
 
 def test_production_espaces_insecables_bom_et_largeur_nulle_autour_de_la_date():
@@ -186,20 +249,42 @@ def test_production_casse_mixte_dans_le_nom_du_mois():
     assert extract_dates("LE 3 AVRIL 2024") == [("3 AVRIL 2024", date(2024, 4, 3))]
 
 
-def test_defaut_1er_en_capitales_n_est_pas_lu():
+def test_production_1er_en_capitales_et_ordinaux_anglais_sont_lus():
+    """Commentaire de TEXTUAL : « "3 avril 2024", "1er mars 2024", "3rd April 2024", in any case »."""
     assert extract_dates("LE 1ER MARS 2024") == [("1ER MARS 2024", date(2024, 3, 1))]
+    assert extract_dates("due 3rd April 2024") == [("3rd April 2024", date(2024, 4, 3))]
+    assert extract_dates("DUE 3RD APRIL 2024") == [("3RD APRIL 2024", date(2024, 4, 3))]
+    assert extract_dates("the 22nd May 2024 and 1st June 2024") == [
+        ("22nd May 2024", date(2024, 5, 22)), ("1st June 2024", date(2024, 6, 1))]
 
 
-def test_defaut_un_mois_en_accents_decomposes_n_est_pas_lu():
+def test_production_un_mois_en_accents_decomposes_est_lu():
+    """Commentaire de WORD : « its accents typed as one character or as a letter plus a mark »."""
     assert extract_dates("1er fe\u0301vrier 2024") == [("1er fe\u0301vrier 2024", date(2024, 2, 1))]
 
 
-def test_defaut_la_forme_anglaise_mois_jour_annee_n_est_pas_lue():
+def test_production_la_forme_anglaise_mois_jour_annee_est_lue():
+    """Commentaire de MONTH_FIRST : « "March 3, 2024" » ; avec ordinal et sans virgule."""
     assert extract_dates("Payment due March 3, 2024.") == [("March 3, 2024", date(2024, 3, 3))]
+    assert extract_dates("Payment due March 3rd, 2024.") == [("March 3rd, 2024", date(2024, 3, 3))]
+    assert extract_dates("Payment due march 3 2024.") == [("march 3 2024", date(2024, 3, 3))]
+    assert extract_dates("Payment due March 32, 2024.") == []
 
 
 def test_production_des_chiffres_pleine_chasse_sont_lus_dans_les_deux_langages():
+    """Commentaire de D : « ASCII digits and full-width digits, read the same way in Python and JavaScript »."""
     assert extract_dates("１２/０３/２０２４") == [("１２/０３/２０２４", date(2024, 3, 12))]
+    assert extract_dates("３ avril ２０２４") == [("３ avril ２０２４", date(2024, 4, 3))]
+    # Les chiffres arabes-indiens ne sont lus ni en Python ni en JavaScript.
+    assert extract_dates("٠٣/٠٤/٢٠٢٤") == []
+
+
+def test_production_l_an_24_ecrit_sur_quatre_chiffres_reste_l_an_24():
+    """Le pivot ne s'applique qu'à une année écrite sur deux chiffres ; l'an 0 n'existe pas (même sortie en JavaScript)."""
+    assert extract_dates("01/01/0024") == [("01/01/0024", date(24, 1, 1))]
+    assert extract_dates("0024-01-01") == [("0024-01-01", date(24, 1, 1))]
+    assert extract_dates("01/01/0001") == [("01/01/0001", date(1, 1, 1))]
+    assert extract_dates("01/01/0000") == []
 
 
 def test_production_valeurs_aux_limites_du_calendrier():

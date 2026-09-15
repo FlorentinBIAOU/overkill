@@ -30,11 +30,28 @@ test('point de rupture : l’échec est silencieux, une liste vide et non une er
 
 test('point de rupture : une date relative avec des chiffres ne rend rien non plus', () => {
   assert.deepEqual(days('livraison dans 15 jours'), []);
+  assert.deepEqual(days('delivery in 15 days'), []);
+});
+
+test('point de rupture : une date abrégée 3/4/24 est écartée exprès', () => {
+  assert.deepEqual(days('rendez-vous le 3/4/24'), []);
+  assert.deepEqual(days('mise à jour vers la version 2.1.24'), []);
+  assert.deepEqual(pairs('rendez-vous le 03/04/24'), [['03/04/24', '2024-04-03']]);
+  assert.deepEqual(days('le 03/4/24'), []);
+  assert.deepEqual(days('le 3/04/24'), []);
+  assert.deepEqual(pairs('le 3/4/2024'), [['3/4/2024', '2024-04-03']]);
 });
 
 // ---------------------------------------------------------------------------
 // Autres affirmations du niveau
 // ---------------------------------------------------------------------------
+
+test('lit les motifs énumérés du scénario', () => {
+  const text = 'Réunion le 12/03/2024, specs 2024-03-12, livraison le 3 avril 2024, invoice March 3, 2024.';
+  assert.deepEqual(pairs(text), [
+    ['12/03/2024', '2024-03-12'], ['2024-03-12', '2024-03-12'], ['3 avril 2024', '2024-04-03'], ['March 3, 2024', '2024-03-03'],
+  ]);
+});
 
 test('lit les trois formats dans une phrase', () => {
   const text = 'Réunion le 12/03/2024, livraison le 3 avril 2024, gel des specs 2024-03-01.';
@@ -48,7 +65,9 @@ test('lit les mois en lettres, avec et sans accents, en français et en anglais'
   assert.deepEqual(pairs('à compter du 1er mars 2024'), [['1er mars 2024', '2024-03-01']]);
 });
 
-test('les années sur deux chiffres suivent le pivot 69 → 2069, 70 → 1970', () => {
+test('les années sur deux chiffres se lisent comme MySQL : 00-69 en 2000, 70-99 en 1900', () => {
+  assert.deepEqual(days('01/01/00'), ['2000-01-01']);
+  assert.deepEqual(days('31/12/99'), ['1999-12-31']);
   assert.deepEqual(days('facture du 12.03.24'), ['2024-03-12']);
   assert.deepEqual(days('archive du 12.03.97'), ['1997-03-12']);
   assert.deepEqual(days('01/01/69'), ['2069-01-01']);
@@ -95,10 +114,13 @@ test('les nombres ordinaires restent intacts', () => {
   assert.deepEqual(days('version 1.2.345'), []);
 });
 
-test('un numéro de version à deux chiffres de fin est lu comme une date', () => {
-  // « version 2.1.24 » rend le 2 janvier 2024, « 10.1.1.24 » le 1er janvier 2024.
-  assert.deepEqual(days('mise à jour vers la version 2.1.24'), []);
-  assert.deepEqual(days('serveur 10.1.1.24'), []);
+test('jamais un morceau d’un nombre pointé plus long', () => {
+  for (const text of ['serveur 10.1.1.24', 'serveur 10.01.01.24', 'réf. 12/03/2024/5', 'réf. 1.12.03.2024', 'v2.1.24']) {
+    assert.deepEqual(days(text), [], text);
+  }
+  assert.deepEqual(pairs('le 01.01.24'), [['01.01.24', '2024-01-01']]);
+  assert.deepEqual(pairs('facture du 12.03.24.'), [['12.03.24', '2024-03-12']]);
+  assert.deepEqual(pairs('facture du 12/03/2024.'), [['12/03/2024', '2024-03-12']]);
 });
 
 test('un passage qui chevauche une date retenue n’est pas une seconde date', () => {
@@ -111,10 +133,10 @@ test('escalate_when : une convention unique rend des dates plausibles mais fauss
   assert.deepEqual(pairs(corpus, true), [['03/04/2024', '2024-04-03'], ['04/05/2024', '2024-05-04']]);
 });
 
-test('INFIRMÉ : verdict_rationale dit que ce que N0 ne sait pas faire, il rend une liste vide, il rend une date fausse', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(days('Invoice issued 04/05/2024, net thirty days.', true), []);
-  });
+test('verdict : ce qu’il ne voit pas est une liste vide, ce qu’il lit à l’envers une date plausible', () => {
+  assert.deepEqual(days('Relance jeudi prochain.'), []);
+  assert.deepEqual(days('Invoice issued 04/05/2024, net thirty days.', true), ['2024-05-04']);
+  assert.deepEqual(days('Invoice issued 04/05/2024, net thirty days.', false), ['2024-04-05']);
 });
 
 test('l’extrait est déterministe et n’importe rien', () => {
@@ -134,8 +156,6 @@ test('production : chaîne vide et texte sans chiffre', () => {
 });
 
 test('production : quinze mille dates tiennent dans une borne large', () => {
-  // Même algorithme quadratique qu'en Python, mais le moteur JavaScript le
-  // parcourt sous la borne ; voir le test DÉFAUT jumeau en Python.
   const text = 'le 12/03/2024, '.repeat(15_000);
   const debut = performance.now();
   assert.equal(extractDates(text).length, 15_000);
@@ -146,7 +166,26 @@ test('production : un motif pathologique termine dans une borne large', () => {
   const debut = performance.now();
   assert.deepEqual(days(`1 ${'a'.repeat(1000)} `.repeat(1000)), []);
   assert.deepEqual(days(`1${' '.repeat(200_000)}avril`), []);
+  assert.deepEqual(days(`March${' '.repeat(200_000)}3`), []);
+  assert.deepEqual(days('1.'.repeat(100_000)), []);
+  assert.deepEqual(days('12/'.repeat(60_000)), []);
   assert.ok(performance.now() - debut < 5_000);
+});
+
+test('une longue suite de lettres est lue une fois, pas une fois par lettre', () => {
+  const debut = performance.now();
+  assert.deepEqual(days(`March${'a'.repeat(100_000)} 3, 2024`), []);
+  assert.deepEqual(pairs(`${`${'a'.repeat(100)} `.repeat(1000)}March 3, 2024`), [['March 3, 2024', '2024-03-03']]);
+  assert.ok(performance.now() - debut < 1_000);
+});
+
+test('DÉFAUT : une longue suite de marques combinantes est lue une fois par marque (10 000 marques : 1,1 s)', async () => {
+  // Le regard arrière de MONTH_FIRST n'exclut que les lettres, et WORD accepte les marques.
+  await assert.rejects(async () => {
+    const debut = performance.now();
+    assert.deepEqual(days(`a${'\u0301'.repeat(10_000)}`), []);
+    assert.ok(performance.now() - debut < 500);
+  }, assert.AssertionError);
 });
 
 test('production : espaces insécables, BOM et largeur nulle autour de la date', () => {
@@ -159,20 +198,36 @@ test('production : casse mixte dans le nom du mois', () => {
   assert.deepEqual(pairs('LE 3 AVRIL 2024'), [['3 AVRIL 2024', '2024-04-03']]);
 });
 
-test('« 1ER » en capitales n’est pas lu', () => {
+test('production : « 1ER » en capitales et ordinaux anglais sont lus', () => {
   assert.deepEqual(pairs('LE 1ER MARS 2024'), [['1ER MARS 2024', '2024-03-01']]);
+  assert.deepEqual(pairs('due 3rd April 2024'), [['3rd April 2024', '2024-04-03']]);
+  assert.deepEqual(pairs('DUE 3RD APRIL 2024'), [['3RD APRIL 2024', '2024-04-03']]);
+  assert.deepEqual(pairs('the 22nd May 2024 and 1st June 2024'), [['22nd May 2024', '2024-05-22'], ['1st June 2024', '2024-06-01']]);
 });
 
-test('un mois en accents décomposés n’est pas lu', () => {
+test('production : un mois en accents décomposés est lu', () => {
   assert.deepEqual(pairs('1er fe\u0301vrier 2024'), [['1er fe\u0301vrier 2024', '2024-02-01']]);
 });
 
-test('la forme anglaise mois, jour, année n’est pas lue', () => {
+test('production : la forme anglaise mois, jour, année est lue', () => {
   assert.deepEqual(pairs('Payment due March 3, 2024.'), [['March 3, 2024', '2024-03-03']]);
+  assert.deepEqual(pairs('Payment due March 3rd, 2024.'), [['March 3rd, 2024', '2024-03-03']]);
+  assert.deepEqual(pairs('Payment due march 3 2024.'), [['march 3 2024', '2024-03-03']]);
+  assert.deepEqual(days('Payment due March 32, 2024.'), []);
 });
 
-test('des chiffres pleine chasse ne sont pas lus en JavaScript, alors que Python les lit', () => {
+test('production : des chiffres pleine chasse sont lus dans les deux langages', () => {
   assert.deepEqual(pairs('１２/０３/２０２４'), [['１２/０３/２０２４', '2024-03-12']]);
+  assert.deepEqual(pairs('３ avril ２０２４'), [['３ avril ２０２４', '2024-04-03']]);
+  assert.deepEqual(days('٠٣/٠٤/٢٠٢٤'), []);
+});
+
+test('production : l’an 24 écrit sur quatre chiffres reste l’an 24', () => {
+  // Commentaire de toDate : « unlike Date.UTC, keeps year 24 as 24, not 1924 ».
+  assert.deepEqual(pairs('01/01/0024'), [['01/01/0024', '0024-01-01']]);
+  assert.deepEqual(pairs('0024-01-01'), [['0024-01-01', '0024-01-01']]);
+  assert.deepEqual(pairs('01/01/0001'), [['01/01/0001', '0001-01-01']]);
+  assert.deepEqual(days('01/01/0000'), []);
 });
 
 test('production : valeurs aux limites du calendrier', () => {

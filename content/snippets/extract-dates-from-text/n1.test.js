@@ -124,11 +124,26 @@ test('lit plusieurs dates dans un document', () => {
   assert.deepEqual(days(text), ['2024-03-02', '2024-05-04']);
 });
 
-test('INFIRMÉ : la docstring dit que l’année sur quatre positions est la seule forme ambiguë, « 03/04/24 » l’est aussi et N1 ne le voit pas', async () => {
-  await assert.rejects(async () => {
-    assert.notDeepEqual(n0.extractDates('03/04/24'), n0.extractDates('03/04/24', false));
-    assert.notDeepEqual(days('Invoice issued 03/04/24, net thirty days.'), []);
-  });
+test('une année sur deux chiffres est aussi ambiguë, et lui échappe', () => {
+  const lire = (text, dayFirst) => n0.extractDates(text, dayFirst).map((d) => iso(d.date));
+  assert.deepEqual(lire('03/04/24', true), ['2024-04-03']);
+  assert.deepEqual(lire('03/04/24', false), ['2024-03-04']);
+  assert.deepEqual(days('Invoice issued 03/04/24, net thirty days.'), []);
+  assert.deepEqual(days('Facture émise le 3 avril 2024.'), []);
+  assert.deepEqual(days('Invoice issued 03/04/2024, net thirty days.'), ['2024-03-04']);
+});
+
+test('tout le modèle tient en un poids par mot et un biais', () => {
+  // Docstring js : « the whole model is one weight per word and a bias ».
+  assert.deepEqual(Object.keys(model).sort(), ['bias', 'weights']);
+  assert.equal(typeof model.bias, 'number');
+  assert.ok(model.weights instanceof Map);
+  for (const [word, weight] of model.weights) {
+    assert.match(word, /^\p{L}+$/u);
+    assert.equal(typeof weight, 'number');
+  }
+  // Un mot par entrée : « facture » et « invoice » ont chacun le leur, et leurs signes s'opposent.
+  assert.ok(model.weights.get('facture') > 0 && model.weights.get('invoice') < 0);
 });
 
 test('l’extrait n’importe rien', () => {
@@ -155,8 +170,7 @@ test('production : texte vide', () => {
   assert.deepEqual(days(''), []);
 });
 
-test('production : une phrase d’entraînement sans date candidate ne fait pas planter l’entraînement', () => {
-  // Python lève ici (voir son test DÉFAUT) ; JavaScript entraîne sur un contexte vide.
+test('production : une phrase d’entraînement sans date candidate entraîne sur un contexte vide', () => {
   const m = train([...DAY_FIRST, ...MONTH_FIRST, 'Facture du 12.03.24'], [...DAY_FIRST.map(() => 1), ...MONTH_FIRST.map(() => 0), 1]);
   assert.deepEqual(pairs(m, 'Facture émise le 25/12/2024.'), [['25/12/2024', '2024-12-25']]);
 });

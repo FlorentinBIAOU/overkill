@@ -7,7 +7,11 @@ from pathlib import Path
 import pytest
 
 import n0
-from n1 import context, extract_dates, train
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+
+from n1 import CANDIDATE, context, extract_dates, train
 
 # A small labelled set, the kind an afternoon of tagging produces. The label is
 # the convention the document follows, not the value of any one date.
@@ -158,17 +162,17 @@ def test_lit_plusieurs_dates_dans_un_document():
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring dit que la forme tout en chiffres à année sur quatre "
-        "positions est « la seule que l'ambiguïté touche » ; « 03/04/24 » est tout aussi "
-        "ambigu (N0 le lit 3 avril ou 4 mars) et N1 ne le voit pas"
-    ),
-)
-def test_infirme_la_forme_a_annee_sur_quatre_positions_est_la_seule_que_l_ambiguite_touche():
-    assert n0.extract_dates("03/04/24") != n0.extract_dates("03/04/24", day_first=False)
-    assert extract_dates(MODEL, "Invoice issued 03/04/24, net thirty days.") != []
+def test_une_annee_sur_deux_chiffres_est_aussi_ambigue_et_lui_echappe():
+    """
+    Docstring : « only covers the all-numeric form with a four-digit year, which is the one form it reads.
+    A two-digit year, 03/04/24, is just as ambiguous and escapes it; so do months written in letters ».
+    """
+    assert n0.extract_dates("03/04/24") == [("03/04/24", date(2024, 4, 3))]
+    assert n0.extract_dates("03/04/24", day_first=False) == [("03/04/24", date(2024, 3, 4))]
+    assert extract_dates(MODEL, "Invoice issued 03/04/24, net thirty days.") == []
+    assert extract_dates(MODEL, "Facture émise le 3 avril 2024.") == []
+    # Témoin : la même date sur quatre positions est lue.
+    assert extract_dates(MODEL, "Invoice issued 03/04/2024, net thirty days.") == [("03/04/2024", date(2024, 3, 4))]
 
 
 def test_l_extrait_n_importe_que_scikit_learn_et_la_bibliotheque_standard():
@@ -177,6 +181,7 @@ def test_l_extrait_n_importe_que_scikit_learn_et_la_bibliotheque_standard():
     imported = {a.name.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
     imported |= {n.module.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
     assert imported == {"re", "datetime", "sklearn"}
+    assert isinstance(MODEL[-1], LogisticRegression) and isinstance(MODEL[0], TfidfVectorizer)
 
 
 def test_deux_entrainements_sur_le_meme_jeu_rendent_les_memes_lectures():
@@ -201,9 +206,20 @@ def test_production_texte_vide():
     assert extract_dates(MODEL, "") == []
 
 
-def test_defaut_une_phrase_d_entrainement_sans_date_candidate_fait_planter_l_entrainement():
-    model = train(DAY_FIRST + MONTH_FIRST + ["Facture du 12.03.24"], [1] * 8 + [0] * 8 + [1])
+def test_production_une_phrase_d_entrainement_sans_date_candidate_entraine_sur_un_contexte_vide():
+    """Commentaire de train : « A sentence without a candidate trains on an empty context, as in JavaScript. »"""
+    extra = "Facture du 12.03.24"
+    model = train(DAY_FIRST + MONTH_FIRST + [extra], [1] * 8 + [0] * 8 + [1])
     assert extract_dates(model, "Facture émise le 25/12/2024.") == [("25/12/2024", date(2024, 12, 25))]
+    # Le même modèle que celui qu'on entraîne à la main avec un contexte vide pour cette phrase.
+    manuel = make_pipeline(
+        TfidfVectorizer(ngram_range=(1, 2), min_df=1),
+        LogisticRegression(class_weight="balanced", max_iter=1000),
+    )
+    contextes = [context(t, CANDIDATE.search(t).span()) for t in DAY_FIRST + MONTH_FIRST] + [""]
+    manuel.fit(contextes, [1] * 8 + [0] * 8 + [1])
+    texte = "Invoice issued 03/04/2024, net thirty days."
+    assert model.predict_proba([context(texte, (15, 25))])[0][1] == manuel.predict_proba([context(texte, (15, 25))])[0][1]
 
 
 def test_production_cinq_mille_dates_ambigues_dans_une_borne_large():

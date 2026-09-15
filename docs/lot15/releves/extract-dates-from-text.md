@@ -1,5 +1,15 @@
 # extract-dates-from-text — relevé du testeur
 
+> **Tour 2 — contre-épreuve : deux marquages restent, à reprendre par le rédacteur.**
+> - **DÉFAUT T2-6 (N0, py/js)** : une longue suite de marques combinantes est lue
+>   une fois par marque (motif `MONTH_FIRST`) : 10 000 marques après une lettre,
+>   2,3 s en Python et 1,1 s en JavaScript ; 20 000, 9 s et 4,3 s. Un texte
+>   « zalgo » collé dans un document suffit.
+> - **DÉFAUT T2-14 (N3, py/js)** : une réponse entièrement enveloppée dans une
+>   seule clôture ```` ```json ```` n'est pas décodée (charte des tests, décision
+>   n° 12, postérieures à la correction) ; l'ancien test qui exigeait qu'elle
+>   lève est corrigé.
+
 Passe 1 du lot 15. Tests : `content/snippets/extract-dates-from-text/n{0,1,3}.test.{py,js}`.
 Avant : 48 tests. Après : 147 (n0.py 26, n0.js 31, n1.py 22, n1.js 22, n3.py 23,
 n3.js 23). Les tests d'origine sont renommés en français, assertions gardées,
@@ -139,3 +149,64 @@ Jeu d'entraînement N1 : les seize phrases des tests d'origine (8 jour-mois,
 - Le point de rupture « là et seulement là » gagnerait à être accompagné d'une
   liste de faux positifs obligatoires pour toute extraction par expression
   régulière : numéros de version, adresses IP, références.
+
+## Tour 2 — contre-épreuve
+
+Après `4a6b228` (corrections du rédacteur, tour 1). Tests : n0.py 26 → 31,
+n0.js 31 → 36, n1.py 22 → 22, n1.js 22 → 23, n3.py 23 → 30, n3.js 23 → 30.
+`node scripts/test-snippets.mjs extract-dates-from-text` : vert, avec un `DÉFAUT`
+en n0 et un en n3, dans chaque langage, signalés en tête. Le test JS de n3 passe
+aussi sous `TZ=America/New_York` et `TZ=Pacific/Kiritimati`.
+
+Retirés, remplacés par le test de la phrase nouvelle : n0
+`…infirme_ce_que_n0_ne_sait_pas_faire_il_rend_une_liste_vide` (py, js) ; n1
+`…infirme_la_forme_a_annee_sur_quatre_positions…` (py, js) ; n3
+`…defaut_le_client_par_defaut_a_la_forme_du_vrai_kit` et les doubles locaux
+`RealShapedClient` (py, js), remplacés par `_harness/fake_sdk.py` /
+`fake-sdk.mjs`. Assertion retirée : la réponse ```` ```json … ``` ```` dans
+`test_production_une_reponse_qui_n_est_pas_une_liste_leve_apres_trois_essais`
+(py, js), contraire à la décision n° 12 ; elle a désormais son test (T2-14).
+Les anciens marquages JavaScript de cette fiche utilisaient
+`assert.rejects` sans type : le marquage restant suit la charte.
+
+### Lignes « À retester »
+
+| # | Ligne | Désormais | Test |
+|---|---|---|---|
+| 65 | n3 éléments nuls ou d'un autre type | démontrée (py, js) : `[null, "2024-03-12", 42, {…}]`, `[null]`, `["2024-03-12"]`, `[[]]` → trois appels puis `ExtractionUnavailable` | test_production_des_elements_nuls_ou_d_un_autre_type_rendent_la_reponse_inutilisable |
+| 60 | n3 client par défaut | démontrée (py, js) avec le double du harnais : T2-11 à T2-13 | — |
+| 25 | n0 verdict_rationale | démontrée (py, js) : « Relance jeudi prochain. » → liste vide ; « Invoice issued 04/05/2024 » lu jour-mois → 4 mai, plausible ; témoin mois-jour → 5 avril | test_verdict_ce_qu_il_ne_voit_pas_est_une_liste_vide_ce_qu_il_lit_a_l_envers_une_date_plausible |
+| 34 | n1 docstring | démontrée (py, js) : N0 lit « 03/04/24 » de deux façons ; N1 ne rend rien sur « 03/04/24 » ni sur « 3 avril 2024 » ; témoin « 03/04/2024 » lu | test_une_annee_sur_deux_chiffres_est_aussi_ambigue_et_lui_echappe |
+| 56 | n3 JS `TODAY` | corrigé : `new Date(2024, 2, 12)` ; le test du jour local est renommé et vérifie aussi un appelant à l'ouest (New York, 23 h) | le jour de référence envoyé est le jour local de l'appelant, pas le jour UTC (js seul) |
+| 17, 20–23, 45, 63, 64, 66 | tests démarqués | renommés `production : …` pour dire ce qu'ils prouvent ; 64 (js) affirme désormais l'acceptation et le nombre d'appels ; 45 (py) compare au modèle entraîné à la main sur un contexte vide | voir T2-1 à T2-5, T2-9, T2-15 |
+| 91 (nouveaux cas n0) | « 3/4/24 », « 03/04/24 », « March 3rd, 2024 », « 3rd April 2024 », « 10.01.01.24 », « 01/01/0024 », « 01/01/0000 », arabes-indiens, « le 12.03.24. », « March » + suite de lettres | démontrés (py, js) : T2-1 à T2-5 | — |
+| — | n0 commentaire du pivot | démontrée (py, js) : 00 → 2000, 69 → 2069, 70 → 1970, 99 → 1999 | test_les_annees_sur_deux_chiffres_se_lisent_comme_mysql_00_69_en_2000_70_99_en_1900 |
+| — | n3 nouveaux cas | `20240312`, `2024-W11-2` → inutilisables (T2-10) ; `text` nombre → `""` ; `content` nul ; « 0024-01-01 » → an 24 dans les deux langages, « 0000-01-01 » écarté ; texte vide sans client ne construit pas le client | démontrés (py, js) | voir T2-10 à T2-15 |
+
+### Phrases nouvelles ou modifiées, code modifié
+
+| # | Où | Affirmation (citée) | Statut | Test |
+|---|---|---|---|---|
+| T2-1 | N0 breaking_point | « « dans 15 jours », qui a des chiffres, ne rend rien non plus » ; « une date abrégée comme « 3/4/24 » est écartée exprès : une année sur deux chiffres n'est lue qu'avec un jour et un mois sur deux chiffres, sans quoi « version 2.1.24 » deviendrait un 2 janvier » | démontrée (py, js) : « dans 15 jours », « in 15 days » → rien ; « 3/4/24 », « 03/4/24 », « 3/04/24 », « version 2.1.24 » → rien ; témoins « 03/04/24 » et « 3/4/2024 » lus | test_point_de_rupture_une_date_relative_avec_des_chiffres_ne_rend_rien_non_plus, test_point_de_rupture_une_date_abregee_3_4_24_est_ecartee_expres |
+| T2-2 | scenario | « des motifs que l'on peut énumérer (12/03/2024, 2024-03-12, 3 avril 2024) » ; en : « March 3, 2024 » | démontrée (py, js) : les quatre dans une phrase, dans l'ordre | test_lit_les_motifs_enumeres_du_scenario |
+| T2-3 | N0 commentaire de NUMERIC | « Never a piece of a longer dotted number: in "10.1.1.24", "1.1.24" is not a date » ; « a short year only with a padded day and month » | démontrée (py, js) : « 10.1.1.24 », « 10.01.01.24 », « 12/03/2024/5 », « 1.12.03.2024 », « v2.1.24 » → rien ; témoins « 01.01.24 », « 12.03.24. » et « 12/03/2024. » en fin de phrase lus | test_jamais_un_morceau_d_un_nombre_pointe_plus_long |
+| T2-4 | N0 commentaires de TEXTUAL, MONTH_FIRST, WORD, D (code modifié) | « "3 avril 2024", "1er mars 2024", "3rd April 2024", in any case » ; « "March 3, 2024" » ; « its accents typed as one character or as a letter plus a mark » ; « ASCII digits and full-width digits, read the same way in Python and JavaScript » | démontrée (py, js) : « 1ER MARS », « 3RD APRIL », « 22nd May », « 1st June » ; « March 3rd, 2024 », « march 3 2024 », « March 32, 2024 » écarté ; « fe\u0301vrier » ; pleine chasse en forme numérique et textuelle ; chiffres arabes-indiens lus ni dans l'un ni dans l'autre | test_production_1er_en_capitales_et_ordinaux_anglais_sont_lus, test_production_la_forme_anglaise_mois_jour_annee_est_lue, test_production_un_mois_en_accents_decomposes_est_lu, test_production_des_chiffres_pleine_chasse_sont_lus_dans_les_deux_langages |
+| T2-5 | N0 `_full_year` / `fullYear`, `toDate` (js) | « Two-digit years as MySQL reads them » ; « unlike Date.UTC, keeps year 24 as 24, not 1924 » | démontrée (py, js) : pivot, « 01/01/0024 » et « 0024-01-01 » → an 24, « 01/01/0001 » → an 1, « 01/01/0000 » → rien | test_les_annees_sur_deux_chiffres_se_lisent_comme_mysql_…, test_production_l_an_24_ecrit_sur_quatre_chiffres_reste_l_an_24 |
+| T2-6 | N0 commentaire de MONTH_FIRST | « It only starts at the start of a word, so a long run of letters is read once, not once per letter » | démontrée (py, js) pour les lettres : « March » + 100 000 lettres, 1 000 mots de 100 lettres, sous 1 s ; **DÉFAUT (py, js)** pour les marques combinantes : le regard arrière `(?<![^\W\d_])` / `(?<!\p{L})` n'exclut que les lettres, et `WORD` accepte les marques, donc chaque marque ouvre une tentative qui relit toute la suite. Mesuré : 5 000 marques 0,6 s (py) / 0,3 s (js) ; 10 000 : 2,3 s / 1,1 s ; 20 000 : 9 s / 4,3 s. Aucune phrase ne l'annonce | test_une_longue_suite_de_lettres_est_lue_une_fois_pas_une_fois_par_lettre ; DÉFAUT : test_defaut_une_longue_suite_de_marques_combinantes_termine_vite |
+| T2-7 | N0 (code modifié, #17) | tableau des caractères déjà lus | démontrée (py, js) : 15 000 dates sous 3 s ; « 1. » × 100 000, « 12/ » × 60 000, « March » + 200 000 espaces sous 5 s | test_production_quinze_mille_dates_tiennent_dans_une_borne_large, test_production_un_motif_pathologique_termine_dans_une_borne_large |
+| T2-8 | N0 docstring py/js + doc.fr | « it is a single call » ; « groups of digits » | démontrée par le refus de 31/02/2024 et 29/02/1900 (tests existants) ; « un seul appel » : c'est `date(year, month, day)` | test_l_expression_reguliere_accepte_31_02_2024_…, test_annees_bissextiles_regle_du_siecle_comprise |
+| T2-9 | N1 commentaire de `train` (py), docstring js | « A sentence without a candidate trains on an empty context, as in JavaScript » ; « the whole model is one weight per word and a bias » | démontrée : py, le modèle entraîné avec « Facture du 12.03.24 » donne exactement la probabilité d'un pipeline entraîné à la main avec un contexte vide pour cette phrase ; js, modèle `{ weights: Map mot → nombre, bias }`, « facture » et « invoice » de signes opposés | test_production_une_phrase_d_entrainement_sans_date_candidate_entraine_sur_un_contexte_vide ; tout le modèle tient en un poids par mot et un biais (js) |
+| T2-10 | N3 breaking_point + `_is_usable` / `isUsable` | « Une réponse qui n'est pas une liste d'objets à date AAAA-MM-JJ — de la prose, une clé mal nommée, une date écrite « 12/03/2024 » — est redemandée, puis l'extrait lève une erreur, plutôt que de rendre une liste vide » | démontrée (py, js), trois appels chaque fois : prose, clé `day`, « 12/03/2024 », heure ajoutée, `20240312` et `2024-W11-2` (que `date.fromisoformat` accepterait), « 2024-3-12 », chiffres pleine chasse, un bon élément à côté d'un mauvais ; témoin : `[]` rend `[]` | test_point_de_rupture_une_reponse_en_prose_…, test_point_de_rupture_une_cle_mal_nommee_ou_une_date_ecrite_12_03_2024_est_redemandee_puis_leve |
+| T2-11 | N3 breaking_point + docstring | « Rien dans la requête n'empêche la réponse de porter « 2024-02-31 » […] ni une date qui ne figure pas dans le document » ; « nothing in the request stops the answer from holding 2024-02-31 » | démontrée (py, js) : la requête au kit ne porte que `model`, `messages`, `temperature` ; 2024-02-31 écarté, date absente du document rendue | test_point_de_rupture_rien_dans_la_requete_n_empeche_…, test_point_de_rupture_2024_02_31_…, test_point_de_rupture_rien_dans_la_reponse_… |
+| T2-12 | N3 docstring | « the only rung on this entry whose request asks for relative dates, "jeudi prochain", to be resolved: it sends today's date along with the text, and asks for every date as a calendar day » ; « because the model is not told what day it is otherwise » | démontrée (py, js) : invite exacte, « Resolve relative dates », « today, which is 2024-03-12 », `YYYY-MM-DD` ; le jour de référence est la seule date de la requête. Que le modèle résolve bien : non testable | test_envoie_le_texte_le_jour_de_reference_et_la_consigne_a_temperature_zero, test_une_date_relative_resolue_par_le_modele_est_rendue |
+| T2-13 | N3 `ProviderClient` / `providerClient`, placé après les refus | « In production it defaults to a real provider client » | démontrée (py, js) : `chat.completions.create`, `gpt-4.1-mini`, un message `user`, `temperature: 0`, modèle choisi transmis ; sans client, `openai` remplacé (`sys.modules` en Python, crochet de résolution en JavaScript) est construit et appelé ; texte vide, blanc ou trop long : le client n'est jamais construit ; `content` nul → trois appels puis erreur nommée ; deux pannes du kit puis succès | test_production_l_adaptateur_parle_au_kit_par_chat_completions_create, test_production_sans_client_le_kit_openai_est_construit_et_appele, test_production_le_client_par_defaut_n_est_construit_qu_apres_les_refus_…, test_production_un_content_nul_…, test_production_une_panne_du_kit_… |
+| T2-14 | N3 production (charte, décision n° 12) | une réponse entièrement enveloppée dans une seule clôture ```` ```json ```` est décodée ; tout autre écart lève | **DÉFAUT (py, js)** : ```` ```json\n[…]\n``` ```` et ```` ```\n[…]\n``` ```` échouent au décodage, sont redemandés, puis `ExtractionUnavailable` après trois appels payés. Texte avant, texte après, deux blocs, clôture non refermée : lèvent, démontrée | DÉFAUT : test_defaut_une_reponse_enveloppee_dans_une_seule_cloture_json_est_decodee ; test_production_une_cloture_entouree_de_texte_double_ou_non_refermee_leve |
+| T2-15 | N3 commentaires | « the cap counts characters, not tokens, and code points, as Python does, not UTF-16 units » ; « nothing to read, so nothing to pay for » ; `text` non chaîne | démontrée (py, js) : 5 000 et 8 000 emoji acceptés, 8 001 refusés sans appel ; texte vide ou blanc, aucun appel ; `text` nul, absent ou nombre → `""` ; « 0024-01-01 » → an 24, « 0000-01-01 » écarté | test_production_le_plafond_compte_des_caracteres_pas_des_jetons, test_production_un_texte_vide_ou_blanc_ne_coute_aucun_appel, test_production_un_passage_nul_absent_ou_non_textuel_devient_une_chaine_vide, test_production_valeurs_aux_limites_du_calendrier_dans_la_reponse |
+| T2-16 | N2 unavailable_reason, verdict (« celui de la bibliothèque standard »), sources | spaCy, MySQL, POSIX | non testable : niveau sans code, documentation citée | — |
+
+### Constats sans marquage
+
+- N1 JavaScript garde `Date.UTC` : « 01/01/0024 » y est écarté (1924 relu), alors
+  que N1 Python rend l'an 24. Aucune phrase ne porte sur ces années ; N0 a été
+  aligné, N1 non.
+- « 2024-3-5 » (ISO sans zéros) n'est lu par N0 dans aucun des deux langages.
