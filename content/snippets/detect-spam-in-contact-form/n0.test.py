@@ -186,51 +186,20 @@ def test_production_constat_le_repli_python_garde_l_accent_circonflexe_ascii():
     assert reasons({"message": "back^link"}, 42) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : les adresses électroniques comptent comme des liens (« example.com » "
-        "dans « claire@example.com ») ; un client qui donne trois adresses est rejeté "
-        "pour « too many links »"
-    ),
-)
 def test_defaut_des_adresses_electroniques_comptent_comme_des_liens():
     message = "Write to me at claire@example.com or claire.dubois@gmail.com, or my colleague paul@example.org"
     assert reasons({**GENUINE, "message": message}, 42) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : les phrases interdites sont cherchées à l'intérieur des mots, sans "
-        "limite de mot : « Géant Casino » et « cryptographie » font rejeter une vraie "
-        "demande ; le commentaire dit « Phrases that no customer of this form has ever written »"
-    ),
-)
 def test_defaut_une_phrase_interdite_est_trouvee_a_l_interieur_d_un_mot():
     for message in ("J'ai acheté ce produit au Géant Casino de Nantes.", "Votre module de cryptographie est-il certifié ?"):
         assert reasons({**GENUINE, "message": message}, 42) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un délai NaN (jeton de temps absent ou illisible, typique d'un script "
-        "qui poste sans afficher la page) passe le contrôle, NaN < 3 étant faux"
-    ),
-)
 def test_defaut_un_delai_nan_passe_le_controle_de_vitesse():
     assert reasons(GENUINE, float("nan")) == ["submitted too fast"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le motif LINK retombe en temps quadratique sur « a-a-a-… » : chaque "
-        "« a » précédé d'un tiret ouvre une tentative de `[\\w-]+` qui court jusqu'au "
-        "bout ; 40 000 caractères prennent plusieurs secondes, et le message n'est pas borné"
-    ),
-)
 def test_defaut_un_message_concu_fait_exploser_le_motif_des_liens():
     started = time.monotonic()
     reasons({**GENUINE, "message": "a-" * 20000}, 42)

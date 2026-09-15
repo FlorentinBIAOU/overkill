@@ -5,10 +5,10 @@ Rung N0. Four checks, no dependency, no training data, and a rejection that
 comes with a reason you can show to whoever asks why a message was lost.
 
 Two of the checks look at the sender rather than the text. A honeypot field,
-hidden in the form and left empty by every human being, and the time spent on
-the page, catch the scripts that post to the endpoint without ever rendering
-it. That is the bulk of the traffic, and no amount of reading the message
-would have caught it any better.
+kept out of sight in the form, and the time spent on the page catch the
+scripts that post to the endpoint without rendering it, as long as they fill
+in every field or post faster than a person types. Neither needs to read the
+message.
 
 The two text checks are the weak half, and the entry says so.
 """
@@ -25,11 +25,17 @@ MAXIMUM_LINKS = 2
 
 # One match per link, not one per part: a bare `https?://` alternative would
 # count `http://example.com` twice and reject the customer who sends two.
-LINK = re.compile(r"(?:https?://|www\.)\S+|\b[\w-]+\.(?:com|net|org|ru|xyz|top)\b")
+# A bare domain must start a word that follows neither `@` nor a dot, so the
+# domain of an email address is not a link, and a run like `a-a-a-...` gives
+# the pattern one place to start instead of one per letter.
+LINK = re.compile(
+    r"(?:https?://|www\.)\S+"
+    r"|(?<![\w@.-])[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|ru|xyz|top)\b"
+)
 
-# Phrases that no customer of this form has ever written, and that the trade
-# they come from cannot do without.
-BANNED = re.compile(r"backlink|guest post|seo (?:services|ranking)|casino|crypto|viagra")
+# Whole words only, so `cryptographie` or a shop called `Casino` is not
+# rejected. Every word on such a list is one a customer may write some day.
+BANNED = re.compile(r"\b(backlink|guest post|seo (?:services|ranking)|online casino|viagra)s?\b")
 
 
 def fold(text: str) -> str:
@@ -48,7 +54,9 @@ def reasons(fields: dict, seconds_on_page: float) -> list[str]:
     found = []
     if fields.get(HONEYPOT_FIELD, "").strip():
         found.append("honeypot filled")
-    if seconds_on_page < MINIMUM_SECONDS:
+    # Written as "not at least", so a missing or unreadable delay (NaN) counts
+    # as too fast instead of slipping through.
+    if not seconds_on_page >= MINIMUM_SECONDS:
         found.append("submitted too fast")
 
     message = fold(fields.get("message", ""))

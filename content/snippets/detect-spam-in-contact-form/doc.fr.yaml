@@ -11,10 +11,10 @@ n0: |
   demande pourquoi son message s'est perdu.
 
   Deux des contrôles regardent l'expéditeur plutôt que le texte. Un champ
-  caché dans le formulaire, laissé vide par tout être humain, et le temps
-  passé sur la page attrapent les scripts qui postent sur le point de
-  terminaison sans jamais l'afficher. C'est l'essentiel du trafic, et aucune
-  lecture du message n'aurait fait mieux.
+  pot de miel, soustrait à la vue dans le formulaire, et le temps passé sur
+  la page attrapent les scripts qui postent sur le point de terminaison sans
+  l'afficher, pour peu qu'ils remplissent tous les champs ou postent plus
+  vite qu'une personne ne tape. Aucun des deux n'a besoin de lire le message.
 
   Les deux contrôles de texte sont la moitié faible, et la fiche le dit.
 
@@ -22,31 +22,27 @@ n1.js: |
   Distinguer le spam d'une vraie demande avec un classifieur linéaire sur des
   n-grammes de caractères.
 
-  Niveau N1. Les règles de N0 cherchent les mots qu'un spammeur employait
-  l'an dernier. Celui-ci regarde la façon dont le message est écrit :
-  quelques centaines d'envois étiquetés, ceux qu'une boîte de réception
-  contient déjà, et le modèle apprend le registre plutôt que la liste de
-  vocabulaire.
+  Niveau N1. Les règles de N0 cherchent les mots d'une liste. Celui-ci note
+  les fragments de caractères d'un message, avec des poids appris sur des
+  envois étiquetés, pris parmi ceux que la boîte de réception a déjà reçus.
 
   Écrit en entier plutôt que tiré d'une bibliothèque, parce qu'un TF-IDF sur
   n-grammes de caractères et une régression logistique ajustée par descente
-  de gradient tiennent en quarante lignes. C'est tout l'argument de ce
+  de gradient tiennent dans ce fichier, sans dépendance. C'est tout l'argument de ce
   niveau : l'outil classique est assez petit pour être lu.
 
 n1.py: |
   Distinguer le spam d'une vraie demande avec un classifieur linéaire sur des
   n-grammes de caractères.
 
-  Niveau N1. Les règles de N0 cherchent les mots qu'un spammeur employait
-  l'an dernier. Celui-ci regarde la façon dont le message est écrit :
-  quelques centaines d'envois étiquetés, ceux qu'une boîte de réception
-  contient déjà, et le modèle apprend le registre plutôt que la liste de
-  vocabulaire.
+  Niveau N1. Les règles de N0 cherchent les mots d'une liste. Celui-ci note
+  les fragments de caractères d'un message, avec des poids appris sur des
+  envois étiquetés, pris parmi ceux que la boîte de réception a déjà reçus.
 
-  Des n-grammes de caractères plutôt que des mots, pour deux raisons. Ils
-  survivent aux graphies employées pour contourner une liste de mots,
-  « b a c k l i n k s », « backl1nks », et ils n'exigent aucun segmenteur
-  qu'il faudrait régler langue par langue.
+  Des n-grammes de caractères plutôt que des mots : « backlink »,
+  « backlinks » et « backlinking » partagent ainsi l'essentiel de leurs
+  traits. Un mot épelé lettre à lettre, « b a c k l i n k s », n'en partage
+  aucun : aucun n-gramme ne franchit une espace.
 
   La décision est une somme pondérée : vous pouvez donc imprimer les traits
   qui ont fait passer un message de l'autre côté de la ligne, ce qui compte
@@ -56,15 +52,17 @@ n3: |
   Trier un envoi de formulaire de contact en interrogeant un modèle
   généraliste.
 
-  Niveau N3. C'est l'option vers laquelle on se tourne d'abord. Elle est ici
-  pour qu'on voie ce qu'elle coûte, pas parce que cette fiche la recommande.
+  Niveau N3. Il est ici pour qu'on voie ce qu'il coûte, pas parce que cette
+  fiche le recommande.
 
-  Voyez ce que le code doit faire et que N0 n'avait pas à faire : plafonner
-  la taille de l'entrée, réessayer après l'échec du fournisseur, analyser une
-  réponse qui n'est que probablement du JSON valide, et refuser de deviner
-  quand elle est inexploitable. Cette plomberie est le vrai coût du niveau,
-  et c'est la part que vos tests doivent couvrir, parce que le modèle
-  lui-même n'est pas testable.
+  Voyez ce que le code doit faire et que N0 n'avait pas à faire : refuser une
+  entrée vide ou trop longue avant de payer un appel, redemander quand le
+  fournisseur échoue ou répond quelque chose d'inexploitable, chaque essai
+  étant facturé, analyser une réponse qui n'est que probablement du JSON
+  valide, et refuser de deviner quand aucun essai n'est exploitable. Cette
+  plomberie est le vrai coût du niveau, et c'est la part que vos tests
+  doivent couvrir, parce qu'un test contre un double ne dit rien de la façon
+  dont le modèle juge.
 
   Voyez aussi ce qu'il ne peut pas faire. Le message entre dans la même
   invite que les consignes, et rien dans le protocole ne dit au modèle auquel

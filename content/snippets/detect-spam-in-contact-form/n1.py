@@ -1,18 +1,17 @@
 """
 Tell spam from a real enquiry with a linear classifier on character n-grams.
 
-Rung N1. The rules of N0 look for the words a spammer used last year. This
-looks at how the message is written: a few hundred labelled submissions, the
-kind an inbox already holds, and the model learns the register rather than the
-vocabulary list.
+Rung N1. The rules of N0 look for the words on a list. This one scores
+the character fragments of a message, with weights learnt from labelled
+submissions, taken from those the inbox has already received.
 
-Character n-grams rather than words, for two reasons. They survive the
-spellings a sender uses to dodge a word list, `b a c k l i n k s`, `backl1nks`,
-and they need no tokeniser that would have to be tuned per language.
+Character n-grams rather than words, so `backlink`, `backlinks` and
+`backlinking` share most of their features. A word spelt out letter by letter,
+`b a c k l i n k s`, shares none: no n-gram crosses a space.
 
-The decision is a weighted sum, so you can print
-the features that pushed a message over the line, which matters the first time
-someone asks why their enquiry was rejected.
+The decision is a weighted sum, so you can print the features that pushed a
+message over the line, which matters the first time someone asks why their
+enquiry was rejected.
 """
 
 import unicodedata
@@ -34,10 +33,10 @@ def train(messages: list[str], labels: list[int]):
         # `char_wb` keeps n-grams inside word boundaries, so the model learns
         # word shapes rather than the way two neighbours happen to collide.
         TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), sublinear_tf=True, min_df=1),
-        # Balanced, because a real inbox holds far more spam than enquiries and
-        # the rare class is the one worth getting right. `C` above one because
-        # a few hundred examples with a heavy regulariser leave every score
-        # sitting near a half, which makes the threshold below meaningless.
+        # Balanced, so whichever class is rarer in your labels weighs as much
+        # as the other. `C` above one because, on a small labelled set, a
+        # heavy regulariser leaves every score sitting near a half, which
+        # makes the threshold below meaningless.
         LogisticRegression(class_weight="balanced", C=10.0, max_iter=1000),
     )
     model.fit([fold(m) for m in messages], labels)
@@ -46,7 +45,11 @@ def train(messages: list[str], labels: list[int]):
 
 def spam_score(model, message: str) -> float:
     """Probability that the submission is spam, between zero and one."""
-    return float(model.predict_proba([fold(message)])[0][1])
+    folded = fold(message)
+    # Nothing to read: without this, the model's bias alone would decide.
+    if not folded.strip():
+        return 0.0
+    return float(model.predict_proba([folded])[0][1])
 
 
 def is_spam(model, message: str, threshold: float = 0.5) -> bool:

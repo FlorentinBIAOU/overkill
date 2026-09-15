@@ -173,12 +173,10 @@ test('production : accents, NFD, espace insécable et message d’un mégaoctet'
   assert.ok(Date.now() - started < 10_000);
 });
 
-test('DÉFAUT : un message vide n’est pas tranché par hasard', async () => {
+test('un message vide n’est pas tranché par hasard', async () => {
   // 0,454 ici, 0,509 en Python.
-  await assert.rejects(async () => {
-    assert.ok(!isSpam(model, ''));
-    assert.ok(spamScore(model, '') < 0.5 - 0.05);
-  });
+  assert.ok(!isSpam(model, ''));
+  assert.ok(spamScore(model, '') < 0.5 - 0.05);
 });
 
 test('DÉFAUT : un entraînement dégénéré ne lève pas', async () => {

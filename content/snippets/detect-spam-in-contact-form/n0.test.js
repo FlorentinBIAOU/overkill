@@ -143,32 +143,24 @@ test('production : constat, le repli JavaScript retire l’accent circonflexe AS
   assert.deepEqual(reasons({ message: 'back^link' }, 42), ['banned phrase: backlink']);
 });
 
-test('DÉFAUT : des adresses électroniques comptent comme des liens', async () => {
-  await assert.rejects(async () => {
-    const message = 'Write to me at claire@example.com or claire.dubois@gmail.com, or my colleague paul@example.org';
+test('des adresses électroniques comptent comme des liens', async () => {
+  const message = 'Write to me at claire@example.com or claire.dubois@gmail.com, or my colleague paul@example.org';
+  assert.deepEqual(reasons({ ...GENUINE, message }, 42), []);
+});
+
+test('une phrase interdite est trouvée à l’intérieur d’un mot', async () => {
+  for (const message of ['J\'ai acheté ce produit au Géant Casino de Nantes.', 'Votre module de cryptographie est-il certifié ?']) {
     assert.deepEqual(reasons({ ...GENUINE, message }, 42), []);
-  });
+  }
 });
 
-test('DÉFAUT : une phrase interdite est trouvée à l’intérieur d’un mot', async () => {
-  await assert.rejects(async () => {
-    for (const message of ['J\'ai acheté ce produit au Géant Casino de Nantes.', 'Votre module de cryptographie est-il certifié ?']) {
-      assert.deepEqual(reasons({ ...GENUINE, message }, 42), []);
-    }
-  });
+test('un délai NaN passe le contrôle de vitesse', async () => {
+  assert.deepEqual(reasons(GENUINE, NaN), ['submitted too fast']);
 });
 
-test('DÉFAUT : un délai NaN passe le contrôle de vitesse', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(reasons(GENUINE, NaN), ['submitted too fast']);
-  });
-});
-
-test('DÉFAUT : un message conçu fait exploser le motif des liens', async () => {
+test('un message conçu fait exploser le motif des liens', async () => {
   // Quadratique : 100 000 caractères « a-a-a-… » prennent plusieurs secondes.
-  await assert.rejects(async () => {
-    const started = Date.now();
-    reasons({ ...GENUINE, message: 'a-'.repeat(50000) }, 42);
-    assert.ok(Date.now() - started < 1000);
-  });
+  const started = Date.now();
+  reasons({ ...GENUINE, message: 'a-'.repeat(50000) }, 42);
+  assert.ok(Date.now() - started < 1000);
 });

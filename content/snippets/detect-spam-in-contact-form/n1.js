@@ -1,15 +1,14 @@
 /**
  * Tell spam from a real enquiry with a linear classifier on character n-grams.
  *
- * Rung N1. The rules of N0 look for the words a spammer used last year. This
- * looks at how the message is written: a few hundred labelled submissions, the
- * kind an inbox already holds, and the model learns the register rather than
- * the vocabulary list.
+ * Rung N1. The rules of N0 look for the words on a list. This one scores
+ * the character fragments of a message, with weights learnt from labelled
+ * submissions, taken from those the inbox has already received.
  *
  * Written out in full rather than pulled from a library, because TF-IDF on
- * character n-grams and a logistic regression fit by gradient descent is forty
- * lines. That is the whole argument of this rung: the classical tool is small
- * enough to read.
+ * character n-grams and a logistic regression fit by gradient descent fit in
+ * this file, with no dependency. That is the whole argument of this rung: the
+ * classical tool is small enough to read.
  */
 
 const BUCKETS = 1024; // hashing trick: no vocabulary to build, or to ship
@@ -43,8 +42,12 @@ function vector(seen, idf) {
 
 /** `labels` is 1 when the submission is spam, 0 when it is a real enquiry. */
 export function train(messages, labels, { epochs = 300, rate = 0.5 } = {}) {
+  if (messages.length !== labels.length || new Set(labels).size < 2) {
+    throw new RangeError('training needs one label per message, and both classes');
+  }
   const raw = messages.map(counts);
-  // Inverse document frequency: an n-gram every message carries says nothing.
+  // Smoothed inverse document frequency, as scikit-learn computes it: an
+  // n-gram every message carries weighs one, a rarer one weighs more.
   const idf = new Float64Array(BUCKETS).map((_, j) =>
     Math.log((1 + raw.length) / (1 + raw.filter((seen) => seen[j] > 0).length)) + 1);
   const rows = raw.map((seen) => vector(seen, idf));
@@ -67,8 +70,10 @@ function probability(model, row) {
   return 1 / (1 + Math.exp(-z));
 }
 
-/** Probability that the submission is spam. */
+/** Probability that the submission is spam, between zero and one. */
 export function spamScore(model, message) {
+  // Nothing to read: without this, the model's bias alone would decide.
+  if (!fold(message).trim()) return 0;
   return probability(model, vector(counts(message), model.idf));
 }
 

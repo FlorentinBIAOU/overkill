@@ -234,14 +234,6 @@ def test_production_accents_nfd_espace_insecable_et_message_d_un_megaoctet():
     assert time.monotonic() - started < 10
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un message vide est jugé par le seul biais du modèle : 0,509, donc "
-        "spam en Python ; 0,454, donc accepté en JavaScript. Les deux langages tranchent "
-        "en sens contraire sur une entrée qui ne contient rien"
-    ),
-)
 def test_defaut_un_message_vide_n_est_pas_tranche_par_hasard():
     assert not is_spam(MODEL, "")
     assert spam_score(MODEL, "") < 0.5 - 0.05

@@ -3,7 +3,7 @@ id: detect-spam-in-contact-form
 family: detect-filter
 status: published
 verdict: N1
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Keep automated and promotional submissions out of a public form without blocking genuine enquiries."
 
 scenario:
-  fr: "On voit des formulaires de contact dont chaque envoi part chez un fournisseur de modèle pour être jugé, avant même qu’on ait regardé qui envoie. Or l’essentiel du trafic vient de scripts qui postent sur le point de terminaison sans jamais afficher la page : un champ caché, laissé vide par tout être humain, les écarte sans lire une ligne du message. Ce qui reste, la part qui demande vraiment de lire, ne ressemble pas au volume qu’on croyait avoir à trier."
-  en: "You see contact forms where every submission is shipped to a model provider for judgement before anyone has looked at who is sending. Yet most of that traffic comes from scripts that post to the endpoint without ever rendering the page: a hidden field, left empty by every human being, turns them away without reading a word of the message. What is left, the part that genuinely needs reading, is nothing like the volume you thought you had to sort."
+  fr: "On voit des formulaires de contact dont chaque envoi part chez un fournisseur de modèle pour être jugé, avant même qu’on ait regardé qui envoie. Or un script qui poste sur le point de terminaison sans afficher la page se trahit s’il remplit le champ caché que la page ne montre pas, ou s’il envoie plus vite qu’une personne ne tape : deux contrôles qui ne lisent pas une ligne du message et ne coûtent rien. Ce qui reste à lire, c’est ce qui passe ces deux contrôles, pas tout le flot."
+  en: "You see contact forms where every submission is shipped to a model provider for judgement before anyone has looked at who is sending. Yet a script that posts to the endpoint without rendering the page gives itself away if it fills in the field the page keeps out of sight, or posts faster than a person types: two checks that read not a word of the message and cost nothing. What is left to read is whatever gets past those two, not the whole flow."
 
 rungs:
   - level: N0
@@ -75,8 +75,8 @@ rungs:
       javascript: snippets/detect-spam-in-contact-form/n1.js
       verification: executed
     breaking_point:
-      fr: "Le même robot patient. Ce niveau apprend le registre des messages qu’on lui a montrés : un envoi court, poli, sans offre, sans prix et sans lien score comme une demande de client, et le test le laisse sous le seuil. C’est mot pour mot le message qui traverse déjà N0 ; ce que N1 gagne, c’est le flot entre les deux, pas cet expéditeur-là."
-      en: "The same patient sender. This level learns the register of the messages it was shown: a short, polite submission with no offer, no price and no link scores like a customer enquiry, and the test leaves it below the threshold. It is word for word the message that already walks past N0; what N1 gains is the flood in between, not this particular sender."
+      fr: "Le même robot patient. Ce niveau pèse les fragments de caractères des messages qu’on lui a montrés : un envoi court, poli, sans offre, sans prix et sans lien score comme une demande de client, et le test le laisse sous le seuil. C’est mot pour mot le message qui traverse déjà N0 ; ce que N1 gagne, c’est le flot entre les deux, pas cet expéditeur-là."
+      en: "The same patient sender. This level weighs the character fragments of the messages it was shown: a short, polite submission with no offer, no price and no link scores like a customer enquiry, and the test leaves it below the threshold. It is word for word the message that already walks past N0; what N1 gains is the flood in between, not this particular sender."
     escalate_when:
       fr: "Vous continuez d’étiqueter et le score des envois que vous ratez ne bouge plus : ce qui les distingue n’est plus la façon dont ils sont écrits."
       en: "You keep labelling and the score of the submissions you miss stops moving: what sets them apart is no longer the way they are written."
@@ -84,8 +84,8 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Sans intérêt ici : un encodeur distillé auto-hébergé coûte un service permanent à exploiter, pour un gain nul sur des messages courts et très typés, que N1 sépare déjà."
-      en: "Not useful here: a distilled self-hosted encoder costs a permanent service to operate, for no gain on short, heavily typed messages that N1 already separates."
+      fr: "Sans intérêt ici : un encodeur auto-hébergé ajoute un modèle à télécharger et un service à exploiter, alors que N1 s’entraîne et répond dans le processus même du formulaire, sans aucune dépendance en JavaScript."
+      en: "Not useful here: a self-hosted encoder adds a model to download and a service to run, while N1 trains and answers inside the form's own process, with no dependency at all in JavaScript."
 
   - level: N3
     available: true
@@ -121,13 +121,13 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N1, parce que la sollicitation qu’on reçoit vraiment n’est pas dans la liste de N0 : « Hi, we can boost your google ranking with quality links, cheap offer. » ne porte ni lien ni mot interdit, traverse les quatre contrôles sans un seul motif de rejet, et le classifieur la range du bon côté sans l’avoir jamais vue, comme il range « backl1nks » et « b a c k l i n k s ». On échange un test unitaire contre quelques centaines d’envois étiquetés, que la boîte de réception contient déjà, et on cesse d’ajouter un mot à une liste après chaque campagne. Le pot de miel et le délai de N0 restent en amont, ils ne coûtent rien et écartent des scripts qu’aucune lecture du message n’écarterait mieux ; N3, lui, ne rattrape pas l’envoi que N1 rate, il ajoute une invite sans parade."
-  en: "N1, because the solicitation you actually receive is not on N0's list: \"Hi, we can boost your google ranking with quality links, cheap offer.\" carries neither a link nor a banned phrase, walks through all four checks without a single reason to reject, and the classifier files it correctly having never seen it, just as it files \"backl1nks\" and \"b a c k l i n k s\". You trade a unit test for a few hundred labelled submissions, which your inbox already holds, and you stop adding a word to a list after every campaign. Keep N0's honeypot and delay in front of it, they cost nothing and turn away scripts that no amount of reading the message would have caught; N3 does not catch the submission N1 misses, it adds a prompt with no defence."
+  fr: "N1, parce qu’une sollicitation n’a pas besoin des mots de la liste de N0 : « Hi, we can boost your google ranking with quality links, cheap offer. » ne porte ni lien ni mot interdit, traverse les quatre contrôles sans un seul motif de rejet, et le classifieur la range du bon côté sans l’avoir jamais vue. On échange un test unitaire contre des envois étiquetés, pris parmi ceux que la boîte de réception a déjà reçus, et on étiquette les envois ratés au lieu d’ajouter un mot à une liste après chaque campagne. Le pot de miel et le délai de N0 restent en amont : ils ne coûtent rien et écartent le script qui remplit le champ caché en écrivant comme un client, que N1 laisse passer. N3 ajoute un appel payé par envoi, et une invite sans parade."
+  en: "N1, because a solicitation does not need the words on N0's list: \"Hi, we can boost your google ranking with quality links, cheap offer.\" carries neither a link nor a banned phrase, walks through all four checks without a single reason to reject, and the classifier files it correctly having never seen it. You trade a unit test for labelled submissions, taken from those your inbox has already received, and you label the ones you miss instead of adding a word to a list after every campaign. Keep N0's honeypot and delay in front of it: they cost nothing and turn away the script that fills in the hidden field while writing like a customer, which N1 lets through. N3 adds a paid call per submission, and a prompt with no defence."
 
 further_reading:
   - label: "Ned Batchelder — Stopping spambots with hashes and honeypots"
     url: "https://nedbatchelder.com/text/stopbots.html"
-  - label: "Paul Graham — A Plan for Spam, l’article fondateur du filtrage statistique"
+  - label: "Paul Graham — A Plan for Spam, le filtrage bayésien sur les mots"
     url: "https://www.paulgraham.com/spam.html"
   - label: "scikit-learn — TfidfVectorizer, dont l’analyseur char_wb employé par l’extrait N1"
     url: "https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"

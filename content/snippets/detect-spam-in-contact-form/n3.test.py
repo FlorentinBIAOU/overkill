@@ -158,36 +158,14 @@ def test_la_forme_rendue_est_spam_et_raison_en_chaine():
     assert classify("x", client=FakeLLM(response='{"spam": true, "reason": 42, "extra": 1}')) == {"spam": True, "reason": "42"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : la docstring promet de savoir « parse an answer that is only probably "
-        "valid JSON » ; une réponse en clôture ```json, forme courante, n'est pas "
-        "décodée : ClassificationUnavailable après trois appels payés"
-    ),
-)
 def test_defaut_une_reponse_en_cloture_de_code_n_est_pas_decodee():
     assert classify("x", client=FakeLLM(response=f"```json\n{SPAM_ANSWER}\n```"))["spam"] is True
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une raison à null devient la chaîne « None » (le JavaScript rend une chaîne vide)",
-)
 def test_defaut_une_raison_nulle_devient_none():
     assert classify("x", client=FakeLLM(response='{"spam": true, "reason": null}'))["reason"] == ""
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle "
-        "`client.complete(prompt=..., temperature=0)`, absent du kit `openai` publié "
-        "(surface réelle : chat.completions.create(model=..., messages=[...]), réponse "
-        "dans choices[0].message.content). L'AttributeError est avalée par la boucle "
-        "de réessai et ressort en ClassificationUnavailable"
-    ),
-)
 def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
     assert classify("My lamp arrived damaged.") == {"spam": False, "reason": "a customer asking about an order"}
 
@@ -211,7 +189,6 @@ def test_l_extrait_n_importe_que_json():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(strict=True, reason="DÉFAUT : un envoi vide ou blanc coûte un appel au fournisseur")
 def test_defaut_un_envoi_vide_ne_coute_aucun_appel():
     client = FakeLLM(response=CLEAN_ANSWER)
     for message in ("", "   "):

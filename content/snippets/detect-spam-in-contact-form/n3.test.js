@@ -122,16 +122,12 @@ test('la forme rendue est spam et raison en chaîne', async () => {
   assert.deepEqual(await classify('x', { client: llm('{"spam": true, "reason": null}') }), { spam: true, reason: '' });
 });
 
-test('DÉFAUT : une réponse en clôture de code n’est pas décodée', async () => {
-  await assert.rejects(async () => {
-    assert.equal((await classify('x', { client: llm(`\`\`\`json\n${SPAM_ANSWER}\n\`\`\``) })).spam, true);
-  });
+test('une réponse en clôture de code n’est pas décodée', async () => {
+  assert.equal((await classify('x', { client: llm(`\`\`\`json\n${SPAM_ANSWER}\n\`\`\``) })).spam, true);
 });
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(await classify('My lamp arrived damaged.'), { spam: false, reason: 'a customer asking about an order' });
-  });
+test('le client par défaut a la forme du vrai kit', async () => {
+  assert.deepEqual(await classify('My lamp arrived damaged.'), { spam: false, reason: 'a customer asking about an order' });
 });
 
 test('le client par défaut échoue en service indisponible sans appel', async () => {
@@ -150,12 +146,10 @@ test('l’extrait n’importe que le client par défaut', () => {
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : un envoi vide ne coûte aucun appel', async () => {
-  await assert.rejects(async () => {
-    const client = llm(CLEAN_ANSWER);
-    for (const message of ['', '   ']) await classify(message, { client }).catch(() => {});
-    assert.equal(client.callCount, 0);
-  });
+test('un envoi vide ne coûte aucun appel', async () => {
+  const client = llm(CLEAN_ANSWER);
+  for (const message of ['', '   ']) await classify(message, { client }).catch(() => {});
+  assert.equal(client.callCount, 0);
 });
 
 test('production : NFD, espace insécable et emoji partent tels quels', async () => {

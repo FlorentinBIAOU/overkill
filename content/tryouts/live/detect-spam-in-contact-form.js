@@ -4,12 +4,10 @@
  * Le vrai extrait du niveau recommandé, importé tel quel : ce qui tourne dans
  * le navigateur est exactement ce que la fiche affiche au-dessus.
  *
- * Ce barreau n'existe qu'entraîné, et il apprend la façon d'écrire des
- * messages qu'on lui montre. Un modèle nourri de français ne sait rien de
- * l'anglais : il y en a donc deux, un par corpus, et la page choisit celui de
- * sa langue. Les deux corpus sont d'une trentaine d'envois, ce qu'un
- * après-midi passé dans la boîte de réception produit, et l'entraînement des
- * deux tient en une quarantaine de millisecondes au chargement de la page.
+ * Ce niveau n'existe qu'entraîné, et il ne pèse que les n-grammes des
+ * messages qu'on lui a montrés. Il y a donc deux modèles, un par corpus de
+ * trente-deux envois, entraînés au chargement de la page, et la page choisit
+ * celui de sa langue.
  *
  * Ce que l'essai ne peut pas faire croire : taper de l'anglais dans le champ
  * de la page française le fait juger par le modèle français, qui n'a jamais vu
@@ -173,8 +171,8 @@ export default {
     },
     {
       label: {
-        fr: 'Le même démarchage, lettres espacées pour passer',
-        en: 'The same solicitation, letters spaced out to get through',
+        fr: 'Un démarchage au mot-clé espacé : le reste du message suffit',
+        en: 'A solicitation with its keyword spaced out: the rest of the message is enough',
       },
       input: {
         fr: 'nous vendons des l i e n s retours et du trafic pas cher, boostez votre référencement',
