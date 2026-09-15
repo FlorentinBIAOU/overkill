@@ -6,7 +6,7 @@ Chaque test nommé ci-dessous existe dans les deux langages, au nom près
 sauf mention contraire.
 
 `node scripts/test-snippets.mjs forecast-weekly-sales` : vert, avec 2 `INFIRMÉ`
-et 5 `DÉFAUT` par langage (le détail est plus bas). 30 tests existaient, tous
+et 6 `DÉFAUT` par langage (le détail est plus bas). 30 tests existaient, tous
 renommés en français avec leurs assertions gardées ; les deux assertions de
 point de rupture de N0 (`> 1.25 × réalisé`, `> 1.10 ×`) ont été resserrées en
 valeurs exactes (`1,274 ± 0,005`, `1,124 ± 0,005`) et dotées d'un témoin. 73 tests
