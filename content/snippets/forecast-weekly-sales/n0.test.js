@@ -214,21 +214,17 @@ test('production : trois cents ans de semaines terminent vite et juste', () => {
   assert.ok(Math.abs(predicted - steadyShop(history.length)) / steadyShop(history.length) < 0.03);
 });
 
-test('DÉFAUT : une valeur manquante ou non numérique ne lève aucune erreur', async () => {
+test('une valeur manquante ou non numérique ne lève aucune erreur', () => {
   // NaN rend NaN, null est compté comme zéro, "1000" rend NaN : aucun ne lève.
-  await assert.rejects(async () => {
-    for (const bad of [NaN, null, '1000']) {
-      assert.throws(() => forecast([...HISTORY.slice(0, -1), bad]));
-    }
-  }, assert.AssertionError);
+  for (const bad of [NaN, null, '1000']) {
+    assert.throws(() => forecast([...HISTORY.slice(0, -1), bad]));
+  }
 });
 
-test('DÉFAUT : une semaine fermée chaque année fait tomber la prévision à NaN', async () => {
+test('une semaine fermée chaque année fait tomber la prévision à NaN', () => {
   // Fermeture annuelle la dernière semaine de l'année : coefficient nul, 0 / 0 dans la fenêtre.
   const history = Array.from({ length: 3 * SEASON }, (_, week) => (week % SEASON === 51 ? 0 : steadyShop(week)));
-  await assert.rejects(async () => {
-    assert.ok(forecast(history, { horizon: 2 }).every(Number.isFinite));
-  }, assert.AssertionError);
+  assert.ok(forecast(history, { horizon: 2 }).every(Number.isFinite));
 });
 
 test('production : un historique entièrement nul prévoit zéro', () => {
@@ -243,8 +239,6 @@ test("production : une fenêtre d'une semaine ne garde que la dernière", () => 
   assert.ok(close(forecast(history, { window: 4 })[0], 1178.571429, 1e-6));
 });
 
-test("DÉFAUT : window=0 fait la moyenne de tout l'historique, sans erreur", async () => {
-  await assert.rejects(async () => {
-    assert.throws(() => forecast(HISTORY, { window: 0 }), RangeError);
-  }, assert.AssertionError);
+test("window=0 fait la moyenne de tout l'historique, sans erreur", () => {
+  assert.throws(() => forecast(HISTORY, { window: 0 }), RangeError);
 });

@@ -22,7 +22,7 @@ const T = {
     passe: ['il y a quatre semaines', 'il y a trois semaines', 'il y a deux semaines', 'la semaine dernière'],
     futur: ['la semaine prochaine', 'dans deux semaines', 'dans trois semaines', 'dans quatre semaines'],
     note: (semaines, croissance) => `${semaines} semaines d’historique ajustées. Croissance lue dans la série : ${croissance > 0 ? '+' : ''}${croissance} pain${Math.abs(croissance) > 1 ? 's' : ''} par an.`,
-    refus: 'Refusé : moins de semaines que de coefficients à estimer',
+    refus: 'Refusé : historique trop court',
     illisible: 'Aucun nombre à lire dans cette saisie.',
   },
   en: {
@@ -30,7 +30,7 @@ const T = {
     passe: ['four weeks ago', 'three weeks ago', 'two weeks ago', 'last week'],
     futur: ['next week', 'in two weeks', 'in three weeks', 'in four weeks'],
     note: (semaines, croissance) => `${semaines} weeks of history fitted. Growth read out of the series: ${croissance > 0 ? '+' : ''}${croissance} loa${Math.abs(croissance) > 1 ? 'ves' : 'f'} a year.`,
-    refus: 'Refused: fewer weeks than coefficients to estimate',
+    refus: 'Refused: history too short',
     illisible: 'No number to read in this input.',
   },
 };
@@ -57,8 +57,8 @@ export default {
     try {
       modele = fit(semaines);
     } catch (erreur) {
-      /* L'extrait refuse un historique plus court que le nombre de coefficients
-         à estimer. Le message affiché est le sien. */
+      /* L'extrait refuse un historique plus court qu'un cycle complet. Le
+         message affiché est le sien. */
       return { verdict: { label: t.refus, detail: erreur.message } };
     }
 

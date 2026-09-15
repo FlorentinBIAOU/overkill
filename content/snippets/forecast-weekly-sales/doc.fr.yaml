@@ -6,13 +6,12 @@ n0: |
   Prévoir les ventes hebdomadaires avec une moyenne mobile et des coefficients
   saisonniers.
 
-  Niveau N0. Sans dépendance, et assez court pour se lire d'une traite.
+  Niveau N0. Sans dépendance.
 
-  L'idée est la plus ancienne de la prévision, et elle porte encore la plupart
-  des petits commerces : les ventes sont un niveau qui bouge lentement,
-  multiplié par une forme qui se répète chaque année. Estimez la forme sur
-  l'historique entier, divisez-la, faites la moyenne de ce qui reste sur les
-  dernières semaines, puis remettez la forme.
+  L'idée est la plus ancienne de la prévision : les ventes sont un niveau qui
+  bouge lentement, multiplié par une forme qui se répète chaque année. Estimez
+  la forme sur l'historique entier, divisez-la, faites la moyenne de ce qui
+  reste sur les dernières semaines, puis remettez la forme.
 
   Ce que ceci ne modélise délibérément pas, c'est une tendance. Une moyenne
   mobile ne regarde jamais qu'en arrière : elle suit un changement de régime au
@@ -31,14 +30,16 @@ n1.py: |
 
   Les variables sont de l'arithmétique de calendrier et rien d'autre : une
   constante, le nombre de cycles écoulés, et quelques paires de sinus et de
-  cosinus dont la période est la saison. Deux paires suffisent à dessiner un
-  pic de Noël et un creux d'été ; au-delà, on commence à dessiner le bruit
-  aussi.
+  cosinus dont la période est la saison. Deux paires suffisent à placer un pic
+  de Noël et un creux d'été ; un pic large de quelques semaines seulement
+  demande plus de paires pour atteindre toute sa hauteur.
 
   Compter la tendance en cycles plutôt qu'en semaines n'est pas cosmétique.
   Cela garde les colonnes de la matrice de conception à des échelles
   comparables, et cela rend le coefficient lisible à lui seul : c'est la
-  croissance par an.
+  croissance par cycle, donc par an avec la saison de 52 semaines par défaut.
+  Moins d'un cycle complet d'historique ne sépare pas la tendance de la
+  saison : il est refusé.
 
 n1.js: |
   Prévoir les ventes hebdomadaires avec un modèle linéaire sur des variables
@@ -55,7 +56,9 @@ n1.js: |
   cosinus dont la période est la saison.
 
   Les moindres carrés sont résolus par les équations normales et une
-  élimination de Gauss, vingt lignes qui ne valent aucune dépendance. Compter
-  la tendance en cycles plutôt qu'en semaines garde ces équations bien
+  élimination de Gauss, assez courte pour qu'aucune dépendance ne vaille la
+  peine. Compter la tendance en cycles plutôt qu'en semaines garde ces équations bien
   conditionnées, et rend le coefficient lisible à lui seul : c'est la
-  croissance par an.
+  croissance par cycle, donc par an avec la saison de 52 semaines par défaut.
+  Moins d'un cycle complet d'historique ne sépare pas la tendance de la
+  saison : il est refusé.

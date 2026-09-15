@@ -254,10 +254,8 @@ test("l'essai lit la croissance des boulangeries et refuse cinq semaines", () =>
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : une entrée vide lève TypeError (design[0]) au lieu du refus nommé', async () => {
-  await assert.rejects(async () => {
-    assert.throws(() => fit([]), RangeError);
-  }, assert.AssertionError);
+test('une entrée vide lève TypeError (design[0]) au lieu du refus nommé', () => {
+  assert.throws(() => fit([]), RangeError);
 });
 
 test('production : trois cents ans de semaines terminent vite et juste', () => {
@@ -269,27 +267,23 @@ test('production : trois cents ans de semaines terminent vite et juste', () => {
   assert.ok(close(predicted, 63259.968239, 1e-5));
 });
 
-test('DÉFAUT : une semaine manquante rend une prévision NaN (NaN) ou fausse (null compté zéro), sans erreur', async () => {
-  await assert.rejects(async () => {
-    for (const missing of [NaN, null]) {
-      assert.throws(() => fit([...HISTORY.slice(0, -1), missing]));
-    }
-  }, assert.AssertionError);
+test('une semaine manquante rend une prévision NaN (NaN) ou fausse (null compté zéro), sans erreur', () => {
+  for (const missing of [NaN, null]) {
+    assert.throws(() => fit([...HISTORY.slice(0, -1), missing]));
+  }
 });
 
-test("DÉFAUT : dix semaines d'historique sont acceptées et rendent une croissance de +899 850 par an pour 208", async () => {
-  await assert.rejects(async () => {
-    for (const weeks of [10, 20, 26]) {
-      let model;
-      try {
-        model = fit(HISTORY.slice(0, weeks));
-      } catch (error) {
-        if (error instanceof RangeError) continue;
-        throw error;
-      }
-      assert.ok(model.coefficients[1] > 104 && model.coefficients[1] < 312);
+test("dix semaines d'historique sont acceptées et rendent une croissance de +899 850 par an pour 208", () => {
+  for (const weeks of [10, 20, 26]) {
+    let model;
+    try {
+      model = fit(HISTORY.slice(0, weeks));
+    } catch (error) {
+      if (error instanceof RangeError) continue;
+      throw error;
     }
-  }, assert.AssertionError);
+    assert.ok(model.coefficients[1] > 104 && model.coefficients[1] < 312);
+  }
 });
 
 test('production : un horizon nul rend une liste vide', () => {

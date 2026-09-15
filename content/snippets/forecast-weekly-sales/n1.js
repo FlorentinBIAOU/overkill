@@ -12,9 +12,11 @@
  * the season.
  *
  * Least squares is solved through the normal equations and a Gaussian
- * elimination, twenty lines that no dependency is worth. Counting the trend
- * in cycles rather than in weeks keeps those equations well behaved, and
- * makes the coefficient readable on its own: it is the growth per year.
+ * elimination, short enough that no dependency is worth it. Counting the
+ * trend in cycles rather than in weeks keeps those equations well behaved,
+ * and makes the coefficient readable on its own: it is the growth per cycle,
+ * per year with the default 52-week season. Less than one full cycle of
+ * history cannot tell the trend from the season, so it is refused.
  */
 
 /** The row of the design matrix for one week. This is the whole model. */
@@ -54,9 +56,12 @@ function solve(matrix, vector) {
  * trend nobody in the company recognises is a model to distrust.
  */
 export function fit(history, { seasonLength = 52, harmonics = 2 } = {}) {
-  const design = history.map((_, week) => calendarFeatures(week, seasonLength, harmonics));
-  const width = design[0].length;
+  const width = 2 + 2 * harmonics;
   if (history.length < width) throw new RangeError('fewer weeks of history than features to estimate');
+  if (history.length < seasonLength) throw new RangeError('a trend cannot be told apart from the season on less than one full cycle');
+  // A missing week must be refused: null would be multiplied as zero, NaN would spread.
+  if (!history.every(Number.isFinite)) throw new TypeError('every week of history needs a finite number');
+  const design = history.map((_, week) => calendarFeatures(week, seasonLength, harmonics));
 
   // Normal equations: (Xᵀ X) b = Xᵀ y.
   const square = Array.from({ length: width }, (_, i) => Array.from({ length: width }, (_, j) => (

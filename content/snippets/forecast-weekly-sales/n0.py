@@ -1,18 +1,19 @@
 """
 Forecast weekly sales with a moving average and seasonal coefficients.
 
-Rung N0. Standard library only, and short enough to read in one sitting.
+Rung N0. Standard library only.
 
-The idea is the oldest one in forecasting, and it still carries most small
-businesses: sales are a level that moves slowly, multiplied by a shape that
-repeats every year. Estimate the shape over the whole history, divide it out,
-average what is left over the last few weeks, then put the shape back.
+The idea is the oldest one in forecasting: sales are a level that moves
+slowly, multiplied by a shape that repeats every year. Estimate the shape over
+the whole history, divide it out, average what is left over the last few
+weeks, then put the shape back.
 
 What this deliberately does not model is a trend. A moving average only ever
 looks backwards, so it follows a change of regime instead of anticipating it.
 That is the limit of this rung, and the test says so out loud.
 """
 
+import math
 from statistics import fmean
 
 
@@ -42,14 +43,25 @@ def forecast(
     the history is position `len(history)` in the cycle. The caller never has
     to align the series on a January.
 
-    `window` is the only real knob. A short window reacts fast and trusts the
-    last few weeks; a long one is steadier and slower to notice a change.
+    `window` trades reactivity for stability. A short window reacts fast and
+    trusts the last few weeks; a long one is steadier and slower to notice a
+    change.
     """
     if len(history) < 2 * season_length:
         raise ValueError("a seasonal coefficient needs two full cycles at the very least")
+    if window < 1:
+        raise ValueError("the moving average needs a window of at least one week")
+    # A missing week must be refused, not averaged into a NaN forecast.
+    if not all(math.isfinite(value) for value in history):
+        raise ValueError("every week of history needs a finite number")
     coefficients = seasonal_coefficients(history, season_length)
     # Divide the season out, so the average below measures the level alone.
-    deseasonalised = [value / coefficients[week % season_length] for week, value in enumerate(history)]
+    # A week closed every year has a zero coefficient and says nothing about the level.
+    deseasonalised = [
+        value / coefficients[week % season_length]
+        for week, value in enumerate(history)
+        if coefficients[week % season_length] != 0
+    ]
     level = fmean(deseasonalised[-window:])
     start = len(history)
     return [level * coefficients[(start + step) % season_length] for step in range(horizon)]

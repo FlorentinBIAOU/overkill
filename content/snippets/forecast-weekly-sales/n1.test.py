@@ -311,10 +311,6 @@ def test_l_essai_lit_la_croissance_des_boulangeries_et_refuse_cinq_semaines():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une entrée vide lève IndexError (design[0]) au lieu du refus nommé",
-)
 def test_defaut_une_entree_vide_est_refusee_par_une_erreur_nommee():
     with pytest.raises(ValueError):
         fit([])
@@ -329,10 +325,6 @@ def test_production_trois_cents_ans_de_semaines_terminent_vite_et_juste():
     assert predicted == pytest.approx(63259.968239, abs=1e-5)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une semaine manquante (None ou NaN) devient NaN et rend une prévision NaN, sans erreur",
-)
 def test_defaut_une_semaine_manquante_ne_rend_pas_une_prevision_nan():
     for missing in (None, float("nan")):
         try:
@@ -342,11 +334,6 @@ def test_defaut_une_semaine_manquante_ne_rend_pas_une_prevision_nan():
         assert all(math.isfinite(x) for x in predicted)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : dix semaines d'historique sont acceptées et rendent une croissance de +899 850 par an "
-    "pour une série qui grandit de 208",
-)
 def test_defaut_un_historique_de_moins_d_un_cycle_ne_rend_pas_une_croissance_absurde():
     for weeks in (10, 20, 26):
         try:

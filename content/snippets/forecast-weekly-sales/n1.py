@@ -8,12 +8,14 @@ estimated together, by least squares, over the whole history.
 
 The features are calendar arithmetic and nothing else: a constant, the number
 of cycles elapsed, and a few sine and cosine pairs whose period is the season.
-Two pairs are enough to draw a Christmas peak and a summer dip; more pairs
-start drawing the noise as well.
+Two pairs are enough to place a Christmas peak and a summer dip; a peak only
+a few weeks wide needs more pairs to reach its full height.
 
 Counting the trend in cycles rather than in weeks is not cosmetic. It keeps
 the columns of the design matrix on comparable scales, and it makes the
-coefficient readable on its own: it is the growth per year.
+coefficient readable on its own: it is the growth per cycle, per year with
+the default 52-week season. Less than one full cycle of history cannot tell
+the trend from the season, so it is refused.
 """
 
 import math
@@ -38,10 +40,15 @@ def fit(history: list[float], season_length: int = 52, harmonics: int = 2) -> di
     number is worth reading before any forecast is: a model that has found a
     trend nobody in the company recognises is a model to distrust.
     """
-    design = [calendar_features(week, season_length, harmonics) for week in range(len(history))]
-    if len(history) < len(design[0]):
+    if len(history) < 2 + 2 * harmonics:
         raise ValueError("fewer weeks of history than features to estimate")
-    coefficients, *_ = np.linalg.lstsq(np.array(design), np.array(history, dtype=float), rcond=None)
+    if len(history) < season_length:
+        raise ValueError("a trend cannot be told apart from the season on less than one full cycle")
+    sales = np.array(history, dtype=float)  # a missing week (None) becomes NaN here
+    if not np.all(np.isfinite(sales)):
+        raise ValueError("every week of history needs a finite number")
+    design = [calendar_features(week, season_length, harmonics) for week in range(len(history))]
+    coefficients, *_ = np.linalg.lstsq(np.array(design), sales, rcond=None)
     return {
         "coefficients": [float(c) for c in coefficients],
         "season_length": season_length,

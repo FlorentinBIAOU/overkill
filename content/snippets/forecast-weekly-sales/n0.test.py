@@ -264,10 +264,6 @@ def test_production_une_valeur_non_numerique_leve_une_erreur_de_type():
         forecast(HISTORY[:-1] + ["1000"])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une semaine manquante (NaN) rend une prévision NaN, sans aucune erreur",
-)
 def test_defaut_une_semaine_manquante_ne_rend_pas_une_prevision_nan():
     try:
         predicted = forecast(HISTORY[:-1] + [float("nan")])
@@ -276,10 +272,6 @@ def test_defaut_une_semaine_manquante_ne_rend_pas_une_prevision_nan():
     assert all(math.isfinite(x) for x in predicted)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une semaine fermée chaque année (ventes nulles) lève ZeroDivisionError",
-)
 def test_defaut_une_semaine_fermee_chaque_annee_ne_fait_pas_tomber_la_prevision():
     # Fermeture annuelle la dernière semaine de l'année : coefficient nul.
     history = [0.0 if week % SEASON == 51 else steady_shop(week) for week in range(3 * SEASON)]
@@ -299,10 +291,6 @@ def test_production_une_fenetre_d_une_semaine_ne_garde_que_la_derniere():
     assert forecast(history, window=4)[0] == pytest.approx(1178.571429, abs=1e-6)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : window=0 fait la moyenne de tout l'historique, sans erreur ([-0:] est la liste entière)",
-)
 def test_defaut_une_fenetre_nulle_est_refusee():
     with pytest.raises(ValueError):
         forecast(HISTORY, window=0)
