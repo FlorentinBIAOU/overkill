@@ -145,8 +145,93 @@ def test_point_de_rupture_un_seuil_ne_distingue_pas_une_lecture_fausse_dune_just
     assert read_page(PAGE, FakeOCR({PAGE: READING}, confidence=0.41))["review"] is True
 
 
+@pytest.mark.xfail(strict=True, reason=(
+    "INFIRMÉ : le point de rupture dit que « relever le seuil n'y change rien » ; "
+    "un seuil de 0,97 lève le drapeau sur la lecture fausse à 0,96 — mais aussi sur "
+    "toute lecture juste à 0,96 (test précédent). Ce qui est vrai : le seuil ne "
+    "sépare pas les deux, il ne laisse pas la page passer quoi qu'on en fasse"
+))
+def test_infirme_relever_le_seuil_ne_change_rien():
+    for centiemes in range(70, 100):
+        result = read_page(PAGE, FakeOCR({PAGE: "N° 2O24-OOO431"}, confidence=0.96), min_confidence=centiemes / 100)
+        assert result["review"] is False, centiemes
+
+
+def test_point_de_rupture_temoin_une_regle_sur_la_forme_des_references_rattrape_la_faute():
+    """« Ce qui rattrape celle-là, c'est une règle sur la forme attendue de vos références, écrite à la main : N0 de nouveau »."""
+    fausse = read_page(PAGE, FakeOCR({PAGE: "N° 2O24-OOO431"}, confidence=0.96))["text"]
+    juste = read_page(PAGE, FakeOCR({PAGE: READING}, confidence=0.94))["text"]
+    assert REFERENCE.search(fausse) is None
+    assert REFERENCE.search(juste).group() == "2024-000431"
+
+
+# ---------------------------------------------------------------------------
+# Le vrai moteur, contre un double à la forme de pytesseract
+# ---------------------------------------------------------------------------
+
+
+def test_le_moteur_par_defaut_appelle_pytesseract_avec_la_langue_annoncee(vrai_moteur_simule):
+    """Docstring : « the language you tell it to expect » ; LANGUAGE = "fra" ; appel réel `image_to_data(…, lang=, output_type=Output.DICT)`."""
+    result = read_page(PAGE)
+    assert vrai_moteur_simule.appels == [{"image": f"<image {PAGE}>", "lang": LANGUAGE, "output_type": "dict"}]
+    assert LANGUAGE == "fra"
+    # « Word-level scores, on a hundred-point scale, and a score of -1 for the layout boxes ».
+    assert result["confidence"] == pytest.approx(0.91)
+    assert result["review"] is False
+
+
 def test_defaut_le_moteur_par_defaut_rend_les_lignes_de_la_page(vrai_moteur_simule):
     assert read_page(PAGE)["text"].splitlines() == ["NORD FOURNITURES SAS", "N° 2024-000431", "NET A PAYER 92,40 EUR"]
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "INFIRMÉ : la docstring de TesseractOCR dit « started once and kept for the "
+    "process » ; read_page sans moteur en construit un nouveau à chaque page, et "
+    "pytesseract lance de toute façon le binaire tesseract dans un sous-processus "
+    "à chaque appel (run_tesseract, subprocess.Popen)"
+))
+def test_infirme_le_moteur_par_defaut_est_demarre_une_fois_pour_le_processus(vrai_moteur_simule, monkeypatch):
+    construits = []
+
+    class Compte(n2.TesseractOCR):
+        def __init__(self, *args, **kwargs):
+            construits.append(1)
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(n2, "TesseractOCR", Compte)
+    read_page("page-1.png")
+    read_page("page-2.png")
+    assert len(construits) == 1
+
+
+# ---------------------------------------------------------------------------
+# Les autres affirmations du niveau
+# ---------------------------------------------------------------------------
+
+
+def test_lit_la_page():
+    result = read_page(PAGE, FakeOCR({PAGE: READING}, confidence=0.94))
+    assert result["text"].splitlines() == [
+        "NORD FOURNITURES SAS",
+        "N° 2024-000431",
+        "Émise le 3 avril 2024",
+        "NET A PAYER 92,40 EUR",
+    ]
+    assert result["confidence"] == 0.94
+    assert result["review"] is False
+
+
+def test_remet_au_moteur_la_page_quon_lui_a_donnee():
+    engine = FakeOCR({PAGE: READING})
+    read_page(PAGE, engine)
+    assert engine.calls == [PAGE]
+
+
+def test_recolle_un_mot_que_le_scan_a_coupe():
+    """Commentaire : « « exemp-\\nlaire » is one word the scanner cut in two »."""
+    engine = FakeOCR({PAGE: "un second exem-\nplaire de la facture"})
+    assert read_page(PAGE, engine)["text"] == "un second exemplaire de la facture"
+    assert clean("réfé-\nrence") == "référence"
 
 
 def test_infirme_python_et_javascript_recollent_les_memes_mots():
