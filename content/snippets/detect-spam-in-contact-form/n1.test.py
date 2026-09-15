@@ -1,6 +1,19 @@
+import ast
+import statistics
+import time
+import unicodedata
+from pathlib import Path
+
+import numpy as np
+import pytest
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+
+from n0 import reasons
 from n1 import fold, is_spam, spam_score, train
 
-# A small labelled set, the kind an afternoon spent in the inbox produces.
+# Un petit jeu étiqueté, ce qu'un après-midi dans la boîte de réception produit.
 SPAM = [
     "Hello, we offer guaranteed first page ranking on Google for your website.",
     "Boost your traffic with our premium backlink packages at cheap prices.",
@@ -39,28 +52,74 @@ GENUINE = [
     "Your newsletter arrives twice, could you remove the duplicate address?",
 ]
 
+LABELS = [1] * len(SPAM) + [0] * len(GENUINE)
+MODEL = train(SPAM + GENUINE, LABELS)
 
-def make_model():
-    return train(SPAM + GENUINE, [1] * len(SPAM) + [0] * len(GENUINE))
+PATIENT_BOT = (
+    "Good morning, I came across your company and I would like to discuss "
+    "a partnership to increase your visibility. When would suit you?"
+)
+VERDICT_SOLICITATION = "Hi, we can boost your google ranking with quality links, cheap offer."
+ENQUIRY = "Hello, my parcel arrived yesterday but the box was open."
 
 
-MODEL = make_model()
+# ---------------------------------------------------------------------------
+# Point de rupture
+# ---------------------------------------------------------------------------
 
 
-def test_folding_removes_case_and_accents():
+def test_point_de_rupture_une_sollicitation_ecrite_dans_le_registre_d_un_client():
+    """
+    breaking_point : « un envoi court, poli, sans offre, sans prix et sans lien
+    score comme une demande de client, et le test le laisse sous le seuil ».
+    Témoin : la sollicitation du verdict est au-dessus.
+    """
+    assert spam_score(MODEL, PATIENT_BOT) < 0.5
+    assert not is_spam(MODEL, PATIENT_BOT)
+    assert spam_score(MODEL, VERDICT_SOLICITATION) > 0.5
+
+
+def test_point_de_rupture_c_est_mot_pour_mot_le_message_qui_traverse_n0():
+    """breaking_point : « C'est mot pour mot le message qui traverse déjà N0 »."""
+    assert reasons({"message": PATIENT_BOT, "website": ""}, 30) == []
+    assert not is_spam(MODEL, PATIENT_BOT)
+
+
+def test_point_de_rupture_ce_que_n1_gagne_est_le_flot_entre_les_deux():
+    """
+    breaking_point : « ce que N1 gagne, c'est le flot entre les deux ». La
+    sollicitation du verdict passe N0 et N1 l'écarte ; un robot au pot de miel
+    rempli, écrit comme un client, est écarté par N0 et passerait N1.
+    """
+    assert reasons({"message": VERDICT_SOLICITATION, "website": ""}, 30) == []
+    assert is_spam(MODEL, VERDICT_SOLICITATION)
+    assert reasons({"message": ENQUIRY, "website": "http://x.com"}, 0.2) == ["honeypot filled", "submitted too fast"]
+    assert not is_spam(MODEL, ENQUIRY)
+
+
+# ---------------------------------------------------------------------------
+# Autres affirmations du niveau
+# ---------------------------------------------------------------------------
+
+
+def test_le_repli_retire_la_casse_et_les_accents():
+    """docstring de fold : « so casing never doubles the feature space »."""
     assert fold("Commande Cassée") == "commande cassee"
+    assert spam_score(MODEL, ENQUIRY.upper()) == spam_score(MODEL, ENQUIRY)
 
 
-def test_catches_a_solicitation_it_has_never_seen():
-    assert is_spam(MODEL, "Hi, we can boost your google ranking with quality links, cheap offer.")
+def test_verdict_attrape_une_sollicitation_jamais_vue():
+    """verdict_rationale : « le classifieur la range du bon côté sans l'avoir jamais vue »."""
+    assert VERDICT_SOLICITATION not in SPAM + GENUINE
+    assert is_spam(MODEL, VERDICT_SOLICITATION)
 
 
-def test_leaves_a_new_customer_enquiry_alone():
-    assert not is_spam(MODEL, "Hello, my parcel arrived yesterday but the box was open.")
+def test_laisse_passer_une_nouvelle_demande_de_client():
+    assert not is_spam(MODEL, ENQUIRY)
 
 
-def test_catches_the_spellings_that_walk_past_a_word_list():
-    """Character n-grams see the shape of a word, not its exact letters."""
+def test_attrape_les_phrases_ou_figurent_les_graphies_contournees():
+    """Test d'origine, gardé : les deux phrases sont classées spam. Ce qu'il ne démontre pas est au test suivant."""
     for written in (
         "we sell b a c k l i n k s and cheap traffic, boost your rankings today",
         "we sell backl1nks and cheap seo packages, boost your ranking now",
@@ -68,34 +127,135 @@ def test_catches_the_spellings_that_walk_past_a_word_list():
         assert is_spam(MODEL, written), written
 
 
-def test_survives_accents_and_a_very_long_message():
-    assert not is_spam(MODEL, "Bonjour, ma commande est arrivée cassée, que dois-je faire ?")
-    repeated = "Hello, I ordered a lamp last week and it arrived damaged. " * 20
-    assert not is_spam(MODEL, repeated)
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "INFIRMÉ : la docstring dit que les n-grammes de caractères « survive the "
+        "spellings a sender uses to dodge a word list, `b a c k l i n k s` », et le "
+        "verdict qu'il range « b a c k l i n k s » comme la sollicitation. Avec "
+        "`char_wb`, aucun n-gramme ne franchit l'espace : « b a c k l i n k s » seul "
+        "score 0,362, moins que « l a m p s » (0,441) ; dans la phrase du test, "
+        "remplacer le mot par « l a m p s » donne 0,853 contre 0,847. C'est le reste "
+        "de la phrase qui la classe"
+    ),
+)
+def test_infirme_les_lettres_espacees_survivent_aux_n_grammes():
+    assert spam_score(MODEL, "b a c k l i n k s") > spam_score(MODEL, "l a m p s")
+    spaced = "we sell b a c k l i n k s and cheap traffic, boost your rankings today"
+    neutral = "we sell l a m p s and cheap traffic, boost your rankings today"
+    assert spam_score(MODEL, spaced) > spam_score(MODEL, neutral)
 
 
-def test_the_threshold_is_yours_to_set():
-    enquiry = "Hello, my parcel arrived yesterday but the box was open."
-    # A threshold of zero rejects everything, which is the point of exposing it.
-    assert is_spam(MODEL, enquiry, threshold=0.0)
+def test_constat_char_wb_ne_forme_aucun_n_gramme_a_travers_une_espace():
+    """Commentaire : « `char_wb` keeps n-grams inside word boundaries »."""
+    analyzer = MODEL.named_steps["tfidfvectorizer"].build_analyzer()
+    assert [gram for gram in analyzer("b a c k l i n k s") if "bac" in gram] == []
+    assert all(" " not in gram.strip() for gram in analyzer("ab cd efgh"))
 
 
-def test_score_is_a_probability():
-    assert 0.0 <= spam_score(MODEL, "anything at all") <= 1.0
-
-
-def test_breaking_point_a_solicitation_written_in_the_register_of_a_customer():
-    """
-    The breaking point claimed on the entry: this rung learns the register of
-    the messages it was shown. A sender who writes like a customer, short,
-    polite, no offer, no price, no link, scores like a customer.
-
-    It is the same message that walks past N0, and it walks past N1 too. The
-    difference between the two rungs is the flood in between, not this sender.
-    """
-    patient_bot = (
-        "Good morning, I came across your company and I would like to discuss "
-        "a partnership to increase your visibility. When would suit you?"
+def test_backl1nks_garde_une_partie_de_sa_forme():
+    """Démontré en Python seulement : « backl1nks » seul score plus que « lamps », et un peu plus dans la phrase."""
+    assert spam_score(MODEL, "backl1nks") > spam_score(MODEL, "lamps")
+    assert spam_score(MODEL, "we sell backl1nks and cheap seo packages, boost your ranking now") > spam_score(
+        MODEL, "we sell lamps and cheap seo packages, boost your ranking now"
     )
-    assert spam_score(MODEL, patient_bot) < 0.5
-    assert not is_spam(MODEL, patient_bot)
+
+
+def test_la_decision_est_une_somme_ponderee_dont_on_peut_imprimer_les_traits():
+    """docstring : « The decision is a weighted sum, so you can print the features that pushed a message over the line »."""
+    vectoriser = MODEL.named_steps["tfidfvectorizer"]
+    classifier = MODEL.named_steps["logisticregression"]
+    row = vectoriser.transform([fold(VERDICT_SOLICITATION)]).toarray()[0]
+    contributions = row * classifier.coef_[0]
+    names = vectoriser.get_feature_names_out()
+    top = [names[i] for i in np.argsort(contributions)[::-1][:5]]
+    assert top[0] == "ran" and "cheap" in top
+    z = contributions.sum() + classifier.intercept_[0]
+    assert spam_score(MODEL, VERDICT_SOLICITATION) == pytest.approx(1 / (1 + np.exp(-z)))
+
+
+def test_c_au_dessus_de_un_ecarte_les_scores_du_demi():
+    """
+    Commentaire : « `C` above one because a few hundred examples with a heavy
+    regulariser leave every score sitting near a half ». Sur le jeu des tests,
+    à C = 1 les scores d'entraînement restent entre 0,35 et 0,66 ; à C = 10,
+    entre 0,11 et 0,90.
+    """
+    def spread(c):
+        model = make_pipeline(
+            TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), sublinear_tf=True, min_df=1),
+            LogisticRegression(class_weight="balanced", C=c, max_iter=1000),
+        )
+        model.fit([fold(m) for m in SPAM + GENUINE], LABELS)
+        return statistics.fmean(abs(p - 0.5) for p in model.predict_proba([fold(m) for m in SPAM + GENUINE])[:, 1])
+    assert spread(1.0) < 0.15 < 0.3 < spread(10.0)
+    scores = [spam_score(MODEL, m) for m in SPAM + GENUINE]
+    assert round(min(scores), 2) == 0.11 and round(max(scores), 2) == 0.9
+
+
+def test_le_seuil_est_a_vous():
+    """docstring d'is_spam : « Move it towards 1 when losing a real enquiry is the expensive mistake »."""
+    assert is_spam(MODEL, ENQUIRY, threshold=0.0)
+    assert not is_spam(MODEL, VERDICT_SOLICITATION, threshold=1.0)
+    exact = spam_score(MODEL, VERDICT_SOLICITATION)
+    assert is_spam(MODEL, VERDICT_SOLICITATION, threshold=exact)  # supérieur ou égal
+
+
+def test_le_score_est_une_probabilite():
+    """docstring de spam_score : « between zero and one »."""
+    assert all(0.0 <= spam_score(MODEL, m) <= 1.0 for m in SPAM + GENUINE + ["anything at all", ""])
+
+
+def test_deux_entrainements_rendent_les_memes_scores():
+    """risks.deterministic : true."""
+    assert spam_score(train(SPAM + GENUINE, LABELS), PATIENT_BOT) == spam_score(MODEL, PATIENT_BOT)
+
+
+def test_l_extrait_n_importe_que_scikit_learn_et_unicodedata():
+    """risks.data_egress : none."""
+    source = ast.parse(Path(__file__).with_name("n1.py").read_text(encoding="utf-8"))
+    modules = {n.module for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
+    modules |= {a.name for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
+    assert modules == {"unicodedata", "sklearn.feature_extraction.text", "sklearn.linear_model", "sklearn.pipeline"}
+
+
+# ---------------------------------------------------------------------------
+# Cas de production
+# ---------------------------------------------------------------------------
+
+
+def test_production_accents_nfd_espace_insecable_et_message_d_un_megaoctet():
+    assert not is_spam(MODEL, "Bonjour, ma commande est arrivée cassée, que dois-je faire ?")
+    assert spam_score(MODEL, unicodedata.normalize("NFD", ENQUIRY + " é")) == spam_score(MODEL, ENQUIRY + " é")
+    assert not is_spam(MODEL, ENQUIRY.replace(" ", " "))
+    assert not is_spam(MODEL, "Hello, I ordered a lamp last week and it arrived damaged. " * 20)
+    started = time.monotonic()
+    spam_score(MODEL, "Hello I have a question. " * 40000)
+    assert time.monotonic() - started < 10
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "DÉFAUT : un message vide est jugé par le seul biais du modèle : 0,509, donc "
+        "spam en Python ; 0,454, donc accepté en JavaScript. Les deux langages tranchent "
+        "en sens contraire sur une entrée qui ne contient rien"
+    ),
+)
+def test_defaut_un_message_vide_n_est_pas_tranche_par_hasard():
+    assert not is_spam(MODEL, "")
+    assert spam_score(MODEL, "") < 0.5 - 0.05
+
+
+def test_production_un_entrainement_degenere_leve():
+    """Python lève sur un jeu vide ou d'une seule classe (le JavaScript, non : DÉFAUT côté js)."""
+    with pytest.raises(ValueError):
+        train([], [])
+    with pytest.raises(ValueError):
+        train(SPAM, [1] * len(SPAM))
+
+
+def test_production_trois_mille_deux_cents_envois_etiquetes():
+    started = time.monotonic()
+    train((SPAM + GENUINE) * 100, LABELS * 100)
+    assert time.monotonic() - started < 30
