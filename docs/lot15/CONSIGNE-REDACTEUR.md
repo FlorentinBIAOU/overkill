@@ -187,6 +187,14 @@ a trouvé ; ne le crois pas sur parole, vérifie. `@xenova/transformers` est
 l'ancien nom de `@huggingface/transformers` : tranche, et sois cohérent au sein
 de la fiche.
 
+Établi par un testeur, source vérifiée (`MIGRATION_GUIDE_V5.md` de
+`transformers`, tâche présente en 4.57.3, absente en 5.0.0) : **`transformers` 5
+a retiré les pipelines `translation`, `summarization` et
+`text2text-generation`**. Un extrait Python qui les charge échoue sur une
+installation courante. Tranche pour chaque extrait concerné : un autre appel qui
+existe en version 5 (vérifié dans la documentation), ou une contrainte de
+version écrite dans le code et dans la fiche. Transformers.js garde ces tâches.
+
 ## Ce que tu rends à la fin
 
 Un compte rendu court : pour chaque fiche, nombre d'affirmations corrigées,
