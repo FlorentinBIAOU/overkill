@@ -8,14 +8,16 @@ humain. Ce qu'ils ne prouvent pas : que le modèle note bien les commentaires.
 
 import json
 import re
+import sys
 import time
+import types
 from pathlib import Path
 
 import pytest
 
 import n2
 from _harness.fake_model import FakeClassifier
-from n2 import DEFAULT_THRESHOLDS, MODEL_NAME, ModerationUnavailable, ToxicityModel, moderate
+from n2 import DEFAULT_THRESHOLDS, HARM_LABELS, MODEL_NAME, ModerationUnavailable, ToxicityModel, moderate
 
 ATTACK = "get off this forum you blorptard"
 BORDERLINE = "that was a spectacularly bad take, honestly"
@@ -50,11 +52,22 @@ def essai_cases():
 # ---------------------------------------------------------------------------
 
 
-def test_point_de_rupture_un_prejudice_sans_etiquette_note_bas_partout_part_en_publication():
+def test_point_de_rupture_sept_nuisances_et_aucune_ne_nomme_la_divulgation_d_un_domicile():
     """
-    « le test lui soumet « he lives at the corner of rue des Lilas by the way, go and
-    say hello », qui n'est aucune des trois, ressort bas partout et part en publication ».
-    Les notes basses sont écrites par le test ; ce qui est démontré, c'est ce que le code en fait.
+    « Le modèle note sept nuisances — toxicité, toxicité sévère, obscénité, attaque identitaire,
+    insulte, menace, contenu sexuel explicite — et aucune ne nomme la divulgation d'un domicile ».
+    Démontré sur la liste des étiquettes qui décident dans l'extrait ; que le modèle réel les note
+    ainsi est sourcé, pas testé.
+    """
+    assert HARM_LABELS == ("toxicity", "severe_toxicity", "obscene", "identity_attack", "insult", "threat",
+                           "sexual_explicit")
+    assert not any(word in label for label in HARM_LABELS for word in ("address", "doxx", "privacy", "personal"))
+
+
+def test_point_de_rupture_sur_des_notes_simulees_basses_l_adresse_part_en_publication():
+    """
+    « « he lives at the corner of rue des Lilas by the way, go and say hello » n'a pas d'étiquette
+    où tomber » ; « Le test ne vérifie que la plomberie, sur des notes simulées. »
     """
     classifier = FakeClassifier({DOXXING: {"toxicity": 0.08, "insult": 0.03, "threat": 0.06}})
     assert moderate([DOXXING], classifier) == [{"action": "allow", "label": "toxicity", "score": 0.08}]
@@ -122,14 +135,71 @@ def test_une_reponse_de_mauvaise_longueur_leve_plutot_que_de_decaler_les_comment
             moderate([ATTACK, CALM], classifier)
 
 
-def test_un_lot_vide_n_atteint_jamais_le_modele():
+def test_un_lot_vide_n_atteint_jamais_le_modele(monkeypatch):
     classifier = FakeClassifier(SCORES)
     assert moderate([], classifier) == []
     assert classifier.calls == []
+    # Sans classifieur non plus : le modèle par défaut n'est pas chargé pour un lot vide.
+    monkeypatch.setattr(n2, "default_model", lambda: pytest.fail("modèle chargé pour un lot vide"))
+    assert moderate([]) == [] and moderate(iter(())) == []
+
+
+@pytest.fixture
+def faux_transformers(monkeypatch):
+    """Double du module `transformers` : `pipeline(tâche, model=…, **options)` rend un pipeline qui note chaque commentaire."""
+    appels = []
+
+    def pipeline(task, **options):
+        appels.append(("pipeline", task, options))
+
+        def pipe(comments, **call_options):
+            appels.append(("pipe", list(comments), call_options))
+            return [[{"label": "toxicity", "score": 0.05}, {"label": "muslim", "score": 0.99}] for _ in comments]
+
+        return pipe
+
+    n2.default_model.cache_clear()
+    monkeypatch.setitem(sys.modules, "transformers", types.SimpleNamespace(pipeline=pipeline))
+    yield appels
+    n2.default_model.cache_clear()
+
+
+def test_par_defaut_le_vrai_pipeline_est_construit_une_fois_tronque_sans_batch_size(faux_transformers):
+    """
+    « The real model, loaded on first use and kept for the process » ; « Truncated to the length the model
+    reads » ; « transformers batches only when given a `batch_size`, and leaves it off by default ».
+    """
+    assert moderate([CALM, ATTACK]) == [{"action": "allow", "label": "toxicity", "score": 0.05}] * 2
+    assert moderate([CALM]) == [{"action": "allow", "label": "toxicity", "score": 0.05}]
+    assert faux_transformers == [
+        ("pipeline", "text-classification", {"model": MODEL_NAME, "top_k": None, "truncation": True}),
+        ("pipe", [CALM, ATTACK], {}),
+        ("pipe", [CALM], {}),
+    ]
+
+
+def test_un_chargement_rate_n_est_pas_garde(monkeypatch):
+    """functools.cache ne garde pas une exception : l'appel suivant retente le chargement."""
+    n2.default_model.cache_clear()
+    monkeypatch.setitem(sys.modules, "transformers", None)
+    with pytest.raises(ImportError):
+        moderate([CALM])
+    loads = []
+
+    def pipeline(task, **options):
+        loads.append(task)
+        return lambda comments: [[{"label": "toxicity", "score": 0.0}] for _ in comments]
+
+    monkeypatch.setitem(sys.modules, "transformers", types.SimpleNamespace(pipeline=pipeline))
+    moderate([CALM])
+    moderate([CALM])
+    assert loads == ["text-classification"]
+    n2.default_model.cache_clear()
 
 
 def test_le_classifieur_est_injecte_et_par_defaut_c_est_le_vrai():
     """« `classifier` is injected so this can be tested without downloading the weights. »"""
+    n2.default_model.cache_clear()
     with pytest.raises(ModuleNotFoundError, match="transformers"):
         moderate([CALM])
     assert MODEL_NAME == "unitary/unbiased-toxic-roberta"
@@ -152,22 +222,29 @@ def test_le_vrai_modele_est_charge_une_fois_pour_le_processus(monkeypatch):
         def predict(self, comments):
             return [{"toxicity": 0.0}] * len(comments)
 
+    n2.default_model.cache_clear()
     monkeypatch.setattr(n2, "ToxicityModel", Counting)
     moderate([CALM])
     moderate([CALM])
     assert len(loads) == 1
+    n2.default_model.cache_clear()
 
 
-def test_defaut_une_etiquette_de_mention_d_identite_ne_bloque_pas_un_commentaire():
+def test_production_une_etiquette_de_mention_d_identite_ne_decide_jamais():
+    """« those say who is mentioned, not what is done to them, and they never decide anything here »."""
     comment = "as a muslim woman i found the second section very useful"
     row = {"toxicity": 0.01, "severe_toxicity": 0.0, "obscene": 0.0, "identity_attack": 0.01, "insult": 0.0,
            "threat": 0.0, "sexual_explicit": 0.0, "male": 0.02, "female": 0.91, "muslim": 0.95}
-    assert moderate([comment], FakeClassifier({comment: row}))[0]["action"] == "allow"
+    assert moderate([comment], FakeClassifier({comment: row}))[0] == {"action": "allow", "label": "toxicity", "score": 0.01}
+    # Une ligne faite des seules étiquettes d'identité n'a rien pour décider : relecture.
+    only = {comment: {"female": 0.91, "muslim": 0.95}}
+    assert moderate([comment], FakeClassifier(only))[0] == {"action": "review", "label": None, "score": None}
 
 
-def test_defaut_une_ligne_d_une_autre_forme_ne_devient_pas_une_decision():
+def test_production_une_ligne_d_une_autre_forme_part_en_relecture():
+    """Une ligne `{label, score}` (sortie `top_k=1`) n'a aucune étiquette de nuisance pour clé : relecture, pas « score »."""
     rows = {ATTACK: {"label": "toxicity", "score": 0.95}}
-    assert moderate([ATTACK], FakeClassifier(rows))[0]["action"] == "review"
+    assert moderate([ATTACK], FakeClassifier(rows))[0] == {"action": "review", "label": None, "score": None}
 
 
 def test_l_essai_fige_six_cas():

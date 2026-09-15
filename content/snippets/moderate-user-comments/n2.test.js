@@ -7,14 +7,29 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { register } from 'node:module';
 import { FakeClassifier } from '../_harness/fake-model.mjs';
-import { DEFAULT_THRESHOLDS, MODEL_NAME, ModerationUnavailable, ToxicityModel, moderate } from './n2.js';
+import { DEFAULT_THRESHOLDS, HARM_LABELS, MODEL_NAME, ModerationUnavailable, ToxicityModel, moderate } from './n2.js';
 import essai from '../../tryouts/frozen/moderate-user-comments.js';
 
 const ATTACK = 'get off this forum you blorptard';
 const BORDERLINE = 'that was a spectacularly bad take, honestly';
 const CALM = 'the diagram is much clearer than the text';
 const DOXXING = 'he lives at the corner of rue des Lilas by the way, go and say hello';
+
+// Double du module « @huggingface/transformers » : l'extrait l'importe au premier
+// chargement ; ce crochet de résolution le remplace par un module qui délègue à
+// une fonction posée par le test. Surface imitée : `pipeline(tâche, modèle,
+// options)` rend un pipeline, `pipe(commentaires, { top_k })` une liste de listes
+// de `{ label, score }`.
+const FAUX_TRANSFORMERS = 'export async function pipeline(...args) { return globalThis.fauxPipeline(...args); }';
+const CROCHET = `export async function resolve(specifier, context, next) {
+  if (specifier === '@huggingface/transformers') {
+    return { url: 'data:text/javascript,' + encodeURIComponent(${JSON.stringify(FAUX_TRANSFORMERS)}), shortCircuit: true };
+  }
+  return next(specifier, context);
+}`;
+register(`data:text/javascript,${encodeURIComponent(CROCHET)}`);
 
 const SCORES = {
   [ATTACK]: { toxicity: 0.96, insult: 0.91, threat: 0.04 },
@@ -26,7 +41,12 @@ const SCORES = {
 // Point de rupture (plomberie seulement)
 // ---------------------------------------------------------------------------
 
-test('point de rupture : un préjudice sans étiquette, noté bas partout, part en publication', async () => {
+test("point de rupture : sept nuisances, et aucune ne nomme la divulgation d'un domicile", () => {
+  assert.deepEqual(HARM_LABELS, ['toxicity', 'severe_toxicity', 'obscene', 'identity_attack', 'insult', 'threat', 'sexual_explicit']);
+  assert.ok(!HARM_LABELS.some((label) => ['address', 'doxx', 'privacy', 'personal'].some((w) => label.includes(w))));
+});
+
+test("point de rupture : sur des notes simulées basses, l'adresse part en publication", async () => {
   const classifier = new FakeClassifier({ [DOXXING]: { toxicity: 0.08, insult: 0.03, threat: 0.06 } });
   assert.deepEqual(await moderate([DOXXING], classifier), [{ action: 'allow', label: 'toxicity', score: 0.08 }]);
   assert.equal((await moderate([ATTACK], new FakeClassifier(SCORES)))[0].action, 'block');
@@ -79,51 +99,72 @@ test('une réponse de mauvaise longueur lève plutôt que de décaler les commen
   }
 });
 
-test("le test existant s'appelle « an empty batch never reaches the model » ; le modèle est appelé avec []", async () => {
+test("un lot vide n'atteint jamais le modèle", async () => {
   const classifier = new FakeClassifier(SCORES);
   assert.deepEqual(await moderate([], classifier), []);
   assert.deepEqual(classifier.calls, []);
+  // Sans classifieur non plus : le modèle par défaut n'est pas chargé pour un lot vide.
+  globalThis.fauxPipeline = async () => assert.fail('modèle chargé pour un lot vide');
+  try {
+    assert.deepEqual(await moderate([]), []);
+  } finally {
+    delete globalThis.fauxPipeline;
+  }
 });
 
-test("le classifieur est injecté, et par défaut c'est le vrai", async () => {
-  await assert.rejects(() => moderate([CALM]), { code: 'ERR_MODULE_NOT_FOUND', message: /@huggingface\/transformers/ });
-  assert.equal(MODEL_NAME, 'Xenova/toxic-bert');
+test("le classifieur est injecté ; par défaut c'est le vrai, chargé une fois, et un chargement raté n'est pas gardé", async () => {
+  // « The real model, loaded on first use and kept for the process » ; « a failed load is not kept ».
+  const appels = [];
+  globalThis.fauxPipeline = async (...args) => {
+    appels.push(['pipeline', ...args]);
+    throw new Error('téléchargement impossible');
+  };
+  try {
+    await assert.rejects(() => moderate([CALM]), /téléchargement impossible/);
+    globalThis.fauxPipeline = async (...args) => {
+      appels.push(['pipeline', ...args]);
+      return async (comments, options) => {
+        appels.push(['pipe', comments, options]);
+        return comments.map(() => [{ label: 'toxicity', score: 0.05 }, { label: 'muslim', score: 0.99 }]);
+      };
+    };
+    assert.deepEqual(await moderate([CALM, ATTACK]), [{ action: 'allow', label: 'toxicity', score: 0.05 }, { action: 'allow', label: 'toxicity', score: 0.05 }]);
+    await moderate([CALM]);
+  } finally {
+    delete globalThis.fauxPipeline;
+  }
+  const options = { subfolder: '', dtype: 'fp32' };
+  assert.deepEqual(appels, [
+    ['pipeline', 'text-classification', 'protectai/unbiased-toxic-roberta-onnx', options],
+    ['pipeline', 'text-classification', 'protectai/unbiased-toxic-roberta-onnx', options],
+    ['pipe', [CALM, ATTACK], { top_k: null }],
+    ['pipe', [CALM], { top_k: null }],
+  ]);
+  assert.equal(MODEL_NAME, 'protectai/unbiased-toxic-roberta-onnx');
 });
 
 test('predict demande toutes les étiquettes et rend une ligne par commentaire', async () => {
   const seen = [];
   const pipe = async (comments, options) => {
     seen.push(options);
-    return comments.map(() => [{ label: 'toxic', score: 0.9 }, { label: 'insult', score: 0.1 }]);
+    return comments.map(() => [{ label: 'toxicity', score: 0.9 }, { label: 'insult', score: 0.1 }]);
   };
   const model = new ToxicityModel(pipe);
-  assert.deepEqual(await model.predict([ATTACK, CALM]), [{ toxic: 0.9, insult: 0.1 }, { toxic: 0.9, insult: 0.1 }]);
+  assert.deepEqual(await model.predict([ATTACK, CALM]), [{ toxicity: 0.9, insult: 0.1 }, { toxicity: 0.9, insult: 0.1 }]);
   assert.deepEqual(seen, [{ top_k: null }]);
 });
 
-test('« The real model, loaded once and kept in memory for the process » ; moderate sans classifieur recharge à chaque appel', async () => {
-  const original = ToxicityModel.load;
-  let loads = 0;
-  ToxicityModel.load = async () => {
-    loads += 1;
-    return { predict: async (c) => c.map(() => ({ toxic: 0 })) };
-  };
-  try {
-    await moderate([CALM]);
-    await moderate([CALM]);
-  } finally {
-    ToxicityModel.load = original;
-  }
-  assert.equal(loads, 1);
+test('production : une étiquette de mention d’identité ne décide jamais', async () => {
+  const comment = 'as a muslim woman i found the second section very useful';
+  const row = { toxicity: 0.01, severe_toxicity: 0, obscene: 0, identity_attack: 0.01, insult: 0, threat: 0, sexual_explicit: 0, male: 0.02, female: 0.91, muslim: 0.95 };
+  assert.deepEqual((await moderate([comment], new FakeClassifier({ [comment]: row })))[0], { action: 'allow', label: 'toxicity', score: 0.01 });
+  const only = { [comment]: { female: 0.91, muslim: 0.95 } };
+  assert.deepEqual((await moderate([comment], new FakeClassifier(only)))[0], { action: 'review', label: null, score: null });
 });
 
-test("DÉFAUT : une ligne d'une autre forme ({label, score}) devient une décision étiquetée « score »", async () => {
-  const rows = { [ATTACK]: { label: 'toxic', score: 0.95 } };
-  const [decision] = await moderate([ATTACK], new FakeClassifier(rows));
-  assert.deepEqual(decision, { action: 'block', label: 'score', score: 0.95 });
-  await assert.rejects(async () => {
-    assert.equal(decision.action, 'review');
-  }, assert.AssertionError);
+test("production : une ligne d'une autre forme part en relecture", async () => {
+  const rows = { [ATTACK]: { label: 'toxicity', score: 0.95 } };
+  assert.deepEqual((await moderate([ATTACK], new FakeClassifier(rows)))[0], { action: 'review', label: null, score: null });
 });
 
 test("l'essai figé : six cas, une note la plus forte, des seuils, un cas inexploitable, l'adresse publiée", async () => {

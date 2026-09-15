@@ -31,10 +31,16 @@ test("point de rupture : le signalement est signalé exactement comme l'insulte"
   assert.ok(!review('great write-up, the third section helped a lot', TERMS).flagged);
 });
 
-test("INFIRMÉ : la fiche dit que rien dans le résultat ne distingue le signalement de l'insulte ; la fenêtre de contexte les distingue", async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(review(REPORT, TERMS).matches, review(ATTACK, TERMS).matches);
-  }, assert.AssertionError);
+test("point de rupture : seule la fenêtre de contexte distingue le signalement de l'insulte", () => {
+  // Une insulte dont le terme tombe à la même position que dans le signalement.
+  const report = review(REPORT, TERMS);
+  const insult = review('just get lost you blorptard', TERMS);
+  assert.equal(report.flagged, true);
+  assert.equal(insult.flagged, true);
+  const differ = Object.keys(report.matches[0]).filter((k) => report.matches[0][k] !== insult.matches[0][k]);
+  assert.deepEqual(differ, ['context']);
+  assert.equal(report.matches[0].context, 'called me a blorptard please remove his');
+  assert.equal(insult.matches[0].context, 'get lost you blorptard');
 });
 
 // ---------------------------------------------------------------------------
@@ -48,9 +54,12 @@ test('signale un terme listé et montre son contexte', () => {
   });
 });
 
-test('chaque décision se ramène à un mot de la liste', () => {
-  const listed = new Set(TERMS.map(normalise));
-  assert.ok(review('ZIBBERNAUT and flarnwît', TERMS).matches.every((m) => listed.has(m.term)));
+test('chaque décision se ramène à une entrée de la liste', () => {
+  const terms = [...TERMS, 'Sale Type'];
+  const listed = new Set(terms.map(normalise));
+  const { matches } = review('ZIBBERNAUT and flarnwît, quel sale type', terms);
+  assert.deepEqual(matches.map((m) => m.term), ['zibbernaut', 'flarnwit', 'sale type']);
+  assert.ok(matches.every((m) => listed.has(m.term)));
 });
 
 test('la normalisation replie la casse et les accents', () => {
@@ -60,10 +69,28 @@ test('la normalisation replie la casse et les accents', () => {
   assert.ok(review('what a blorptard', ['BLÖRPTARD']).flagged);
 });
 
-test("INFIRMÉ : rien d'autre que la casse et les accents n'est touché ; NFKD replie aussi les formes de compatibilité", async () => {
+test('les formes de compatibilité sont repliées, pas les sosies', () => {
+  assert.equal(normalise('ｂｌｏｒｐｔａｒｄ'), 'blorptard');
+  assert.equal(normalise('ﬁn²'), 'fin2');
+  assert.ok(review('you ᵇˡᵒʳᵖᵗᵃʳᵈ', TERMS).flagged);
+  assert.ok(review('you are a ﬂarnwit', TERMS).flagged);
+  // Les sosies : un zéro, un « о » cyrillique.
+  assert.equal(normalise('bl0rptard'), 'bl0rptard');
+  assert.ok(!review('you bl0rptard', TERMS).flagged);
+  assert.ok(!review('you bl\u043erptard', TERMS).flagged);
+});
+
+test('les formes de compatibilité en capitales sont repliées comme les autres', () => {
+  // Python ne les replie pas : casefold y est appliqué avant NFKD.
+  assert.ok(review('you 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃', TERMS).flagged);
+  assert.ok(review('you ᴮᴸᴼᴿᴾᵀᴬᴿᴰ', TERMS).flagged);
+});
+
+test('INFIRMÉ : « ß » et « ς » ne sont pas les deux seules lettres où casefold diffère des minuscules après NFKD ; le repli JavaScript diverge de Python ailleurs', async () => {
+  // Valeurs de normalise en Python : « ᾳ » → « αι », « Ꭰ » (cherokee) → « Ꭰ ».
   await assert.rejects(async () => {
-    assert.equal(normalise('ｂｌｏｒｐｔａｒｄ'), 'ｂｌｏｒｐｔａｒｄ');
-    assert.equal(normalise('ﬁn²'), 'ﬁn²');
+    assert.equal(normalise('ᾳ'), 'αι');
+    assert.equal(normalise('Ꭰ'), 'Ꭰ');
   }, assert.AssertionError);
 });
 
@@ -88,8 +115,18 @@ test('la fenêtre est coupée aux bords du commentaire', () => {
   assert.equal(review('blorptard', TERMS, 5).matches[0].context, 'blorptard');
 });
 
-test('« Return every listed term found in text » ; un terme de deux mots n’est jamais trouvé', async () => {
+test('un terme de deux mots est trouvé', () => {
   assert.ok(review('quel sale type celui-là', ['sale type']).flagged);
+});
+
+test('un terme de plusieurs mots est trouvé quelle que soit la ponctuation qui les sépare', () => {
+  assert.deepEqual(review('quel sale, type celui-là', ['sale type'], 1).matches, [
+    { term: 'sale type', position: 1, context: 'quel sale type celui' },
+  ]);
+  assert.ok(review('quel SALE — type', ['sale type']).flagged);
+  // Témoin : les mots doivent se suivre.
+  assert.ok(!review('quel sale gros type', ['sale type']).flagged);
+  assert.deepEqual(review('sale type', ['sale', 'sale type']).matches.map((m) => m.term), ['sale', 'sale type']);
 });
 
 test("n0 est déterministe et n'emploie aucune dépendance", () => {
@@ -129,10 +166,31 @@ test("production : pleine largeur et marque d'ordre", () => {
   assert.ok(review('﻿blorptard', TERMS).flagged);
 });
 
-test('toLowerCase ne replie pas « ß » ; « SCHEISSE » n’est pas trouvé pour « scheiße », Python le trouve', async () => {
+test('production : ß majuscule et sigma final sont repliés comme en Python', () => {
+  assert.ok(review('STRAẞE', ['strasse']).flagged);
   assert.ok(review('SCHEISSE', ['scheiße']).flagged);
+  assert.equal(normalise('ΚΑΚΟΣ'), 'κακοσ');
+  assert.equal(normalise('κακος'), 'κακοσ');
+  assert.ok(review('κακος', ['ΚΑΚΟΣ']).flagged);
 });
 
-test('un accent tapé en NFD coupe le mot avant la normalisation', async () => {
-  assert.ok(review('quel flarnwît', TERMS).flagged);
+test('production : un terme vide ou de ponctuation dans la liste est sans effet', () => {
+  assert.deepEqual(review(ATTACK, ['', '!!!']), { flagged: false, matches: [] });
+  assert.deepEqual(review(ATTACK, ['', 'blorptard']).matches, [
+    { term: 'blorptard', position: 5, context: 'this forum you blorptard' },
+  ]);
+});
+
+test('DÉFAUT : une voyelle dépendante du devanagari coupe le mot ; « मल » est trouvé dans « कोमल »', async () => {
+  await assert.rejects(async () => {
+    assert.ok(!review('यह कोमल है', ['मल']).flagged);
+    assert.equal(review('तुम कमीने हो', ['कमीने']).matches[0].context, 'तुम कमीने हो');
+  }, assert.AssertionError);
+});
+
+test('production : un accent tapé en NFD reste dans son mot', () => {
+  assert.deepEqual(review('quel flarnwi\u0302t', TERMS).matches, [
+    { term: 'flarnwit', position: 1, context: 'quel flarnwît' },
+  ]);
+  assert.ok(review('quel flarnwît', ['flarnwi\u0302t']).flagged);
 });

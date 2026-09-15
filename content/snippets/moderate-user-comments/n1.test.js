@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { stableHash } from '../_harness/fake-model.mjs';
 import { review } from './n0.js';
 import { isAbusive, score, train } from './n1.js';
 
@@ -39,11 +40,13 @@ const LABELS = [...ABUSIVE.map(() => 1), ...ORDINARY.map(() => 0)];
 const HOSTILE_UNSEEN = 'people like you should not be allowed to have an account here';
 const REPORT = 'he called me a blorptard, please remove his comment';
 const TERMS = ['blorptard', 'zibbernaut', 'flarnwit'];
+const INSULTS = new Set(['blorptard', 'bl0rptard', 'zibbernaut', 'flarnwit']);
 const model = train([...ABUSIVE, ...ORDINARY], LABELS);
+const SOURCE = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
 
 /** Les n-grammes de 3 à 5 caractères que l'extrait hache, recalculés ici pour les compter. */
 function grams(text) {
-  const padded = ` ${text.toLowerCase()} `;
+  const padded = ` ${text.normalize('NFKC').toLowerCase()} `;
   const out = new Set();
   for (let n = 3; n <= 5; n += 1) for (let i = 0; i + n <= padded.length; i += 1) out.add(padded.slice(i, i + n));
   return out;
@@ -54,22 +57,35 @@ function grams(text) {
 // ---------------------------------------------------------------------------
 
 test("point de rupture : l'hostilité sans forme apprise reste sous le seuil", () => {
-  assert.ok(Math.abs(score(model, HOSTILE_UNSEEN) - 0.1396) < 1e-3);
+  assert.ok(Math.abs(score(model, HOSTILE_UNSEEN) - 0.3784) < 1e-3);
   assert.ok(!isAbusive(model, HOSTILE_UNSEEN));
   assert.ok(isAbusive(model, 'get off this forum you blorptard'));
 });
 
-test('point de rupture : le signalement repasse au-dessus', () => {
-  assert.ok(Math.abs(score(model, REPORT) - 0.8173) < 1e-3);
+test('point de rupture : le signalement passe au-dessus', () => {
+  assert.ok(Math.abs(score(model, REPORT) - 0.8904) < 1e-3);
   assert.ok(isAbusive(model, REPORT));
   assert.ok(!isAbusive(model, 'thanks for the detailed explanation'));
 });
 
-test('INFIRMÉ : la phrase hostile « ne réemploie aucune forme vue à l’entraînement » ; elle en partage des dizaines', async () => {
-  const seen = new Set([...ABUSIVE, ...ORDINARY].flatMap((c) => [...grams(c)]));
-  await assert.rejects(async () => {
-    assert.equal([...grams(HOSTILE_UNSEEN)].filter((g) => seen.has(g)).length, 0);
-  }, assert.AssertionError);
+test("point de rupture : la phrase hostile n'emploie aucune des insultes du corpus", () => {
+  assert.ok(ABUSIVE.every((comment) => [...INSULTS].some((insult) => comment.includes(insult))));
+  assert.ok(HOSTILE_UNSEEN.split(' ').every((word) => !INSULTS.has(word)));
+  assert.ok(REPORT.includes('blorptard'));
+});
+
+test('un corpus plus fourni change les poids, pas ce que le modèle lit', () => {
+  // « ce que le modèle lit : des n-grammes de caractères » : les cases non nulles
+  // sont exactement celles des n-grammes du corpus, quel que soit le corpus.
+  const extra = ['you are all flarnwits and zibbernauts', 'people like you should leave', 'nice work on the charts'];
+  const larger = train([...ABUSIVE, ...ORDINARY, ...extra], [...LABELS, 1, 1, 0]);
+  assert.notDeepEqual([...larger.weights], [...model.weights]);
+  assert.notEqual(score(larger, HOSTILE_UNSEEN), score(model, HOSTILE_UNSEEN));
+  for (const [trained, corpus] of [[model, [...ABUSIVE, ...ORDINARY]], [larger, [...ABUSIVE, ...ORDINARY, ...extra]]]) {
+    const buckets = new Set(corpus.flatMap((c) => [...grams(c)]).map((g) => stableHash(g) % 1024));
+    const nonZero = new Set([...trained.weights.keys()].filter((j) => trained.weights[j] !== 0));
+    assert.deepEqual(nonZero, buckets);
+  }
 });
 
 test('N0 et N1 tombent sur le même exemple du signalement', () => {
@@ -101,38 +117,49 @@ test("bl0rptard et blorptardd partagent l'essentiel de leurs traits", () => {
   }
 });
 
-test('chaque classe est pondérée par sa rareté pour ne pas tout laisser passer ; sur 2 insultes pour 36 commentaires, le modèle pondéré laisse tout passer (Python en attrape 2)', async () => {
+test('chaque classe est pondérée par sa rareté pour ne pas tout laisser passer', async () => {
+  // 2 insultes pour 36 commentaires ordinaires. Le même code sans pondération
+  // (pas constant) est chargé depuis le source de l'extrait.
   const comments = [...ABUSIVE.slice(0, 2), ...ORDINARY, ...ORDINARY, ...ORDINARY];
   const labels = [1, 1, ...new Array(36).fill(0)];
+  const heldOut = ABUSIVE.slice(4);
   const weighted = train(comments, labels);
-  assert.ok(ABUSIVE.slice(4).some((c) => isAbusive(weighted, c)));
+  assert.deepEqual(heldOut.filter((c) => isAbusive(weighted, c)), ['nobody wants you here you blorptard']);
+  assert.ok(Math.abs(score(weighted, 'nobody wants you here you blorptard') - 0.568) < 1e-3);
+  const formula = '(rate * labels.length) / (2 * counts[labels[i]])';
+  assert.ok(SOURCE.includes(formula));
+  const unweighted = await import(`data:text/javascript,${encodeURIComponent(SOURCE.replace(formula, 'rate'))}`);
+  const flat = unweighted.train(comments, labels);
+  assert.equal(heldOut.filter((c) => unweighted.isAbusive(flat, c)).length, 0);
+  assert.ok(Math.max(...heldOut.map((c) => unweighted.score(flat, c))) < 0.3);
 });
 
-test('INFIRMÉ : « chaque poids peut être imprimé et discuté » ; un poids est une case de hachage partagée par plusieurs n-grammes', async () => {
-  // 2 006 n-grammes distincts dans le corpus, 499 poids non nuls.
-  const distinct = new Set([...ABUSIVE, ...ORDINARY].flatMap((c) => [...grams(c)])).size;
+test('chaque poids peut être imprimé, mais un poids vaut pour tous les n-grammes de sa case', () => {
+  // « to argue about one, list those n-grams first » : la liste se reconstruit ainsi.
+  const byBucket = new Map();
+  for (const g of new Set([...ABUSIVE, ...ORDINARY].flatMap((c) => [...grams(c)]))) {
+    const bucket = stableHash(g) % 1024;
+    byBucket.set(bucket, [...(byBucket.get(bucket) ?? []), g]);
+  }
+  const shared = [...byBucket.values()].filter((list) => list.length > 1);
+  assert.ok(shared.length > 100, `${shared.length} cases partagées`);
+  // Chaque poids non nul du modèle a sa liste de n-grammes, et une liste seulement.
+  assert.deepEqual(new Set([...model.weights.keys()].filter((j) => model.weights[j] !== 0)), new Set(byBucket.keys()));
+});
+
+test('production : le hachage 32 bits exact répartit les n-grammes sur plus de 800 cases', () => {
+  // « Math.imul keeps the multiplication exact on 32 bits » : même empreinte que stableHash du harnais.
+  const distinct = new Set([...ABUSIVE, ...ORDINARY].flatMap((c) => [...grams(c)]));
   const nonZero = [...model.weights].filter((w) => w !== 0).length;
-  await assert.rejects(async () => {
-    assert.equal(nonZero, distinct);
-  }, assert.AssertionError);
+  assert.equal(distinct.size, 2006);
+  assert.equal(nonZero, 877);
+  assert.equal(nonZero, new Set([...distinct].map((g) => stableHash(g) % 1024)).size);
 });
 
-test("DÉFAUT : le hachage FNV multiplie en flottant et perd ses bits bas ; 2 006 n-grammes n'occupent que 499 cases sur 1 024", async () => {
-  // Réparties au hasard, 2 006 clés occuperaient environ 880 cases.
-  const nonZero = [...model.weights].filter((w) => w !== 0).length;
-  assert.equal(nonZero, 499);
-  await assert.rejects(async () => {
-    assert.ok(nonZero > 800);
-  }, assert.AssertionError);
-});
-
-test('INFIRMÉ : « une régression logistique sur des n-grammes de caractères hachés tient en quarante lignes » ; n1.js en compte 41', async () => {
-  const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
-  const lines = source.split('\n').filter((line) => !/^\s*(\/\/|\*|\/\*\*|$)/.test(line)).length;
-  assert.equal(lines, 41);
-  await assert.rejects(async () => {
-    assert.ok(lines <= 40);
-  }, assert.AssertionError);
+test('hacher, entraîner et noter tiennent en quatre fonctions', () => {
+  const functions = [...SOURCE.matchAll(/^(?:export )?function (\w+)/gm)].map((m) => m[1]);
+  assert.deepEqual(functions, ['features', 'train', 'predict', 'score', 'isAbusive']);
+  // isAbusive est la décision, pas le calcul : les quatre autres font le modèle.
 });
 
 test('assez petit pour vivre à côté du code, entraîné le temps d’une lecture, sans dépendance', () => {
@@ -178,20 +205,31 @@ test("une note prend moins d'une milliseconde", () => {
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test("un commentaire vide est jugé injurieux (score 0,67) ; Python le laisse passer (0,45)", async () => {
+test("production : un commentaire vide n'est pas signalé", () => {
+  // « A comment with no n-gram to read scores 0: the bias alone is not evidence. »
+  assert.equal(score(model, ''), 0);
   assert.ok(!isAbusive(model, ''));
 });
 
-test("un corpus vide ou d'une seule classe est accepté, et le modèle obtenu signale tout", async () => {
-  for (const [comments, labels] of [[[], []], [['you blorptard', 'what a flarnwit'], [1, 1]]]) {
-    let trained;
-    try {
-      trained = train(comments, labels);
-    } catch {
-      continue;
+test("DÉFAUT : un commentaire d'espaces n'est pas signalé et vaut 0 ; trois espaces notent 0,71, au-dessus du seuil", async () => {
+  // Python : 0. Les n-grammes faits d'espaces sont hachés comme les autres.
+  await assert.rejects(async () => {
+    for (const blank of ['   ', '\n\t ']) {
+      assert.equal(score(model, blank), 0, JSON.stringify(blank));
+      assert.ok(!isAbusive(model, blank));
     }
-    assert.ok(!isAbusive(trained, 'thank you for the article'));
+  }, assert.AssertionError);
+});
+
+test("production : un corpus vide, d'une seule classe ou mal étiqueté est refusé", () => {
+  for (const [comments, labels] of [[[], []], [['you blorptard', 'what a flarnwit'], [1, 1]], [['you blorptard', 'thanks'], [1, 0, 0]]]) {
+    assert.throws(() => train(comments, labels), { name: 'RangeError', message: 'train needs labels 0 and 1, one per comment' });
   }
+});
+
+test('production : pleine largeur et ligatures sont lues comme les lettres ordinaires', () => {
+  assert.equal(score(model, 'you are a ｂｌｏｒｐｔａｒｄ'), score(model, 'you are a blorptard'));
+  assert.equal(score(model, 'this ﬂarnwit ruins'), score(model, 'this flarnwit ruins'));
 });
 
 test('production : un commentaire de cent Ko termine', () => {

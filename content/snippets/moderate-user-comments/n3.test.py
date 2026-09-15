@@ -7,45 +7,21 @@ toute dépense, une panne est retentée, une réponse inutilisable lève au lieu
 devenir une décision. Ce qu'ils ne prouvent pas : que le fournisseur juge bien.
 """
 
-import ast
 import json
-from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import CATEGORIES, DEFAULT_THRESHOLDS, MAX_CHARACTERS, PROMPT, ModerationUnavailable, moderate
+from _harness.fake_sdk import FakeSDK
+from n3 import (CATEGORIES, DEFAULT_THRESHOLDS, MAX_CHARACTERS, MODEL, PROMPT, ModerationUnavailable, ProviderClient,
+                moderate)
 
 ATTACK = "get off this forum you blorptard"
 CALM = "the diagram is much clearer than the text"
-HERE = Path(__file__).parent
 
 
 def scored(**values):
     return json.dumps({name: values.get(name, 0.0) for name in CATEGORIES})
-
-
-class RealShapedClient:
-    """Surface du kit `openai` publié : chat.completions.create(model=..., messages=[...]), réponse dans choices[0].message.content."""
-
-    def __init__(self, content):
-        self.content = content
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-    def _create(self, **kwargs):
-        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(role="assistant", content=self.content))])
-
-
-def code_lines(path: Path) -> int:
-    """Lignes de code hors docstrings, commentaires et lignes vides."""
-    source = path.read_text(encoding="utf-8")
-    docstrings = set()
-    for node in ast.walk(ast.parse(source)):
-        if isinstance(node, (ast.Module, ast.FunctionDef, ast.ClassDef)) and ast.get_docstring(node) is not None:
-            docstrings |= set(range(node.body[0].lineno, node.body[0].end_lineno + 1))
-    return sum(1 for i, line in enumerate(source.splitlines(), 1)
-               if line.strip() and not line.strip().startswith("#") and i not in docstrings)
 
 
 # ---------------------------------------------------------------------------
@@ -55,9 +31,9 @@ def code_lines(path: Path) -> int:
 
 def test_point_de_rupture_un_commentaire_anodin_note_harcelement_est_bloque_sans_rien_pour_le_contester():
     """
-    « Dans le test, « the diagram is much clearer than the text » revient noté en
-    harcèlement au-delà du seuil de blocage, et la fonction bloque, correctement selon
-    sa propre logique. Aucun trait à inspecter, aucun poids à imprimer. »
+    « Si « the diagram is much clearer than the text » revient noté en harcèlement au-delà
+    du seuil de blocage — le test simule cette réponse —, la fonction bloque, correctement
+    selon sa propre logique. Aucun trait à inspecter, aucun poids à imprimer. »
     """
     decision = moderate(CALM, client=FakeLLM(response=scored(harassment=0.95)))
     assert decision == {"action": "block", "category": "harassment", "score": 0.95,
@@ -71,16 +47,6 @@ def test_point_de_rupture_un_commentaire_anodin_note_harcelement_est_bloque_sans
 # ---------------------------------------------------------------------------
 # Autres affirmations du niveau
 # ---------------------------------------------------------------------------
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring dit « le code le plus court à écrire de toute l'échelle » ; n3.py compte 42 lignes "
-    "de code, contre 19 (N0), 14 (N1) et 32 (N2)",
-)
-def test_n3_est_le_code_le_plus_court_de_l_echelle():
-    n3 = code_lines(HERE / "n3.py")
-    assert all(n3 <= code_lines(HERE / f"n{level}.py") for level in (0, 1, 2))
 
 
 def test_bloque_ce_que_le_modele_note_haut_et_publie_ce_qu_il_note_bas():
@@ -141,13 +107,77 @@ def test_une_panne_est_retentee_le_nombre_de_fois_annonce_pas_une_de_plus():
     assert never.call_count == 3
 
 
+FENCED = "```json\n" + scored(harassment=0.95) + "\n```"
+
+
 @pytest.mark.xfail(
     strict=True,
-    reason="DÉFAUT : le client par défaut `OpenAI()` n'a pas de méthode `complete` ; la surface réelle est "
-    "chat.completions.create(model=..., messages=[...]). L'AttributeError est avalée et sort en ModerationUnavailable",
+    reason="DÉFAUT (charte, décision 12) : une réponse entièrement enveloppée dans une seule clôture ```json "
+    "n'est pas décodée ; json.loads échoue, trois appels facturés, puis ModerationUnavailable",
 )
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    assert moderate(CALM, client=RealShapedClient(scored()))["action"] == "allow"
+def test_defaut_une_reponse_entierement_dans_une_cloture_json_est_decodee():
+    client = FakeLLM(response=FENCED)
+    assert moderate(CALM, client=client)["action"] == "block"
+    assert client.call_count == 1
+
+
+def test_production_tout_autre_ecart_autour_du_json_leve():
+    """Texte avant ou après, deux blocs, clôture non refermée : inutilisable."""
+    body = scored(harassment=0.95)
+    for answer in ("Here you go:\n```json\n" + body + "\n```", "```json\n" + body + "\n```\nHope this helps.",
+                   "```json\n" + body + "\n```\n```json\n" + body + "\n```", "```json\n" + body):
+        client = FakeLLM(response=answer)
+        with pytest.raises(ModerationUnavailable):
+            moderate(CALM, client=client)
+        assert client.call_count == 3, answer
+
+
+# ---------------------------------------------------------------------------
+# L'adaptateur par défaut, contre un double à la forme du vrai kit
+# ---------------------------------------------------------------------------
+
+
+def test_production_l_adaptateur_par_defaut_parle_au_kit_comme_le_vrai():
+    """`ProviderClient` : chat.completions.create(model=…, messages=[…], temperature=…), réponse lue dans choices[0].message.content."""
+    sdk = FakeSDK(content=scored(harassment=0.95))
+    assert moderate(CALM, client=ProviderClient(sdk=sdk))["action"] == "block"
+    assert sdk.requests == [{"endpoint": "chat.completions", "model": MODEL,
+                             "messages": [{"role": "user", "content": PROMPT.format(comment=CALM)}], "temperature": 0}]
+    assert MODEL == "gpt-4.1-mini"
+
+
+def test_production_l_adaptateur_contenu_nul_ou_json_non_objet_leve_apres_les_essais():
+    """« No content (a refusal) and anything but a JSON object are unusable. »"""
+    for content in (None, "[1]", "0.9"):
+        sdk = FakeSDK(content=content)
+        with pytest.raises(ModerationUnavailable, match="not a JSON object"):
+            moderate(CALM, client=ProviderClient(sdk=sdk))
+        assert len(sdk.requests) == 3, content
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content=scored(), fail_times=2)
+    assert moderate(CALM, client=ProviderClient(sdk=sdk))["action"] == "allow"
+    assert len(sdk.requests) == 3
+    sdk = FakeSDK(content=scored(), fail_times=5)
+    with pytest.raises(ModerationUnavailable, match="simulated provider failure"):
+        moderate(CALM, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_sans_client_le_vrai_kit_est_charge():
+    """« In production it defaults to a real provider client » : le kit `openai`, absent de l'environnement des tests."""
+    with pytest.raises(ModuleNotFoundError, match="openai"):
+        moderate(CALM)
+
+
+def test_production_quatre_mille_emojis_sont_acceptes_quatre_mille_un_refuses_avant_l_appel():
+    """« The cap counts characters, not tokens, and is checked before any call: the caller decides where a longer comment goes. »"""
+    client = FakeLLM(response=scored())
+    assert moderate("🙂" * 4000, client=client)["action"] == "allow"
+    with pytest.raises(ValueError, match="4000"):
+        moderate("🙂" * 4001, client=client)
+    assert client.call_count == 1
 
 
 # ---------------------------------------------------------------------------
@@ -172,10 +202,6 @@ def test_production_une_injection_reste_apres_les_consignes():
 def test_production_une_reponse_partielle_decide_sur_ce_qui_est_revenu():
     assert moderate(ATTACK, client=FakeLLM(response='{"hate": 0.65}')) == {
         "action": "review", "category": "hate", "score": 0.65, "scores": {"hate": 0.65}}
-
-
-def test_production_quatre_mille_emojis_sont_acceptes_en_python():
-    assert moderate("🙂" * 4000, client=FakeLLM(response=scored()))["action"] == "allow"
 
 
 def test_production_zero_essai_leve_l_erreur_nommee_sans_appel():

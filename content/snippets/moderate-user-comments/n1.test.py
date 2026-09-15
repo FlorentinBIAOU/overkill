@@ -1,5 +1,6 @@
 import ast
 import pickle
+import sys
 import time
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 
 from n0 import review
-from n1 import is_abusive, score, train
+from n1 import fold, is_abusive, score, train
 
 # Un corpus de la taille d'un après-midi d'étiquetage. Les insultes sont inventées.
 ABUSIVE = [
@@ -47,6 +48,7 @@ ORDINARY = [
 LABELS = [1] * len(ABUSIVE) + [0] * len(ORDINARY)
 HOSTILE_UNSEEN = "people like you should not be allowed to have an account here"
 REPORT = "he called me a blorptard, please remove his comment"
+INSULTS = {"blorptard", "bl0rptard", "zibbernaut", "flarnwit"}
 
 
 @pytest.fixture(scope="module")
@@ -75,15 +77,24 @@ def test_point_de_rupture_le_signalement_repasse_au_dessus(model):
     assert not is_abusive(model, "thanks for the detailed explanation")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la fiche dit que la phrase hostile « ne réemploie aucune forme vue à l'entraînement » ; "
-    "44 de ses 114 n-grammes sont dans le vocabulaire appris",
-)
-def test_la_phrase_hostile_ne_reemploie_aucune_forme_vue(model):
-    vectoriser = model[0]
-    grams = set(vectoriser.build_analyzer()(HOSTILE_UNSEEN))
-    assert not grams & set(vectoriser.vocabulary_)
+def test_point_de_rupture_la_phrase_hostile_n_emploie_aucune_des_insultes_du_corpus():
+    """« « people like you should not be allowed to have an account here », qui n'emploie aucune des insultes du corpus »."""
+    assert all(any(insult in comment for insult in INSULTS) for comment in ABUSIVE)
+    assert not set(HOSTILE_UNSEEN.split()) & INSULTS
+    # Témoin : le signalement, lui, en emploie une.
+    assert "blorptard" in REPORT
+
+
+def test_un_corpus_plus_fourni_change_les_poids_pas_ce_que_le_modele_lit(model):
+    """« Un corpus plus fourni change les poids, pas ce que le modèle lit : des n-grammes de caractères. »"""
+    extra = ["you are all flarnwits and zibbernauts", "people like you should leave", "nice work on the charts"]
+    larger = train(ABUSIVE + ORDINARY + extra, LABELS + [1, 1, 0])
+    assert larger[-1].coef_.shape != model[-1].coef_.shape or (larger[-1].coef_ != model[-1].coef_).any()
+    assert score(larger, HOSTILE_UNSEEN) != score(model, HOSTILE_UNSEEN)
+    lit = model[0].build_analyzer()(HOSTILE_UNSEEN)
+    assert larger[0].build_analyzer()(HOSTILE_UNSEEN) == lit
+    padded = " " + " ".join(HOSTILE_UNSEEN.split()) + " "
+    assert all(3 <= len(g) <= 5 and g.strip() in padded for g in lit)
 
 
 def test_n0_et_n1_tombent_sur_le_meme_exemple_du_signalement(model):
@@ -154,7 +165,7 @@ def test_c_au_dessus_de_un_parce_que_le_regulariseur_par_defaut_laisse_tout_pres
 
 
 def test_le_modele_entier_est_un_vecteur_de_poids_qu_on_peut_imprimer(model):
-    """« Le modèle entier est un vecteur de poids sur des n-grammes de caractères […] chaque poids peut être imprimé et discuté. »"""
+    """« The whole model is a vector of weights over character n-grams […] every weight can be printed next to the n-gram it belongs to. »"""
     names = model[0].get_feature_names_out()
     weights = model[-1].coef_[0]
     assert len(names) == len(weights) == 1208
@@ -183,12 +194,14 @@ def test_le_seuil_est_a_l_appelant(model):
 
 
 def test_n1_est_deterministe_et_s_appuie_sur_scikit_learn(model):
+    """risks : deterministic ; vendor_lock library. `unicodedata`, pour NFKC, est de la bibliothèque standard."""
     again = train(ABUSIVE + ORDINARY, LABELS)
     assert (again[-1].coef_ == model[-1].coef_).all()
     source = (Path(__file__).parent / "n1.py").read_text(encoding="utf-8")
     modules = {a.name.split(".")[0] for n in ast.walk(ast.parse(source)) if isinstance(n, ast.Import) for a in n.names}
     modules |= {n.module.split(".")[0] for n in ast.walk(ast.parse(source)) if isinstance(n, ast.ImportFrom)}
-    assert modules == {"sklearn"}
+    assert modules == {"sklearn", "unicodedata"}
+    assert modules - set(sys.stdlib_module_names) == {"sklearn"}
 
 
 def test_une_note_prend_moins_d_une_milliseconde(model):
@@ -207,7 +220,37 @@ def test_une_note_prend_moins_d_une_milliseconde(model):
 
 
 def test_production_un_commentaire_vide_n_est_pas_signale(model):
+    """« A comment with no n-gram to read scores 0: the intercept alone is not evidence. »"""
+    assert score(model, "") == 0.0
     assert not is_abusive(model, "")
+
+
+def test_production_un_commentaire_d_espaces_n_est_pas_signale_et_vaut_zero(model):
+    for blank in ("   ", "\n\t ", "\u200b"):
+        assert score(model, blank) == 0.0, repr(blank)
+        assert not is_abusive(model, blank)
+
+
+def test_production_un_commentaire_dont_aucun_n_gramme_n_est_connu_vaut_zero(model):
+    """En Python, « no n-gram to read » vaut aussi pour des n-grammes absents du vocabulaire."""
+    assert model[0].transform(["qqqq"]).nnz == 0
+    assert score(model, "qqqq") == 0.0
+    # Témoin : un seul n-gramme connu suffit à produire une note.
+    assert score(model, "a") == pytest.approx(0.4249, abs=1e-3)
+
+
+def test_production_pleine_largeur_et_ligatures_sont_lues_comme_les_lettres_ordinaires(model):
+    """fold : « NFKC then lowercase, so full-width letters and ligatures read as the plain ones »."""
+    assert fold("ｂｌｏｒｐｔａｒｄ") == "blorptard" and fold("ﬂarnwit") == "flarnwit"
+    assert score(model, "you are a ｂｌｏｒｐｔａｒｄ") == score(model, "you are a blorptard")
+    assert score(model, "this ﬂarnwit ruins") == score(model, "this flarnwit ruins")
+
+
+def test_production_le_modele_reste_serialisable():
+    """`preprocessor=fold`, une fonction nommée : le modèle passe par pickle et note à l'identique."""
+    trained = train(ABUSIVE + ORDINARY, LABELS)
+    again = pickle.loads(pickle.dumps(trained))
+    assert score(again, REPORT) == score(trained, REPORT)
 
 
 def test_production_un_corpus_vide_ou_d_une_seule_classe_est_refuse():
@@ -215,6 +258,8 @@ def test_production_un_corpus_vide_ou_d_une_seule_classe_est_refuse():
         train([], [])
     with pytest.raises(ValueError):
         train(["you blorptard", "what a flarnwit"], [1, 1])
+    with pytest.raises(ValueError):
+        train(["you blorptard", "thanks"], [1, 0, 0])
 
 
 def test_production_un_commentaire_de_cent_ko_termine(model):

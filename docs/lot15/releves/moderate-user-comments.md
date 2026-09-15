@@ -1,5 +1,29 @@
 # moderate-user-comments — relevé du testeur
 
+> **Contre-épreuve du tour 1 : restent marqués, et à reprendre.**
+>
+> Corrections du rédacteur **infirmées** :
+> 1. **N0 Python, docstring « Case, accents and compatibility forms […] are folded »** (`INFIRMÉ`, py seul) :
+>    `casefold` passe avant NFKD ; une forme de compatibilité en capitale devient une capitale ordinaire jamais
+>    repliée. « you 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃 » et « you ᴮᴸᴼᴿᴾᵀᴬᴿᴰ » ne sont pas signalés en Python (ils le sont en JavaScript).
+>    Graphie d'évitement courante.
+> 2. **N0 JavaScript, commentaire « The two letters whose Python casefold differs from their lowercase once NFKD
+>    has run, ß and the final ς »** (`INFIRMÉ`, py et js) : 254 lettres (ypogegrammeni « ͺ », sigma lunaire,
+>    cherokee…). Conséquence : `normalise('ᾳ')` vaut « αι » en Python, « α » en JavaScript ; « Ꭰ » reste « Ꭰ » en
+>    Python, devient « ꭰ » en JavaScript. Effet pratique faible (le texte et la liste passent par le même repli
+>    dans un même langage), mais la phrase est fausse.
+> 3. **N1 JavaScript, « commentaire d'espaces à 0 »** (ligne « À retester » du rédacteur ; `DÉFAUT`, js seul) :
+>    `score(model, '   ')` vaut 0,7104, signalé au seuil 0,5 ; `'\n\t '` aussi. Les n-grammes faits d'espaces sont
+>    hachés. Python : 0.
+>
+> Défauts **non traités ou nouveaux** :
+> 4. **N3, clôture ```json** (`DÉFAUT`, py et js) : décision 12 et charte à jour — une réponse entièrement
+>    enveloppée dans une seule clôture doit être décodée ; `json.loads` / `JSON.parse` échouent, trois appels
+>    facturés, puis `ModerationUnavailable`. Les autres écarts (texte autour, deux blocs, clôture ouverte) lèvent
+>    bien.
+> 5. **N0, devanagari** (`DÉFAUT`, py et js, nouveau) : une voyelle dépendante est une marque, pas une lettre, et
+>    coupe le mot. « मल » est trouvé dans « यह कोमल है » ; la fenêtre de « तुम कमीने हो » montre « त म कम न ह ».
+
 Passe 1 du lot 15. Tests : `content/snippets/moderate-user-comments/n{0,1,2,3}.test.{py,js}`.
 Un test nommé ci-dessous existe dans les deux langages, sauf mention « py seul » ou « js seul ».
 
@@ -148,3 +172,93 @@ N1 — 1 `INFIRMÉ` en Python, 4 `INFIRMÉ` et 3 `DÉFAUT` en JavaScript ; N2 �
 - **Les noms de tests sont des affirmations** : un nom de test existant disait le contraire de ce que le code fait (#57). La charte les compte-t-elle dans le périmètre ? Je les ai traités comme tels.
 - **Comptage de lignes** : trois affirmations de ce lot portent sur une longueur de code (« quarante lignes », « trente lignes », « le plus court »). Une fonction commune de comptage, dans `_harness/`, éviterait que chaque testeur invente la sienne.
 - **Recommandation fondée sur le double** : la charte devrait interdire qu'un verdict repose sur une affirmation que seul le modèle réel pourrait démontrer (#43), sauf source citée.
+
+## Tour 1 — contre-épreuve
+
+Tests repris après `3339814`. `node scripts/test-snippets.mjs moderate-user-comments` : vert.
+Compte (py / js) : n0 18 → 24 / 19 → 24 ; n1 20 → 25 / 20 → 23 ; n2 19 → 22 / 17 → 18 ; n3 15 → 19 / 14 → 18.
+Doubles locaux `RealShapedClient` / `realShapedClient` retirés, remplacés par `_harness/fake_sdk.py` et
+`_harness/fake-sdk.mjs`. Les deux tests qui comptaient des lignes (N1 JS « quarante lignes », N3 « le plus
+court ») sont retirés (décision 10 ; les phrases ont disparu).
+
+### « À retester », ligne par ligne
+
+| # | Ligne du rédacteur | Statut désormais | Test |
+|---|---|---|---|
+| R1 | n1 py : `modules == {"sklearn"}` | démontrée : `{"sklearn", "unicodedata"}`, seul `sklearn` hors bibliothèque standard (`vendor_lock: library`) | test_n1_est_deterministe_et_s_appuie_sur_scikit_learn |
+| R2 | n1 js, points de rupture : 0,3784 et 0,8904 | démontrée ; marges 0,12 sous le seuil et 0,39 au-dessus | point de rupture : l'hostilité sans forme apprise reste sous le seuil ; … le signalement passe au-dessus |
+| R3 | n1 js, hachage FNV | démontrée : 2 006 n-grammes, 877 cases ; l'ensemble des cases non nulles est exactement celui que donne `stableHash` du harnais | production : le hachage 32 bits exact répartit les n-grammes sur plus de 800 cases |
+| R4 | n1 js, « quatre fonctions » | démontrée : `features`, `train`, `predict`, `score`, puis `isAbusive` (la décision). « courtes » : non testable, appréciation | hacher, entraîner et noter tiennent en quatre fonctions |
+| R5 | n1 : `train` refuse une classe, des longueurs différentes | démontrée : py `ValueError`, js `RangeError('train needs labels 0 and 1, one per comment')` pour `[]`, `[1, 1]`, 2 commentaires pour 3 étiquettes | test_production_un_corpus_vide_ou_d_une_seule_classe_est_refuse / production : un corpus vide, d'une seule classe ou mal étiqueté est refusé (le test JS précédent était décoratif : `try … continue`) |
+| R5 | n1 : commentaire vide à 0 | démontrée dans les deux langages | test_production_un_commentaire_vide_n_est_pas_signale |
+| R5 | n1 : commentaire d'espaces à 0 | démontrée en Python (« \u00a0 », tabulation, espace de largeur nulle : 0) ; **DÉFAUT en JavaScript** : 0,7104, signalé | test_production_un_commentaire_d_espaces_n_est_pas_signale_et_vaut_zero / DÉFAUT : un commentaire d'espaces… |
+| R5 | n1 py : aucun n-gramme connu → 0 | démontrée : « qqqq » `nnz == 0`, 0 ; témoin « a » 0,4249 | test_production_un_commentaire_dont_aucun_n_gramme_n_est_connu_vaut_zero |
+| R5 | n1 : pleine largeur et ligature | démontrée : même note que la graphie ordinaire, à l'égalité exacte, py et js | test_production_pleine_largeur_et_ligatures_sont_lues_comme_les_lettres_ordinaires |
+| R5 | n1 py : sérialisable | démontrée : `pickle` aller-retour, même note | test_production_le_modele_reste_serialisable |
+| R6 | n2 js : `pipeline` reçoit `{ subfolder: '', dtype: 'fp32' }` | démontrée par un double du module (crochet `module.register`) : `pipeline('text-classification', 'protectai/unbiased-toxic-roberta-onnx', { subfolder: '', dtype: 'fp32' })`, puis `pipe(liste, { top_k: null })` | le classifieur est injecté ; par défaut c'est le vrai, chargé une fois, et un chargement raté n'est pas gardé |
+| R7 | n2 js : ligne d'une autre forme | démontrée : `review`, étiquette et note nulles, py et js | test_production_une_ligne_d_une_autre_forme_part_en_relecture |
+| R8 | n2 : étiquettes d'identité ignorées (jumeau js) | démontrée py et js ; une ligne faite des seules étiquettes d'identité part en relecture | test_production_une_etiquette_de_mention_d_identite_ne_decide_jamais |
+| R8 | n2 py : `truncation=True` | démontrée par un double du module `transformers` : `pipeline("text-classification", model=MODEL_NAME, top_k=None, truncation=True)`, sans `batch_size`, appel `pipe(liste)` sans option | test_par_defaut_le_vrai_pipeline_est_construit_une_fois_tronque_sans_batch_size |
+| R8 | n2 : modèle gardé après succès, oublié après échec | démontrée : py (`functools.cache`, `ImportError` puis chargement unique sur deux appels) ; js (rejet, puis un chargement pour deux appels) | test_un_chargement_rate_n_est_pas_garde ; test JS ci-dessus |
+| R8 | n2 : lot vide sans chargement | démontrée : ni `predict`, ni `default_model` / `pipeline` appelé | test_un_lot_vide_n_atteint_jamais_le_modele |
+| R8 | n2 py : cache laissé par le test « chargé une fois » | fait : `default_model.cache_clear()` avant et après chaque test qui touche au modèle par défaut | — |
+| R9 | n2 : étiquette `toxic` → `toxicity` | fait (js) | predict demande toutes les étiquettes et rend une ligne par commentaire |
+| R10 | n0 : phrase #3 (fenêtre) | démontrée : pour un signalement et une insulte au terme à la même position, seule la clé `context` diffère | test_point_de_rupture_seule_la_fenetre_de_contexte_distingue_le_signalement_de_l_insulte |
+| R10 | n0 : phrase #8 (formes de compatibilité, sosies) | démontrée pour pleine largeur, ligatures, exposants minuscules, zéro et « о » cyrillique non repliés ; **INFIRMÉE en Python** pour les capitales de compatibilité (en tête) | test_les_formes_de_compatibilite_sont_repliees_pas_les_sosies ; test_les_formes_de_compatibilite_en_capitales_sont_repliees_comme_les_autres |
+| R10 | n0 : « sale, type » | démontrée : trouvé, position 1, fenêtre « quel sale type celui » ; « SALE — type » aussi ; témoin « sale gros type » non ; « sale » et « sale type » rendus tous deux | test_un_terme_de_plusieurs_mots_est_trouve_quelle_que_soit_la_ponctuation_qui_les_separe |
+| R10 | n0 : « ẞ » majuscule et « ς » final | démontrée, identique py/js | test_production_ss_majuscule_et_sigma_final_sont_replies_comme_en_javascript |
+| R10 | n0 : terme vide dans la liste | démontrée : `""` et `"!!!"` sans effet | test_production_un_terme_vide_ou_de_ponctuation_dans_la_liste_est_sans_effet |
+| R11 | n1 « aucune forme vue » → « aucune des insultes du corpus » | démontrée : chaque commentaire injurieux du corpus contient une des quatre insultes, la phrase hostile aucune ; témoin : le signalement en contient une | test_point_de_rupture_la_phrase_hostile_n_emploie_aucune_des_insultes_du_corpus |
+| R11 | n1 js « chaque poids peut être imprimé et discuté » → phrase remplacée | démontrée : chaque poids non nul correspond à la liste reconstruite de ses n-grammes ; plus de cent cases en portent plusieurs | chaque poids peut être imprimé, mais un poids vaut pour tous les n-grammes de sa case |
+| R12 | n3 « le plus court » | test retiré | — |
+| R12 | n3, adaptateur par défaut | démontrée avec `FakeSDK` : requête `{model: "gpt-4.1-mini", messages: [{role: "user", content: invite}], temperature: 0}` ; `content` nul, `[1]`, `0.9` → `ModerationUnavailable` (« not a JSON object ») après trois requêtes ; deux pannes du kit puis succès : trois requêtes ; cinq pannes : trois requêtes puis l'erreur ; sans client : import du kit `openai` | test_production_l_adaptateur_… (trois tests), test_production_sans_client_le_vrai_kit_est_charge |
+| R13 | noms des tests démarqués | faits : `production : un accent tapé en NFD reste dans son mot`, `un terme de deux mots est trouvé`, `production : ß majuscule et sigma final…`, `production : un commentaire vide n'est pas signalé`, `production : une ligne d'une autre forme part en relecture`, `production : une étiquette de mention d'identité ne décide jamais`, `production : quatre mille emojis sont acceptés, quatre mille un refusés avant l'appel` | — |
+| R14 | essai, `why` du cas 6 ; `toxicity` | démontrée : les sept étiquettes de `HARM_LABELS` ; notes simulées basses → publié ; `toxicity` existe dans la liste qui décide | test_l_essai_fige_six_cas, point de rupture : sept nuisances… |
+
+### Phrases nouvelles ou modifiées
+
+| Où | Phrase | Statut | Test |
+|---|---|---|---|
+| scenario | « Deux solutions sont à portée de main […] La difficulté, pourtant, n'est pas de reconnaître le mot mais de savoir ce qu'il fait là » | démontrée pour N0 et N1 (le signalement marqué comme l'insulte) ; le reste non testable | test_n0_et_n1_tombent_sur_le_meme_exemple_du_signalement |
+| N0 docstring + doc.fr | « every decision can be traced back to one entry in a list you control » | démontrée, avec une entrée de deux mots | test_chaque_decision_se_ramene_a_une_entree_de_la_liste |
+| N0 docstring `normalise` | « Fold case, compatibility forms and accents » | démontrée en JS ; INFIRMÉE en Python pour les capitales de compatibilité (voir en tête) | idem R10 |
+| N0 commentaire py/js | « Composed first, so an accent typed as a separate mark stays in its word » | démontrée | test_production_un_accent_tape_en_nfd_reste_dans_son_mot |
+| N0 commentaire js | « The two letters whose Python casefold differs from their lowercase once NFKD has run, ß and the final ς » | **INFIRMÉE** (voir en tête) | INFIRMÉ : « ß » et « ς » ne sont pas les deux seules lettres… (py : énumération ; js : valeurs Python épinglées) |
+| N1 breaking_point | « Le modèle apprend des fragments de texte, pas une intention » | non testable : propriété générale | — |
+| N1 breaking_point | « Un corpus plus fourni change les poids, pas ce que le modèle lit : des n-grammes de caractères » | démontrée : trois commentaires de plus changent poids et note de la phrase hostile ; py : l'analyseur rend les mêmes n-grammes de 3 à 5 caractères ; js : les cases non nulles sont exactement celles des n-grammes du corpus, pour les deux corpus | test_un_corpus_plus_fourni_change_les_poids_pas_ce_que_le_modele_lit |
+| N1 docstring py + doc.fr | « every weight can be printed next to the n-gram it belongs to » | démontrée (1 208 poids nommés) | test_le_modele_entier_est_un_vecteur_de_poids_qu_on_peut_imprimer |
+| N1 commentaire py/js | « A comment with no n-gram to read scores 0: the intercept alone is not evidence » | démontrée pour le vide ; voir R5 pour les espaces | — |
+| N1 commentaire js | « Each class is weighted by its rarity, because […] an unweighted model learns to allow everything » | démontrée désormais en JS : 2 insultes pour 36, le modèle pondéré attrape 1 des 8 restantes (« nobody wants you here you blorptard », 0,568, marge 0,068) ; le même source avec un pas constant n'en attrape aucune (note maximale 0,246) | chaque classe est pondérée par sa rareté pour ne pas tout laisser passer |
+| N1 commentaire js | « Math.imul keeps the multiplication exact on 32 bits » | démontrée (R3) | — |
+| N2 breaking_point | « sept nuisances — […] — et aucune ne nomme la divulgation d'un domicile » | démontrée sur `HARM_LABELS` ; que le modèle réel rende ces sept étiquettes : sourcé (`config.json`), non testable ici | point de rupture : sept nuisances, et aucune ne nomme la divulgation d'un domicile |
+| N2 breaking_point, essai why | « la fiche du modèle prévient qu'un commentaire contenant des mots d'insulte sera probablement noté toxique […] le signalement d'une insulte n'y échappe pas » | non testable : comportement du modèle réel, sourcé | — |
+| N2 breaking_point | « Le test ne vérifie que la plomberie, sur des notes simulées » | démontrée : les notes du cas sont écrites par le test | point de rupture : sur des notes simulées basses, l'adresse part en publication |
+| N2 regulatory (ajout) | « Usages prévus par l'auteur du modèle […] » | non testable : déclaratif, sourcé | — |
+| N2 docstring + doc.fr | « A RoBERTa encoder fine-tuned on the Civil Comments corpus […] It arrives trained on labelled comments, which N1 makes you gather yourself » | non testable pour le modèle (sourcé) ; « N1 makes you gather » démontré : `train` refuse un corpus vide ou d'une classe | R5 |
+| N2 docstring + doc.fr | « the labels that may decide » | démontrée (R8) | — |
+| N2 commentaire py/js | « The labels that name a harm […] they never decide anything here » | démontrée (R8) | — |
+| N2 docstring `moderate` py | « transformers batches only when given a `batch_size`, and leaves it off by default » | démontrée pour le code (aucun `batch_size` passé) ; le comportement de la bibliothèque est sourcé, non testable | test_par_defaut_le_vrai_pipeline_… |
+| N2 docstring `moderate` js | « Transformers.js runs it through the model in one pass, padded to the longest comment » | non testable : interne de la bibliothèque ; démontré que la liste part en un appel `pipe` | le classifieur est injecté ; … |
+| N2 commentaires py/js | « Truncated to the length the model reads, as Transformers.js does » ; « Full precision, as in Python » ; « The same model as the Python snippet, exported to ONNX » | démontrée pour les options passées ; l'identité des deux modèles et la troncature de Transformers.js : sourcées, non testables | R6, R8 |
+| N2 `ToxicityModel` / `default_model` | « A large download: load it once, with `default_model` » ; « loaded on first use and kept for the process » | démontrée (R8) | — |
+| N2 verdict_rationale | « N2, parce que c'est le premier niveau qui arrive déjà entraîné […] garde chez vous » ; « C'est pour cela que l'extrait tient deux seuils et envoie la bande du milieu à un humain » | démontrée pour les deux seuils et la bande (test_deux_seuils_une_bande_pour_un_humain) et pour N0/N1 ; le reste non testable (jugement, sourcé) | — |
+| N3 breaking_point | « Si « the diagram… » revient noté en harcèlement […] — le test simule cette réponse —, la fonction bloque » | démontrée | test_point_de_rupture_un_commentaire_anodin_note_harcelement_… |
+| N3 breaking_point | « que le fournisseur pris en exemple ne garantit pas identique d'un appel à l'autre, même à graine fixée » | non testable : fournisseur (sourcé) | — |
+| N3 docstring + doc.fr | « The rung that hands the most away […] the text of your users' comments, which leaves your premises on every call » | démontrée pour le texte (invite et requête du kit) ; le reste non testable | test_envoie_le_commentaire_…, test_production_l_adaptateur_par_defaut_… |
+| N3 commentaire py/js | « The provider bills every token of the prompt. The cap counts characters, not tokens, and is checked before any call: the caller decides where a longer comment goes instead » | démontrée : 4 000 emojis acceptés, 4 001 refusés par `ValueError` / `RangeError` avant tout appel, dans les deux langages | test_production_quatre_mille_emojis_sont_acceptes_quatre_mille_un_refuses_avant_l_appel |
+| N3 commentaire py/js | « No content (a refusal) and anything but a JSON object are unusable » | démontrée (R12) | — |
+| N3 `MODEL` | « an example id: check the parameters your model accepts » | démontrée pour la valeur transmise ; le conseil non testable | — |
+| Essai, en-tête | « un modèle dont les poids se téléchargent » | non testable ici | — |
+
+### Code modifié : cas de production (nouveaux)
+
+- **n0, NFC puis découpage** : accent NFD dans le texte et dans la liste ; devanagari : voir DÉFAUT en tête ; un
+  terme vide ; « ẞ », « ς ».
+- **n0, Python contre JavaScript** : `normalise` diverge aussi sur les voyelles de catégorie `Mc` (Python ne
+  retire que les marques `combining`, JavaScript toutes les `\p{M}`) : `normalise("कोमल")` vaut « कोमल » en
+  Python, « कमल » en JavaScript. Sans effet sur `review`, qui coupe les mots à ces marques dans les deux langages
+  (voir DÉFAUT 5), mais la fonction exportée ne rend pas la même chose.
+- **n1 js, hachage, garde de `train`, vide et espaces** : R3, R5.
+- **n2, sélection des étiquettes, cache, lot vide** : R7, R8.
+- **n3, adaptateur et plafond** : R12 et la ligne du plafond.
+- **n3, clôture de code** : DÉFAUT 4.

@@ -3,6 +3,8 @@ import sys
 import time
 from pathlib import Path
 
+import unicodedata
+
 import pytest
 
 from n0 import normalise, review
@@ -45,13 +47,16 @@ def test_point_de_rupture_le_signalement_est_signale_exactement_comme_l_insulte(
     assert not review("great write-up, the third section helped a lot", TERMS)["flagged"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la fiche dit que rien dans le résultat ne distingue le signalement de l'insulte ; "
-    "la fenêtre de contexte les distingue (« called me a blorptard please remove his » contre « this forum you blorptard »)",
-)
-def test_rien_dans_le_resultat_ne_distingue_le_signalement_de_l_insulte():
-    assert review(REPORT, TERMS)["matches"] == review(ATTACK, TERMS)["matches"]
+def test_point_de_rupture_seule_la_fenetre_de_contexte_distingue_le_signalement_de_l_insulte():
+    """« même drapeau, même terme, et seule la fenêtre de contexte, qu'un humain doit lire, les distingue »."""
+    # Une insulte dont le terme tombe à la même position que dans le signalement.
+    attack = "just get lost you blorptard"
+    report, insult = review(REPORT, TERMS), review(attack, TERMS)
+    assert report["flagged"] == insult["flagged"] is True
+    differ = {key for key in report["matches"][0] if report["matches"][0][key] != insult["matches"][0][key]}
+    assert differ == {"context"}
+    assert report["matches"][0]["context"] == "called me a blorptard please remove his"
+    assert insult["matches"][0]["context"] == "get lost you blorptard"
 
 
 # ---------------------------------------------------------------------------
@@ -65,10 +70,12 @@ def test_signale_un_terme_liste_et_montre_son_contexte():
         {"term": "blorptard", "position": 9, "context": "work of a blorptard"}]}
 
 
-def test_chaque_decision_se_ramene_a_un_mot_de_la_liste():
-    """« auditable: every decision can be traced back to one word in a list you control »."""
-    result = review("ZIBBERNAUT and flarnwît", TERMS)
-    assert {m["term"] for m in result["matches"]} <= {normalise(t) for t in TERMS}
+def test_chaque_decision_se_ramene_a_une_entree_de_la_liste():
+    """« auditable: every decision can be traced back to one entry in a list you control »."""
+    terms = TERMS + ["Sale Type"]
+    result = review("ZIBBERNAUT and flarnwît, quel sale type", terms)
+    assert [m["term"] for m in result["matches"]] == ["zibbernaut", "flarnwit", "sale type"]
+    assert {m["term"] for m in result["matches"]} <= {normalise(t) for t in terms}
 
 
 def test_la_normalisation_replie_la_casse_et_les_accents():
@@ -78,14 +85,46 @@ def test_la_normalisation_replie_la_casse_et_les_accents():
     assert review("what a blorptard", ["BLÖRPTARD"])["flagged"]  # la liste est normalisée aussi
 
 
+def test_les_formes_de_compatibilite_sont_repliees_pas_les_sosies():
+    """
+    « Case, accents and compatibility forms (full-width letters, ligatures, superscripts) are
+    spellings of the same word […] Look-alikes are not: a 0 stays a 0, which is why bl0rptard walks past. »
+    """
+    assert normalise("ｂｌｏｒｐｔａｒｄ") == "blorptard"
+    assert normalise("ﬁn²") == "fin2"
+    assert review("you ᵇˡᵒʳᵖᵗᵃʳᵈ", TERMS)["flagged"]
+    assert review("you are a ﬂarnwit", TERMS)["flagged"]
+    # Les sosies : un zéro, un « о » cyrillique.
+    assert normalise("bl0rptard") == "bl0rptard"
+    assert not review("you bl0rptard", TERMS)["flagged"]
+    assert not review("you bl\u043erptard", TERMS)["flagged"]
+
+
 @pytest.mark.xfail(
     strict=True,
-    reason="INFIRMÉ : la docstring dit que rien d'autre que la casse et les accents n'est touché ; NFKD replie "
-    "aussi les formes de compatibilité (pleine largeur, ligatures, exposants)",
+    reason="INFIRMÉ : casefold est appliqué avant NFKD ; une forme de compatibilité en capitale (lettres "
+    "mathématiques, capitales en exposant) devient une capitale ordinaire, jamais repliée : « 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃 » "
+    "donne « BLORPTARD » et n'est pas signalé (JavaScript le signale)",
 )
-def test_rien_d_autre_que_la_casse_et_les_accents_n_est_touche():
-    assert normalise("ｂｌｏｒｐｔａｒｄ") == "ｂｌｏｒｐｔａｒｄ"
-    assert normalise("ﬁn²") == "ﬁn²"
+def test_les_formes_de_compatibilite_en_capitales_sont_repliees_comme_les_autres():
+    assert review("you 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃", TERMS)["flagged"]
+    assert review("you ᴮᴸᴼᴿᴾᵀᴬᴿᴰ", TERMS)["flagged"]
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="INFIRMÉ : le commentaire de n0.js dit que « ß » et « ς » sont les deux lettres dont casefold diffère "
+    "des minuscules une fois NFKD appliqué ; il y en a 254 (ypogegrammeni, sigma lunaire, cherokee…)",
+)
+def test_ss_et_sigma_final_sont_les_seules_lettres_ou_casefold_differe_des_minuscules_apres_nfkd():
+    differ = set()
+    for code in range(0x110000):
+        char = chr(code)
+        if unicodedata.category(char).startswith("L"):
+            folded = unicodedata.normalize("NFKD", char)
+            if folded.casefold() != folded.lower():
+                differ.add(char)
+    assert differ == {"ß", "ς"}
 
 
 def test_les_lettres_et_chiffres_de_toute_ecriture_la_ponctuation_et_le_souligne_separent():
@@ -114,6 +153,17 @@ def test_la_fenetre_est_coupee_aux_bords_du_commentaire():
 
 def test_un_terme_de_deux_mots_est_trouve():
     assert review("quel sale type celui-là", ["sale type"])["flagged"]
+
+
+def test_un_terme_de_plusieurs_mots_est_trouve_quelle_que_soit_la_ponctuation_qui_les_separe():
+    """« A term of several words matches those words in a row, whatever punctuation separates them in the comment. »"""
+    result = review("quel sale, type celui-là", ["sale type"], window=1)
+    assert result["matches"] == [{"term": "sale type", "position": 1, "context": "quel sale type celui"}]
+    assert review("quel SALE — type", ["sale type"])["flagged"]
+    # Témoin : les mots doivent se suivre.
+    assert not review("quel sale gros type", ["sale type"])["flagged"]
+    # Un terme et un terme plus long qui le contient sont rendus tous les deux.
+    assert [m["term"] for m in review("sale type", ["sale", "sale type"])["matches"]] == ["sale", "sale type"]
 
 
 def test_n0_est_deterministe_et_n_emploie_que_la_bibliotheque_standard():
@@ -161,5 +211,31 @@ def test_production_pleine_largeur_marque_d_ordre_et_casefold():
     assert review("SCHEISSE", ["scheiße"])["flagged"]  # casefold : ß devient ss
 
 
-def test_defaut_un_terme_avec_accent_decompose_est_signale():
-    assert review("quel flarnwît", TERMS)["flagged"]
+def test_production_un_accent_tape_en_nfd_reste_dans_son_mot():
+    """« Composed first, so an accent typed as a separate mark stays in its word. »"""
+    assert review("quel flarnwi\u0302t", TERMS)["matches"] == [
+        {"term": "flarnwit", "position": 1, "context": "quel flarnwît"}]
+    assert review("quel flarnwît", ["flarnwi\u0302t"])["flagged"]
+
+
+def test_production_ss_majuscule_et_sigma_final_sont_replies_comme_en_javascript():
+    assert review("STRAẞE", ["strasse"])["flagged"]
+    assert review("SCHEISSE", ["scheiße"])["flagged"]
+    assert normalise("ΚΑΚΟΣ") == normalise("κακος") == "κακοσ"
+    assert review("κακος", ["ΚΑΚΟΣ"])["flagged"]
+
+
+def test_production_un_terme_vide_ou_de_ponctuation_dans_la_liste_est_sans_effet():
+    assert review(ATTACK, ["", "!!!"]) == {"flagged": False, "matches": []}
+    assert review(ATTACK, ["", "blorptard"])["matches"] == [
+        {"term": "blorptard", "position": 5, "context": "this forum you blorptard"}]
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="DÉFAUT : une voyelle dépendante du devanagari est une marque, pas une lettre : elle coupe le mot. "
+    "« मल » est trouvé dans « कोमल », et la fenêtre de « तुम कमीने हो » montre « त म कम न ह »",
+)
+def test_defaut_un_mot_devanagari_n_est_pas_coupe_a_ses_voyelles():
+    assert not review("यह कोमल है", ["मल"])["flagged"]
+    assert review("तुम कमीने हो", ["कमीने"])["matches"][0]["context"] == "तुम कमीने हो"
