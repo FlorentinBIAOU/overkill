@@ -5,9 +5,9 @@
  * le navigateur est exactement ce que la fiche affiche au-dessus.
  *
  * L'arbre est construit ici, au chargement du module, et une seule fois : c'est
- * l'argument du barreau. Ce qui se rejoue à chaque frappe n'est que la descente
- * dans l'arbre, et c'est pour cela qu'elle tient dans l'intervalle entre deux
- * touches.
+ * l'argument du niveau. Ce qui se rejoue à chaque frappe n'est que la descente
+ * dans l'arbre, puis la lecture du classement que le nœud garde depuis la
+ * première fois qu'on le lui a demandé.
  */
 import { build, suggest } from '../../snippets/add-autocomplete-to-a-search-bar/n0.js';
 

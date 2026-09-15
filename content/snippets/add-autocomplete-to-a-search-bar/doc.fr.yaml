@@ -17,9 +17,12 @@ n0: |
   d'origine. Qui tape « ec » trouve « écharpe », et le lit tout de même
   correctement écrit dans la liste déroulante.
 
-  Ensuite, l'ordre est un tri ordinaire sur le compte d'usage. Suggérer n'est
-  pas retrouver : dix candidats sous un préfixe est le cas courant, et trier
-  dix éléments à chaque frappe ne coûte rien qui vaille d'être optimisé.
+  Ensuite, l'ordre est un tri ordinaire sur le compte d'usage, fait une fois
+  par nœud et conservé là. La barre vide atteint l'index entier, une première
+  lettre une bonne part de celui-ci, et chaque utilisateur demande les deux :
+  les trier de nouveau à chaque frappe, c'est là que partirait le temps. Le
+  prix se paie en mémoire, au plus une référence par terme pour chaque nœud
+  qu'une frappe a atteint.
 
 n1: |
   Réordonner les suggestions avec ce sur quoi les gens ont réellement cliqué.
@@ -31,9 +34,9 @@ n1: |
 
   Le modèle est un comptage, pas un gradient : pour chaque préfixe qui a été
   frappé un jour, combien de fois chaque suggestion a été choisie. Il
-  s'entraîne en une passe sur le journal et se relit par une lecture de
-  dictionnaire, ce qu'autorise le budget d'une suggestion, qui est
-  l'intervalle entre deux touches.
+  s'entraîne en une passe sur le journal et se relit par des lectures de
+  dictionnaire, au plus une par longueur de préfixe pour chaque candidat, sur
+  une saisie dont la longueur comptée est plafonnée.
 
   Les candidats arrivent en argument : ce niveau réordonne une liste, il ne la
   retrouve pas.

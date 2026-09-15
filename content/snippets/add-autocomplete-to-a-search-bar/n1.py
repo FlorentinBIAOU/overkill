@@ -7,8 +7,8 @@ the drop-down opened. Clicks say the second, and they are already in the logs.
 
 The model is a count, not a gradient: for every prefix that was ever typed,
 how many times each suggestion was chosen. It trains in one pass over the log
-and is read back with a dictionary lookup, which is what a suggestion budget
-of a keystroke allows.
+and is read back with dictionary lookups, at most one per prefix length for
+each candidate, on a query whose counted length is capped.
 
 The candidates come in as an argument: this rung reorders a list, it does not
 retrieve it.
@@ -16,11 +16,24 @@ retrieve it.
 
 import unicodedata
 
+# Categories M* are the accents NFKD detaches; Cf holds the invisible characters.
+DROPPED = {"Mn", "Mc", "Me", "Cf"}
+# NFKD has already turned non-breaking spaces into plain ones; these are the
+# other spaces. The final sigma is folded by hand: JavaScript keeps it.
+FOLD = str.maketrans("\t\n\v\f\rς", "     σ")
+
+# Only the first characters of a query are counted. A pasted paragraph would
+# otherwise store one key per prefix, each a copy of the prefix: the memory
+# grows with the square of its length, and so does the lookup.
+MAX_TYPED = 64
+
 
 def normalise(text: str) -> str:
     """Same folding as the prefix tree, so both rungs agree on what was typed."""
-    decomposed = unicodedata.normalize("NFD", text.casefold())
-    return "".join(c for c in decomposed if not unicodedata.combining(c))
+    # Upper then lower case folds "ß" into "ss", the same way in both languages.
+    folded = unicodedata.normalize("NFKD", text).upper().lower().translate(FOLD)
+    kept = "".join(c for c in folded if unicodedata.category(c) not in DROPPED)
+    return " ".join(word for word in kept.split(" ") if word)
 
 
 def learn(clicks) -> dict:
@@ -33,7 +46,7 @@ def learn(clicks) -> dict:
     """
     model: dict = {}
     for typed, term in clicks:
-        typed = normalise(typed)
+        typed = normalise(typed)[:MAX_TYPED]
         for length in range(len(typed) + 1):
             key = (typed[:length], term)
             model[key] = model.get(key, 0) + 1
@@ -45,7 +58,7 @@ def _evidence(model: dict, prefix: str, term: str) -> int:
     Clicks recorded for the longest prefix of the query that saw this term.
 
     Backing off matters: a rare prefix has too few clicks of its own, but it
-    shares its first letters with hundreds of past queries that do. The longer
+    shares its first letters with past queries that do. The longer
     the matching prefix, the more specific the evidence, hence the weight.
     """
     for length in range(len(prefix), -1, -1):
@@ -64,7 +77,7 @@ def rerank(model: dict, prefix: str, candidates, limit: int = 5) -> list[str]:
     what it has evidence about, which is what makes it safe to ship on a log
     that is still thin.
     """
-    prefix = normalise(prefix)
+    prefix = normalise(prefix)[:MAX_TYPED]
     ranked = sorted(
         enumerate(candidates),
         key=lambda pair: (-_evidence(model, prefix, pair[1]), pair[0]),

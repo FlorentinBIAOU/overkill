@@ -3,7 +3,7 @@ id: add-autocomplete-to-a-search-bar
 family: search
 status: published
 verdict: N0
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Offer suggestions from the first characters typed into a search bar."
 
 scenario:
-  fr: "On voit des barres de recherche qui interrogent un modèle généraliste à chaque frappe pour proposer la suite. Ce qu’il y a à proposer est pourtant un ensemble fermé : les termes du catalogue, et ceux que les utilisateurs ont déjà cherchés. Le budget d’une suggestion, c’est l’intervalle entre deux touches, et un aller-retour réseau l’a dépassé avant même que le modèle ait commencé à répondre."
-  en: "Search bars that call a general-purpose model on every keystroke to propose what comes next are a common sight. What there is to propose is a closed set, though: the terms in your catalogue, and the ones your users have already searched for. The budget for a suggestion is the gap between two keys, and a network round trip has spent it before the model has started answering."
+  fr: "On voit des barres de recherche qui interrogent un modèle généraliste à chaque frappe pour proposer la suite. Ce qu’il y a à proposer est pourtant un ensemble fermé : les termes du catalogue, et ceux que les utilisateurs ont déjà cherchés. Chaque frappe paie un appel réseau pour une liste que l’index du site contient déjà."
+  en: "Search bars that call a general-purpose model on every keystroke to propose what comes next are a common sight. What there is to propose is a closed set, though: the terms in your catalogue, and the ones your users have already searched for. Every keystroke pays for a network call to fetch a list the site’s own index already holds."
 
 rungs:
   - level: N0
@@ -80,23 +80,23 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Une suggestion doit tenir entre deux frappes. Un modèle auto-hébergé demande un service permanent à exploiter et un aller-retour à chaque touche, pour proposer des termes qui appartiennent déjà à un ensemble fermé : l’arbre de préfixes les sort de la mémoire du processus."
-      en: "A suggestion has to fit between two keystrokes. A self-hosted model costs a permanent service to run and a round trip per key, to propose terms that already belong to a closed set: the prefix tree pulls them straight out of process memory."
+      fr: "Un modèle auto-hébergé demande un service permanent à exploiter et un appel à chaque touche, pour proposer des termes qui appartiennent déjà à un ensemble fermé : l’arbre de préfixes les sort de la mémoire du processus."
+      en: "A self-hosted model costs a permanent service to run and a call on every key, to propose terms that already belong to a closed set: the prefix tree pulls them straight out of process memory."
 
   - level: N3
     available: false
     unavailable_reason:
-      fr: "Un appel réseau par caractère frappé. La latence dépasse à elle seule l’intervalle entre deux touches, et la facture se multiplie par la longueur de la requête : la même recherche est payée autant de fois qu’elle compte de lettres."
-      en: "One network call per character typed. The latency alone exceeds the gap between two keys, and the bill multiplies by the length of the query: the same search is paid for as many times as it has letters."
+      fr: "Un appel réseau par caractère frappé, pour proposer des termes que l’index contient déjà. La facture se multiplie par la longueur de la requête : la même recherche est payée autant de fois qu’elle compte de lettres."
+      en: "One network call per character typed, to propose terms the index already holds. The bill multiplies by the length of the query: the same search is paid for as many times as it has letters."
 
 verdict_rationale:
-  fr: "N0 répond, N1 ne fait que remettre en ordre ce que N0 a trouvé, et les deux niveaux échouent sur la même faute de frappe : le test de N1 le démontre. Prenez N0, et ajoutez N1 le jour où votre journal de clics est assez fourni pour montrer que le terme choisi n’est plus celui du haut de la liste. Vous n’y perdez pas de latence, le réordonnancement étant une lecture de dictionnaire, mais vous prenez en charge un journal de comportement à conserver."
-  en: "N0 answers, N1 only puts back in order what N0 found, and both levels fail on the same typo, as N1's own test demonstrates. Take N0, and add N1 the day your click log is thick enough to show that the term people pick is no longer the one at the top. You lose no latency, the reranking being a dictionary lookup, but you take on a behavioural log to keep."
+  fr: "N0 répond, N1 ne fait que remettre en ordre ce que N0 a trouvé, et les deux niveaux échouent sur la même faute de frappe : le test de N1 le démontre. Prenez N0, et ajoutez N1 le jour où votre journal de clics est assez fourni pour montrer que le terme choisi n’est plus celui du haut de la liste. Le réordonnancement ne fait que lire des compteurs en mémoire, sans appel, mais vous prenez en charge un journal de comportement à conserver."
+  en: "N0 answers, N1 only puts back in order what N0 found, and both levels fail on the same typo, as N1's own test demonstrates. Take N0, and add N1 the day your click log is thick enough to show that the term people pick is no longer the one at the top. The reranking only reads counters held in memory, with no call, but you take on a behavioural log to keep."
 
 further_reading:
   - label: "Introduction to Information Retrieval, chapitre 3 — Dictionnaires et récupération tolérante aux fautes"
     url: "https://nlp.stanford.edu/IR-book/html/htmledition/dictionaries-and-tolerant-retrieval-1.html"
-  - label: "Unicode Standard Annex #15 — Normalization Forms, la décomposition employée par les deux niveaux"
+  - label: "Unicode Standard Annex #15 — Normalization Forms, la décomposition de compatibilité (NFKD) employée par les deux niveaux"
     url: "https://www.unicode.org/reports/tr15/"
   - label: "W3C ARIA Authoring Practices — le motif combobox, pour la liste déroulante de suggestions"
     url: "https://www.w3.org/WAI/ARIA/apg/patterns/combobox/"

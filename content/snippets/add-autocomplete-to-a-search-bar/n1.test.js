@@ -173,14 +173,12 @@ test('production : une requête collée de 10 000 caractères termine dans une b
   assert.ok(performance.now() - debut < 10_000);
 });
 
-test('DÉFAUT : une requête collée de 10 000 caractères laisse cinquante millions de caractères de clés', async () => {
+test('une requête collée de 10 000 caractères laisse cinquante millions de caractères de clés', async () => {
   // Une clé par préfixe, chacune copie du préfixe : 50 025 002 caractères.
-  await assert.rejects(async () => {
-    const m = learn([['q'.repeat(10_000), 'chemise en lin']]);
-    let total = 0;
-    for (const k of m.keys()) total += k.length;
-    assert.ok(total <= 100 * 10_000, `${total} caractères de clés`);
-  });
+  const m = learn([['q'.repeat(10_000), 'chemise en lin']]);
+  let total = 0;
+  for (const k of m.keys()) total += k.length;
+  assert.ok(total <= 100 * 10_000, `${total} caractères de clés`);
 });
 
 test('production : une saisie en accents décomposés retrouve les clics du terme composé', () => {
@@ -191,13 +189,11 @@ test('production : une saisie en accents décomposés retrouve les clics du term
   ]);
 });
 
-test('INFIRMÉ : le commentaire dit « a tab never occurs inside a prefix », une tabulation dans la saisie crée un clic fantôme', async () => {
+test('le commentaire dit « a tab never occurs inside a prefix », une tabulation dans la saisie crée un clic fantôme', async () => {
   // La clé est `${prefix}\t${term}` : la saisie « a<TAB>b » cliquée sur « c »
   // produit la même clé que la saisie « a » cliquée sur « b<TAB>c ».
-  await assert.rejects(async () => {
-    const m = learn([['a\tb', 'c']]);
-    assert.deepEqual(rerank(m, 'a', ['x', 'b\tc']), ['x', 'b\tc']);
-  });
+  const m = learn([['a\tb', 'c']]);
+  assert.deepEqual(rerank(m, 'a', ['x', 'b\tc']), ['x', 'b\tc']);
 });
 
 test('production : limite à zéro et au nombre exact de candidats', () => {

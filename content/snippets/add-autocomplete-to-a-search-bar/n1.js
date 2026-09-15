@@ -8,19 +8,31 @@
  *
  * The model is a count, not a gradient: for every prefix that was ever typed,
  * how many times each suggestion was chosen. It trains in one pass over the
- * log and is read back with a map lookup, which is what a suggestion budget of
- * a few milliseconds per keystroke allows.
+ * log and is read back with map lookups, at most one per prefix length for
+ * each candidate, on a query whose counted length is capped.
  *
  * The candidates come in as an argument: this rung reorders a list, it does
  * not retrieve it.
  */
 
+// Only the first characters of a query are counted. A pasted paragraph would
+// otherwise store one key per prefix, each a copy of the prefix: the memory
+// grows with the square of its length, and so does the lookup.
+export const MAX_TYPED = 64;
+
 /** Same folding as the prefix tree, so both rungs agree on what was typed. */
 export function normalise(text) {
-  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  // Upper then lower case folds "ß" into "ss", the same way in both languages,
+  // and the final sigma is folded by hand. \p{M} holds the accents NFKD
+  // detaches, \p{Cf} the invisible characters; NFKD has already turned
+  // non-breaking spaces into plain ones.
+  const folded = text.normalize('NFKD').toUpperCase().toLowerCase().replace(/ς/g, 'σ');
+  const kept = folded.replace(/[\p{M}\p{Cf}]/gu, '').replace(/[\t\n\v\f\r]/g, ' ');
+  return kept.split(' ').filter(Boolean).join(' ');
 }
 
-// A map key has to be a single value, and a tab never occurs inside a prefix.
+// A map key has to be a single value. A tab never occurs inside a normalised
+// prefix, since normalise turns it into a space, so the first tab splits the key.
 const key = (prefix, term) => `${prefix}\t${term}`;
 
 /**
@@ -33,7 +45,7 @@ const key = (prefix, term) => `${prefix}\t${term}`;
 export function learn(clicks) {
   const model = new Map();
   for (const [typed, term] of clicks) {
-    const prefix = normalise(typed);
+    const prefix = normalise(typed).slice(0, MAX_TYPED);
     for (let length = 0; length <= prefix.length; length += 1) {
       const at = key(prefix.slice(0, length), term);
       model.set(at, (model.get(at) ?? 0) + 1);
@@ -46,7 +58,7 @@ export function learn(clicks) {
  * Clicks recorded for the longest prefix of the query that saw this term.
  *
  * Backing off matters: a rare prefix has too few clicks of its own, but it
- * shares its first letters with hundreds of past queries that do. The longer
+ * shares its first letters with past queries that do. The longer
  * the matching prefix, the more specific the evidence, hence the weight.
  */
 function evidence(model, prefix, term) {
@@ -66,7 +78,7 @@ function evidence(model, prefix, term) {
  * still thin.
  */
 export function rerank(model, prefix, candidates, limit = 5) {
-  const typed = normalise(prefix);
+  const typed = normalise(prefix).slice(0, MAX_TYPED);
   const scored = candidates.map((term, rank) => [evidence(model, typed, term), rank, term]);
   scored.sort((a, b) => b[0] - a[0] || a[1] - b[1]);
   return scored.slice(0, limit).map(([, , term]) => term);

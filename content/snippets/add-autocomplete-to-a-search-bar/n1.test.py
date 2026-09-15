@@ -195,14 +195,6 @@ def test_production_une_requete_collee_de_10000_caracteres_termine_dans_une_born
     assert time.perf_counter() - debut < 10
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : learn garde une clé par préfixe, chacune copie du préfixe : une "
-        "seule requête de 10 000 caractères laisse 50 005 000 caractères de clés "
-        "dans le modèle, rien ne borne la longueur comptée"
-    ),
-)
 def test_defaut_une_requete_collee_de_10000_caracteres_laisse_cinquante_millions_de_caracteres_de_cles():
     model = learn([("q" * 10_000, "chemise en lin")])
     assert sum(len(prefix) for prefix, _ in model) <= 100 * 10_000

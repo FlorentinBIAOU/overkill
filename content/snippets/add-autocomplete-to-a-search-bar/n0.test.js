@@ -125,12 +125,10 @@ test('production : cent mille termes se construisent et se parcourent dans une b
   assert.ok(performance.now() - debut < 20_000);
 });
 
-test('DÉFAUT : un terme de 100 000 caractères dans le journal fait planter la barre vide', async () => {
+test('un terme de 100 000 caractères dans le journal fait planter la barre vide', async () => {
   // collect est récursif : « Maximum call stack size exceeded » sur le préfixe vide.
-  await assert.rejects(async () => {
-    const long = build([['x'.repeat(100_000), 1], ['chemise en lin', 2]]);
-    assert.deepEqual(suggest(long, ''), ['chemise en lin', 'x'.repeat(100_000)]);
-  });
+  const long = build([['x'.repeat(100_000), 1], ['chemise en lin', 2]]);
+  assert.deepEqual(suggest(long, ''), ['chemise en lin', 'x'.repeat(100_000)]);
 });
 
 test('production : une saisie en accents décomposés retrouve le terme composé', () => {
@@ -143,26 +141,20 @@ test('production : casse mixte et emoji sont retrouvés', () => {
   assert.deepEqual(suggest(build([['🎁 coffret cadeau', 3]]), '🎁'), ['🎁 coffret cadeau']);
 });
 
-test('DÉFAUT : « strasse » ne retrouve pas « Straße » en JavaScript, alors que Python le retrouve', async () => {
+test('« strasse » ne retrouve pas « Straße » en JavaScript, alors que Python le retrouve', async () => {
   // toLowerCase garde « ß », casefold le replie en « ss » : les deux extraits
   // ne proposent pas la même chose pour la même frappe.
-  await assert.rejects(async () => {
-    assert.deepEqual(suggest(build([['Straße', 1]]), 'strasse'), ['Straße']);
-  });
+  assert.deepEqual(suggest(build([['Straße', 1]]), 'strasse'), ['Straße']);
 });
 
-test('DÉFAUT : un caractère invisible dans la saisie vide la liste', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(suggest(tree, 'écharpe\u00a0en'), ['écharpe en laine']);
-    assert.deepEqual(suggest(tree, '\u200bech'), ['écharpe en laine', 'échelle télescopique']);
-    assert.deepEqual(suggest(tree, '\ufeffech'), ['écharpe en laine', 'échelle télescopique']);
-  });
+test('un caractère invisible dans la saisie vide la liste', async () => {
+  assert.deepEqual(suggest(tree, 'écharpe\u00a0en'), ['écharpe en laine']);
+  assert.deepEqual(suggest(tree, '\u200bech'), ['écharpe en laine', 'échelle télescopique']);
+  assert.deepEqual(suggest(tree, '\ufeffech'), ['écharpe en laine', 'échelle télescopique']);
 });
 
-test('DÉFAUT : une espace en tête de saisie vide la liste', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(suggest(tree, ' cha'), ['chaussures de running', 'chaussettes de sport']);
-  });
+test('une espace en tête de saisie vide la liste', async () => {
+  assert.deepEqual(suggest(tree, ' cha'), ['chaussures de running', 'chaussettes de sport']);
 });
 
 test('production : à compte égal, l’ordre est alphabétique', () => {

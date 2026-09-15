@@ -113,14 +113,6 @@ def test_la_normalisation_replie_les_accents_sans_toucher_aux_lettres():
     assert normalise("Étagère Murale") == "etagere murale"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : le commentaire dit « A character can never collide with it », "
-        'or END vaut "\\0", un caractère : un terme qui contient NUL fait lever '
-        "build (AttributeError) ou suggest (TypeError)"
-    ),
-)
 def test_infirme_un_caractere_nul_dans_un_terme_ne_se_confond_pas_avec_la_marque_de_fin():
     """commentaire : « Marks the terms that end at a node. A character can never collide with it. »"""
     tree = build([("a\0b", 1)])
@@ -176,13 +168,6 @@ def test_production_cent_mille_termes_se_construisent_et_se_parcourent_dans_une_
     assert time.perf_counter() - debut < 20
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : _collect est récursif, un terme de 100 000 caractères dans le "
-        "journal fait lever RecursionError sur le préfixe vide, pour tout le monde (en Python dès 1 000 caractères)"
-    ),
-)
 def test_defaut_un_terme_de_100000_caracteres_dans_le_journal_fait_planter_la_barre_vide():
     tree = build([("x" * 100_000, 1), ("chemise en lin", 2)])
     assert suggest(tree, "") == ["chemise en lin", "x" * 100_000]
@@ -205,14 +190,6 @@ def test_production_strasse_retrouve_strasse_avec_eszett_dans_les_deux_langages(
     assert suggest(build([("Straße", 1)]), "strasse") == ["Straße"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un caractère invisible collé dans la saisie (espace insécable, "
-        "espace de largeur nulle, marque d'ordre des octets) rend la bonne "
-        "orthographe inatteignable, une rupture que la fiche n'annonce pas"
-    ),
-)
 def test_defaut_un_caractere_invisible_dans_la_saisie_vide_la_liste():
     tree = make_tree()
     assert suggest(tree, "écharpe\u00a0en") == ["écharpe en laine"]
@@ -220,10 +197,6 @@ def test_defaut_un_caractere_invisible_dans_la_saisie_vide_la_liste():
     assert suggest(tree, "\ufeffech") == ["écharpe en laine", "échelle télescopique"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une espace en tête de saisie, fréquente après un collage, vide la liste",
-)
 def test_defaut_une_espace_en_tete_de_saisie_vide_la_liste():
     assert suggest(make_tree(), " cha") == [
         "chaussures de running",
@@ -231,13 +204,6 @@ def test_defaut_une_espace_en_tete_de_saisie_vide_la_liste():
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : à compte égal, Python départage par point de code, donc « zèbre » "
-        "passe avant « écharpe » ; l'extrait JavaScript, lui, rend l'ordre alphabétique"
-    ),
-)
 def test_defaut_a_compte_egal_l_ordre_est_alphabetique():
     assert suggest(build([("zèbre", 1), ("écharpe", 1)]), "") == ["écharpe", "zèbre"]
 
