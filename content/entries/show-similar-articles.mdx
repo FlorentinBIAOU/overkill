@@ -3,7 +3,7 @@ id: show-similar-articles
 family: recommend
 status: published
 verdict: N1
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Offer three or four other articles from the site, under the one being read, that cover the same subject."
 
 scenario:
-  fr: "On voit un appel de modèle au moment d’afficher la page, pour lui demander quels articles ressemblent à celui qu’on lit. Le résultat ne dépend pourtant pas du lecteur, et il ne change que lorsqu’un article est publié ou que ses étiquettes changent : c’est une table à construire une fois, pas un calcul à refaire à chaque affichage. Les trois niveaux de cette fiche rendent la même table, un article vers ses voisins et leurs scores, et le code qui affiche le bloc ne change pas quand vous montez d’un niveau."
-  en: "The reflex is to call a model when the page is rendered, asking which articles look like the one being read. But the result does not depend on the reader, and it only changes when an article is published or retagged: it is a table to build once, not a computation to redo on every view. The three levels here return the same table, an article to its neighbours and their scores, and the code that renders the block does not change when you move up a level."
+  fr: "On voit un appel de modèle au moment d’afficher la page, pour lui demander quels articles ressemblent à celui qu’on lit. Le résultat ne dépend pourtant pas du lecteur, et il ne change que lorsque le fonds change : un article publié, réécrit, ou dont les étiquettes changent. C’est une table à construire hors ligne, pour tout le fonds d’un coup, pas un calcul à refaire à chaque affichage ; les latences annoncées sont celles d’un article, pas celle de la table entière. Les trois niveaux de cette fiche rendent une table de même forme, un article vers ses voisins et leurs scores, et le code qui affiche le bloc ne change pas quand vous montez d’un niveau."
+  en: "The reflex is to call a model when the page is rendered, asking which articles look like the one being read. But the result does not depend on the reader, and it only changes when the corpus does: an article published, rewritten or retagged. It is a table to build offline, for the whole corpus at once, not a computation to redo on every view; the latencies given are those of one article, not of the whole table. The three levels here return a table of the same shape, an article to its neighbours and their scores, and the code that renders the block does not change when you move up a level."
 
 rungs:
   - level: N0
@@ -44,11 +44,11 @@ rungs:
       javascript: snippets/show-similar-articles/n0.js
       verification: executed
     breaking_point:
-      fr: "Un fonds mal étiqueté ne produit aucune similarité, et l’échec est total plutôt que dégradé. Le test construit deux corpus : dans le premier, chaque article porte « blog » et « article », dont le poids vaut exactement zéro ; dans le second, chaque article porte une étiquette que lui seul porte. Les deux tables sortent entièrement vides, et le bloc n’apparaît sur aucune page."
-      en: "A badly tagged corpus produces no similarity at all, and the failure is total rather than degraded. The test builds two of them: in the first, every article carries “blog” and “article”, whose weight is exactly zero; in the second, every article carries a tag nobody else carries. Both tables come out empty, and the block appears on no page."
+      fr: "Un fonds mal étiqueté ne produit aucune similarité juste, et l’échec est total plutôt que dégradé. Le test construit deux corpus : dans le premier, chaque article porte « blog » et « article », dont le poids vaut exactement zéro ; dans le second, chaque article porte une étiquette que lui seul porte. Les deux tables sortent entièrement vides, et le bloc n’apparaît sur aucune page. À un article près, l’échec change de sens : qu’un quatrième article ne porte pas « article », et les trois autres deviennent voisins parfaits, à 1,0, sans rien avoir en commun qu’une étiquette générique."
+      en: "A badly tagged corpus produces no sound similarity at all, and the failure is total rather than degraded. The test builds two of them: in the first, every article carries “blog” and “article”, whose weight is exactly zero; in the second, every article carries a tag nobody else carries. Both tables come out empty, and the block appears on no page. One article more and the failure turns around: let a fourth article go without “article”, and the other three become perfect neighbours, at 1.0, with nothing in common but a generic tag."
     escalate_when:
-      fr: "La table que vous construisez contient des lignes vides, parce que vos étiquettes sont soit sur tous les articles, soit sur un seul."
-      en: "The table you build has empty rows, because your tags sit either on every article or on exactly one."
+      fr: "La table que vous construisez contient des lignes vides, ou des voisins à 1,0 qui ne partagent qu’une étiquette générique : vos étiquettes sont sur tous les articles ou presque, ou sur un seul."
+      en: "The table you build has empty rows, or neighbours at 1.0 that share nothing but a generic tag: your tags sit on every article or nearly, or on exactly one."
 
   - level: N1
     available: true
@@ -75,8 +75,8 @@ rungs:
       javascript: snippets/show-similar-articles/n1.js
       verification: executed
     breaking_point:
-      fr: "TF-IDF compare des chaînes de caractères, pas des sens. Le test met côte à côte l’article anglais sur le levain et son jumeau français : leur cosinus vaut exactement zéro, pas une valeur basse. Dans le même corpus, une annonce de déménagement de bureau, qui ne partage avec l’article anglais que de la grammaire, obtient un score strictement supérieur. Aucun seuil ne rattrape cela."
-      en: "TF-IDF compares strings, not meanings. The test puts the English sourdough article next to its French twin: their cosine is exactly zero, not merely low. In the same corpus an office-move announcement, which shares nothing with the English article but grammar, scores strictly higher. No threshold rescues that."
+      fr: "TF-IDF compare des chaînes de caractères, pas des sens. Le test met côte à côte l’article anglais sur le levain et son jumeau français : leur cosinus vaut exactement zéro, pas une valeur basse. Dans le même corpus, une annonce de déménagement de bureau, qui ne partage avec l’article anglais que des mots de liaison et le mot anglais pour « jour », obtient un score strictement supérieur ; sans ce mot, elle passe encore devant. Aucun seuil ne rattrape cela."
+      en: "TF-IDF compares strings, not meanings. The test puts the English sourdough article next to its French twin: their cosine is exactly zero, not merely low. In the same corpus an office-move announcement, which shares nothing with the English article but function words and “day”, scores strictly higher; without “day”, it still comes first. No threshold rescues that."
     escalate_when:
       fr: "Votre fonds dit la même chose avec deux vocabulaires : deux langues, ou le jargon d’un auteur face aux mots courants d’un autre."
       en: "Your corpus says the same thing in two vocabularies: two languages, or one author’s jargon against another’s plain words."
@@ -106,8 +106,8 @@ rungs:
       javascript: snippets/show-similar-articles/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Un article reçoit un vecteur, quelle que soit sa longueur : un texte qui aborde huit sujets les porte chacun au huitième. Le test ajoute un paragraphe digressif à l’article sur le pain de seigle — le four, la planche, le pot de confiture, la poêle — et cela suffit à lui coûter sa place de premier voisin : l’article sur le levain se retrouve apparié à celui sur la poêle en fonte, et l’article rallongé perd au passage son propre meilleur voisin. Le double local du test amplifie l’écart ; la dilution, elle, est celle des vrais encodeurs."
-      en: "An article gets one vector however long it is, so a piece covering eight subjects carries each of them at one eighth. The test adds a rambling paragraph to the rye loaf article — the oven, the board, the jar of jam, the pan — and that alone costs it its place as first neighbour: the sourdough piece is paired with the cast iron one instead, and the lengthened article loses its own best neighbour along the way. The local double sharpens the gap; the dilution itself is what real encoders do."
+      fr: "Un article reçoit un seul vecteur, qui mêle tout ce qu’il contient. Le test ajoute un paragraphe digressif à l’article sur le pain de seigle — le four, la planche, le pot de confiture, la poêle — et cela suffit à lui coûter sa place de premier voisin : l’article sur le levain se retrouve apparié à celui sur la poêle en fonte, et l’article rallongé perd au passage son propre meilleur voisin ; rallongé de son propre sujet, il garde sa place. Ces vecteurs sont ceux du double local : ce que le vrai modèle rend sur ces articles n’est pas mesuré ici. Et le modèle nommé ne lit que le début d’un long article, 128 jetons en Python et 512 en JavaScript : ce qui dépasse ne dilue pas le vecteur, il n’y entre pas."
+      en: "An article gets a single vector, which blends everything it holds. The test adds a rambling paragraph to the rye loaf article — the oven, the board, the jar of jam, the pan — and that alone costs it its place as first neighbour: the sourdough piece is paired with the cast iron one instead, and the lengthened article loses its own best neighbour along the way; lengthened with its own subject, it keeps its place. These vectors come from the local double: what the real model returns on these articles is not measured here. And the named model only reads the start of a long article, 128 tokens in Python and 512 in JavaScript: what lies beyond does not dilute the vector, it never enters it."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus dans cette fiche : au-delà, on ne change plus d’algorithme, on découpe les articles en passages et on indexe les passages."
       en: "There is no level above this one here: past it you do not change algorithm, you cut articles into passages and index the passages."
@@ -119,15 +119,15 @@ rungs:
       en: "Recomputing similarity through a model call on every page view, for a result that does not change between two publications, is waste. The ranking depends neither on the reader nor on the moment: the only conceivable gain is its quality, and it would be paid for on every view instead of once per publication."
 
 verdict_rationale:
-  fr: "N1 est le niveau qui ne dépend de personne. N0 est gratuit et se teste unitairement, mais il ne voit que ce que quelqu’un a pensé à étiqueter, et le jour où l’étiquetage se relâche la table se vide au lieu de se dégrader ; N1 lit l’article et laisse le corpus décider quels mots comptent, pour la même table construite hors ligne. Son prix est une liste de mots vides par langue, sans laquelle le test apparie l’article sur l’affûtage avec l’annonce du site : montez à N2 quand votre fonds dit la même chose en deux langues, pas avant, sous peine d’échanger une bibliothèque contre un service à tenir chaud."
-  en: "N1 is the level that depends on nobody. N0 is free and unit testable, but it only sees what somebody remembered to tag, and the day tagging slips the table empties rather than degrades; N1 reads the article and lets the corpus decide which words matter, for the same table built offline. Its price is a stop list per language, without which the test pairs the knife-sharpening article with the site announcement: move up to N2 when your corpus says the same thing in two languages, not before, or you trade a library for a service to keep warm."
+  fr: "N1 ne dépend ni de l’étiquetage ni d’un modèle. N0 est gratuit et se teste unitairement, mais il ne voit que ce que quelqu’un a pensé à étiqueter, et le jour où l’étiquetage se relâche, la table se vide ou se remplit de voisins parfaits que rien ne rapproche ; N1 lit l’article et laisse le corpus décider quels mots comptent, pour la même table construite hors ligne. Son prix est une liste de mots vides par langue, sans laquelle le test apparie l’article sur l’affûtage avec l’annonce du site : montez à N2 quand votre fonds dit la même chose en deux langues, pas avant, sous peine d’ajouter à chaque construction de la table un modèle à charger."
+  en: "N1 depends neither on tagging nor on a model. N0 is free and unit testable, but it only sees what somebody remembered to tag, and the day tagging slips, the table empties or fills with perfect neighbours that nothing connects; N1 reads the article and lets the corpus decide which words matter, for the same table built offline. Its price is a stop list per language, without which the test pairs the knife-sharpening article with the site announcement: move up to N2 when your corpus says the same thing in two languages, not before, or every build of the table has a model to load."
 
 further_reading:
   - label: "Introduction to Information Retrieval — pondération tf-idf, un terme pèse ce qu’il est rare"
     url: "https://nlp.stanford.edu/IR-book/html/htmledition/tf-idf-weighting-1.html"
   - label: "Introduction to Information Retrieval — produit scalaire et cosinus entre deux documents"
     url: "https://nlp.stanford.edu/IR-book/html/htmledition/dot-products-1.html"
-  - label: "scikit-learn — TfidfVectorizer, et la formule d’idf lissée employée par l’extrait"
+  - label: "scikit-learn — TfidfVectorizer, et le lissage de l’idf employé par l’extrait"
     url: "https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"
   - label: "Sentence-Transformers — documentation des encodeurs auto-hébergés"
     url: "https://www.sbert.net/"

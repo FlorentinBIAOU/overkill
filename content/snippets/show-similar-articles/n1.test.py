@@ -362,28 +362,12 @@ def test_production_un_article_au_corps_vide_est_classe_sur_son_titre():
     assert build_neighbour_table(articles, stop_words=ENGLISH_FILLER)["sourdough-starter"] == [("rye-bread", 0.082)]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un fonds dont aucun mot ne survit (titres d'une lettre, corps vides, "
-        "ou seulement des mots vides) fait lever ValueError « empty vocabulary » à "
-        "scikit-learn ; le JavaScript rend une table de lignes vides"
-    ),
-)
 def test_defaut_un_fonds_sans_aucun_mot_retenu_leve():
     assert build_neighbour_table([{"id": "a", "title": "A", "body": ""}, {"id": "b", "title": "B", "body": ""}]) == {
         "a": [], "b": []
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un corps à None (un NULL lu en base) devient le mot « None » dans le "
-        "texte indexé ; deux articles sans rien de commun deviennent voisins (0,126) "
-        "par ce seul mot. Le JavaScript fait de même avec « null »"
-    ),
-)
 def test_defaut_un_corps_absent_devient_le_mot_none():
     corpus = [
         {"id": "a", "title": "Kimchi", "body": None},
@@ -393,13 +377,6 @@ def test_defaut_un_corps_absent_devient_le_mot_none():
     assert build_neighbour_table(corpus)["a"] == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le même article en NFC et en NFD (copié depuis un Mac) ne se "
-        "reconnaît qu'à 0,083 : chaque lettre accentuée décomposée coupe le mot"
-    ),
-)
 def test_defaut_le_meme_article_en_nfd_ne_se_reconnait_pas():
     nfc = {"id": "nfc", "title": "Pâte à crêpes", "body": "La pâte à crêpes repose une heure."}
     nfd = {"id": "nfd", "title": unicodedata.normalize("NFD", nfc["title"]), "body": unicodedata.normalize("NFD", nfc["body"])}

@@ -19,10 +19,17 @@
  * article. That is the point, not a rounding accident: such a tag must not
  * create any similarity at all.
  */
+/** Each tag once, in NFC, so that a tag typed on two systems meets itself. */
+export function tagSet(tags) {
+  // A lone string would be read letter by letter, and "blog" would meet "gloss".
+  if (typeof tags === 'string') throw new TypeError('tags must be an array of strings, not a string');
+  return new Set(Array.from(tags, (tag) => tag.normalize('NFC')));
+}
+
 export function tagWeights(articles) {
   const counts = new Map();
   for (const article of articles) {
-    for (const tag of new Set(article.tags)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    for (const tag of tagSet(article.tags)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
   }
   const weights = new Map();
   for (const [tag, count] of counts) weights.set(tag, Math.log(articles.length / count));
@@ -35,7 +42,7 @@ function norm(vector) {
 
 /** Cosine between two tag sets, each weighted by tag rarity. */
 export function similarity(firstTags, secondTags, weights) {
-  const vector = (tags) => new Map([...new Set(tags)].map((t) => [t, weights.get(t) ?? 0]));
+  const vector = (tags) => new Map([...tagSet(tags)].map((t) => [t, weights.get(t) ?? 0]));
   const first = vector(firstTags);
   const second = vector(secondTags);
 

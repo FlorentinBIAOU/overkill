@@ -287,24 +287,20 @@ test('production : un fonds sans aucun mot retenu rend des lignes vides (le Pyth
   assert.deepEqual(buildNeighbourTable([{ id: 'a', title: 'A', body: '' }, { id: 'b', title: 'B', body: '' }]), { a: [], b: [] });
 });
 
-test('DÉFAUT : un corps absent devient le mot « null »', async () => {
-  await assert.rejects(async () => {
-    const corpus = [
-      { id: 'a', title: 'Kimchi', body: null },
-      { id: 'b', title: 'Knives', body: null },
-      { id: 'c', title: 'Rye', body: 'rye bread' },
-    ];
-    assert.deepEqual(buildNeighbourTable(corpus).a, []);
-  });
+test('un corps absent devient le mot « null »', async () => {
+  const corpus = [
+    { id: 'a', title: 'Kimchi', body: null },
+    { id: 'b', title: 'Knives', body: null },
+    { id: 'c', title: 'Rye', body: 'rye bread' },
+  ];
+  assert.deepEqual(buildNeighbourTable(corpus).a, []);
 });
 
-test('DÉFAUT : le même article en NFD ne se reconnaît pas', async () => {
-  await assert.rejects(async () => {
-    const nfc = { id: 'nfc', title: 'Pâte à crêpes', body: 'La pâte à crêpes repose une heure.' };
-    const nfd = { id: 'nfd', title: nfc.title.normalize('NFD'), body: nfc.body.normalize('NFD') };
-    const other = { id: 'x', title: 'Other', body: 'thing' };
-    assert.ok(scoresOf(buildNeighbourTable([nfc, nfd, other], { minimum: -1 }), 'nfc').nfd > 0.9);
-  });
+test('le même article en NFD ne se reconnaît pas', async () => {
+  const nfc = { id: 'nfc', title: 'Pâte à crêpes', body: 'La pâte à crêpes repose une heure.' };
+  const nfd = { id: 'nfd', title: nfc.title.normalize('NFD'), body: nfc.body.normalize('NFD') };
+  const other = { id: 'x', title: 'Other', body: 'thing' };
+  assert.ok(scoresOf(buildNeighbourTable([nfc, nfd, other], { minimum: -1 }), 'nfc').nfd > 0.9);
 });
 
 test('production : espace insécable, emoji, BOM et casse', () => {

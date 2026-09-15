@@ -135,8 +135,8 @@ export default {
   level: 'N1',
 
   note: {
-    fr: 'Le tableau montre tout le classement, plancher compris : les articles au-dessus du plancher sont ceux qui s’afficheraient sous l’article, les autres sont écartés. Un zéro n’est pas un score faible, c’est l’absence de tout mot commun.',
-    en: 'The table shows the whole ranking, floor included: the articles above the floor are the ones that would appear under the article, the others are dropped. A zero is not a low score, it is the absence of any shared word.',
+    fr: 'Le tableau montre tout le classement, plancher compris : les articles au-dessus du plancher sont ceux qui s’afficheraient sous l’article, les autres sont écartés. Un zéro n’est pas un score faible, c’est l’absence de tout mot commun, mots vides mis à part.',
+    en: 'The table shows the whole ranking, floor included: the articles above the floor are the ones that would appear under the article, the others are dropped. A zero is not a low score, it is the absence of any shared word, stop words aside.',
   },
 
   run(titre, lang) {
@@ -176,7 +176,7 @@ export default {
       label: { fr: 'Des mots du corps, pas du titre', en: 'Words from the body, not the title' },
       input: {
         fr: 'Saler le chou avant de le faire fermenter',
-        en: 'Letting cucumbers ferment in a jar',
+        en: 'Garlic and dill before letting them ferment',
       },
     },
     {

@@ -280,13 +280,6 @@ def test_production_etiquette_repetee_et_casse_differente():
     assert build_neighbour_table(cased) == {"a": [], "b": [], "c": []}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : deux étiquettes identiques à l'œil, l'une en NFC et l'autre en NFD "
-        "(« fermentação » saisi sur deux systèmes), ne se rencontrent pas"
-    ),
-)
 def test_defaut_une_etiquette_nfd_ne_rencontre_pas_la_meme_en_nfc():
     corpus = [
         {"id": "a", "tags": ["fermentação", "x"]},
@@ -296,14 +289,6 @@ def test_defaut_une_etiquette_nfd_ne_rencontre_pas_la_meme_en_nfc():
     assert build_neighbour_table(corpus)["a"] != []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : des étiquettes passées en chaîne au lieu d'une liste (« blog » lu "
-        "d'une colonne CSV) sont découpées lettre à lettre : « blog » et « gloss » "
-        "deviennent voisins à 0,29 par leurs lettres communes"
-    ),
-)
 def test_defaut_des_etiquettes_en_chaine_sont_lues_lettre_a_lettre():
     corpus = [{"id": "a", "tags": "blog"}, {"id": "b", "tags": "gloss"}, {"id": "c", "tags": "x"}]
     try:

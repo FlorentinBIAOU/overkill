@@ -215,29 +215,25 @@ test('production : étiquette répétée et casse différente', () => {
   assert.deepEqual(buildNeighbourTable(cased), { a: [], b: [], c: [] });
 });
 
-test('DÉFAUT : une étiquette NFD ne rencontre pas la même en NFC', async () => {
-  await assert.rejects(async () => {
-    const corpus = [
-      { id: 'a', tags: ['fermentação', 'x'] },
-      { id: 'b', tags: ['fermentação'.normalize('NFD'), 'y'] },
-      { id: 'c', tags: ['z'] },
-    ];
-    assert.notDeepEqual(buildNeighbourTable(corpus).a, []);
-  });
+test('une étiquette NFD ne rencontre pas la même en NFC', async () => {
+  const corpus = [
+    { id: 'a', tags: ['fermentação', 'x'] },
+    { id: 'b', tags: ['fermentação'.normalize('NFD'), 'y'] },
+    { id: 'c', tags: ['z'] },
+  ];
+  assert.notDeepEqual(buildNeighbourTable(corpus).a, []);
 });
 
-test('DÉFAUT : des étiquettes en chaîne sont lues lettre à lettre', async () => {
-  await assert.rejects(async () => {
-    const corpus = [{ id: 'a', tags: 'blog' }, { id: 'b', tags: 'gloss' }, { id: 'c', tags: 'x' }];
-    let table;
-    try {
-      table = buildNeighbourTable(corpus);
-    } catch (error) {
-      if (error instanceof TypeError) return;
-      throw error;
-    }
-    assert.deepEqual(table.a, []);
-  });
+test('des étiquettes en chaîne sont lues lettre à lettre', async () => {
+  const corpus = [{ id: 'a', tags: 'blog' }, { id: 'b', tags: 'gloss' }, { id: 'c', tags: 'x' }];
+  let table;
+  try {
+    table = buildNeighbourTable(corpus);
+  } catch (error) {
+    if (error instanceof TypeError) return;
+    throw error;
+  }
+  assert.deepEqual(table.a, []);
 });
 
 test('production : limites k nul et score égal au minimum', () => {

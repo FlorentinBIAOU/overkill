@@ -180,14 +180,12 @@ test('un lot tronqué lève plutôt que de décaler chaque voisin', async () => 
   await assert.rejects(() => buildNeighbourTable(ARTICLES, { encoder: new TruncatedEncoder(256) }), EncodingFailed);
 });
 
-test('INFIRMÉ : des vecteurs inutilisables lèvent', async () => {
-  await assert.rejects(async () => {
-    const nan = { encode: async (texts) => texts.map(() => [NaN, NaN, NaN]) };
-    const ragged = { encode: async (texts) => texts.map((_, i) => (i === texts.length - 1 ? [1, 0, 5] : [1, 0])) };
-    for (const bad of [nan, ragged]) {
-      await assert.rejects(() => buildNeighbourTable(ARTICLES, { encoder: bad }), EncodingFailed);
-    }
-  });
+test('des vecteurs inutilisables lèvent', async () => {
+  const nan = { encode: async (texts) => texts.map(() => [NaN, NaN, NaN]) };
+  const ragged = { encode: async (texts) => texts.map((_, i) => (i === texts.length - 1 ? [1, 0, 5] : [1, 0])) };
+  for (const bad of [nan, ragged]) {
+    await assert.rejects(() => buildNeighbourTable(ARTICLES, { encoder: bad }), EncodingFailed);
+  }
 });
 
 test('constat : le double ne comble pas le trou des deux langues', async () => {

@@ -13,7 +13,16 @@ site announcement next to every article on the site.
 """
 
 import math
+import unicodedata
 from collections import Counter
+
+
+def tag_set(tags) -> set[str]:
+    """Each tag once, in NFC, so that a tag typed on two systems meets itself."""
+    if isinstance(tags, str):
+        # A lone string would be read letter by letter, and "blog" would meet "gloss".
+        raise TypeError("tags must be a list of strings, not a string")
+    return {unicodedata.normalize("NFC", tag) for tag in tags}
 
 
 def tag_weights(articles: list[dict]) -> dict[str, float]:
@@ -24,7 +33,7 @@ def tag_weights(articles: list[dict]) -> dict[str, float]:
     article. That is the point, not a rounding accident: such a tag must not
     create any similarity at all.
     """
-    counts = Counter(tag for article in articles for tag in set(article["tags"]))
+    counts = Counter(tag for article in articles for tag in tag_set(article["tags"]))
     return {tag: math.log(len(articles) / count) for tag, count in counts.items()}
 
 
@@ -34,8 +43,8 @@ def _norm(vector: dict[str, float]) -> float:
 
 def similarity(first_tags, second_tags, weights: dict[str, float]) -> float:
     """Cosine between two tag sets, each weighted by tag rarity."""
-    first = {tag: weights.get(tag, 0.0) for tag in set(first_tags)}
-    second = {tag: weights.get(tag, 0.0) for tag in set(second_tags)}
+    first = {tag: weights.get(tag, 0.0) for tag in tag_set(first_tags)}
+    second = {tag: weights.get(tag, 0.0) for tag in tag_set(second_tags)}
     shared = sum(first[tag] * second[tag] for tag in first.keys() & second.keys())
     norms = _norm(first) * _norm(second)
     # An article carrying only universal tags has a null vector, and no

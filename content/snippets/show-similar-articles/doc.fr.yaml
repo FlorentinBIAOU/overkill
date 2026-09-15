@@ -22,46 +22,49 @@ n1.py: |
   Articles liés par le texte lui-même : TF-IDF, puis similarité cosinus.
 
   Niveau N1. N0 ne voit que ce que quelqu'un a pensé à étiqueter. Celui-ci lit
-  l'article, et laisse le corpus décider quels mots comptent : un mot qui
-  figure dans tous les articles ne pèse presque rien, ce qui est l'idée de N0
-  appliquée au vocabulaire plutôt qu'aux libellés. Personne n'a rien à
-  entretenir.
+  l'article, et laisse le corpus décider quels mots comptent : plus un mot est
+  rare dans le corpus, plus il pèse. À la différence d'une étiquette portée
+  par tous les articles en N0, un mot présent dans tous les articles pèse
+  encore quelque chose : c'est pourquoi la liste de mots vides ci-dessous fait
+  partie du travail, une par langue.
 
   Toujours calculé hors ligne, une fois par modification du fonds, et il rend
-  la même table de voisins que N0. Le code qui affiche la page ne change pas
-  quand on passe d'un niveau au suivant : c'est ce qui rend le passage bon
-  marché.
+  une table de voisins de la même forme que N0. Le code qui affiche la page ne
+  change pas quand on passe d'un niveau au suivant : c'est ce qui rend le
+  passage bon marché.
 
 n1.js: |
   Articles liés par le texte lui-même : TF-IDF, puis similarité cosinus.
 
   Niveau N1. N0 ne voit que ce que quelqu'un a pensé à étiqueter. Celui-ci lit
-  l'article, et laisse le corpus décider quels mots comptent : un mot qui
-  figure dans tous les articles ne pèse presque rien, ce qui est l'idée de N0
-  appliquée au vocabulaire plutôt qu'aux libellés. Personne n'a rien à
-  entretenir.
+  l'article, et laisse le corpus décider quels mots comptent : plus un mot est
+  rare dans le corpus, plus il pèse. À la différence d'une étiquette portée
+  par tous les articles en N0, un mot présent dans tous les articles pèse
+  encore quelque chose : c'est pourquoi la liste de mots vides ci-dessous fait
+  partie du travail, une par langue.
 
   Écrit en entier plutôt que tiré d'une bibliothèque, parce que TF-IDF est un
-  comptage, un logarithme et une division. La pondération ci-dessous est la
-  pondération lissée usuelle : ce fichier classe donc un corpus exactement
-  comme le fait la version Python.
+  comptage, un logarithme et une division. Le découpage en jetons et la
+  pondération ci-dessous sont ceux de scikit-learn par défaut : ce fichier
+  classe donc un corpus comme le fait la version Python.
 
 n2: |
   Articles liés par des embeddings de documents auto-hébergés.
 
   Niveau N2. N1 compare des mots. Deux articles qui traitent du même sujet
   avec deux vocabulaires, ou dans deux langues, ne partagent aucun terme et
-  obtiennent exactement zéro. Un encodeur projette chaque article dans un
-  vecteur où c'est le sens, et non l'orthographe, qui décide de la distance :
-  l'article français et l'article anglais sur le levain peuvent alors se
-  retrouver ensemble.
+  obtiennent exactement zéro. L'encodeur nommé ci-dessous est multilingue,
+  entraîné pour qu'une phrase et sa traduction tombent près l'une de l'autre :
+  c'est ce qui pourrait réunir l'article français et l'article anglais sur le
+  levain, ce que le double local du test ne fait pas. Il ne lit que le début
+  d'un long article (128 jetons en Python, 512 en JavaScript) et coupe le
+  reste.
 
   La table est toujours construite hors ligne, une fois par modification du
   fonds, et elle a la même forme que celle que rendent N0 et N1 : le code qui
-  affiche la page ne change jamais. Ce qui change, c'est ce que vous faites
-  tourner désormais — quelques centaines de mégaoctets de poids, un processus à
-  tenir chaud, et un index vectoriel dès que le fonds ne tient plus dans une
-  simple liste.
+  affiche la page ne change jamais. Ce qui change, c'est ce que la
+  construction fait tourner : un modèle dont les poids sont téléchargés une
+  fois, puis chargés à chaque construction de la table.
 
   L'encodeur est un paramètre doté d'une valeur par défaut réelle : le lecteur
   voit ainsi le code de chargement, tandis que le test injecte un double local.

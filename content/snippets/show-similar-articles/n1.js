@@ -2,17 +2,19 @@
  * Related articles from the text itself: TF-IDF, then cosine similarity.
  *
  * Rung N1. N0 only sees what someone remembered to tag. This reads the
- * article, and lets the corpus decide which words matter: a word appearing in
- * every article weighs almost nothing, which is the idea of N0 applied to
- * vocabulary instead of labels. Nobody has to maintain anything.
+ * article, and lets the corpus decide which words matter: the rarer a word
+ * across the corpus, the more it weighs. Unlike a tag on every article at N0, a
+ * word in every article still weighs something, which is why the stop list
+ * below is part of the job, one per language.
  *
  * Written out rather than pulled from a library, because TF-IDF is a count, a
- * logarithm and a division. The weighting below is the standard smoothed one,
- * so this ranks a corpus exactly as the Python version does.
+ * logarithm and a division. The tokens and the weighting below are
+ * scikit-learn's defaults, so this ranks a corpus as the Python version does.
  */
 
-// Runs of two or more letters, digits or underscores. A one-letter token
-// carries no subject, and dropping it costs nothing.
+// Runs of two or more letters, digits or underscores, as scikit-learn's
+// default token pattern. A one-letter word, such as the C of "Programming in
+// C", is dropped with the rest.
 const TOKEN = /[\p{L}\p{N}_]{2,}/gu;
 
 export function tokenise(text, stopWords = new Set()) {
@@ -21,7 +23,10 @@ export function tokenise(text, stopWords = new Set()) {
 
 /** The title counts twice: a word in a title is a stronger claim. */
 export function articleText(article) {
-  return `${article.title} ${article.title} ${article.body}`;
+  const title = article.title ?? '';
+  const body = article.body ?? ''; // a NULL column is empty
+  // NFC: the same accented word typed on two systems is one token, not two halves.
+  return `${title} ${title} ${body}`.normalize('NFC');
 }
 
 /** One l2-normalised TF-IDF vector per document, as a Map of term to weight. */
@@ -32,8 +37,8 @@ export function vectorise(texts, stopWords = new Set()) {
     for (const term of new Set(terms)) appearances.set(term, (appearances.get(term) ?? 0) + 1);
   }
 
-  // Smoothed: as if one extra document held every term, so a term present
-  // everywhere still has a defined weight instead of a division by zero.
+  // Smoothed, as scikit-learn does by default: as if one extra document held
+  // every term once. A term present everywhere weighs 1, the least possible.
   const idf = (term) => Math.log((1 + documents.length) / (1 + appearances.get(term))) + 1;
 
   return documents.map((terms) => {
@@ -57,9 +62,9 @@ function cosine(first, second) {
  * Return `{ [article id]: [[neighbour id, score], ...] }`, best first.
  *
  * `stopWords` is a per-language list, so it belongs to the caller and not to
- * this function. Without one the ranking still works, because a word in every
- * article is downweighted anyway, but the floor has to do more of the job on
- * a small corpus.
+ * this function. Without one, the words every article shares still count: on
+ * the test corpus, the knife-sharpening article gets the site announcement as
+ * a neighbour.
  *
  * `minimum` is that floor, not a knob to be tweaked until the block looks
  * full: below it, two articles share ordinary words and nothing else, and

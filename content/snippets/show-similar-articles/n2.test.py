@@ -231,15 +231,6 @@ def test_un_lot_tronque_leve_plutot_que_de_decaler_chaque_voisin():
         build_neighbour_table(ARTICLES, encoder=TruncatedEncoder(dimensions=256))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : EncodingFailed se dit levée quand l'encodeur « returned something "
-        "unusable ». Des vecteurs NaN rendent une table entièrement vide, qui se lit "
-        "« aucun article n'a de voisin » ; des vecteurs de dimensions incohérentes "
-        "(zip tronque) rendent des voisins à 1,0. Rien ne lève"
-    ),
-)
 def test_infirme_des_vecteurs_inutilisables_levent():
     nan = TableEncoder(lambda texts: [[float("nan")] * 3 for _ in texts])
     ragged = TableEncoder(lambda texts: [[1.0, 0.0]] * (len(texts) - 1) + [[1.0, 0.0, 5.0]])

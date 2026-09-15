@@ -2,14 +2,17 @@
 Related articles from the text itself: TF-IDF, then cosine similarity.
 
 Rung N1. N0 only sees what someone remembered to tag. This reads the article,
-and lets the corpus decide which words matter: a word appearing in every
-article weighs almost nothing, which is the idea of N0 applied to vocabulary
-instead of labels. Nobody has to maintain anything.
+and lets the corpus decide which words matter: the rarer a word across the
+corpus, the more it weighs. Unlike a tag on every article at N0, a word in every
+article still weighs something, which is why the stop list below is part of
+the job, one per language.
 
-Still computed offline, once per corpus change, and it returns the same
-neighbour table as N0. The page-rendering code does not change when you move
-from one rung to the next, which is what makes the move cheap.
+Still computed offline, once per corpus change, and it returns a neighbour
+table of the same shape as N0. The page-rendering code does not change when
+you move from one rung to the next, which is what makes the move cheap.
 """
+
+import unicodedata
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
@@ -23,7 +26,9 @@ def article_text(article: dict) -> str:
     buried in the fourth paragraph, and repeating the title is the cheapest
     way to say so to a bag-of-words model.
     """
-    return f"{article['title']} {article['title']} {article['body']}"
+    title, body = article["title"] or "", article["body"] or ""  # a NULL column is empty
+    # NFC: the same accented word typed on two systems is one token, not two halves.
+    return unicodedata.normalize("NFC", f"{title} {title} {body}")
 
 
 def build_neighbour_table(
@@ -36,9 +41,9 @@ def build_neighbour_table(
     Return `{article id: [(neighbour id, score), ...]}`, best neighbour first.
 
     `stop_words` is a per-language list, so it belongs to the caller and not
-    to this function. Without one the ranking still works, because a word in
-    every article is downweighted anyway, but the floor has to do more of the
-    job on a small corpus.
+    to this function. Without one, the words every article shares still count:
+    on the test corpus, the knife-sharpening article gets the site announcement
+    as a neighbour.
 
     `minimum` is that floor, not a knob to be tweaked until the block looks
     full: below it, two articles share ordinary words and nothing else, and
@@ -49,7 +54,10 @@ def build_neighbour_table(
 
     # Rows come out l2-normalised, so their dot product is already a cosine.
     vectoriser = TfidfVectorizer(stop_words=stop_words)
-    matrix = vectoriser.fit_transform(article_text(a) for a in articles)
+    try:
+        matrix = vectoriser.fit_transform(article_text(a) for a in articles)
+    except ValueError:  # no word left at all: nothing to compare, no neighbours
+        return {article["id"]: [] for article in articles}
     scores = linear_kernel(matrix)
 
     table = {}
