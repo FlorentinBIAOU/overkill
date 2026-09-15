@@ -1,32 +1,41 @@
 /**
  * Route comments with a self-hosted toxicity classifier.
  *
- * Rung N2. A distilled encoder fine-tuned on a moderation corpus, running on
- * your own machine. It reads context the n-grams of N1 cannot, and it stays
- * inside your infrastructure, which matters when the text you are sending
- * away is the abuse one of your users just received.
+ * Rung N2. A RoBERTa encoder fine-tuned on the Civil Comments corpus of a
+ * public toxicity challenge, running on your own machine. It arrives trained
+ * on labelled comments, which N1 makes you gather yourself, and it stays
+ * inside your infrastructure, which matters when the text you would send away
+ * is the abuse one of your users just received.
  *
  * What you own on this rung is not the model, it is everything around it: the
- * batching, the thresholds, and the answer to "what does the code do when the
- * model says nothing usable". The model itself is a black box with a fixed
- * list of labels, and the last function below is where that becomes your
- * problem.
+ * batching, the thresholds, the labels that may decide, and the answer to
+ * "what does the code do when the model says nothing usable". The model itself
+ * is a black box with a fixed list of labels, and the last function below is
+ * where that becomes your problem.
  */
 
-export const MODEL_NAME = 'Xenova/toxic-bert';
+// The same model as the Python snippet, exported to ONNX with its weights at
+// the root of the repository rather than in an `onnx/` folder.
+export const MODEL_NAME = 'protectai/unbiased-toxic-roberta-onnx';
+
+// The labels that name a harm. The model also scores which identities a
+// comment mentions (male, muslim, black…): those say who is mentioned, not what
+// is done to them, and they never decide anything here.
+export const HARM_LABELS = ['toxicity', 'severe_toxicity', 'obscene', 'identity_attack', 'insult', 'threat', 'sexual_explicit'];
 
 // Two thresholds, not one: between "obviously fine" and "obviously not" there
-// is a band that belongs to a human, and pretending otherwise is how automated
-// moderation earns its reputation.
+// is a band that belongs to a human.
 export const DEFAULT_THRESHOLDS = { block: 0.9, review: 0.6 };
 
 export class ModerationUnavailable extends Error {}
 
-/** The real model, loaded once and kept in memory for the process. */
+/** The real model. A large download: load it once, with `defaultModel`. */
 export class ToxicityModel {
   static async load(name = MODEL_NAME) {
-    const { pipeline } = await import('@huggingface/transformers'); // a large download, done once
-    return new ToxicityModel(await pipeline('text-classification', name));
+    const { pipeline } = await import('@huggingface/transformers');
+    // Full precision, as in Python; the pipeline truncates to the length the
+    // model reads, so whatever sits past it in a very long comment is not scored.
+    return new ToxicityModel(await pipeline('text-classification', name, { subfolder: '', dtype: 'fp32' }));
   }
 
   constructor(pipe) {
@@ -40,19 +49,30 @@ export class ToxicityModel {
   }
 }
 
+let loading;
+
+/** The real model, loaded on first use and kept for the process. */
+export function defaultModel() {
+  loading ??= ToxicityModel.load().catch((error) => {
+    loading = undefined; // a failed load is not kept: the next call retries
+    throw error;
+  });
+  return loading;
+}
+
 /**
  * Decide what to do with each comment: block, send to review, or allow.
  *
  * `classifier` is injected so this can be tested without downloading the
  * weights. In production it defaults to the real model above.
  *
- * The whole batch goes in one call. Feeding comments one by one is the usual
- * way this rung is made slow, because a batch of a hundred is one pass through
- * the model and a hundred calls are a hundred passes.
+ * The whole list goes to the classifier in one call, and Transformers.js runs
+ * it through the model in one pass, padded to the longest comment.
  */
 export async function moderate(comments, classifier, thresholds = DEFAULT_THRESHOLDS) {
-  const model = classifier ?? (await ToxicityModel.load());
   const batch = [...comments];
+  if (batch.length === 0) return [];
+  const model = classifier ?? (await defaultModel());
   const scored = await model.predict(batch);
   if (scored.length !== batch.length) {
     throw new ModerationUnavailable('the model returned one row per comment, and did not');
@@ -61,14 +81,14 @@ export async function moderate(comments, classifier, thresholds = DEFAULT_THRESH
 }
 
 /**
- * Keep the strongest label, and fall back to a human when nothing is usable.
+ * Keep the strongest harm label, and fall back to a human when nothing is usable.
  *
  * Falling back to "allow" would be the tempting shortcut, and it would mean
  * that a model failure silently publishes everything it was asked about.
  */
 function decide(scores, thresholds) {
   const usable = Object.entries(scores ?? {}).filter(
-    ([, v]) => typeof v === 'number' && v >= 0 && v <= 1,
+    ([label, v]) => HARM_LABELS.includes(label) && typeof v === 'number' && v >= 0 && v <= 1,
   );
   if (usable.length === 0) return { action: 'review', label: null, score: null };
   const [label, score] = usable.reduce((best, row) => (row[1] > best[1] ? row : best));

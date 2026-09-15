@@ -7,13 +7,14 @@ n0: |
   rendant le contexte.
 
   Niveau N0. Déterministe, aucune dépendance, et vérifiable : chaque décision
-  se ramène à un mot d'une liste que vous tenez.
+  se ramène à une entrée d'une liste que vous tenez.
 
   Deux choses le rendent utilisable, et pas seulement simple.
 
-  D'abord, la normalisation. Les accents et la casse sont des graphies du même
-  mot : ils sont réduits avant la comparaison. Rien d'autre n'est touché, car
-  aller plus loin commencerait à inventer des correspondances.
+  D'abord, la normalisation. La casse, les accents et les formes de
+  compatibilité (lettres pleine largeur, ligatures, exposants) sont des
+  graphies du même mot : ils sont réduits avant la comparaison. Les sosies ne
+  le sont pas : un 0 reste un 0, et c'est pourquoi bl0rptard passe.
 
   Ensuite, la fenêtre de contexte. Une liste de termes ne peut rien décider
   seule, donc la fonction renvoie les mots autour de chaque trouvaille. Un
@@ -30,13 +31,13 @@ n1.js: |
   la forme montrée au modèle, et qu'une variante que personne n'a ajoutée à
   une liste obtient quand même une note.
 
-  Écrit à la main plutôt que tiré d'une bibliothèque, parce qu'une régression
-  logistique sur des n-grammes de caractères hachés tient en quarante lignes.
-  Le modèle est un vecteur de poids : assez petit pour vivre à côté du code,
-  entraîné le temps que vous lisiez ceci, et chaque poids peut être imprimé
-  et discuté. En modération, cette dernière propriété vaut mieux qu'un point
-  de justesse, parce qu'un jour ou l'autre quelqu'un demande pourquoi son
-  commentaire a été masqué.
+  Écrit à la main plutôt que tiré d'une bibliothèque : hacher les n-grammes
+  de caractères, entraîner une régression logistique et noter tiennent en
+  quatre fonctions courtes. Le modèle est un vecteur de poids, assez petit
+  pour vivre à côté du code et entraîné le temps que vous lisiez ceci. Chaque
+  poids peut être imprimé, mais avec le hachage un poids vaut pour tous les
+  n-grammes qui tombent dans sa case : pour en discuter un, listez d'abord ces
+  n-grammes. Quelqu'un demandera pourquoi son commentaire a été masqué.
 
 n1.py: |
   Noter un commentaire avec un classifieur linéaire entraîné sur un corpus
@@ -50,32 +51,33 @@ n1.py: |
 
   Le modèle entier est un vecteur de poids sur des n-grammes de caractères.
   Il est assez petit pour vivre à côté du code, il s'entraîne le temps que
-  vous lisiez cette docstring, et chaque poids peut être imprimé et discuté.
-  En modération, cette dernière propriété vaut mieux qu'un point de justesse :
-  quelqu'un demandera pourquoi un commentaire a été masqué.
+  vous lisiez cette docstring, et chaque poids peut être imprimé à côté du
+  n-gramme auquel il appartient. Quelqu'un demandera pourquoi son commentaire
+  a été masqué.
 
 n2: |
   Orienter les commentaires avec un classifieur de toxicité auto-hébergé.
 
-  Niveau N2. Un encodeur distillé, affiné sur un corpus de modération, qui
-  tourne sur votre machine. Il lit un contexte que les n-grammes de N1 ne
-  peuvent pas lire, et il reste dans votre infrastructure, ce qui compte
-  quand le texte qu'on enverrait ailleurs est l'injure qu'un de vos
-  utilisateurs vient de recevoir.
+  Niveau N2. Un encodeur RoBERTa affiné sur le corpus Civil Comments d'un défi
+  public de détection de toxicité, qui tourne sur votre machine. Il arrive
+  entraîné sur des commentaires étiquetés, que N1 vous oblige à rassembler
+  vous-même, et il reste dans votre infrastructure, ce qui compte quand le
+  texte qu'on enverrait ailleurs est l'injure qu'un de vos utilisateurs vient
+  de recevoir.
 
   Ce qui vous appartient à ce niveau n'est pas le modèle, c'est tout ce qui
-  l'entoure : le regroupement en lots, les seuils, et la réponse à « que fait
-  le code quand le modèle ne dit rien d'exploitable ». Le modèle lui-même est
+  l'entoure : le regroupement en lots, les seuils, les étiquettes qui ont le
+  droit de décider, et la réponse à « que fait le code quand le modèle ne dit
+  rien d'exploitable ». Le modèle lui-même est
   une boîte noire avec une liste d'étiquettes figée, et la dernière fonction
   ci-dessous est l'endroit où cela devient votre problème.
 
 n3: |
   Noter un commentaire en interrogeant un modèle généraliste.
 
-  Niveau N3. Le code le plus court à écrire de toute l'échelle, et celui qui
-  abandonne le plus : le sens de chaque catégorie, l'étalonnage, le droit de
-  contester, et le texte des commentaires de vos utilisateurs, qui sort de
-  chez vous à chaque appel.
+  Niveau N3. Le niveau qui abandonne le plus : le sens de chaque catégorie,
+  l'étalonnage, le droit de contester, et le texte des commentaires de vos
+  utilisateurs, qui sort de chez vous à chaque appel.
 
   Vous nommez les catégories ci-dessous ; le modèle décide de ce qu'elles
   veulent dire. Tout le reste ici — plafonner l'entrée, réessayer, refuser

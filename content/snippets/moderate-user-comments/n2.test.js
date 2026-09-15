@@ -79,12 +79,10 @@ test('une réponse de mauvaise longueur lève plutôt que de décaler les commen
   }
 });
 
-test("INFIRMÉ : le test existant s'appelle « an empty batch never reaches the model » ; le modèle est appelé avec []", async () => {
+test("le test existant s'appelle « an empty batch never reaches the model » ; le modèle est appelé avec []", async () => {
   const classifier = new FakeClassifier(SCORES);
   assert.deepEqual(await moderate([], classifier), []);
-  await assert.rejects(async () => {
-    assert.deepEqual(classifier.calls, []);
-  }, assert.AssertionError);
+  assert.deepEqual(classifier.calls, []);
 });
 
 test("le classifieur est injecté, et par défaut c'est le vrai", async () => {
@@ -103,7 +101,7 @@ test('predict demande toutes les étiquettes et rend une ligne par commentaire',
   assert.deepEqual(seen, [{ top_k: null }]);
 });
 
-test('INFIRMÉ : « The real model, loaded once and kept in memory for the process » ; moderate sans classifieur recharge à chaque appel', async () => {
+test('« The real model, loaded once and kept in memory for the process » ; moderate sans classifieur recharge à chaque appel', async () => {
   const original = ToxicityModel.load;
   let loads = 0;
   ToxicityModel.load = async () => {
@@ -116,9 +114,7 @@ test('INFIRMÉ : « The real model, loaded once and kept in memory for the proce
   } finally {
     ToxicityModel.load = original;
   }
-  await assert.rejects(async () => {
-    assert.equal(loads, 1);
-  }, assert.AssertionError);
+  assert.equal(loads, 1);
 });
 
 test("DÉFAUT : une ligne d'une autre forme ({label, score}) devient une décision étiquetée « score »", async () => {

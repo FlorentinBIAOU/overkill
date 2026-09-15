@@ -101,13 +101,11 @@ test("bl0rptard et blorptardd partagent l'essentiel de leurs traits", () => {
   }
 });
 
-test('INFIRMÉ : chaque classe est pondérée par sa rareté pour ne pas tout laisser passer ; sur 2 insultes pour 36 commentaires, le modèle pondéré laisse tout passer (Python en attrape 2)', async () => {
+test('chaque classe est pondérée par sa rareté pour ne pas tout laisser passer ; sur 2 insultes pour 36 commentaires, le modèle pondéré laisse tout passer (Python en attrape 2)', async () => {
   const comments = [...ABUSIVE.slice(0, 2), ...ORDINARY, ...ORDINARY, ...ORDINARY];
   const labels = [1, 1, ...new Array(36).fill(0)];
   const weighted = train(comments, labels);
-  await assert.rejects(async () => {
-    assert.ok(ABUSIVE.slice(4).some((c) => isAbusive(weighted, c)));
-  }, assert.AssertionError);
+  assert.ok(ABUSIVE.slice(4).some((c) => isAbusive(weighted, c)));
 });
 
 test('INFIRMÉ : « chaque poids peut être imprimé et discuté » ; un poids est une case de hachage partagée par plusieurs n-grammes', async () => {
@@ -180,24 +178,20 @@ test("une note prend moins d'une milliseconde", () => {
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test("DÉFAUT : un commentaire vide est jugé injurieux (score 0,67) ; Python le laisse passer (0,45)", async () => {
-  await assert.rejects(async () => {
-    assert.ok(!isAbusive(model, ''));
-  }, assert.AssertionError);
+test("un commentaire vide est jugé injurieux (score 0,67) ; Python le laisse passer (0,45)", async () => {
+  assert.ok(!isAbusive(model, ''));
 });
 
-test("DÉFAUT : un corpus vide ou d'une seule classe est accepté, et le modèle obtenu signale tout", async () => {
-  await assert.rejects(async () => {
-    for (const [comments, labels] of [[[], []], [['you blorptard', 'what a flarnwit'], [1, 1]]]) {
-      let trained;
-      try {
-        trained = train(comments, labels);
-      } catch {
-        continue;
-      }
-      assert.ok(!isAbusive(trained, 'thank you for the article'));
+test("un corpus vide ou d'une seule classe est accepté, et le modèle obtenu signale tout", async () => {
+  for (const [comments, labels] of [[[], []], [['you blorptard', 'what a flarnwit'], [1, 1]]]) {
+    let trained;
+    try {
+      trained = train(comments, labels);
+    } catch {
+      continue;
     }
-  }, assert.AssertionError);
+    assert.ok(!isAbusive(trained, 'thank you for the article'));
+  }
 });
 
 test('production : un commentaire de cent Ko termine', () => {

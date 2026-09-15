@@ -122,10 +122,6 @@ def test_une_reponse_de_mauvaise_longueur_leve_plutot_que_de_decaler_les_comment
             moderate([ATTACK, CALM], classifier)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le test existant s'appelle « an empty batch never reaches the model » ; le modèle est appelé avec []",
-)
 def test_un_lot_vide_n_atteint_jamais_le_modele():
     classifier = FakeClassifier(SCORES)
     assert moderate([], classifier) == []
@@ -146,11 +142,6 @@ def test_predict_convertit_la_sortie_du_pipeline_une_ligne_par_commentaire():
     assert model.predict([ATTACK, CALM]) == [{"toxicity": 0.9, "insult": 0.1}] * 2
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring dit « The real model, loaded once and kept in memory for the process » ; "
-    "`moderate` sans classifieur construit un ToxicityModel, donc recharge le pipeline, à chaque appel",
-)
 def test_le_vrai_modele_est_charge_une_fois_pour_le_processus(monkeypatch):
     loads = []
 
@@ -167,11 +158,6 @@ def test_le_vrai_modele_est_charge_une_fois_pour_le_processus(monkeypatch):
     assert len(loads) == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : la décision prend le maximum sur toutes les étiquettes ; le modèle par défaut (unbiased-toxic-roberta) "
-    "rend aussi des étiquettes de mention d'identité (muslim, female…), et un commentaire qui mentionne une identité est bloqué",
-)
 def test_defaut_une_etiquette_de_mention_d_identite_ne_bloque_pas_un_commentaire():
     comment = "as a muslim woman i found the second section very useful"
     row = {"toxicity": 0.01, "severe_toxicity": 0.0, "obscene": 0.0, "identity_attack": 0.01, "insult": 0.0,
@@ -179,10 +165,6 @@ def test_defaut_une_etiquette_de_mention_d_identite_ne_bloque_pas_un_commentaire
     assert moderate([comment], FakeClassifier({comment: row}))[0]["action"] == "allow"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une ligne d'une autre forme ({'label': …, 'score': …}) devient une décision étiquetée « score »",
-)
 def test_defaut_une_ligne_d_une_autre_forme_ne_devient_pas_une_decision():
     rows = {ATTACK: {"label": "toxicity", "score": 0.95}}
     assert moderate([ATTACK], FakeClassifier(rows))[0]["action"] == "review"

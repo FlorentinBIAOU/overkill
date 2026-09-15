@@ -15,8 +15,8 @@ need:
   en: "Keep an abusive comment from being published, or put it in front of a moderator before it is."
 
 scenario:
-  fr: "Deux réflexes se croisent : une liste de gros mots recopiée d’un dépôt public, ou un appel de modèle généraliste sur chaque commentaire soumis. Les deux passent à côté de la difficulté réelle, qui n’est pas de reconnaître le mot mais de savoir ce qu’il fait là : la même insulte est tantôt l’attaque, tantôt la citation de cette attaque par la personne qui la signale, tantôt une plaisanterie entre habitués. Et ce qui sort de la chaîne n’est pas un score, c’est une décision prise sur le texte de quelqu’un, qu’il faudra un jour lui expliquer."
-  en: "Two reflexes meet here: a swear-word list copied from a public repository, or a general-purpose model called on every submitted comment. Both miss the real difficulty, which is not recognising the word but working out what it is doing there: the same insult is the attack in one comment, a quotation of that attack by the person reporting it in the next, and banter between regulars in the one after. What comes out of the pipeline is not a score either, it is a decision taken about somebody’s writing, and sooner or later it has to be explained to them."
+  fr: "Deux solutions sont à portée de main : une liste de gros mots, ou un appel de modèle généraliste sur chaque commentaire soumis. La difficulté, pourtant, n’est pas de reconnaître le mot mais de savoir ce qu’il fait là : la même insulte est tantôt l’attaque, tantôt la citation de cette attaque par la personne qui la signale, tantôt une plaisanterie entre habitués. Et ce qui sort de la chaîne n’est pas un score, c’est une décision prise sur le texte de quelqu’un, qu’il faudra un jour lui expliquer."
+  en: "Two answers are within easy reach: a swear-word list, or a general-purpose model called on every submitted comment. The difficulty, though, is not recognising the word but working out what it is doing there: the same insult is the attack in one comment, a quotation of that attack by the person reporting it in the next, and banter between regulars in the one after. What comes out of the pipeline is not a score either, it is a decision taken about somebody’s writing, and sooner or later it has to be explained to them."
 
 rungs:
   - level: N0
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/moderate-user-comments/n0.js
       verification: executed
     breaking_point:
-      fr: "Deux moitiés, toutes deux dans le test. Une graphie absente de la liste passe intacte : « bl0rptard », « blorp-tard », les lettres espacées une à une. Et la liste voit le mot, jamais son emploi : le message « he called me a blorptard, please remove his comment » est signalé exactement comme l’insulte qu’il rapporte, et rien dans le résultat ne les distingue."
-      en: "Two halves, both in the test. A spelling the list does not hold walks straight past: bl0rptard, blorp-tard, letters spaced one by one. And the list sees the word, never its use: “he called me a blorptard, please remove his comment” is flagged exactly like the insult it reports, and nothing in the result tells them apart."
+      fr: "Deux moitiés, toutes deux dans le test. Une graphie absente de la liste passe intacte : « bl0rptard », « blorp-tard », les lettres espacées une à une. Et la liste voit le mot, jamais son emploi : le message « he called me a blorptard, please remove his comment » est signalé exactement comme l’insulte qu’il rapporte : même drapeau, même terme, et seule la fenêtre de contexte, qu’un humain doit lire, les distingue."
+      en: "Two halves, both in the test. A spelling the list does not hold walks straight past: bl0rptard, blorp-tard, letters spaced one by one. And the list sees the word, never its use: “he called me a blorptard, please remove his comment” is flagged exactly like the insult it reports: same flag, same term, and only the context window, which a human has to read, tells them apart."
     escalate_when:
       fr: "Vos modérateurs passent leur journée à classer sans suite des signalements qui n’en sont pas, ou vous ajoutez une graphie de plus à la liste chaque semaine."
       en: "Your moderators spend the day closing flags that were never abuse, or you are adding one more spelling to the list every week."
@@ -71,8 +71,8 @@ rungs:
       javascript: snippets/moderate-user-comments/n1.js
       verification: executed
     breaking_point:
-      fr: "Le modèle apprend un vocabulaire, pas une intention. Le test le montre des deux côtés : « people like you should not be allowed to have an account here » ne réemploie aucune forme vue à l’entraînement et reste sous le seuil, tandis que le signalement « he called me a blorptard, please remove his comment » repasse au-dessus. Un corpus plus fourni déplace la frontière sans changer ce que le modèle regarde, qui reste la surface du texte."
-      en: "The model learns a vocabulary, not an intent. The test shows both sides: “people like you should not be allowed to have an account here” reuses no shape it was trained on and stays under the threshold, while the report “he called me a blorptard, please remove his comment” lands above it. A larger corpus moves the boundary without changing what the model looks at, which is still the surface of the text."
+      fr: "Le modèle apprend des fragments de texte, pas une intention. Le test le montre des deux côtés : « people like you should not be allowed to have an account here », qui n’emploie aucune des insultes du corpus, reste sous le seuil, tandis que le signalement « he called me a blorptard, please remove his comment » passe au-dessus. Un corpus plus fourni change les poids, pas ce que le modèle lit : des n-grammes de caractères."
+      en: "The model learns fragments of text, not an intent. The test shows both sides: “people like you should not be allowed to have an account here”, which uses none of the corpus insults, stays under the threshold, while the report “he called me a blorptard, please remove his comment” lands above it. A larger corpus changes the weights, not what the model reads: character n-grams."
     escalate_when:
       fr: "L’hostilité qui vous échappe est écrite en langue ordinaire, sans un seul terme que vous puissiez lister ou étiqueter."
       en: "The hostility you are missing is written in plain words, without a single term you could list or label."
@@ -95,17 +95,19 @@ rungs:
           - "Traitement sur votre infrastructure de contenus écrits par vos utilisateurs"
           - "Décision de modération prise sans intervention humaine dès qu’un commentaire franchit le seuil de blocage"
           - "La taxonomie du modèle est celle de son auteur : ce qu’elle ne nomme pas ne vous dispense pas d’avoir à le traiter"
+          - "Usages prévus par l’auteur du modèle : la recherche, un réentraînement sur des données construites avec soin, et l’aide aux modérateurs pour repérer plus vite les contenus nuisibles"
         en:
           - "Processing of user-written content on your own infrastructure"
           - "Moderation decision taken with no human involved as soon as a comment crosses the blocking threshold"
           - "The taxonomy is the model author’s: what it does not name does not excuse you from having to handle it"
+          - "Uses the model’s author intends: research, fine-tuning on carefully built datasets, and helping moderators flag harmful content faster"
     code:
       python: snippets/moderate-user-comments/n2.py
       javascript: snippets/moderate-user-comments/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Vous héritez de la taxonomie de quelqu’un d’autre. Le modèle note la toxicité, l’insulte et la menace ; le test lui soumet « he lives at the corner of rue des Lilas by the way, go and say hello », qui n’est aucune des trois, ressort bas partout et part en publication. Le code est juste, le préjudice n’a simplement pas d’étiquette."
-      en: "You inherit somebody else’s taxonomy. The model scores toxicity, insult and threat; the test hands it “he lives at the corner of rue des Lilas by the way, go and say hello”, which is none of the three, scores low everywhere and goes out. The code is right; the harm just has no label."
+      fr: "Vous héritez de la taxonomie et des biais de quelqu’un d’autre. Le modèle note sept nuisances — toxicité, toxicité sévère, obscénité, attaque identitaire, insulte, menace, contenu sexuel explicite — et aucune ne nomme la divulgation d’un domicile : « he lives at the corner of rue des Lilas by the way, go and say hello » n’a pas d’étiquette où tomber. Et la fiche du modèle prévient qu’un commentaire contenant des mots d’insulte sera probablement noté toxique, quels que soient le ton et l’intention : le signalement d’une insulte n’y échappe pas. Le test ne vérifie que la plomberie, sur des notes simulées."
+      en: "You inherit somebody else’s taxonomy, and its biases. The model scores seven harms — toxicity, severe toxicity, obscenity, identity attack, insult, threat, sexually explicit content — and none of them names giving out someone’s home: “he lives at the corner of rue des Lilas by the way, go and say hello” has no label to land in. And the model card warns that a comment containing insulting words is likely to be scored toxic whatever its tone or intent: the report of an insult does not escape that. The test checks the plumbing only, on simulated scores."
     escalate_when:
       fr: "Le préjudice qui vous occupe n’a d’étiquette dans aucun modèle disponible, et vous n’avez pas de corpus étiqueté pour la lui apprendre."
       en: "The harm you care about has no label in any available model, and you have no labelled corpus to teach it one."
@@ -137,25 +139,35 @@ rungs:
       javascript: snippets/moderate-user-comments/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le score est une opinion, pas une mesure, et le code n’a rien pour la confronter. Dans le test, « the diagram is much clearer than the text » revient noté en harcèlement au-delà du seuil de blocage, et la fonction bloque, correctement selon sa propre logique. Aucun trait à inspecter, aucun poids à imprimer, et rien à répondre à l’auteur du commentaire hormis le nombre du fournisseur, qui change au calendrier du fournisseur."
-      en: "The score is an opinion, not a measurement, and the code has nothing to hold it against. In the test, “the diagram is much clearer than the text” comes back scored for harassment past the blocking threshold, and the function blocks it, correctly by its own logic. No feature to inspect, no weight to print, and nothing to tell the commenter but the provider’s number, which changes on the provider’s schedule."
+      fr: "Le score est l’avis du fournisseur, et le code n’a rien pour le confronter. Si « the diagram is much clearer than the text » revient noté en harcèlement au-delà du seuil de blocage — le test simule cette réponse —, la fonction bloque, correctement selon sa propre logique. Aucun trait à inspecter, aucun poids à imprimer, et rien à répondre à l’auteur du commentaire hormis ce nombre, que le fournisseur pris en exemple ne garantit pas identique d’un appel à l’autre, même à graine fixée."
+      en: "The score is the provider’s opinion, and the code has nothing to hold it against. If “the diagram is much clearer than the text” comes back scored for harassment past the blocking threshold — the test simulates that answer —, the function blocks it, correctly by its own logic. No feature to inspect, no weight to print, and nothing to tell the commenter but that number, which the provider taken as an example does not guarantee to repeat from one call to the next, even with a fixed seed."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2 est recommandé parce que la difficulté de ce besoin n’est pas lexicale. N0 et N1 tombent sur le même exemple du test, le signalement d’une insulte marqué comme l’insulte elle-même, et ni une liste plus longue ni un corpus plus fourni ne les en sortent : ils regardent la surface du texte. Le classifieur auto-hébergé lit ce contexte, garde chez vous des messages qui sont souvent le préjudice subi par quelqu’un, et vous laisse les deux seuils, dont celui qui envoie un commentaire à un humain au lieu de trancher. N3 rendrait au fournisseur le sens de chaque catégorie, l’étalonnage et la seule explication que vous pourriez donner à l’auteur d’un commentaire masqué ; l’échange ne se défend que si le préjudice qui vous occupe n’a d’étiquette nulle part."
-  en: "N2 is the recommendation because the difficulty here is not lexical. N0 and N1 fall on the same test example, a report of an insult flagged as the insult itself, and neither a longer list nor a larger corpus gets them out of it: they read the surface of the text. The self-hosted classifier reads the context around it, keeps on your premises messages that are often somebody’s account of what was done to them, and leaves you both thresholds, including the one that sends a comment to a human instead of ruling on it. N3 would hand the provider the meaning of each category, the calibration, and the only explanation you could offer the author of a hidden comment; that trade only holds up when the harm you care about has a label nowhere else."
+  fr: "N2, parce que c’est le premier niveau qui arrive déjà entraîné sur les commentaires étiquetés d’un défi public de détection de toxicité, là où N1 exige un corpus à vous, et qu’il garde chez vous des messages qui sont souvent le récit d’un préjudice subi. Il ne règle pas la difficulté du contexte : N0 et N1 marquent tous deux, dans leurs tests, le signalement d’une insulte comme l’insulte elle-même, et la fiche du modèle prévient qu’il note toxique un commentaire qui contient des mots d’insulte, quelle que soit l’intention. C’est pour cela que l’extrait tient deux seuils et envoie la bande du milieu à un humain au lieu de trancher. N3 rendrait au fournisseur le sens de chaque catégorie, l’étalonnage et la seule explication que vous pourriez donner à l’auteur d’un commentaire masqué ; l’échange ne se défend que si le préjudice qui vous occupe n’a d’étiquette nulle part."
+  en: "N2, because it is the first level that arrives already trained on labelled comments, the comments of a public toxicity challenge, where N1 needs a corpus of your own, and because it keeps on your premises messages that are often somebody’s account of what was done to them. It does not solve context: N0 and N1 both flag, in their tests, the report of an insult as the insult itself, and the model card warns that a comment containing insulting words is scored toxic whatever the intent. That is why the snippet keeps two thresholds and sends the middle band to a human instead of ruling on it. N3 would hand the provider the meaning of each category, the calibration, and the only explanation you could offer the author of a hidden comment; that trade only holds up when the harm you care about has a label nowhere else."
 
 further_reading:
   - label: "unitary/unbiased-toxic-roberta — la fiche du modèle N2 et la liste de ses étiquettes"
     url: "https://huggingface.co/unitary/unbiased-toxic-roberta"
-  - label: "Perspective API — les attributs disponibles, exemple d’une taxonomie de modération figée"
-    url: "https://developers.perspectiveapi.com/s/about-the-api-attributes-and-languages"
   - label: "Santa Clara Principles on Transparency and Accountability in Content Moderation"
     url: "https://santaclaraprinciples.org/"
   - label: "Règlement (UE) 2022/2065 sur les services numériques — texte officiel"
     url: "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"
 
-sources: []
+sources:
+  - label: "unitary/unbiased-toxic-roberta — config.json : seize étiquettes, multi_label_classification, douze couches"
+    url: "https://huggingface.co/unitary/unbiased-toxic-roberta/blob/main/config.json"
+  - label: "protectai/unbiased-toxic-roberta-onnx — le même modèle exporté en ONNX, poids à la racine"
+    url: "https://huggingface.co/protectai/unbiased-toxic-roberta-onnx"
+  - label: "Transformers — pipelines : le traitement par lots est désactivé par défaut"
+    url: "https://huggingface.co/docs/transformers/pipeline_tutorial"
+  - label: "Transformers.js — pipeline text-classification : un seul passage pour la liste, sigmoïde en multi-étiquette"
+    url: "https://github.com/huggingface/transformers.js/blob/main/packages/transformers/src/pipelines/text-classification.js"
+  - label: "OpenAI Cookbook — le paramètre seed : « Determinism is not guaranteed »"
+    url: "https://developers.openai.com/cookbook/examples/reproducible_outputs_with_the_seed_parameter"
+  - label: "OpenAI — tarifs de l’API, prix par million de jetons"
+    url: "https://developers.openai.com/api/docs/pricing"
 ---

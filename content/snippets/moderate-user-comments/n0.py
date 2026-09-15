@@ -2,13 +2,14 @@
 Flag a comment against a term list, after normalisation, with context.
 
 Rung N0. Deterministic, standard library only, and auditable: every decision
-can be traced back to one word in a list you control.
+can be traced back to one entry in a list you control.
 
 Two things make it usable rather than merely simple.
 
-First, normalisation. Accents and case are spellings of the same word, so they
-are folded before matching. Nothing else is touched: folding further would
-start inventing matches.
+First, normalisation. Case, accents and compatibility forms (full-width
+letters, ligatures, superscripts) are spellings of the same word, so they are
+folded before matching. Look-alikes are not: a 0 stays a 0, which is why
+bl0rptard walks past.
 
 Second, the context window. A term list cannot decide anything on its own, so
 the function returns the words around each hit. A human reads the window and
@@ -24,14 +25,22 @@ TOKEN = re.compile(r"[^\W_]+")
 
 
 def normalise(text: str) -> str:
-    """Fold case and strip accents, so one entry matches its spellings."""
+    """Fold case, compatibility forms and accents, so one entry matches its spellings."""
     decomposed = unicodedata.normalize("NFKD", text.casefold())
     return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def _words(text: str) -> list[str]:
+    # Composed first, so an accent typed as a separate mark stays in its word.
+    return TOKEN.findall(unicodedata.normalize("NFC", text))
 
 
 def review(text: str, terms, window: int = 3) -> dict:
     """
     Return every listed term found in `text`, with the words around it.
+
+    A term of several words matches those words in a row, whatever punctuation
+    separates them in the comment.
 
     `terms` is yours: the list is policy, not code, and it belongs outside the
     function that applies it.
@@ -39,15 +48,17 @@ def review(text: str, terms, window: int = 3) -> dict:
     `window` is a number of words on each side. Widen it when your reviewers
     keep asking what the comment was about.
     """
-    listed = {normalise(t) for t in terms}
-    words = TOKEN.findall(text)
+    listed = {tuple(normalise(w) for w in _words(t)) for t in terms}
+    longest = max(map(len, listed), default=0)
+    words = _words(text)
+    folded = [normalise(w) for w in words]
     matches = []
-    for position, word in enumerate(words):
-        if normalise(word) in listed:
-            start = max(0, position - window)
-            matches.append({
-                "term": normalise(word),
-                "position": position,
-                "context": " ".join(words[start:position + window + 1]),
-            })
+    for position in range(len(words)):
+        for size in range(1, min(longest, len(words) - position) + 1):
+            if tuple(folded[position:position + size]) in listed:
+                matches.append({
+                    "term": " ".join(folded[position:position + size]),
+                    "position": position,
+                    "context": " ".join(words[max(0, position - window):position + size + window]),
+                })
     return {"flagged": bool(matches), "matches": matches}

@@ -138,16 +138,14 @@ test('production : une réponse partielle décide sur ce qui est revenu', async 
   });
 });
 
-test('DÉFAUT : le plafond compte des unités UTF-16 ; 4 000 emojis sont refusés en JavaScript, acceptés en Python', async () => {
-  await assert.rejects(async () => {
-    let decision;
-    try {
-      decision = await moderate('🙂'.repeat(4000), { client: new FakeLLM({ response: scored() }) });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(decision.action, 'allow');
-  }, assert.AssertionError);
+test('le plafond compte des unités UTF-16 ; 4 000 emojis sont refusés en JavaScript, acceptés en Python', async () => {
+  let decision;
+  try {
+    decision = await moderate('🙂'.repeat(4000), { client: new FakeLLM({ response: scored() }) });
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.equal(decision.action, 'allow');
 });
 
 test("production : zéro essai lève l'erreur nommée sans appel", async () => {

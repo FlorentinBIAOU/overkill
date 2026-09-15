@@ -1,9 +1,9 @@
 """
 Score a comment by asking a general-purpose model.
 
-Rung N3. The shortest code on the ladder to write, and the one that hands the
-most away: what each category means, the calibration, the right to appeal, and
-the text of your users' comments, which leaves your premises on every call.
+Rung N3. The rung that hands the most away: what each category means, the
+calibration, the right to appeal, and the text of your users' comments, which
+leaves your premises on every call.
 
 You name the categories below; the model decides what they mean. Everything
 else here — capping the input, retrying, refusing to act on an answer that is
@@ -15,6 +15,11 @@ itself is not testable.
 from __future__ import annotations
 
 import json
+
+# The provider named here is an example, not a recommendation: the reasoning
+# holds for any general-purpose model API, and the client is swappable. Pass
+# any object with a `complete(prompt=..., temperature=...)` method.
+MODEL = "gpt-4.1-mini"  # an example id: check the parameters your model accepts
 
 CATEGORIES = ("harassment", "hate", "violence", "self_harm")
 
@@ -28,6 +33,25 @@ MAX_CHARACTERS = 4000
 DEFAULT_THRESHOLDS = {"block": 0.9, "review": 0.6}
 
 
+class ProviderClient:
+    """The one call this snippet makes, on top of the provider's SDK."""
+
+    def __init__(self, sdk=None, model: str = MODEL):
+        if sdk is None:  # pragma: no cover - needs a key and a network
+            from openai import OpenAI
+
+            sdk = OpenAI()
+        self.sdk, self.model = sdk, model
+
+    def complete(self, *, prompt: str, temperature: float) -> str:
+        response = self.sdk.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+        )
+        return response.choices[0].message.content
+
+
 class ModerationUnavailable(Exception):
     """The provider could not be reached, or answered something unusable."""
 
@@ -39,16 +63,13 @@ def moderate(comment: str, client=None, *, thresholds=None, attempts: int = 3) -
     `client` is injected so this can be tested without a network call. In
     production it defaults to a real provider client.
     """
-    if client is None:  # pragma: no cover - needs a key and a network
-        from openai import OpenAI
-
-        client = OpenAI()
-
-    # A model charges by the token, and a comment that long is a bug or an
-    # attack. Refusing it is a cost control, not an optimisation.
+    # The provider bills every token of the prompt. The cap counts characters,
+    # not tokens, and is checked before any call: the caller decides where a
+    # longer comment goes instead.
     if len(comment) > MAX_CHARACTERS:
         raise ValueError(f"comment longer than {MAX_CHARACTERS} characters")
 
+    client = client or ProviderClient()
     thresholds = thresholds or DEFAULT_THRESHOLDS
     scores = _ask(client, comment, attempts)
     category, score = max(scores.items(), key=lambda item: item[1])
@@ -72,8 +93,14 @@ def _ask(client, comment: str, attempts: int) -> dict[str, float]:
     last_error: Exception | None = None
     for _ in range(attempts):
         try:
+            # Temperature zero, because a moderation decision that changes between
+            # two identical calls cannot be explained to the person it hit.
             answer = client.complete(prompt=PROMPT.format(comment=comment), temperature=0)
-            parsed = json.loads(answer)
+            # No content (a refusal) and anything but a JSON object are unusable.
+            parsed = json.loads(answer) if isinstance(answer, str) else None
+            if not isinstance(parsed, dict):
+                last_error = ValueError("the answer is not a JSON object")
+                continue
             scores = {n: float(parsed[n]) for n in CATEGORIES if _is_score(parsed.get(n))}
             if scores:
                 return scores

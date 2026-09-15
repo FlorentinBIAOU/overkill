@@ -1,10 +1,9 @@
 /**
  * Score a comment by asking a general-purpose model.
  *
- * Rung N3. The shortest code on the ladder to write, and the one that hands
- * the most away: what each category means, the calibration, the right to
- * appeal, and the text of your users' comments, which leaves your premises on
- * every call.
+ * Rung N3. The rung that hands the most away: what each category means, the
+ * calibration, the right to appeal, and the text of your users' comments,
+ * which leaves your premises on every call.
  *
  * You name the categories below; the model decides what they mean. Everything
  * else here — capping the input, retrying, refusing to act on an answer that
@@ -12,6 +11,28 @@
  * bugs of this rung live. It is also all your tests can reach, because the
  * judgement itself is not testable.
  */
+
+// The provider named here is an example, not a recommendation: the reasoning
+// holds for any general-purpose model API, and the client is swappable. Pass
+// any object with a `complete({ prompt, temperature })` method.
+export const MODEL = 'gpt-4.1-mini'; // an example id: check the parameters your model accepts
+
+export async function providerClient(sdk, model = MODEL) {
+  if (!sdk) {
+    const { OpenAI } = await import('openai');
+    sdk = new OpenAI();
+  }
+  return {
+    async complete({ prompt, temperature }) {
+      const response = await sdk.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+      });
+      return response.choices[0].message.content;
+    },
+  };
+}
 
 export const CATEGORIES = ['harassment', 'hate', 'violence', 'self_harm'];
 
@@ -39,18 +60,14 @@ export class ModerationUnavailable extends Error {}
  * @param {number} [options.attempts]
  */
 export async function moderate(comment, { client, thresholds = DEFAULT_THRESHOLDS, attempts = 3 } = {}) {
-  if (!client) {
-    // Needs a key and a network, so it is never reached in the tests.
-    const { OpenAI } = await import('openai');
-    client = new OpenAI();
-  }
-
-  // A model charges by the token, and a comment that long is a bug or an
-  // attack. Refusing it is a cost control, not an optimisation.
-  if (comment.length > MAX_CHARACTERS) {
+  // The provider bills every token of the prompt. The cap counts characters
+  // (code points, as Python does), not tokens, and is checked before any call:
+  // the caller decides where a longer comment goes instead.
+  if ([...comment].length > MAX_CHARACTERS) {
     throw new RangeError(`comment longer than ${MAX_CHARACTERS} characters`);
   }
 
+  client ??= await providerClient();
   const scores = await ask(client, comment, attempts);
   const [category, score] = Object.entries(scores).reduce((best, row) => (row[1] > best[1] ? row : best));
   let action = 'allow';
@@ -76,7 +93,12 @@ async function ask(client, comment, attempts) {
         // two identical calls cannot be explained to the person it hit.
         temperature: 0,
       });
-      const parsed = JSON.parse(answer);
+      // No content (a refusal) and anything but a JSON object are unusable.
+      const parsed = typeof answer === 'string' ? JSON.parse(answer) : null;
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        lastError = new Error('the answer is not a JSON object');
+        continue;
+      }
       const scores = Object.fromEntries(CATEGORIES.filter((n) => isScore(parsed[n])).map((n) => [n, parsed[n]]));
       if (Object.keys(scores).length > 0) return scores;
       lastError = new Error('no category came back as a score in range');

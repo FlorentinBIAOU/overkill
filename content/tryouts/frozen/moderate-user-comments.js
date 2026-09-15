@@ -1,8 +1,8 @@
 /**
  * Essai figé — modérer les commentaires avec un classifieur auto-hébergé.
  *
- * Cet extrait ne peut pas tourner dans un navigateur : il charge un modèle de
- * plusieurs centaines de mégaoctets. Les six cas ci-dessous sont donc exécutés
+ * Cet extrait ne peut pas tourner dans un navigateur : il charge un modèle
+ * dont les poids se téléchargent. Les six cas ci-dessous sont donc exécutés
  * à la construction du site, avec le double local qui sert déjà aux tests — le
  * même que `n2.test.js`.
  *
@@ -139,8 +139,8 @@ export default {
       simulate: { scores: { toxicity: 0.08, insult: 0.03, threat: 0.06 } },
       fails: true,
       why: {
-        fr: 'Ce commentaire désigne le domicile de quelqu’un et invite à s’y rendre. Il n’est ni toxique, ni insultant, ni menaçant au sens de la liste d’étiquettes du modèle : il ressort bas partout, et le code le publie. Rien n’est faux dans le code — le préjudice n’a simplement pas d’étiquette. Vous héritez de la taxonomie de quelqu’un d’autre, et l’élargir demande un corpus étiqueté à vous, c’est-à-dire le coût qu’on prête à N1 et qu’on suppose absent ici.',
-        en: 'This comment points at someone’s home and invites people to turn up. It is neither toxic, nor insulting, nor threatening as the model’s label list understands those words: it scores low everywhere, and the code publishes it. Nothing in the code is wrong — the harm simply has no label. You inherit somebody else’s taxonomy, and widening it takes a labelled corpus of your own, which is the cost people grant N1 and assume away here.',
+        fr: 'Ce commentaire désigne le domicile de quelqu’un et invite à s’y rendre. Aucune des sept nuisances que note le modèle ne nomme ce préjudice. Les notes basses de ce cas sont simulées, et le code publie ce qui est noté bas : rien n’est faux dans le code, le préjudice n’a pas d’étiquette. Vous héritez de la taxonomie de quelqu’un d’autre, et l’élargir demande un corpus étiqueté à vous.',
+        en: 'This comment points at someone’s home and invites people to turn up. None of the seven harms the model scores names it. The low scores of this case are simulated, and the code publishes what scores low: nothing in the code is wrong, the harm has no label. You inherit somebody else’s taxonomy, and widening it takes a labelled corpus of your own.',
       },
     },
   ],

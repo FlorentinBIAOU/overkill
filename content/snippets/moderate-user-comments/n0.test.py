@@ -112,11 +112,6 @@ def test_la_fenetre_est_coupee_aux_bords_du_commentaire():
     assert review("blorptard", TERMS, window=5)["matches"][0]["context"] == "blorptard"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring dit « Return every listed term found in text » ; un terme de deux mots "
-    "n'est jamais trouvé, la comparaison se fait mot par mot",
-)
 def test_un_terme_de_deux_mots_est_trouve():
     assert review("quel sale type celui-là", ["sale type"])["flagged"]
 
@@ -166,9 +161,5 @@ def test_production_pleine_largeur_marque_d_ordre_et_casefold():
     assert review("SCHEISSE", ["scheiße"])["flagged"]  # casefold : ß devient ss
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un accent tapé en NFD coupe le mot avant la normalisation ; « flarnwi\\u0302t » n'est pas signalé",
-)
 def test_defaut_un_terme_avec_accent_decompose_est_signale():
     assert review("quel flarnwît", TERMS)["flagged"]

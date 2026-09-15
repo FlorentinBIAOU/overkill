@@ -88,10 +88,8 @@ test('la fenêtre est coupée aux bords du commentaire', () => {
   assert.equal(review('blorptard', TERMS, 5).matches[0].context, 'blorptard');
 });
 
-test('INFIRMÉ : « Return every listed term found in text » ; un terme de deux mots n’est jamais trouvé', async () => {
-  await assert.rejects(async () => {
-    assert.ok(review('quel sale type celui-là', ['sale type']).flagged);
-  }, assert.AssertionError);
+test('« Return every listed term found in text » ; un terme de deux mots n’est jamais trouvé', async () => {
+  assert.ok(review('quel sale type celui-là', ['sale type']).flagged);
 });
 
 test("n0 est déterministe et n'emploie aucune dépendance", () => {
@@ -131,14 +129,10 @@ test("production : pleine largeur et marque d'ordre", () => {
   assert.ok(review('﻿blorptard', TERMS).flagged);
 });
 
-test('DÉFAUT : toLowerCase ne replie pas « ß » ; « SCHEISSE » n’est pas trouvé pour « scheiße », Python le trouve', async () => {
-  await assert.rejects(async () => {
-    assert.ok(review('SCHEISSE', ['scheiße']).flagged);
-  }, assert.AssertionError);
+test('toLowerCase ne replie pas « ß » ; « SCHEISSE » n’est pas trouvé pour « scheiße », Python le trouve', async () => {
+  assert.ok(review('SCHEISSE', ['scheiße']).flagged);
 });
 
-test('DÉFAUT : un accent tapé en NFD coupe le mot avant la normalisation', async () => {
-  await assert.rejects(async () => {
-    assert.ok(review('quel flarnwît', TERMS).flagged);
-  }, assert.AssertionError);
+test('un accent tapé en NFD coupe le mot avant la normalisation', async () => {
+  assert.ok(review('quel flarnwît', TERMS).flagged);
 });
