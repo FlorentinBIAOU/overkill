@@ -13,7 +13,7 @@ entière de N3). 89 tests ajoutés (141 au total : 69 py, 72 js).
 
 Marquages : N0 — 4 `INFIRMÉ` et 2 `DÉFAUT` en Python, 3 `INFIRMÉ` et 2
 `DÉFAUT` en JavaScript ; N2 — 3 `DÉFAUT` en Python, 1 `INFIRMÉ` et 3 `DÉFAUT`
-en JavaScript (l'`INFIRMÉ` porte sur l'essai) ; N3 — 3 `DÉFAUT` en Python, 4
+en JavaScript (l'`INFIRMÉ` porte sur l'essai), plus un `DÉFAUT` Python établi hors de la suite (#71) ; N3 — 3 `DÉFAUT` en Python, 4
 `DÉFAUT` en JavaScript.
 
 | # | Où | Affirmation (citée) | Statut | Test |
@@ -58,7 +58,7 @@ en JavaScript (l'`INFIRMÉ` porte sur l'essai) ; N3 — 3 `DÉFAUT` en Python, 4
 | 38 | N2 `_generate` | « A local model still fails: out of memory, a worker that died » | démontrée : 1 panne puis succès en 2 appels ; 5 pannes → 2 appels puis `TranslationUnavailable` portant le message ; `attempts=0` : erreur nommée sans appel ; essai, cas 4 | test_un_modele_qui_echoue_est_retente, test_production_zero_essai_leve_sans_appel |
 | 39 | N2 `TranslationUnavailable` | « The model failed every attempt, or returned nothing usable » | démontrée pour la réponse blanche (2 appels) ; essai, cas 5 ; DÉFAUT #45 pour une réponse d'un autre type | test_une_reponse_vide_leve_plutot_que_de_blanchir_l_interface |
 | 40 | N2 `translate` | « `model` is injected so this can be tested without loading the weights. Left alone, it is the real one above » | démontrée : sans modèle, py `ModuleNotFoundError: transformers`, js `ERR_MODULE_NOT_FOUND @xenova/transformers`. Précision : le modèle est chargé avant le test de la source vide | test_le_modele_est_injecte_et_par_defaut_c_est_le_vrai |
-| 41 | N2 `load_translator` | « The real model: weights on disk, loaded once, run locally » ; `pipeline("translation", model=…)` puis `[0]["translation_text"]` | non testable ici (bibliothèque absente) ; surface vérifiée, voir plus bas : l'appel existe ; une enveloppe à la forme du pipeline est acceptée | test_un_modele_a_la_forme_du_pipeline_de_traduction_est_accepte |
+| 41 | N2 `load_translator` | « The real model: weights on disk, loaded once, run locally » ; `pipeline("translation", model=…)` puis `[0]["translation_text"]` | Python : DÉFAUT, établi hors de la suite (bibliothèque absente), voir #71 ; JavaScript : l'appel existe. Une enveloppe à la forme du pipeline est acceptée | test_un_modele_a_la_forme_du_pipeline_de_traduction_est_accepte |
 | 42 | N2 existant | « an empty source is not worth a call » | démontrée (chaîne vide et blanche rendues telles quelles, aucun appel) | test_une_source_vide_ne_vaut_pas_un_appel |
 | 43 | N2 risks | `deterministic: true`, `data_egress: own-infra`, latency `~100 ms`, `footprint`, les deux lignes réglementaires | démontrée pour la plomberie (mêmes résultats ; garde réseau) ; le modèle, la latence, la licence : non testable | test_la_plomberie_est_deterministe |
 | 44 | N2 production | cent variables sur 5 répétitions ; NFD, emoji, U+00A0 ; espaces de bord | démontrée ; précision : la traduction est `strip()`ée, « Name: » devient « Nom : » sans son espace final | test_production_… (trois tests) |
@@ -88,6 +88,7 @@ en JavaScript (l'`INFIRMÉ` porte sur l'essai) ; N3 — 3 `DÉFAUT` en Python, 4
 | 68 | verdict_rationale | « N0 […] n’a rien à dire d’une chaîne nouvelle : son test le montre en renvoyant une absence de correspondance plutôt qu’une approximation présentable » | démontrée (#1) | — |
 | 69 | verdict_rationale | « sur les variables, les deux niveaux réclament le même contrôle en sortie, et N2 le double d’un masquage, puisque son modèle ne voit jamais la variable, là où celui de N3 la lit dans l’invite » | démontrée pour la plomberie ; mais le masquage N2, face au vrai modèle, rend chaque variable perdue (#30) | test_verdict_n2_masque_la_variable_que_n3_montre_dans_l_invite, test_le_meme_controle_des_variables_qu_au_niveau_du_dessous |
 | 70 | verdict_rationale | « N2 est recommandé parce que c’est le premier niveau qui traduit » ; « Le modèle auto-hébergé garde les chaînes chez vous et tient dans un fichier que vous versionnez » ; « l’essentiel d’un fichier d’interface s’y arrête » | non testable : jugement, exploitation ; « garde les chaînes chez vous » : démontrée pour la plomberie (garde réseau) | — |
+| 71 | N2 py, chargement réel | `from transformers import pipeline` puis `pipeline("translation", model=MODEL_NAME)` | DÉFAUT : la tâche « translation » n'existe plus dans `transformers` 5 ; voir détail | — (documentation et source de la bibliothèque) |
 
 ## Non testable, et pourquoi
 
@@ -116,9 +117,11 @@ en JavaScript (l'`INFIRMÉ` porte sur l'essai) ; N3 — 3 `DÉFAUT` en Python, 4
 - **#61 — N3, chaîne vide.** Une chaîne vide (fréquente dans un catalogue : clé créée, texte à venir) part chez le fournisseur ; la seule réponse juste, `{"translation": ""}`, est refusée comme « without a translation », retentée, et la chaîne coûte trois appels puis lève `TranslationUnavailable`. N2 la rend telle quelle sans appel ; N3 ne peut jamais la traiter.
 - **#64 — N3 JavaScript, plafond en unités UTF-16.** `source.length` compte les unités UTF-16 : 2 000 emojis en font 4 000, refusés en JS, acceptés en Python.
 
+- **#71 — N2 Python, tâche supprimée de `transformers` 5.** Le guide de migration de la version 5 (`MIGRATION_GUIDE_V5.md`) : « `question-answering` and `Text2TextGenerationPipeline`, including its related `SummarizationPipeline` and `TranslationPipeline`, were deprecated and will now be removed ». Vérifié dans le source : la table des tâches de `src/transformers/pipelines/__init__.py` déclare `"translation"` en v4.57.3 et ne la déclare plus en v5.0.0 ; la version publiée sur PyPI est 5.17.0. `load_translator()` échoue donc à l'installation courante de la bibliothèque (tâche inconnue), avant tout chargement de poids. Rien n'épingle `transformers<5` (ni l'extrait, ni `requirements-snippets.txt`). La surface actuelle pour un modèle Marian est `AutoTokenizer` + `AutoModelForSeq2SeqLM.generate`, ou un modèle conversationnel avec `pipeline("text-generation")`. JavaScript (Transformers.js) garde la tâche `translation`.
+
 ## Surface des bibliothèques réelles (consigne)
 
-- **N2 Python** : `transformers.pipeline("translation", model="Helsinki-NLP/opus-mt-en-fr")` existe ; le pipeline prend une chaîne et rend `[{"translation_text": …}]`. L'appel de `load_translator` existe ; pas de `DÉFAUT` sur l'appel. Le défaut est le marqueur (#30).
+- **N2 Python** : `transformers.pipeline("translation", model="Helsinki-NLP/opus-mt-en-fr")` existe jusqu'à la version 4.57 (tâche déclarée dans `src/transformers/pipelines/__init__.py` de v4.57.3), et rend `[{"translation_text": …}]`. Elle n'existe plus depuis la version 5.0 : `DÉFAUT` #71.
 - **N2 JavaScript** : `pipeline('translation', 'Xenova/opus-mt-en-fr')` puis `(await pipe(text))[0].translation_text` : forme documentée de Transformers.js pour les modèles Marian ; le modèle `Xenova/opus-mt-en-fr` existe sur le Hub (bibliothèque transformers.js, ONNX quantifié, base `Helsinki-NLP/opus-mt-en-fr`), avec le même tokeniseur, donc le même défaut #30. `@xenova/transformers` est l'ancien nom du paquet (`@huggingface/transformers` aujourd'hui).
 - **N3** : `DÉFAUT` #60.
 
