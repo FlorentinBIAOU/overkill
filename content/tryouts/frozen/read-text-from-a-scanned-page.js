@@ -173,8 +173,8 @@ export default {
       },
       fails: true,
       why: {
-        fr: 'La facture porte la référence 2024-000431 ; le moteur rend « 2O24-OOO431 », avec la lettre O à la place du zéro, et une confiance de 0,96. Le drapeau de relecture reste baissé, puisque le moteur n’a pas hésité : le scan est net, les glyphes sont détachés, et c’est justement pour cela qu’il est sûr de lui. Relever le seuil n’y change rien, l’erreur est confiante. Ce qui la rattrape, c’est une règle sur la forme attendue de vos références, écrite à la main : le barreau N0, de nouveau.',
-        en: 'The invoice carries the reference 2024-000431; the engine returns “2O24-OOO431”, with the letter O in place of the zero, and a confidence of 0.96. The review flag stays down, because the engine never hesitated: the scan is clean, the glyphs are well separated, and that is exactly why it is sure of itself. Raising the threshold changes nothing, the mistake is confident. What catches it is a rule about the shape your references take, written by hand: rung N0 again.',
+        fr: 'La facture porte la référence 2024-000431 ; le moteur rend « 2O24-OOO431 », avec la lettre O à la place du zéro, et une confiance de 0,96. Le drapeau de relecture reste baissé, puisque le score dépasse le seuil. Un seuil relevé au-dessus de 0,96 le lèverait, mais sur toutes les lectures justes rendues au même score aussi : il ne sépare pas la lecture fausse de la bonne. Ce qui la rattrape, c’est une règle sur la forme attendue de vos références, écrite à la main : le niveau N0, de nouveau.',
+        en: 'The invoice carries the reference 2024-000431; the engine returns “2O24-OOO431”, with the letter O in place of the zero, and a confidence of 0.96. The review flag stays down, because the score clears the threshold. A threshold raised above 0.96 would raise it, but on every correct reading returned at the same score as well: it does not tell the wrong reading from the right one. What catches it is a rule about the shape your references take, written by hand: level N0 again.',
       },
     },
   ],

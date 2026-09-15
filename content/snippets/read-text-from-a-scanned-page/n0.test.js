@@ -161,12 +161,10 @@ test('point de rupture : un export à police sous-ensemble compte zéro caractè
   assert.ok(!report.reason.includes('OCR'));
 });
 
-test('INFIRMÉ : un export à police sous-ensemble de quatre-vingts glyphes est refusé', () => {
+test('un export à police sous-ensemble de quatre-vingts glyphes est refusé', () => {
   // Codes 1 à 80 : les codes 33 à 80 se lisent « ! » à « P », et la page passe pour lue.
-  assert.throws(() => {
-    const codes = Array.from({ length: 400 }, (_, i) => ((i * 37) % 80) + 1);
-    assert.equal(readTextLayer(buildPdf(shownCodes(codes))).hasTextLayer, false);
-  });
+  const codes = Array.from({ length: 400 }, (_, i) => ((i * 37) % 80) + 1);
+  assert.equal(readTextLayer(buildPdf(shownCodes(codes))).hasTextLayer, false);
 });
 
 // ---------------------------------------------------------------------------
@@ -198,11 +196,9 @@ test('les nombres de crénage d’un tableau TJ ne portent aucun caractère', ()
   assert.equal(readTextLayer(buildPdf('BT [(Fac) -120 (ture) 33 (s)] TJ ET')).text, 'Factures');
 });
 
-test('INFIRMÉ : une chaîne qu’aucun opérateur ne montre n’est pas du texte', () => {
+test('une chaîne qu’aucun opérateur ne montre n’est pas du texte', () => {
   // « /Span << /Lang (fr-FR) >> BDC (Facture) Tj » se lit « fr-FRFacture ».
-  assert.throws(() => {
-    assert.equal(readTextLayer(buildPdf('BT /Span << /Lang (fr-FR) >> BDC (Facture) Tj EMC ET')).text, 'Facture');
-  });
+  assert.equal(readTextLayer(buildPdf('BT /Span << /Lang (fr-FR) >> BDC (Facture) Tj EMC ET')).text, 'Facture');
 });
 
 test('une chaîne non montrée après une ligne montrée est écartée', () => {
@@ -301,119 +297,101 @@ test('production : UTF-16, NFD, emoji, insécable et BOM', () => {
   assert.equal(report.hasTextLayer, true);
 });
 
-test('DÉFAUT : un scan à palette de couleurs n’est pas déclaré lu', () => {
+test('un scan à palette de couleurs n’est pas déclaré lu', () => {
   // Dictionnaire d'image de plus de 300 octets : NOT_CONTENT ne voit plus
   // /Subtype /Image, les pixels sont lus, 24 778 caractères de bruit.
-  assert.throws(() => {
-    const pixels = zlib.deflateSync(PHOTO);
-    const palette = Buffer.from(Array.from({ length: 768 }, (_, i) => (i * 7) % 256)).toString('hex');
-    const declaration = latin1(
-      '<< /Type /XObject /Subtype /Image /Width 500 /Height 500 /BitsPerComponent 8 ' +
-        `/Filter /FlateDecode /ColorSpace [/Indexed /DeviceRGB 255 <${palette}>] /Length ${pixels.length} >>`,
-    );
-    assert.equal(readTextLayer(buildPdf(SCANNED, { photo: pixels, imageDict: declaration })).hasTextLayer, false);
-  });
+  const pixels = zlib.deflateSync(PHOTO);
+  const palette = Buffer.from(Array.from({ length: 768 }, (_, i) => (i * 7) % 256)).toString('hex');
+  const declaration = latin1(
+    '<< /Type /XObject /Subtype /Image /Width 500 /Height 500 /BitsPerComponent 8 ' +
+      `/Filter /FlateDecode /ColorSpace [/Indexed /DeviceRGB 255 <${palette}>] /Length ${pixels.length} >>`,
+  );
+  assert.equal(readTextLayer(buildPdf(SCANNED, { photo: pixels, imageDict: declaration })).hasTextLayer, false);
 });
 
-test('DÉFAUT : l’euro et l’apostrophe typographique d’une police WinAnsi sont lus', () => {
+test('l’euro et l’apostrophe typographique d’une police WinAnsi sont lus', () => {
   // Décodés en Latin-1 : 0x80 et 0x92 ressortent en U+0080 et U+0092.
-  assert.throws(() => {
-    assert.equal(readTextLayer(buildPdf('BT (Total : 92,40 \\200 \\222l\\222article) Tj ET')).text, 'Total : 92,40 € ’l’article');
-  });
+  assert.equal(readTextLayer(buildPdf('BT (Total : 92,40 \\200 \\222l\\222article) Tj ET')).text, 'Total : 92,40 € ’l’article');
 });
 
-test('DÉFAUT : un flux ASCII85 n’est pas renvoyé vers un OCR', () => {
-  assert.throws(() => {
-    const zip = zlib.deflateSync(latin1(TYPESET));
-    // ASCII85 d'Adobe, écrit ici faute de bibliothèque standard.
-    let a85 = '<~';
-    for (let i = 0; i < zip.length; i += 4) {
-      const chunk = Buffer.alloc(4);
-      zip.copy(chunk, 0, i, Math.min(i + 4, zip.length));
-      const n = chunk.readUInt32BE(0);
-      const size = Math.min(4, zip.length - i);
-      if (n === 0 && size === 4) { a85 += 'z'; continue; }
-      let v = n;
-      const digits = [];
-      for (let k = 0; k < 5; k += 1) { digits.unshift(String.fromCharCode(33 + (v % 85))); v = Math.floor(v / 85); }
-      a85 += digits.slice(0, size + 1).join('');
-    }
-    a85 += '~>';
-    const empty = zlib.deflateSync(Buffer.alloc(0));
-    const base = buildPdf('');
-    const oldPart = Buffer.concat([latin1(`<< /Filter /FlateDecode /Length ${empty.length} >>\nstream\n`), empty]);
-    const at = base.indexOf(oldPart);
-    assert.ok(at > 0);
-    const doc = Buffer.concat([
-      base.subarray(0, at),
-      latin1(`<< /Filter [/ASCII85Decode /FlateDecode] /Length ${a85.length} >>\nstream\n${a85}`),
-      base.subarray(at + oldPart.length),
-    ]);
-    assert.ok(!(readTextLayer(doc).reason ?? '').includes('OCR'));
-  });
+test('un flux ASCII85 n’est pas renvoyé vers un OCR', () => {
+  const zip = zlib.deflateSync(latin1(TYPESET));
+  // ASCII85 d'Adobe, écrit ici faute de bibliothèque standard.
+  let a85 = '<~';
+  for (let i = 0; i < zip.length; i += 4) {
+    const chunk = Buffer.alloc(4);
+    zip.copy(chunk, 0, i, Math.min(i + 4, zip.length));
+    const n = chunk.readUInt32BE(0);
+    const size = Math.min(4, zip.length - i);
+    if (n === 0 && size === 4) { a85 += 'z'; continue; }
+    let v = n;
+    const digits = [];
+    for (let k = 0; k < 5; k += 1) { digits.unshift(String.fromCharCode(33 + (v % 85))); v = Math.floor(v / 85); }
+    a85 += digits.slice(0, size + 1).join('');
+  }
+  a85 += '~>';
+  const empty = zlib.deflateSync(Buffer.alloc(0));
+  const base = buildPdf('');
+  const oldPart = Buffer.concat([latin1(`<< /Filter /FlateDecode /Length ${empty.length} >>\nstream\n`), empty]);
+  const at = base.indexOf(oldPart);
+  assert.ok(at > 0);
+  const doc = Buffer.concat([
+    base.subarray(0, at),
+    latin1(`<< /Filter [/ASCII85Decode /FlateDecode] /Length ${a85.length} >>\nstream\n${a85}`),
+    base.subarray(at + oldPart.length),
+  ]);
+  assert.ok(!(readTextLayer(doc).reason ?? '').includes('OCR'));
 });
 
-test('DÉFAUT : un PDF chiffré n’est pas renvoyé vers un OCR', () => {
-  assert.throws(() => {
-    const doc = buildPdf(photograph(400).subarray(4), {
-      compress: false,
-      trailer: '/Encrypt 7 0 R ',
-      extra: ['<< /Filter /Standard /V 2 /R 3 /Length 128 /P -44 >>'],
-    });
-    assert.ok(!(readTextLayer(doc).reason ?? '').includes('OCR'));
+test('un PDF chiffré n’est pas renvoyé vers un OCR', () => {
+  const doc = buildPdf(photograph(400).subarray(4), {
+    compress: false,
+    trailer: '/Encrypt 7 0 R ',
+    extra: ['<< /Filter /Standard /V 2 /R 3 /Length 128 /P -44 >>'],
   });
+  assert.ok(!(readTextLayer(doc).reason ?? '').includes('OCR'));
 });
 
-test('DÉFAUT : des parenthèses équilibrées non échappées sont lues', () => {
-  assert.throws(() => {
-    assert.equal(
-      readTextLayer(buildPdf('BT (Facture (copie) numero 2024-000431 du 3 avril) Tj ET')).text,
-      'Facture (copie) numero 2024-000431 du 3 avril',
-    );
-  });
+test('des parenthèses équilibrées non échappées sont lues', () => {
+  assert.equal(
+    readTextLayer(buildPdf('BT (Facture (copie) numero 2024-000431 du 3 avril) Tj ET')).text,
+    'Facture (copie) numero 2024-000431 du 3 avril',
+  );
 });
 
-test('DÉFAUT : des pages rangées dans un flux d’objets sont comptées', () => {
-  assert.throws(() => {
-    const objets = zlib.deflateSync(latin1('3 0 << /Type /Page /Parent 2 0 R /Contents 4 0 R >>'));
-    const page = latin1(
-      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources ' +
-        '<< /Font << /F1 5 0 R >> /XObject << /Im0 6 0 R >> >> /Contents 4 0 R >>',
-    );
-    const base = buildPdf(TYPESET);
-    const at = base.indexOf(page);
-    const doc = Buffer.concat([
-      base.subarray(0, at),
-      latin1(`<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode /Length ${objets.length} >>\nstream\n`),
-      objets,
-      latin1('\nendstream'),
-      base.subarray(at + page.length),
-    ]);
-    assert.equal(readTextLayer(doc).pages, 1);
-  });
+test('des pages rangées dans un flux d’objets sont comptées', () => {
+  const objets = zlib.deflateSync(latin1('3 0 << /Type /Page /Parent 2 0 R /Contents 4 0 R >>'));
+  const page = latin1(
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources ' +
+      '<< /Font << /F1 5 0 R >> /XObject << /Im0 6 0 R >> >> /Contents 4 0 R >>',
+  );
+  const base = buildPdf(TYPESET);
+  const at = base.indexOf(page);
+  const doc = Buffer.concat([
+    base.subarray(0, at),
+    latin1(`<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode /Length ${objets.length} >>\nstream\n`),
+    objets,
+    latin1('\nendstream'),
+    base.subarray(at + page.length),
+  ]);
+  assert.equal(readTextLayer(doc).pages, 1);
 });
 
-test('DÉFAUT : un flux de BT sans ET ne fait pas exploser le temps', () => {
+test('un flux de BT sans ET ne fait pas exploser le temps', () => {
   // Temps quadratique : 80 000 « BT » prennent plusieurs secondes ici.
-  assert.throws(() => {
-    const doc = buildPdf('BT '.repeat(80_000), { compress: false });
-    const debut = performance.now();
-    readTextLayer(doc);
-    assert.ok(performance.now() - debut < 1000);
-  });
+  const doc = buildPdf('BT '.repeat(80_000), { compress: false });
+  const debut = performance.now();
+  readTextLayer(doc);
+  assert.ok(performance.now() - debut < 1000);
 });
 
-test('DÉFAUT : les deux langages donnent la même raison pour les codes 28 à 31', () => {
+test('les deux langages donnent la même raison pour les codes 28 à 31', () => {
   // Python compte U+001C à U+001F comme des espaces, JavaScript non.
-  assert.throws(() => {
-    const doc = buildPdf(shownCodes(Array(8).fill([28, 29, 30, 31]).flat()));
-    assert.equal(enPython([doc])[0].reason, readTextLayer(doc).reason);
-  });
+  const doc = buildPdf(shownCodes(Array(8).fill([28, 29, 30, 31]).flat()));
+  assert.equal(enPython([doc])[0].reason, readTextLayer(doc).reason);
 });
 
-test('DÉFAUT : une chaîne UTF-16 impaire ne fait lever aucun des deux langages', () => {
+test('une chaîne UTF-16 impaire ne fait lever aucun des deux langages', () => {
   // Buffer.swap16 lève RangeError sur un nombre impair d'octets.
-  assert.throws(() => {
-    assert.doesNotThrow(() => readTextLayer(buildPdf(`BT (${'A'.repeat(30)}) Tj <FEFF004100> Tj ET`)));
-  });
+  assert.doesNotThrow(() => readTextLayer(buildPdf(`BT (${'A'.repeat(30)}) Tj <FEFF004100> Tj ET`)));
 });

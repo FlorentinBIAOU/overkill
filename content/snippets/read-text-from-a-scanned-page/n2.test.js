@@ -134,14 +134,12 @@ test('point de rupture : témoin, une règle sur la forme des références rattr
 // Le vrai moteur, contre un double à la forme de tesseract.js
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : le moteur par défaut lit la page avec la forme publiée de tesseract.js', async () => {
+test('le moteur par défaut lit la page avec la forme publiée de tesseract.js', async () => {
   // `data.words` n'existe plus par défaut depuis tesseract.js v6 : `read`
   // lève TypeError, l'appel est retenté, et readPage lève OCRUnavailable.
   globalThis.__tesseract = { workers: [], images: [], terminated: 0 };
-  await assert.rejects(async () => {
-    const result = await readPage(PAGE);
-    assert.ok(result.text.includes('NORD FOURNITURES SAS'));
-  });
+  const result = await readPage(PAGE);
+  assert.ok(result.text.includes('NORD FOURNITURES SAS'));
   assert.equal(globalThis.__tesseract.workers[0], LANGUAGE);
   assert.equal(LANGUAGE, 'fra');
 });
@@ -178,12 +176,10 @@ test('recolle un mot que le scan a coupé', async () => {
   assert.equal((await readPage(PAGE, engine)).text, 'un second exemplaire de la facture');
 });
 
-test('INFIRMÉ : Python et JavaScript recollent les mêmes mots', () => {
+test('Python et JavaScript recollent les mêmes mots', () => {
   // `\w` sans drapeau u ne reconnaît que l'ASCII : « réfé-\nrence » reste coupé ici.
-  assert.throws(() => {
-    const textes = ['réfé-\nrence', 'ache-\ntée', 'exem-\nplaire', 'N°  2024\n\n  NET\u00a0A PAYER'];
-    assert.deepEqual(cleanEnPython(textes), textes.map(clean));
-  });
+  const textes = ['réfé-\nrence', 'ache-\ntée', 'exem-\nplaire', 'N°  2024\n\n  NET\u00a0A PAYER'];
+  assert.deepEqual(cleanEnPython(textes), textes.map(clean));
 });
 
 test('une confiance basse garde le texte et demande un humain', async () => {
@@ -276,8 +272,8 @@ test('production : une lecture d’un mégaoctet se nettoie vite', async () => {
   assert.equal(text.split('exemplaire').length - 1, 30_000);
 });
 
-test('DÉFAUT : une référence coupée en fin de ligne garde son trait d’union', async () => {
+test('une référence coupée en fin de ligne garde son trait d’union', async () => {
   // « N° 2024-\n000431 » devient « 2024000431 ».
   const { text } = await readPage(PAGE, new FakeOCR({ [PAGE]: 'Facture N° 2024-\n000431' }, 0.95));
-  assert.throws(() => assert.ok(REFERENCE.test(text.replace('\n', ''))));
+  assert.ok(REFERENCE.test(text.replace('\n', '')));
 });

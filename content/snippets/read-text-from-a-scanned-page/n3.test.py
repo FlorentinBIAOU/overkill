@@ -103,15 +103,6 @@ def test_point_de_rupture_temoin_un_fragment_avoue_illisible_leve_le_drapeau():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle "
-    "`client.complete(prompt=…, image={…}, temperature=0)` ; cette méthode n'existe "
-    "pas dans le kit `openai` (3.14.0), dont la surface est "
-    "`client.chat.completions.create(model=…, messages=[…])` (l'image voyage dans "
-    "un élément de contenu `image_url` en URI de données), réponse dans "
-    "`choices[0].message.content`. L'AttributeError est avalée et retentée, "
-    "l'appelant reçoit ReadingUnavailable sans qu'aucune requête soit partie"
-))
 def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(monkeypatch):
     module = faux_openai(json.dumps(TRANSCRIPTION))
     monkeypatch.setitem(sys.modules, "openai", module)
@@ -162,13 +153,6 @@ def test_refuse_un_format_non_reconnu_avant_de_rien_depenser(octets):
     assert client.call_count == 0
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : le commentaire de SIGNATURES dit « Anything else is refused rather "
-    "than sent and charged for, because a provider will reject it too » ; le "
-    "fournisseur de l'extrait accepte PNG, JPEG, WEBP et GIF non animé "
-    "(documentation « Images and vision ») : l'extrait refuse WEBP et GIF, qu'il "
-    "accepte, et envoie TIFF, qu'il rejette"
-))
 def test_infirme_les_formats_envoyes_sont_ceux_que_le_fournisseur_accepte():
     envoyes = {media for _, media in n3.SIGNATURES}
     assert envoyes == FORMATS_DU_FOURNISSEUR
@@ -240,12 +224,6 @@ def test_une_reponse_mal_formee_leve_aussi(reponse):
         read_page(PNG, client=FakeLLM(response=json.dumps(reponse)))
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : une réponse `{\"text\": \"\", \"unreadable\": []}` rend une page vide "
-    "sans drapeau de relecture — exactement ce que le test d'origine appelle « file "
-    "the page as read and empty, which is worse than failing ». N2 lève le drapeau "
-    "sur un texte vide ; N3 non"
-))
 def test_defaut_une_transcription_vide_leve_le_drapeau_de_relecture():
     result = read_page(PNG, client=FakeLLM(response=json.dumps({"text": "", "unreadable": []})))
     assert result["review"] is True

@@ -9,56 +9,53 @@ n0.py: |
   Niveau N0. Bibliothèque standard seule : zlib pour décompresser les flux de la
   page, et une lecture des opérateurs qui y montrent du texte.
 
-  La plupart des « pages scannées » n'ont jamais été scannées. Un PDF produit
-  par un logiciel de comptabilité, un traitement de texte ou un pilote
-  d'impression en PDF porte son texte à côté de ses instructions de dessin,
-  déjà exact, sans étape de reconnaissance et donc sans rien à rater. Poser la
-  question d'abord, c'est un appel de fonction, et elle règle tout le besoin dès
-  que la réponse est oui.
+  Un PDF produit par un logiciel de comptabilité, un traitement de texte ou un
+  pilote d'impression en PDF porte son texte à côté de ses instructions de
+  dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater.
+  Poser la question d'abord, c'est un appel de fonction, et elle règle tout le
+  besoin dès que la réponse est oui.
 
   L'intérêt est dans la question, pas dans l'extracteur. Quand la réponse est
   non, cette fonction le dit — elle ne rend pas une chaîne vide, qu'un appelant
   lirait comme « la page est blanche ».
 
-  D'où deux façons de dire non, qui appellent deux suites différentes. Rien n'a
-  été montré du tout : la page est une image, et un moteur de reconnaissance est
-  l'étape suivante. Beaucoup a été montré et rien ne se lit : le texte est là,
-  derrière une table de police que ce fichier ne porte pas, et un moteur de
-  reconnaissance serait une réponse entièrement fausse — ce document n'a jamais
-  été une image.
+  D'où un non qui vient avec l'une de deux suites. Rien n'a été montré du tout :
+  la page est une image, et un moteur de reconnaissance est l'étape suivante. Le
+  texte est là et ce fichier ne sait pas le décoder — une police qui porte sa
+  propre table, un document chiffré, un autre filtre que Flate : l'étape
+  suivante est une bibliothèque PDF complète, et un moteur de reconnaissance
+  serait une réponse fausse, puisque ce document n'a jamais été une image.
 
 n0.js: |
   Lire la couche de texte que le document porte peut-être déjà, avant de sortir
   un OCR.
 
-  Niveau N0. Bibliothèque standard seule : node:zlib pour décompresser les flux
-  de la page, et une lecture des opérateurs qui y montrent du texte.
+  Niveau N0. Bibliothèque standard seule : node:zlib pour décompresser les flux de la
+  page, et une lecture des opérateurs qui y montrent du texte.
 
-  La plupart des « pages scannées » n'ont jamais été scannées. Un PDF produit
-  par un logiciel de comptabilité, un traitement de texte ou un pilote
-  d'impression en PDF porte son texte à côté de ses instructions de dessin,
-  déjà exact, sans étape de reconnaissance et donc sans rien à rater. Poser la
-  question d'abord, c'est un appel de fonction, et elle règle tout le besoin dès
-  que la réponse est oui.
+  Un PDF produit par un logiciel de comptabilité, un traitement de texte ou un
+  pilote d'impression en PDF porte son texte à côté de ses instructions de
+  dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater.
+  Poser la question d'abord, c'est un appel de fonction, et elle règle tout le
+  besoin dès que la réponse est oui.
 
   L'intérêt est dans la question, pas dans l'extracteur. Quand la réponse est
   non, cette fonction le dit — elle ne rend pas une chaîne vide, qu'un appelant
   lirait comme « la page est blanche ».
 
-  D'où deux façons de dire non, qui appellent deux suites différentes. Rien n'a
-  été montré du tout : la page est une image, et un moteur de reconnaissance est
-  l'étape suivante. Beaucoup a été montré et rien ne se lit : le texte est là,
-  derrière une table de police que ce fichier ne porte pas, et un moteur de
-  reconnaissance serait une réponse entièrement fausse — ce document n'a jamais
-  été une image.
+  D'où un non qui vient avec l'une de deux suites. Rien n'a été montré du tout :
+  la page est une image, et un moteur de reconnaissance est l'étape suivante. Le
+  texte est là et ce fichier ne sait pas le décoder — une police qui porte sa
+  propre table, un document chiffré, un autre filtre que Flate : l'étape
+  suivante est une bibliothèque PDF complète, et un moteur de reconnaissance
+  serait une réponse fausse, puisque ce document n'a jamais été une image.
 
 n2: |
   Lire une page scannée avec un moteur de reconnaissance optique auto-hébergé.
 
   Niveau N2. Quand N0 a répondu « pas de couche de texte », quelque chose doit
   regarder les pixels. Un moteur comme Tesseract fait exactement cela, sur votre
-  machine : la page ne la quitte pas, il n'y a ni clé ni quota, et la même image
-  donne la même lecture à chaque fois.
+  machine : la page ne la quitte pas, et il n'y a ni clé ni quota.
 
   Ce que vous tenez à ce niveau n'est pas le moteur, c'est tout ce qui
   l'entoure : la langue que vous lui annoncez, la confiance sous laquelle une
@@ -70,10 +67,7 @@ n3: |
   Lire une page scannée en remettant l'image à un modèle généraliste
   multimodal.
 
-  Niveau N3. C'est l'option vers laquelle on se tourne d'abord, et sur cette
-  fiche elle apporte quelque chose de réel : un modèle qui voit la page lit une
-  annotation manuscrite en marge, un tampon en travers d'un tableau, une mise en
-  colonnes qu'un moteur d'OCR aplatit.
+  Niveau N3. La page part entière, vers un modèle qui rend une transcription.
 
   Voyez ce que le code doit faire et que N0 n'avait pas à faire : reconnaître le
   format de l'image, plafonner ce qu'il envoie, encoder les octets, réessayer

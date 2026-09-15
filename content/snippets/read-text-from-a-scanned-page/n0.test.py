@@ -189,14 +189,6 @@ def test_point_de_rupture_un_export_a_police_sous_ensemble_compte_zero_caractere
     assert "OCR" not in report["reason"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : le point de rupture dit qu'un export dont la police sous-ensemble "
-    "renumérote ses glyphes à partir de un « compte alors zéro caractère lisible » ; "
-    "ce n'est vrai que tant que la police compte moins de 33 glyphes. Codes 1 à 80 "
-    "(une facture ordinaire : majuscules, minuscules, chiffres, ponctuation) : les "
-    "codes 33 à 80 se lisent comme « ! » à « P », 240 caractères sur 400 sont comptés "
-    "lisibles, et l'extrait déclare une couche de texte faite de charabia"
-))
 def test_infirme_un_export_a_police_sous_ensemble_de_quatre_vingts_glyphes_est_refuse():
     codes = [((i * 37) % 80) + 1 for i in range(400)]
     report = read_text_layer(build_pdf(shown_codes(codes)))
@@ -247,12 +239,6 @@ def test_les_nombres_de_crenage_dun_tableau_tj_ne_portent_aucun_caractere():
     assert read_text_layer(build_pdf(b"BT [(Fac) -120 (ture) 33 (s)] TJ ET"))["text"] == "Factures"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : le commentaire dit « A string no operator shows is not text » ; une "
-    "chaîne en attente n'est oubliée que si une ligne a déjà été montrée. Dans un "
-    "objet texte balisé, « /Span << /Lang (fr-FR) >> BDC (Facture) Tj » se lit "
-    "« fr-FRFacture » : la chaîne de la propriété est collée au texte montré"
-))
 def test_infirme_une_chaine_quaucun_operateur_ne_montre_nest_pas_du_texte():
     report = read_text_layer(build_pdf(b"BT /Span << /Lang (fr-FR) >> BDC (Facture) Tj EMC ET"))
     assert report["text"] == "Facture"
@@ -371,13 +357,6 @@ def test_production_utf16_nfd_emoji_insecable_et_bom():
     assert report["has_text_layer"] is True
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : une image dont le dictionnaire dépasse 300 octets (une palette de "
-    "256 couleurs écrite en ligne, /ColorSpace [/Indexed /DeviceRGB 255 <…>]) sort "
-    "de la fenêtre HEADER : NOT_CONTENT ne voit plus /Subtype /Image, les pixels "
-    "sont lus, et la page scannée est déclarée lue avec 24 778 caractères de "
-    "bruit. Le filtre BT…ET, présenté comme « belt and braces », ne la protège pas"
-))
 def test_defaut_un_scan_a_palette_de_couleurs_nest_pas_declare_lu():
     pixels = zlib.compress(PHOTO)
     palette = bytes((i * 7) % 256 for i in range(768)).hex().encode()
@@ -388,22 +367,11 @@ def test_defaut_un_scan_a_palette_de_couleurs_nest_pas_declare_lu():
     assert report["has_text_layer"] is False
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : le texte d'une police simple est décodé en Latin-1, alors que "
-    "l'encodage d'une police simple courante (WinAnsiEncoding) place « € » en 0x80 "
-    "et « ’ » en 0x92 : ils ressortent en caractères de contrôle U+0080 et U+0092, "
-    "non comptés, et « 92,40 € » s'indexe sans son symbole"
-))
 def test_defaut_leuro_et_lapostrophe_typographique_dune_police_winansi_sont_lus():
     report = read_text_layer(build_pdf(b"BT (Total : 92,40 \\200 \\222l\\222article) Tj ET"))
     assert report["text"] == "Total : 92,40 € ’l’article"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : un flux de contenu encodé /ASCII85Decode (ou LZW) ne se décompresse "
-    "pas par zlib, n'est pas lu, et la facture composée est renvoyée vers un OCR "
-    "comme une image"
-))
 def test_defaut_un_flux_ascii85_nest_pas_renvoye_vers_un_ocr():
     a85 = base64.a85encode(zlib.compress(TYPESET), adobe=True)
     doc = build_pdf(b"").replace(
@@ -414,11 +382,6 @@ def test_defaut_un_flux_ascii85_nest_pas_renvoye_vers_un_ocr():
     assert "OCR" not in (read_text_layer(doc)["reason"] or "")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : un document chiffré (entrée /Encrypt du trailer, courante sur les "
-    "relevés bancaires même sans mot de passe d'ouverture) a des flux illisibles "
-    "sans déchiffrement ; l'extrait ne regarde pas /Encrypt et renvoie vers un OCR"
-))
 def test_defaut_un_pdf_chiffre_nest_pas_renvoye_vers_un_ocr():
     chiffre = photograph(400)[4:]
     doc = build_pdf(chiffre, compress=False, trailer=b"/Encrypt 7 0 R ",
@@ -426,21 +389,11 @@ def test_defaut_un_pdf_chiffre_nest_pas_renvoye_vers_un_ocr():
     assert "OCR" not in (read_text_layer(doc)["reason"] or "")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : des parenthèses équilibrées non échappées sont légales dans une "
-    "chaîne littérale (PDF 32000-1, 7.3.4.2) ; TOKEN ne les accepte pas, et "
-    "« (Facture (copie) numero 2024-000431 du 3 avril) » se lit « copie »"
-))
 def test_defaut_des_parentheses_equilibrees_non_echappees_sont_lues():
     report = read_text_layer(build_pdf(b"BT (Facture (copie) numero 2024-000431 du 3 avril) Tj ET"))
     assert report["text"] == "Facture (copie) numero 2024-000431 du 3 avril"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : un document PDF 1.5 qui range ses objets de page dans un flux "
-    "d'objets compressé (/ObjStm, l'écriture par défaut de nombreux exports "
-    "récents) rapporte « pages: 0 »"
-))
 def test_defaut_des_pages_rangees_dans_un_flux_dobjets_sont_comptees():
     objets = b"3 0 << /Type /Page /Parent 2 0 R /Contents 4 0 R >>"
     doc = build_pdf(TYPESET).replace(
@@ -452,12 +405,6 @@ def test_defaut_des_pages_rangees_dans_un_flux_dobjets_sont_comptees():
     assert read_text_layer(doc)["pages"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : TEXT_OBJECT cherche paresseusement un ET après chaque BT ; un flux "
-    "de 60 Ko fait de « BT » sans « ET » est parcouru en temps quadratique "
-    "(observé : environ 5 s en Python, 0,2 s en Node pour 20 000 BT), là où une "
-    "page réelle se lit en une fraction de milliseconde"
-))
 def test_defaut_un_flux_de_bt_sans_et_ne_fait_pas_exploser_le_temps():
     doc = build_pdf(b"BT " * 20_000, compress=False)
     debut = time.perf_counter()
@@ -465,23 +412,11 @@ def test_defaut_un_flux_de_bt_sans_et_ne_fait_pas_exploser_le_temps():
     assert time.perf_counter() - debut < 1.0
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : Python compte U+001C à U+001F comme des espaces (str.isspace), "
-    "JavaScript non (\\s) ; sur une police renumérotée qui emploie ces codes, "
-    "Python rend « image, OCR » et JavaScript « table de police, bibliothèque PDF » "
-    "pour le même document"
-))
 def test_defaut_les_deux_langages_donnent_la_meme_raison_pour_les_codes_28_a_31():
     doc = build_pdf(shown_codes([28, 29, 30, 31] * 8))
     assert en_javascript([doc])[0]["reason"] == read_text_layer(doc)["reason"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : une chaîne hexadécimale UTF-16 de longueur impaire (<FEFF004100>, "
-    "document tronqué ou forgé) fait lever RangeError à n0.js (Buffer.swap16) ; "
-    "n0.py rend un caractère de remplacement. Le même document plante un langage "
-    "et pas l'autre"
-))
 def test_defaut_une_chaine_utf16_impaire_ne_fait_lever_aucun_des_deux_langages():
     doc = build_pdf(b"BT (" + b"A" * 30 + b") Tj <FEFF004100> Tj ET")
     assert "error" not in en_javascript([doc])[0]

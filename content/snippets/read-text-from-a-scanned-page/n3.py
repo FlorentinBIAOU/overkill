@@ -1,9 +1,7 @@
 """
 Read a scanned page by handing the image to a general-purpose multimodal model.
 
-Rung N3. This is the option people reach for first, and on this entry it does
-buy something real: a model that sees the page reads a handwritten annotation
-in the margin, a stamp across a table, a column layout an OCR engine flattens.
+Rung N3. The page goes out whole, to a model that returns a transcription.
 
 Note what the code has to do that N0 did not: recognise the image format, cap
 what it sends, encode the bytes, retry on failure, parse an answer that is only
@@ -19,6 +17,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 
 PROMPT = (
     "Transcribe the page in the image, exactly as it is printed, keeping the\n"
@@ -28,15 +27,45 @@ PROMPT = (
     "cannot read: leave « ... » in the text and name it in `unreadable`."
 )
 
-# The signatures a scanner produces. Anything else is refused rather than sent
-# and charged for, because a provider will reject it too.
-SIGNATURES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"),
-              (b"II*\x00", "image/tiff"), (b"MM\x00*", "image/tiff"))
+# The formats the provider's vision input lists: PNG, JPEG, WEBP and GIF (not
+# animated, which this check does not see). Anything else, a TIFF included, is
+# refused before it is sent: convert it first.
+SIGNATURES = ((rb"\x89PNG\r\n\x1a\n", "image/png"), (rb"\xff\xd8\xff", "image/jpeg"),
+              (rb"RIFF.{4}WEBP", "image/webp"), (rb"GIF8[79]a", "image/gif"))
 
-# A page scan larger than this is a photograph of a desk, not a page. A model
-# charges by what it is given, so refusing it is a cost control, not an
-# optimisation.
+# A cap on what is encoded and uploaded; base64 makes the request a third larger
+# than the file. It is not a cost control: the provider bills an image by its
+# dimensions, not by its bytes.
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
+# The provider named here is an example, not a recommendation: the reasoning
+# holds for any general-purpose model API, and the client is swappable. Pass
+# any object with a `complete(prompt=..., image=..., temperature=...)` method.
+MODEL = "gpt-4.1-mini"  # an example id: check the parameters your model accepts
+
+
+class ProviderClient:
+    """The one call this snippet makes, on top of the provider's SDK."""
+
+    def __init__(self, sdk=None, model: str = MODEL):
+        if sdk is None:  # pragma: no cover - needs a key and a network
+            from openai import OpenAI
+
+            sdk = OpenAI()
+        self.sdk, self.model = sdk, model
+
+    def complete(self, *, prompt: str, image: dict, temperature: float) -> str:
+        # The image travels inside the message, as a data URL.
+        url = f"data:{image['media_type']};base64,{image['data']}"
+        response = self.sdk.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": url}},
+            ]}],
+            temperature=temperature,
+        )
+        return response.choices[0].message.content
 
 
 class ReadingUnavailable(Exception):
@@ -50,11 +79,7 @@ def read_page(image_bytes: bytes, client=None, *, attempts: int = 3, max_bytes: 
     `client` is injected so this function can be tested without a network call.
     In production it defaults to a real provider client.
     """
-    if client is None:  # pragma: no cover - needs a key and a network
-        from openai import OpenAI
-
-        client = OpenAI()
-
+    client = client or ProviderClient()
     media_type = _media_type(image_bytes)
     if len(image_bytes) > max_bytes:
         raise ValueError(f"image larger than {max_bytes} bytes")
@@ -64,15 +89,16 @@ def read_page(image_bytes: bytes, client=None, *, attempts: int = 3, max_bytes: 
     if not isinstance(text, str) or not isinstance(unreadable, list):
         raise ReadingUnavailable("the model answered JSON that is not a transcription")
 
-    # What the model admits it could not read is the only doubt it reports.
-    # It is worth having, and it is not a confidence: see the test file.
-    return {"text": text, "unreadable": [str(u) for u in unreadable], "review": bool(unreadable)}
+    # Two doubts, and neither is a confidence: what the model admits it could
+    # not read, and a page that came back empty. See the test file.
+    review = bool(unreadable) or not text.strip()
+    return {"text": text, "unreadable": [str(u) for u in unreadable], "review": review}
 
 
 def _media_type(image_bytes: bytes) -> str:
     """Read the format from the bytes, rather than trusting a file extension."""
     for signature, media_type in SIGNATURES:
-        if image_bytes.startswith(signature):
+        if re.match(signature, image_bytes, re.S):
             return media_type
     raise ValueError("unrecognised image format")
 
@@ -85,10 +111,13 @@ def _ask(client, image_bytes: bytes, media_type: str, attempts: int) -> dict:
                 prompt=PROMPT,
                 # Base64 is how an image travels in a JSON request body.
                 image={"media_type": media_type, "data": base64.b64encode(image_bytes).decode("ascii")},
-                # Temperature zero: a transcription that changes between two
-                # identical calls cannot be checked by anyone.
+                # The lowest temperature: the SDK documents lower values as more
+                # focused and deterministic.
                 temperature=0,
             )
+            if not isinstance(answer, str):  # a refusal comes back as no content
+                last_error = ValueError("the model answered no text")
+                continue
             parsed = json.loads(answer)
             if isinstance(parsed, dict):
                 return parsed

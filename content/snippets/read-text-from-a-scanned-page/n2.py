@@ -3,8 +3,7 @@ Read a scanned page with a self-hosted optical recognition engine.
 
 Rung N2. When N0 answered « no text layer », something has to look at the
 pixels. An engine like Tesseract does exactly that, on your machine: the page
-never leaves it, there is no key and no quota, and the same image gives the
-same reading every time.
+never leaves it, and there is no key and no quota.
 
 What you own on this rung is not the engine, it is everything around it: the
 language you tell it to expect, the confidence under which a page goes to a
@@ -16,8 +15,8 @@ from __future__ import annotations
 
 import re
 
-# The language matters more than anything else you can tune here: an engine
-# reading French with an English model invents accents it has never seen.
+# The language data the engine loads, named by its Tesseract code: `fra` for
+# French documents.
 LANGUAGE = "fra"
 
 # The engine reports how sure it is of each word. Below this, the page is
@@ -30,7 +29,7 @@ class OCRUnavailable(Exception):
 
 
 class TesseractOCR:
-    """The real engine, started once and kept for the process."""
+    """The real engine. pytesseract starts the tesseract binary for every call."""
 
     def __init__(self, language: str = LANGUAGE) -> None:
         import pytesseract  # wraps the tesseract binary installed on the host
@@ -39,7 +38,7 @@ class TesseractOCR:
         self.language = language
 
     def read(self, image_path: str) -> dict:
-        """The text of one image, and how sure the engine is of it."""
+        """The text of one image, line by line, and how sure the engine is of it."""
         from PIL import Image
 
         data = self._pytesseract.image_to_data(
@@ -47,11 +46,17 @@ class TesseractOCR:
             lang=self.language,
             output_type=self._pytesseract.Output.DICT,
         )
-        # Word-level scores, on a hundred-point scale, and a score of -1 for
-        # the layout boxes that carry no word at all.
-        scores = [float(c) for w, c in zip(data["text"], data["conf"]) if w.strip() and float(c) >= 0]
+        # One row per layout box: a row of level 4 opens a line, the rows of
+        # level 5 that follow are its words, each scored out of a hundred.
+        lines, scores = [], []
+        for level, word, score in zip(data["level"], data["text"], data["conf"]):
+            if level == 4:
+                lines.append([])
+            elif level == 5 and lines and word.strip() and float(score) >= 0:
+                lines[-1].append(word)
+                scores.append(float(score))
         return {
-            "text": "\n".join(data["text"]),
+            "text": "\n".join(" ".join(words) for words in lines),
             "confidence": sum(scores) / (100 * len(scores)) if scores else 0.0,
         }
 
@@ -88,11 +93,12 @@ def _read(engine, image_path, attempts: int) -> object:
 
 
 def clean(text: str) -> str:
-    """Whitespace, and the hyphen a page break leaves inside a word."""
+    """Whitespace, and the hyphen a line break leaves inside a word."""
     lines = [re.sub(r"[ \t\xa0]+", " ", line).strip() for line in text.splitlines()]
     joined = "\n".join(line for line in lines if line)
-    # « exemp-\nlaire » is one word the scanner cut in two, not two words.
-    return re.sub(r"(\w)-\n(\w)", r"\1\2", joined)
+    # « exemp-\nlaire » is one word the scanner cut in two, not two words. Letters
+    # only: « 2024-\n000431 » is a reference, and keeps its hyphen.
+    return re.sub(r"([^\W\d_])-\n([^\W\d_])", r"\1\2", joined)
 
 
 def _confidence(value) -> float:

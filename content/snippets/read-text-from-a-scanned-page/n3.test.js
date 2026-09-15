@@ -96,13 +96,11 @@ test('point de rupture : témoin, un fragment avoué illisible lève le drapeau'
 // Le client par défaut
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit', async () => {
+test('le client par défaut a la forme du vrai kit', async () => {
   // `new OpenAI()` puis `client.complete(...)` : la méthode n'existe pas ; la
   // TypeError est avalée et retentée, et aucune requête ne part.
   globalThis.__openai = { requests: [] };
-  await assert.rejects(async () => {
-    assert.equal((await readPage(PNG)).text, TRANSCRIPTION.text);
-  });
+  assert.equal((await readPage(PNG)).text, TRANSCRIPTION.text);
   assert.equal(globalThis.__openai.requests.length, 0);
 });
 
@@ -147,7 +145,7 @@ for (const [nom, octets] of [['GIF', GIF], ['WEBP', WEBP], ['PDF', Buffer.from('
   });
 }
 
-test('INFIRMÉ : les formats envoyés sont ceux que le fournisseur accepte', async () => {
+test('les formats envoyés sont ceux que le fournisseur accepte', async () => {
   // L'extrait envoie TIFF (refusé par le fournisseur) et refuse GIF et WEBP (acceptés).
   const envoyes = new Set();
   for (const octets of [PNG, JPEG, TIFF, GIF, WEBP]) {
@@ -157,7 +155,7 @@ test('INFIRMÉ : les formats envoyés sont ceux que le fournisseur accepte', asy
       envoyes.add(client.lastRequest.image.mediaType);
     } catch { /* refusé */ }
   }
-  assert.throws(() => assert.deepEqual(envoyes, FORMATS_DU_FOURNISSEUR));
+  assert.deepEqual(envoyes, FORMATS_DU_FOURNISSEUR);
 });
 
 test('refuse une image trop grande avant de rien dépenser, et accepte la limite exacte', async () => {
@@ -221,10 +219,10 @@ for (const reponse of [
   });
 }
 
-test('DÉFAUT : une transcription vide lève le drapeau de relecture', async () => {
+test('une transcription vide lève le drapeau de relecture', async () => {
   // { text: '', unreadable: [] } rend une page vide sans drapeau ; N2 le lève.
   const result = await readPage(PNG, { client: new FakeLLM({ response: JSON.stringify({ text: '', unreadable: [] }) }) });
-  assert.throws(() => assert.equal(result.review, true));
+  assert.equal(result.review, true);
 });
 
 test('l’image entière part chez le tiers', async () => {

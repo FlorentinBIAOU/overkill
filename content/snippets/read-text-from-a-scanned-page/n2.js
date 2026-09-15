@@ -3,8 +3,7 @@
  *
  * Rung N2. When N0 answered « no text layer », something has to look at the
  * pixels. An engine like Tesseract does exactly that, on your machine: the
- * page never leaves it, there is no key and no quota, and the same image gives
- * the same reading every time.
+ * page never leaves it, and there is no key and no quota.
  *
  * What you own on this rung is not the engine, it is everything around it: the
  * language you tell it to expect, the confidence under which a page goes to a
@@ -12,8 +11,8 @@
  * answer to « what does the code do when the engine says nothing usable ».
  */
 
-// The language matters more than anything else you can tune here: an engine
-// reading French with an English model invents accents it has never seen.
+// The language data the engine loads, named by its Tesseract code: `fra` for
+// French documents.
 export const LANGUAGE = 'fra';
 
 // The engine reports how sure it is of each word. Below this, the page is
@@ -22,10 +21,12 @@ export const DEFAULT_MIN_CONFIDENCE = 0.7;
 
 export class OCRUnavailable extends Error {}
 
-/** The real engine, started once and kept for the process. */
+/** The real engine: one worker, started on first use and kept for the process. */
 export class TesseractOCR {
   static async load(language = LANGUAGE) {
-    const { createWorker } = await import('tesseract.js'); // pulls the language data once
+    // tesseract.js downloads the language data from a CDN unless `langPath`
+    // points at local files.
+    const { createWorker } = await import('tesseract.js');
     return new TesseractOCR(await createWorker(language));
   }
 
@@ -36,11 +37,20 @@ export class TesseractOCR {
   /** The text of one image, and how sure the engine is of it. */
   async read(imagePath) {
     const { data } = await this.worker.recognize(imagePath);
-    // Word-level scores, on a hundred-point scale.
-    const scores = data.words.filter((w) => w.text.trim()).map((w) => w.confidence);
-    const total = scores.reduce((sum, score) => sum + score, 0);
-    return { text: data.text, confidence: scores.length ? total / (100 * scores.length) : 0 };
+    // Since tesseract.js 6, words are not returned unless asked for; `confidence`
+    // is the engine's mean word score, out of a hundred.
+    return { text: data.text, confidence: data.confidence / 100 };
   }
+}
+
+let worker; // a promise, so two pages read at once still share one worker
+
+function defaultEngine() {
+  worker ??= TesseractOCR.load().catch((error) => {
+    worker = undefined; // a failed start is not kept: the next page tries again
+    throw error;
+  });
+  return worker;
 }
 
 /**
@@ -54,7 +64,7 @@ export class TesseractOCR {
  * @param {{minConfidence?: number, attempts?: number}} [options]
  */
 export async function readPage(imagePath, engine, { minConfidence = DEFAULT_MIN_CONFIDENCE, attempts = 2 } = {}) {
-  const reader = engine ?? (await TesseractOCR.load());
+  const reader = engine ?? (await defaultEngine());
   const reading = await read(reader, imagePath, attempts);
   if (typeof reading?.text !== 'string') {
     throw new OCRUnavailable('the engine owed a reading, and did not give one');
@@ -81,14 +91,15 @@ async function read(engine, imagePath, attempts) {
   throw new OCRUnavailable(String(lastError));
 }
 
-/** Whitespace, and the hyphen a page break leaves inside a word. */
+/** Whitespace, and the hyphen a line break leaves inside a word. */
 export function clean(text) {
   const lines = text
     .split('\n')
     .map((line) => line.replace(/[ \t\xa0]+/g, ' ').trim())
     .filter((line) => line !== '');
-  // « exemp-\nlaire » is one word the scanner cut in two, not two words.
-  return lines.join('\n').replace(/(\w)-\n(\w)/g, (_, before, after) => before + after);
+  // « exemp-\nlaire » is one word the scanner cut in two, not two words. Letters
+  // only: « 2024-\n000431 » is a reference, and keeps its hyphen.
+  return lines.join('\n').replace(/(\p{L})-\n(\p{L})/gu, (_, before, after) => before + after);
 }
 
 /** A number the caller can act on, rather than whatever came back. */

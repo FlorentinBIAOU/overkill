@@ -2,10 +2,7 @@
  * Read a scanned page by handing the image to a general-purpose multimodal
  * model.
  *
- * Rung N3. This is the option people reach for first, and on this entry it
- * does buy something real: a model that sees the page reads a handwritten
- * annotation in the margin, a stamp across a table, a column layout an OCR
- * engine flattens.
+ * Rung N3. The page goes out whole, to a model that returns a transcription.
  *
  * Note what the code has to do that N0 did not: recognise the image format,
  * cap what it sends, encode the bytes, retry on failure, parse an answer that
@@ -25,19 +22,47 @@ export const PROMPT = [
   'cannot read: leave « ... » in the text and name it in `unreadable`.',
 ].join('\n');
 
-// The signatures a scanner produces. Anything else is refused rather than sent
-// and charged for, because a provider will reject it too.
+// The formats the provider's vision input lists: PNG, JPEG, WEBP and GIF (not
+// animated, which this check does not see). Anything else, a TIFF included, is
+// refused before it is sent: convert it first.
 const SIGNATURES = [
-  [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 'image/png'],
-  [[0xff, 0xd8, 0xff], 'image/jpeg'],
-  [[0x49, 0x49, 0x2a, 0x00], 'image/tiff'],
-  [[0x4d, 0x4d, 0x00, 0x2a], 'image/tiff'],
+  [/^\x89PNG\r\n\x1a\n/, 'image/png'],
+  [/^\xff\xd8\xff/, 'image/jpeg'],
+  [/^RIFF[\s\S]{4}WEBP/, 'image/webp'],
+  [/^GIF8[79]a/, 'image/gif'],
 ];
 
-// A page scan larger than this is a photograph of a desk, not a page. A model
-// charges by what it is given, so refusing it is a cost control, not an
-// optimisation.
+// A cap on what is encoded and uploaded; base64 makes the request a third
+// larger than the file. It is not a cost control: the provider bills an image
+// by its dimensions, not by its bytes.
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+// The provider named here is an example, not a recommendation: the reasoning
+// holds for any general-purpose model API, and the client is swappable. Pass
+// any object with a `complete({ prompt, image, temperature })` method.
+export const MODEL = 'gpt-4.1-mini'; // an example id: check the parameters your model accepts
+
+export async function providerClient(sdk, model = MODEL) {
+  if (!sdk) {
+    const { OpenAI } = await import('openai');
+    sdk = new OpenAI();
+  }
+  return {
+    async complete({ prompt, image, temperature }) {
+      // The image travels inside the message, as a data URL.
+      const url = `data:${image.mediaType};base64,${image.data}`;
+      const response = await sdk.chat.completions.create({
+        model,
+        messages: [{
+          role: 'user',
+          content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url } }],
+        }],
+        temperature,
+      });
+      return response.choices[0].message.content;
+    },
+  };
+}
 
 export class ReadingUnavailable extends Error {}
 
@@ -52,12 +77,7 @@ export class ReadingUnavailable extends Error {}
  * @param {number} [options.maxBytes]
  */
 export async function readPage(imageBytes, { client, attempts = 3, maxBytes = MAX_IMAGE_BYTES } = {}) {
-  if (!client) {
-    // Needs a key and a network, so it is never reached in the tests.
-    const { OpenAI } = await import('openai');
-    client = new OpenAI();
-  }
-
+  client ??= await providerClient();
   const bytes = Buffer.from(imageBytes);
   const mediaType = mediaTypeOf(bytes);
   if (bytes.length > maxBytes) throw new RangeError(`image larger than ${maxBytes} bytes`);
@@ -68,15 +88,17 @@ export async function readPage(imageBytes, { client, attempts = 3, maxBytes = MA
     throw new ReadingUnavailable('the model answered JSON that is not a transcription');
   }
 
-  // What the model admits it could not read is the only doubt it reports. It
-  // is worth having, and it is not a confidence: see the test file.
-  return { text, unreadable: unreadable.map(String), review: unreadable.length > 0 };
+  // Two doubts, and neither is a confidence: what the model admits it could
+  // not read, and a page that came back empty. See the test file.
+  const review = unreadable.length > 0 || text.trim() === '';
+  return { text, unreadable: unreadable.map(String), review };
 }
 
 /** Read the format from the bytes, rather than trusting a file extension. */
 function mediaTypeOf(bytes) {
+  const head = bytes.subarray(0, 12).toString('latin1');
   for (const [signature, mediaType] of SIGNATURES) {
-    if (signature.every((byte, i) => bytes[i] === byte)) return mediaType;
+    if (signature.test(head)) return mediaType;
   }
   throw new TypeError('unrecognised image format');
 }
@@ -89,10 +111,14 @@ async function ask(client, bytes, mediaType, attempts) {
         prompt: PROMPT,
         // Base64 is how an image travels in a JSON request body.
         image: { mediaType, data: bytes.toString('base64') },
-        // Temperature zero: a transcription that changes between two identical
-        // calls cannot be checked by anyone.
+        // The lowest temperature: the SDK documents lower values as more
+        // focused and deterministic.
         temperature: 0,
       });
+      if (typeof answer !== 'string') {
+        lastError = new Error('the model answered no text'); // a refusal comes back as no content
+        continue;
+      }
       const parsed = JSON.parse(answer);
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
       lastError = new Error('the model answered something that is not an object');

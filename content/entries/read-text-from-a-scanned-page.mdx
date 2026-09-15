@@ -3,7 +3,7 @@ id: read-text-from-a-scanned-page
 family: recognize-transcribe
 status: published
 verdict: N2
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Get the text out of a document that arrived as a PDF or an image, to index it, file it or read it back."
 
 scenario:
-  fr: "On voit régulièrement des chaînes de traitement envoyer chaque page entrante à un moteur de reconnaissance, ou à un modèle multimodal, sans jamais demander au document s’il porte déjà son texte. Beaucoup de « scans » n’ont pourtant jamais été scannés : une facture sortie d’un logiciel de comptabilité, un relevé imprimé en PDF, un contrat exporté d’un traitement de texte transportent leur texte à côté de leurs instructions de dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater. Poser la question coûte un appel de fonction, et elle règle tout le besoin quand la réponse est oui. Quand elle est non, le vrai travail commence : quelque chose doit regarder les pixels."
-  en: "Pipelines routinely ship every incoming page off to a recognition engine, or to a multimodal model, without ever asking the document whether it already carries its text. Plenty of « scans » were never scanned: an invoice out of an accounting package, a statement printed to PDF, a contract exported from a word processor all carry their text next to their drawing instructions, already correct, with no recognition step and therefore nothing to get wrong. Asking costs one function call, and it settles the whole need whenever the answer is yes. When the answer is no, the real work starts: something has to look at the pixels."
+  fr: "Une chaîne de traitement qui envoie chaque page entrante à un moteur de reconnaissance, ou à un modèle multimodal, ne demande jamais au document s’il porte déjà son texte. Un document arrivé en PDF n’a pourtant pas forcément été scanné : une facture sortie d’un logiciel de comptabilité, un relevé imprimé en PDF, un contrat exporté d’un traitement de texte transportent leur texte à côté de leurs instructions de dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater. Poser la question coûte un appel de fonction, et elle règle tout le besoin quand la réponse est oui. Quand elle est non, le vrai travail commence : quelque chose doit regarder les pixels."
+  en: "A pipeline that ships every incoming page off to a recognition engine, or to a multimodal model, never asks the document whether it already carries its text. A document that arrived as a PDF was not necessarily scanned, though: an invoice out of an accounting package, a statement printed to PDF, a contract exported from a word processor all carry their text next to their drawing instructions, already correct, with no recognition step and therefore nothing to get wrong. Asking costs one function call, and it settles the whole need whenever the answer is yes. When the answer is no, the real work starts: something has to look at the pixels."
 
 rungs:
   - level: N0
@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/read-text-from-a-scanned-page/n0.js
       verification: executed
     breaking_point:
-      fr: "Une page réellement scannée n’a pas de couche de texte, et aucune lecture n’en inventera une. Le document du test est valide, il compte une page, et cette page est une photographie dessinée en plein cadre : zéro caractère, que son image se décompresse ou qu’elle arrive déjà compressée en JPEG, comme celle d’un vrai scanner. Ce que l’extrait rend alors n’est pas une chaîne vide, qui se lirait « page blanche » et ferait classer un document non lu, mais un rapport qui nomme la raison et renvoie vers un OCR. C’est le premier des deux refus que les tests démontrent, et le seuil de caractères y range aussi le tampon d’un numéro de page : un caractère posé sur une image reste une image. Le second refus est ailleurs. Un export de traitement de texte, dont la police sous-ensemble renumérote ses glyphes à partir de un, porte bien son texte sans que l’extrait ait la table qui le rendrait aux lettres : il compte alors zéro caractère lisible, le dit, et renvoie vers une bibliothèque PDF complète plutôt que vers un OCR, qui ne servirait à rien sur un document qui n’a jamais été une image."
-      en: "A page that was really scanned has no text layer, and no amount of parsing will invent one. The test document is valid, it has one page, and that page is a photograph drawn edge to edge: zero characters, whether its picture inflates or arrives already compressed as a JPEG, the way a real scanner writes it. What the snippet returns then is not an empty string, which would read as « this page is blank » and file an unread document, but a report that names the reason and points at OCR. That is the first of the two refusals the tests pin down, and the character threshold files a stamped page number under it as well: one character sitting on an image is still an image. The second refusal is a different matter. A word-processor export, whose subset font renumbers its glyphs from one, does carry its text while the snippet has no table to turn it back into letters: it counts zero readable characters, says so, and points at a full PDF library rather than at OCR, which would be no use at all on a document that was never a picture."
+      fr: "Une page réellement scannée n’a pas de couche de texte, et aucune lecture n’en inventera une. Le document du test est valide, il compte une page, et cette page est une photographie dessinée en plein cadre : zéro caractère, que son image se décompresse ou qu’elle arrive déjà compressée en JPEG, comme celle d’un vrai scanner. Ce que l’extrait rend alors n’est pas une chaîne vide, qui se lirait « page blanche » et ferait classer un document non lu, mais un rapport qui nomme la raison et renvoie vers un OCR ; le seuil de caractères y range aussi le tampon d’un numéro de page, un caractère posé sur une image. Le second renvoi va vers une bibliothèque PDF complète : un document chiffré, un flux encodé par un autre filtre que la seule décompression que l’extrait sait faire, ou une police sous-ensemble qui renumérote ses glyphes à partir de un. Cette dernière, l’extrait la reconnaît à un seul signe, un code sous 32, là où aucun encodage nommé d’une police simple ne place de glyphe. Et c’est là qu’il casse : une page dont la police renumérotée n’emploie que des codes à partir de 33 — « !F;0%J?4) » là où la page imprime des lettres — n’a aucun de ces codes, passe pour une couche de texte lisible, et rend du charabia comme s’il avait été lu."
+      en: "A page that was really scanned has no text layer, and no amount of parsing will invent one. The test document is valid, it has one page, and that page is a photograph drawn edge to edge: zero characters, whether its picture inflates or arrives already compressed as a JPEG, the way a real scanner writes it. What the snippet returns then is not an empty string, which would read as « this page is blank » and file an unread document, but a report that names the reason and points at OCR; the character threshold files a stamped page number there too, one character sitting on an image. The other referral goes to a full PDF library: an encrypted document, a stream encoded by a filter other than the one decompression the snippet knows, or a subset font that renumbers its glyphs from one. That last one the snippet recognises by a single sign, a code below 32, where no named encoding of a simple font puts a glyph. And that is where it breaks: a page whose renumbered font only uses codes from 33 up — « !F;0%J?4) » where the page prints letters — carries none of those codes, passes for a readable text layer, and hands back gibberish as if it had been read."
     escalate_when:
       fr: "Le rapport revient avec « pas de couche de texte » sur des documents qu’il faut bien lire."
       en: "The report comes back « no text layer » on documents you still have to read."
@@ -53,8 +53,8 @@ rungs:
   - level: N1
     available: false
     unavailable_reason:
-      fr: "Un OCR écrit à la main — segmentation des caractères, puis classifieur sur chaque glyphe — est un projet de plusieurs mois, dont le résultat reste en deçà des moteurs libres qui s’installent en une commande. Sur cette fiche, N2 n’est pas une montée en puissance, c’est le point d’entrée raisonnable."
-      en: "A hand-written OCR — character segmentation, then a classifier on each glyph — is a project of several months whose result stays below the free engines you install with a single command. On this entry, N2 is not a step up in power, it is the sensible entry point."
+      fr: "Un OCR écrit à la main — segmentation des lignes et des caractères, puis classifieur sur chaque glyphe — refait ce que fait déjà Tesseract, un moteur libre que les distributions courantes proposent en paquet, installé par une seule commande. Sur cette fiche, N2 n’est pas une montée en puissance, c’est le point d’entrée raisonnable."
+      en: "A hand-written OCR — line and character segmentation, then a classifier on each glyph — redoes what Tesseract already does, a free engine the common distributions ship as a package, installed with a single command. On this entry, N2 is not a step up in power, it is the sensible entry point."
 
   - level: N2
     available: true
@@ -71,21 +71,21 @@ rungs:
       footprint: moderate
       regulatory:
         fr:
-          - "Traitement des documents sur votre infrastructure, données linguistiques du moteur comprises"
+          - "Traitement des documents sur votre infrastructure ; seules les données linguistiques du moteur viennent de l’extérieur, que tesseract.js télécharge par défaut depuis un CDN"
           - "Les pages envoyées en relecture humaine sont vues par une personne : le périmètre des accès internes est à traiter comme tel"
         en:
-          - "Processing of the documents on your own infrastructure, engine language data included"
+          - "Processing of the documents on your own infrastructure; only the engine’s language data comes from outside, which tesseract.js downloads from a CDN by default"
           - "Pages sent to human review are seen by a person: internal access is part of the scope and is handled as such"
     code:
       python: snippets/read-text-from-a-scanned-page/n2.py
       javascript: snippets/read-text-from-a-scanned-page/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Une erreur sûre d’elle, contre laquelle un seuil de confiance ne peut rien. Le test écrit la lecture lui-même dans un double local, faute de pouvoir commander une faute à un moteur : ce qui revient est « N° 2O24-OOO431 », la lettre O là où la facture imprimait un zéro, avec un score haut. Le drapeau de relecture reste alors baissé, puisque rien n’a hésité, et relever le seuil n’y change rien — un seuil attrape une page sur laquelle le moteur a peiné, pas une page qu’il a mal lue sans peiner. Ce que le test prouve est donc cet aveuglement du seuil, pas la faute du moteur. Ce qui rattrape celle-là, c’est une règle sur la forme attendue de vos références, écrite à la main : N0 de nouveau."
-      en: "A confident mistake, and a confidence threshold can do nothing about it. The test writes the reading itself, into a local double, since no test can order a mistake from an engine: what comes back is « N° 2O24-OOO431 », the letter O where the invoice printed a zero, with a high score. The review flag then stays down, because nothing hesitated, and raising the threshold changes nothing — a threshold catches a page the engine struggled with, not a page it read wrong without struggling. What the test proves is therefore that blindness of the threshold, not the engine’s mistake. What catches that mistake is a rule about the shape your references take, written by hand: level N0 again."
+      fr: "Une erreur sûre d’elle, contre laquelle un seuil de confiance ne peut rien. Le test écrit la lecture lui-même dans un double local, faute de pouvoir commander une faute à un moteur : ce qui revient est « N° 2O24-OOO431 », la lettre O là où la facture imprimait un zéro, avec un score haut. Le drapeau de relecture reste alors baissé, puisque le score passe le seuil. Un seuil relevé au-dessus de ce score le lèverait, mais sur toutes les lectures justes rendues au même score aussi : un seuil attrape une page sur laquelle le moteur a peiné, il ne distingue pas une page mal lue d’une page bien lue au même score. Ce que le test prouve est donc cet aveuglement du seuil, pas la faute du moteur. Ce qui rattrape celle-là, c’est une règle sur la forme attendue de vos références, écrite à la main : N0 de nouveau."
+      en: "A confident mistake, and a confidence threshold can do nothing about it. The test writes the reading itself, into a local double, since no test can order a mistake from an engine: what comes back is « N° 2O24-OOO431 », the letter O where the invoice printed a zero, with a high score. The review flag then stays down, because the score clears the threshold. A threshold raised above that score would raise it, but on every correct reading returned at the same score as well: a threshold catches a page the engine struggled with, it cannot tell a page read wrong from a page read right at the same score. What the test proves is therefore that blindness of the threshold, not the engine’s mistake. What catches that mistake is a rule about the shape your references take, written by hand: level N0 again."
     escalate_when:
-      fr: "Vos pages portent ce qu’un moteur de lignes ne rend pas : une annotation manuscrite en marge, un tampon en travers d’un tableau, deux colonnes qu’il aplatit en une seule suite de lignes."
-      en: "Your pages carry what a line engine does not return: a handwritten note in the margin, a stamp across a table, two columns it flattens into a single run of lines."
+      fr: "Vos pages portent ce que la documentation de Tesseract dit mal lire : de l’écriture manuscrite, pour laquelle le moteur n’est pas conçu, ou des tableaux, qu’il reconnaît mal sans segmentation écrite pour eux."
+      en: "Your pages carry what Tesseract’s own documentation says it reads badly: handwriting, which the engine is not designed for, or tables, which it struggles with unless you write the segmentation for them."
 
   - level: N3
     available: true
@@ -121,18 +121,30 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2, parce que sur une page réellement scannée il ne reste que les pixels, et que c’est le seul niveau qui les lise chez vous, sans clé ni quota, et deux fois de la même façon. N0 passe toujours en premier : il coûte un appel de fonction, il règle tout le besoin quand le document portait déjà son texte, et quand il ne le porte pas, il le dit au lieu de rendre une page vide — c’est le réflexe, pas la solution générale. N3 lit ce que N2 aplatit, une annotation en marge ou deux colonnes, et le paie de la seule chose qui compte ici : sa transcription peut avoir été écrite plutôt que lue, et rien dans le code ne peut s’en apercevoir."
-  en: "N2, because on a page that was really scanned nothing is left but the pixels, and this is the only level that reads them on your own machine, with no key and no quota, and reads them the same way twice. N0 comes first every time: it costs one function call, it settles the whole need when the document was carrying its text all along, and when it is not, it says so instead of handing back a blank page — a first reflex, not a general solution. N3 reads what N2 flattens, a note in the margin or two columns, and pays for it with the one thing that matters here: its transcription may have been written rather than read, and nothing in the code can tell."
+  fr: "N2, parce que sur une page réellement scannée il ne reste que les pixels, et que c’est le seul niveau qui les lise chez vous, sans clé ni quota. N0 passe toujours en premier : il coûte un appel de fonction, il règle tout le besoin quand le document portait déjà son texte, et quand il ne le porte pas, il le dit au lieu de rendre une page vide — c’est le réflexe, pas la solution générale. N3 reste pour ce que Tesseract dit lui-même mal lire, l’écriture manuscrite et les tableaux, sans que rien ici ne prouve que le modèle les lise mieux, et il le paie de la seule chose qui compte : sa transcription peut avoir été écrite plutôt que lue, et rien dans le code ne peut s’en apercevoir."
+  en: "N2, because on a page that was really scanned nothing is left but the pixels, and this is the only level that reads them on your own machine, with no key and no quota. N0 comes first every time: it costs one function call, it settles the whole need when the document was carrying its text all along, and when it is not, it says so instead of handing back a blank page — a first reflex, not a general solution. N3 is left for what Tesseract itself says it reads badly, handwriting and tables, with nothing here proving the model reads them any better, and it pays with the one thing that matters: its transcription may have been written rather than read, and nothing in the code can tell."
 
 further_reading:
   - label: "PDF 32000-1:2008 — les opérateurs de texte d’un flux de contenu, section 9.4"
     url: "https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf"
   - label: "Tesseract OCR — le moteur nommé par l’extrait N2"
     url: "https://github.com/tesseract-ocr/tesseract"
-  - label: "Tesseract — Improving the quality of the output, sur ce qui fait rater une page"
+  - label: "Tesseract — Improving the quality of the output, sur ce qui fait rater une page, tableaux compris"
     url: "https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html"
+  - label: "Tesseract — FAQ, sur l’écriture manuscrite"
+    url: "https://tesseract-ocr.github.io/tessdoc/FAQ.html"
   - label: "tesseract.js — le portage JavaScript utilisé par l’extrait N2"
     url: "https://github.com/naptha/tesseract.js"
 
-sources: []
+sources:
+  - label: "PDF 32000-1:2008, 7.3.4.2 (chaînes littérales), 7.5.7 (flux d’objets), 9.4.3 (opérateurs de texte), annexe D (encodages)"
+    url: "https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf"
+  - label: "Tesseract — Installation"
+    url: "https://tesseract-ocr.github.io/tessdoc/Installation.html"
+  - label: "tesseract.js — API, createWorker et recognize"
+    url: "https://github.com/naptha/tesseract.js/blob/master/docs/api.md"
+  - label: "pytesseract — image_to_data"
+    url: "https://github.com/madmaze/pytesseract"
+  - label: "OpenAI — Images and vision : formats acceptés, facturation par dimensions"
+    url: "https://developers.openai.com/api/docs/guides/images-vision"
 ---
