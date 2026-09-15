@@ -255,14 +255,12 @@ test('l’essai entraîne quatre classifieurs sur 28 articles par langue', () =>
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : un fonds vide ou de longueurs différentes est accepté sans erreur', () => {
+test('un fonds vide ou de longueurs différentes est accepté sans erreur', () => {
   // Python lève ValueError dans les deux cas. Ici, un fonds vide donne un
   // modèle sans thème qui ne pose jamais rien ; des listes de longueurs
   // différentes donnent des scores NaN, et aucun article n'est plus étiqueté.
-  assert.throws(() => {
-    assert.throws(() => train([], []));
-    assert.throws(() => train(ARTICLES, TOPICS.slice(0, -2)));
-  }, assert.AssertionError);
+  assert.throws(() => train([], []));
+  assert.throws(() => train(ARTICLES, TOPICS.slice(0, -2)));
 });
 
 test('production : valeurs aux limites du seuil', () => {
@@ -279,7 +277,7 @@ test('production : un article de 700 Ko termine vite', () => {
   assert.ok(performance.now() - start < 2000);
 });
 
-test('DÉFAUT : un fonds de trois cents articles ne s’entraîne pas', () => {
+test('un fonds de trois cents articles ne s’entraîne pas', () => {
   // 300 articles de 500 mots : plus de 120 000 traits, et `Math.hypot(...vector)`
   // dépasse la pile (RangeError). Même en dessous, l'entraînement coûte
   // epochs × articles × traits × thèmes : 100 articles de 300 mots prennent
@@ -292,17 +290,15 @@ test('DÉFAUT : un fonds de trois cents articles ne s’entraîne pas', () => {
     Array.from({ length: 500 }, () => lexicon[Math.floor(3000 * rnd() ** 2)]).join(' '),
   );
   const topics = articles.map((_, i) => [['a', 'b', 'c', 'd'][i % 4]]);
-  assert.throws(() => {
-    const start = performance.now();
-    let model;
-    try {
-      model = train(articles, topics, { epochs: 1 });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.ok(performance.now() - start < 1000);
-    assert.deepEqual(model.topics, ['a', 'b', 'c', 'd']);
-  }, assert.AssertionError);
+  const start = performance.now();
+  let model;
+  try {
+    model = train(articles, topics, { epochs: 1 });
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.ok(performance.now() - start < 1000);
+  assert.deepEqual(model.topics, ['a', 'b', 'c', 'd']);
 });
 
 test('production : encodage NFD, insécables, emoji, BOM', () => {

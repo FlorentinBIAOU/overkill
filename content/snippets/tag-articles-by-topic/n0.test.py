@@ -194,11 +194,6 @@ def test_le_repli_de_suffixes_confond_aussi_des_mots_distincts():
     assert tag("Son post sur LinkedIn a fait réagir.", {"recrutement": ["poste"]}) == ["recrutement"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : `min_terms` dit « how many distinct terms » et « a single passing mention » ; une seule "
-    "mention de « crédit d'impôt » compte deux termes, « crédit d'impôt » et « impôt »",
-)
 def test_min_terms_demande_plus_qu_une_mention_en_passant():
     assert tag("Le crédit d'impôt recherche est prolongé.", VOCABULARY, min_terms=2) == []
 
@@ -220,11 +215,6 @@ def test_le_theme_le_mieux_etaye_passe_en_premier():
     assert tag(article, VOCABULARY) == ["recrutement", "télétravail"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ (Python) : « ties in alphabetical order » ; `sorted` range par point de code, « Zèbre » avant "
-    "« armée » et « économie » après « fiscalité », quand JavaScript rend l'ordre alphabétique",
-)
 def test_a_egalite_les_themes_sont_dans_l_ordre_alphabetique():
     vocabulary = {"économie": ["budget"], "fiscalité": ["budget"], "Zèbre": ["budget"], "armée": ["budget"]}
     assert tag("Le budget est voté.", vocabulary) == ["armée", "économie", "fiscalité", "Zèbre"]
@@ -265,11 +255,6 @@ def test_production_entrees_vides():
     assert tag("Un article.", {"vide": []}) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : `min_terms=0` n'est pas refusé et étiquette tous les thèmes, même un article vide, sans "
-    "qu'aucun terme ne les justifie",
-)
 def test_defaut_min_terms_a_zero_est_refuse_ou_n_etiquette_rien_sans_terme():
     try:
         out = tag("", VOCABULARY, min_terms=0)
@@ -309,20 +294,10 @@ def test_production_encodage_nfd_insecables_apostrophe_emoji_bom():
     assert tag("Le TéLéTrAvAiL", VOCABULARY) == ["télétravail"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un trait d'union conditionnel (U+00AD) ou une espace sans chasse (U+200B) collés par un "
-    "outil de mise en page coupent le mot en deux, et le terme n'est plus trouvé",
-)
 def test_defaut_un_caractere_invisible_dans_un_mot_ne_cache_pas_le_terme():
     assert tag("Le télé­travail progresse.", VOCABULARY) == ["télétravail"]
     assert tag("Le télé​travail progresse.", VOCABULARY) == ["télétravail"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : la ligature « œ » n'est pas décomposée par NFD ; « main-d'oeuvre » et « main-d'œuvre », les "
-    "deux graphies courantes, ne se rencontrent pas",
-)
 def test_defaut_oe_et_la_ligature_se_rencontrent():
     assert tag("Le coût de la main-d'oeuvre augmente.", {"emploi": ["main-d'œuvre"]}) == ["emploi"]

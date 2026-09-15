@@ -3,7 +3,7 @@ id: tag-articles-by-topic
 family: classify-route
 status: published
 verdict: N1
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,15 +15,15 @@ need:
   en: "Attach to every article the topics it covers, taken from the newsroom’s own list."
 
 scenario:
-  fr: "On voit passer chaque article publié dans un appel de modèle généraliste, la liste des thèmes maison recopiée dans l’invite, pour récupérer deux ou trois étiquettes. Le fonds, lui, est déjà là : des années d’articles que la rédaction a étiquetés à la main, et dont personne ne se sert. La question n’est pas de savoir si un modèle sait poser une étiquette, c’est de savoir pourquoi on loue tous les mois une connaissance qu’on possède déjà."
-  en: "A common pattern is to push every published article through a general-purpose model call, the in-house topic list pasted into the prompt, and take back two or three tags. Meanwhile the archive sits right there: years of articles the newsroom tagged by hand, which nobody uses. The question is not whether a model can attach a label, it is why you would rent every month a knowledge you already own."
+  fr: "On voit passer chaque article publié dans un appel de modèle généraliste, la liste des thèmes maison recopiée dans l’invite, pour récupérer deux ou trois étiquettes. Or une rédaction qui étiquette ses articles depuis des années a déjà de quoi entraîner un classifieur : ses propres articles, étiquetés à la main. La question n’est pas de savoir si un modèle sait poser une étiquette, c’est de savoir pourquoi on loue tous les mois une connaissance qu’on possède déjà."
+  en: "A common pattern is to push every published article through a general-purpose model call, the in-house topic list pasted into the prompt, and take back two or three tags. Yet a newsroom that has tagged its articles for years already holds what it takes to train a classifier: its own articles, tagged by hand. The question is not whether a model can attach a label, it is why you would rent every month a knowledge you already own."
 
 rungs:
   - level: N0
     available: true
     name:
-      fr: "Vocabulaire contrôlé, correspondance de termes après lemmatisation"
-      en: "Controlled vocabulary, term matching after lemmatisation"
+      fr: "Vocabulaire contrôlé, correspondance de termes après retrait des terminaisons"
+      en: "Controlled vocabulary, term matching after suffix stripping"
     cost: nul
     latency: "<1 ms"
     risks:
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/tag-articles-by-topic/n0.js
       verification: executed
     breaking_point:
-      fr: "Un thème traité de bout en bout sans jamais être nommé. « L’équipe ne se retrouve au bureau que le mardi, les réunions se tiennent en visioconférence » : c’est du télétravail du premier au dernier mot, aucun terme de la liste n’y figure, et l’article ressort sans étiquette. La seule réparation est d’ajouter un terme après chaque article manqué, indéfiniment."
-      en: "A topic covered from end to end without ever being named. “The team is only in the office on Tuesdays, meetings are held over video”: that is remote work from the first word to the last, not one term of the list appears in it, and the article comes back untagged. The only repair is to add a term after each missed article, for ever."
+      fr: "Un thème traité de bout en bout sans jamais être nommé. « L’équipe ne se retrouve au bureau que le mardi, les réunions se tiennent en visioconférence » : c’est du télétravail du premier au dernier mot, aucun terme de la liste n’y figure, et l’article ressort sans étiquette. La seule réparation est d’ajouter un terme après chaque article manqué, et l’article suivant, écrit autrement, repasse au travers."
+      en: "A topic covered from end to end without ever being named. “The team is only in the office on Tuesdays, meetings are held over video”: that is remote work from the first word to the last, not one term of the list appears in it, and the article comes back untagged. The only repair is to add a term after each missed article, and the next one, written another way, slips through again."
     escalate_when:
       fr: "Votre liste de termes s’allonge à chaque relecture éditoriale, parce que des articles ressortent vides alors qu’ils traitent bien d’un thème."
       en: "Your term list grows at every editorial review, because articles keep coming back empty although they plainly cover a topic."
@@ -67,8 +67,8 @@ rungs:
       javascript: snippets/tag-articles-by-topic/n1.js
       verification: executed
     breaking_point:
-      fr: "Un thème que personne n’a étiqueté n’existe pas pour le modèle. L’article sur le guichet de subvention de la région ressort vide, et baisser le seuil pour le rattraper ne fait pas apparaître le thème manquant : il classe l’article en télétravail. Chaque thème ajouté à la taxonomie redemande une passe d’étiquetage à la main sur tout le fonds."
-      en: "A topic nobody labelled does not exist for the model. The article about a regional subsidy desk comes back empty, and lowering the threshold to catch it does not surface the missing topic: it files the article under remote work. Every topic added to the taxonomy asks for another hand-labelling pass over the whole archive."
+      fr: "Un thème que personne n’a étiqueté n’existe pas pour le modèle. L’article sur le guichet de subvention de la région ressort vide, et baisser le seuil pour le rattraper ne fait pas apparaître le thème manquant : il classe l’article en télétravail. Un thème ajouté à la taxonomie n’existe pour le modèle qu’une fois des articles étiquetés avec lui, et les articles du fonds qui en parlent sans porter l’étiquette lui servent d’exemples contraires."
+      en: "A topic nobody labelled does not exist for the model. The article about a regional subsidy desk comes back empty, and lowering the threshold to catch it does not surface the missing topic: it files the article under remote work. A topic added to the taxonomy exists for the model only once articles have been tagged with it, and the archive articles that cover it without the tag teach it the opposite."
     escalate_when:
       fr: "La rédaction ouvre une rubrique et attend des étiquettes le jour même, avant qu’un seul article n’ait été étiqueté à la main."
       en: "The newsroom opens a new section and expects tags the same day, before a single article has been labelled by hand."
@@ -98,8 +98,8 @@ rungs:
       javascript: snippets/tag-articles-by-topic/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le score est un cosinus, pas une probabilité, et il ne veut pas dire la même chose d’un thème à l’autre. Sur un article de quatre phrases de cybersécurité qui se termine par une ligne sur l’amende non déductible de l’impôt, la fiscalité passe sous le seuil ; le seuil qui la rattrape fait entrer aussi le télétravail, dont l’article ne parle jamais. Aucun seuil ne sépare les deux, et en régler un demande des articles déjà étiquetés à la main : le corpus que ce niveau devait épargner."
-      en: "The score is a cosine, not a probability, and it does not mean the same thing from one topic to the next. On an article that spends four sentences on computer security and closes with one line about a fine not being tax deductible, the tax topic falls below the threshold; the threshold that brings it back also lets in remote work, which the article never mentions. No threshold separates the two, and setting one calls for articles already tagged by hand: the very corpus this level was meant to save."
+      fr: "Le score est un cosinus, pas une probabilité : il peut être négatif, les scores d’un même article ne somment pas à un, et un seul seuil sert tous les thèmes. Le test le montre sur des vecteurs écrits à la main. Choisir ce seuil d’après les erreurs qu’il fait demande des articles dont on connaît déjà les thèmes : le corpus que ce niveau devait épargner. Ce que vaut un même cosinus d’un thème à l’autre avec le vrai encodeur, aucun test d’ici ne le mesure."
+      en: "The score is a cosine, not a probability: it can be negative, the scores of one article do not add up to one, and a single threshold serves every topic. The test shows it on vectors written by hand. Choosing that threshold by the mistakes it makes takes articles whose topics are already known: the very corpus this level was meant to save. What the same cosine is worth from one topic to the next with the real encoder, no test here measures."
     escalate_when:
       fr: "Aucun réglage du seuil ne vous donne à la fois les thèmes secondaires réels et le silence sur les thèmes absents, et vos relecteurs retirent plus d’étiquettes qu’ils n’en gardent."
       en: "No setting of the threshold gives you both the real secondary topics and silence on the absent ones, and your reviewers remove more tags than they keep."
@@ -131,22 +131,22 @@ rungs:
       javascript: snippets/tag-articles-by-topic/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle peut répondre n’importe quoi, « Bien sûr ! Voici les thèmes de cet article : » là où du JSON était demandé. Or la liste vide est ici une réponse légitime, puisque des articles ne portent aucun thème : avaler l’erreur rendrait la panne indiscernable du résultat correct, et les articles tomberaient sans bruit de toutes les pages de rubrique. L’extrait lève une erreur, et l’appelant décide."
-      en: "The model can answer anything, prose where JSON was asked for. An empty list is a legitimate answer here, since plenty of articles carry no topic at all: swallowing the error would make a failure indistinguishable from a correct result, and articles would drop out of every section page without a sound. The snippet raises instead, and the caller decides."
+      fr: "La réponse est du texte libre : l’extrait demande du JSON, il ne peut pas l’imposer, et « Bien sûr ! Voici les thèmes de cet article : » arrive par le même canal qu’une liste. Or la liste vide est ici une réponse légitime, puisque des articles ne portent aucun thème : avaler l’erreur rendrait la panne indiscernable du résultat correct, et les articles tomberaient sans bruit de toutes les pages de rubrique. L’extrait lève une erreur, pour de la prose comme pour une liste d’autre chose que des noms ou de noms dont aucun n’est dans la taxonomie, et l’appelant décide."
+      en: "The answer is free text: the snippet asks for JSON, it cannot enforce it, and \"Sure! Here are the topics of this article:\" comes down the same channel as a list. An empty list is a legitimate answer here, since some articles carry no topic at all: swallowing the error would make a failure indistinguishable from a correct result, and articles would drop out of every section page without a sound. The snippet raises instead, for prose as for a list of anything but names or of names none of which is in the taxonomy, and the caller decides."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N1 est le premier niveau qui voit des sujets plutôt que des mots : l’article de télétravail qui n’emploie aucun terme de la liste, et que le vocabulaire contrôlé laisse filer, il l’étiquette, et le test le mesure. Ce qu’il coûte n’est pas le code, qui tient sur une page, mais quelques centaines d’articles étiquetés à la main — qu’une rédaction qui étiquette depuis des années possède déjà. N2 lèverait la vraie limite de N1, l’ajout d’un thème sans corpus derrière lui, mais au prix d’un seuil qu’on ne peut plus calibrer et d’un service à tenir chaud : montez-y le jour où la taxonomie bouge plus vite que vous n’étiquetez."
-  en: "N1 is the first level that sees subjects rather than words: the remote-work article that uses none of the listed terms, and slips past the controlled vocabulary, gets tagged here, and the test measures it. What it costs is not the code, which fits on a page, but a few hundred hand-tagged articles — which a newsroom that has been tagging for years already owns. N2 would lift N1's real limit, adding a topic with no corpus behind it, but it charges a threshold you can no longer calibrate and a service to keep warm: climb there the day your taxonomy moves faster than you can label."
+  fr: "N1 est le premier niveau qui apprend quels mots vont avec un thème, au lieu de s’en tenir à ceux qu’on a listés : l’article de télétravail qui n’emploie aucun terme de la liste, et que le vocabulaire contrôlé laisse filer, il l’étiquette, et le test le mesure. Ce qu’il coûte n’est pas le code, mais des articles étiquetés à la main — qu’une rédaction qui étiquette depuis des années possède déjà. N2 lèverait la vraie limite de N1, l’ajout d’un thème sans corpus derrière lui, mais au prix d’un seuil qu’on ne choisit qu’avec des articles déjà étiquetés et d’un service à tenir chaud : montez-y le jour où la taxonomie bouge plus vite que vous n’étiquetez."
+  en: "N1 is the first level that learns which words go with a topic, instead of keeping to the ones someone listed: the remote-work article that uses none of the listed terms, and slips past the controlled vocabulary, gets tagged here, and the test measures it. What it costs is not the code, but hand-tagged articles — which a newsroom that has been tagging for years already owns. N2 would lift N1's real limit, adding a topic with no corpus behind it, but it charges a threshold you can only choose with articles already tagged, and a service to keep warm: climb there the day your taxonomy moves faster than you can label."
 
 further_reading:
   - label: "W3C — SKOS Reference, modéliser un vocabulaire contrôlé et ses termes"
     url: "https://www.w3.org/TR/skos-reference/"
   - label: "scikit-learn — Multiclass and multioutput algorithms, dont la classification un contre tous et multi-étiquette"
     url: "https://scikit-learn.org/stable/modules/multiclass.html"
-  - label: "Introduction to Information Retrieval — Vector space classification, le fondement de TF-IDF appliqué à la classification"
+  - label: "Introduction to Information Retrieval — Vector space classification, la classification de documents représentés en vecteurs TF-IDF"
     url: "https://nlp.stanford.edu/IR-book/html/htmledition/vector-space-classification-1.html"
   - label: "Sentence-Transformers — documentation de l’encodeur employé au niveau N2"
     url: "https://www.sbert.net/"

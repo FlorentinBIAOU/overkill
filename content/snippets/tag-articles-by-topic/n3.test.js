@@ -62,12 +62,10 @@ test('point de rupture : une réponse JSON qui n’est pas une liste lève', asy
   }
 });
 
-test('INFIRMÉ : « L’extrait lève » ; une liste d’objets ou de nombres rend [] en silence', async () => {
-  await assert.rejects(async () => {
-    for (const answer of ['[{"topic": "fiscalité"}]', '[1, 2]']) {
-      await assert.rejects(() => tag(ARTICLE, TOPICS, { client: new FakeLLM({ response: answer }) }), TaggingUnavailable);
-    }
-  }, assert.AssertionError);
+test('« L’extrait lève » ; une liste d’objets ou de nombres rend [] en silence', async () => {
+  for (const answer of ['[{"topic": "fiscalité"}]', '[1, 2]']) {
+    await assert.rejects(() => tag(ARTICLE, TOPICS, { client: new FakeLLM({ response: answer }) }), TaggingUnavailable);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -191,31 +189,25 @@ test('production : une réponse de mille noms termine vite', async () => {
   assert.ok(performance.now() - start < 1000);
 });
 
-test('DÉFAUT : le plafond compte des unités UTF-16 ; 12 000 emojis sont refusés', async () => {
+test('le plafond compte des unités UTF-16 ; 12 000 emojis sont refusés', async () => {
   // Python les accepte (12 000 caractères). Aucun des deux ne compte des jetons.
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await tag('🙂'.repeat(MAX_CHARACTERS), TOPICS, { client: new FakeLLM({ response: '[]' }) });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.deepEqual(out, []);
-  }, assert.AssertionError);
+  let out;
+  try {
+    out = await tag('🙂'.repeat(MAX_CHARACTERS), TOPICS, { client: new FakeLLM({ response: '[]' }) });
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.deepEqual(out, []);
 });
 
-test('DÉFAUT : un thème écrit dans une autre forme Unicode n’est pas reconnu', async () => {
+test('un thème écrit dans une autre forme Unicode n’est pas reconnu', async () => {
   const topics = TOPICS.map((t) => t.normalize('NFD'));
-  await assert.rejects(async () => {
-    assert.deepEqual(await tag(ARTICLE, topics, { client: new FakeLLM({ response: '["fiscalité"]' }) }), [topics[1]]);
-  }, assert.AssertionError);
+  assert.deepEqual(await tag(ARTICLE, topics, { client: new FakeLLM({ response: '["fiscalité"]' }) }), [topics[1]]);
 });
 
-test('DÉFAUT : une réponse entièrement hors taxonomie rend [] sans erreur', async () => {
-  await assert.rejects(async () => {
-    await assert.rejects(
-      () => tag(ARTICLE, TOPICS, { client: new FakeLLM({ response: '["tax", "remote work"]' }) }),
-      TaggingUnavailable,
-    );
-  }, assert.AssertionError);
+test('une réponse entièrement hors taxonomie rend [] sans erreur', async () => {
+  await assert.rejects(
+    () => tag(ARTICLE, TOPICS, { client: new FakeLLM({ response: '["tax", "remote work"]' }) }),
+    TaggingUnavailable,
+  );
 });

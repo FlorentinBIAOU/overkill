@@ -9,11 +9,13 @@ work topic, although no editor would ever have written them in a term list.
 One classifier per topic, each answering its own yes-or-no question. That is
 what one-versus-rest means, and it is what keeps the tagging multi-label: the
 topics do not compete for a single winner, so an article can come back with
-three tags, or with none.
+two tags, or with none. The article's TF-IDF vector has length one, though:
+the more topics it covers, the less weight each gets. In the test, an article
+made of the training articles of three topics comes back with no tag at all.
 
 The cost of this rung is not the code, which is below. It is the labelled
-corpus: a few hundred articles someone has to tag by hand, and tag again every
-time the taxonomy moves.
+corpus: articles someone has to tag by hand, and tag again every time the
+taxonomy moves.
 """
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -31,8 +33,8 @@ def train(articles: list[str], topics_per_article: list[list[str]]) -> dict:
     binariser = MultiLabelBinarizer()
     matrix = binariser.fit_transform(topics_per_article)
     pipeline = make_pipeline(
-        # Word unigrams and bigrams: "à distance" says something that
-        # "distance" alone does not.
+        # Word unigrams and bigrams. Words of one character are dropped first,
+        # so "travailler à distance" gives the pair "travailler distance".
         TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True),
         OneVsRestClassifier(LogisticRegression(C=4.0, max_iter=1000)),
     )
@@ -43,6 +45,9 @@ def train(articles: list[str], topics_per_article: list[list[str]]) -> dict:
 def score(model: dict, article: str) -> dict[str, float]:
     """One probability per topic, each independent of the others."""
     probabilities = model["pipeline"].predict_proba([article])[0]
+    # With a single topic, scikit-learn solves a binary problem and returns two
+    # columns, absent then present: the topics are always the last columns.
+    probabilities = probabilities[-len(model["topics"]):]
     return {topic: float(p) for topic, p in zip(model["topics"], probabilities)}
 
 

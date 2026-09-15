@@ -1,5 +1,6 @@
 /**
- * Tag articles from a controlled vocabulary, matched after simple lemmatisation.
+ * Tag articles from a controlled vocabulary, matched after stripping common
+ * endings.
  *
  * Rung N0. Deterministic, no dependency, and auditable: every tag can be
  * traced back to the term that produced it, which is what an editor asks for
@@ -16,16 +17,20 @@
  * a question nobody asked.
  */
 
-// Endings stripped, longest first. This is a plural-and-suffix stripper, not a
-// linguist's lemmatiser. It only has to fold the spellings of one word onto
-// each other, and both sides of the comparison get the same treatment.
+// Endings stripped, longest of any two that overlap first. This is a
+// plural-and-suffix stripper, not a lemmatiser: "embauchons" does not become
+// "embaucher", "fiscaux" does not become "fiscal", and "poste" and "post" fold
+// onto the same stem. Both sides of the comparison get the same treatment.
 const SUFFIXES = ['ements', 'ement', 'ations', 'ation', 'es', 's', 'x', 'e'];
 
 const WORD = /[\p{L}\p{N}]+/gu;
 
 /** Lowercase and drop accents, so "Fiscalité" and "FISCALITE" meet. */
 export function normalise(text) {
-  return text.toLowerCase().normalize('NFD').replace(/\p{M}+/gu, '');
+  // NFD does not split the ligatures, and a soft hyphen or a zero-width space
+  // (format characters) would cut a word in two: both are handled here.
+  const unfolded = text.toLowerCase().replaceAll('œ', 'oe').replaceAll('æ', 'ae');
+  return unfolded.normalize('NFD').replace(/[\p{M}\p{Cf}]+/gu, '');
 }
 
 /** Strip one ending, and only when a stem of three letters is left. */
@@ -60,13 +65,27 @@ export function stems(text) {
  * Raise it when a single passing mention is not enough to file an article.
  */
 export function tag(article, vocabulary, minTerms = 1) {
+  if (!(minTerms >= 1)) throw new RangeError('minTerms must be at least 1: a topic needs a term');
   const haystack = stems(article);
   const hits = new Map();
   for (const [topic, terms] of Object.entries(vocabulary)) {
-    const found = terms.filter((term) => haystack.includes(stems(term))).length;
+    let remaining = haystack;
+    let found = 0;
+    // Longest first, and a term found is removed from the text: "impot"
+    // inside "credit d impot" is the same mention, not a second term.
+    for (const term of [...new Set(terms.map(stems))].sort((a, b) => b.length - a.length)) {
+      if (term.trim() && remaining.includes(term)) {
+        found += 1;
+        remaining = remaining.replaceAll(term, ' ');
+      }
+    }
     if (found >= minTerms) hits.set(topic, found);
   }
-  // Best supported first, ties in alphabetical order: a tagging run has to be
+  // Best supported first, then by name once lowercased and stripped of
+  // accents, the same order in both languages: a tagging run has to be
   // replayable, and a set has no order to replay.
-  return [...hits.keys()].sort((a, b) => hits.get(b) - hits.get(a) || a.localeCompare(b));
+  const byName = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  return [...hits.keys()].sort(
+    (a, b) => hits.get(b) - hits.get(a) || byName(normalise(a), normalise(b)) || byName(a, b),
+  );
 }

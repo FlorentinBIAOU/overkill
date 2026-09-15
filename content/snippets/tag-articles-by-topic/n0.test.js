@@ -152,10 +152,8 @@ test('le repli de suffixes confond aussi des mots distincts', () => {
   assert.deepEqual(tag('Son post sur LinkedIn a fait réagir.', { recrutement: ['poste'] }), ['recrutement']);
 });
 
-test('INFIRMÉ : `minTerms` compte des termes distincts ; une seule mention de « crédit d’impôt » en compte deux', () => {
-  assert.throws(() => {
-    assert.deepEqual(tag("Le crédit d'impôt recherche est prolongé.", VOCABULARY, 2), []);
-  }, assert.AssertionError);
+test('`minTerms` compte des termes distincts ; une seule mention de « crédit d’impôt » en compte deux', () => {
+  assert.deepEqual(tag("Le crédit d'impôt recherche est prolongé.", VOCABULARY, 2), []);
 });
 
 test('minTerms compte des termes distincts, pas des occurrences', () => {
@@ -205,16 +203,14 @@ test('production : entrées vides', () => {
   assert.deepEqual(tag('Un article.', { vide: [] }), []);
 });
 
-test('DÉFAUT : `minTerms` à zéro n’est pas refusé et étiquette tous les thèmes sans terme', () => {
-  assert.throws(() => {
-    let out;
-    try {
-      out = tag('', VOCABULARY, 0);
-    } catch {
-      return;
-    }
-    assert.deepEqual(out, []);
-  }, assert.AssertionError);
+test('`minTerms` à zéro n’est pas refusé et étiquette tous les thèmes sans terme', () => {
+  let out;
+  try {
+    out = tag('', VOCABULARY, 0);
+  } catch {
+    return;
+  }
+  assert.deepEqual(out, []);
 });
 
 test('production : valeurs aux limites de minTerms', () => {
@@ -247,15 +243,11 @@ test('production : encodage NFD, insécables, apostrophe, emoji, BOM', () => {
   assert.deepEqual(tag('Le TéLéTrAvAiL', VOCABULARY), ['télétravail']);
 });
 
-test('DÉFAUT : un caractère invisible dans un mot cache le terme', () => {
-  assert.throws(() => {
-    assert.deepEqual(tag('Le télé­travail progresse.', VOCABULARY), ['télétravail']);
-    assert.deepEqual(tag('Le télé​travail progresse.', VOCABULARY), ['télétravail']);
-  }, assert.AssertionError);
+test('un caractère invisible dans un mot cache le terme', () => {
+  assert.deepEqual(tag('Le télé­travail progresse.', VOCABULARY), ['télétravail']);
+  assert.deepEqual(tag('Le télé​travail progresse.', VOCABULARY), ['télétravail']);
 });
 
-test('DÉFAUT : « oe » et la ligature « œ » ne se rencontrent pas', () => {
-  assert.throws(() => {
-    assert.deepEqual(tag("Le coût de la main-d'oeuvre augmente.", { emploi: ["main-d'œuvre"] }), ['emploi']);
-  }, assert.AssertionError);
+test('« oe » et la ligature « œ » ne se rencontrent pas', () => {
+  assert.deepEqual(tag("Le coût de la main-d'oeuvre augmente.", { emploi: ["main-d'œuvre"] }), ['emploi']);
 });

@@ -4,12 +4,12 @@
  * Le vrai extrait du niveau recommandé, importé tel quel : ce qui tourne dans
  * le navigateur est exactement ce que la fiche affiche au-dessus.
  *
- * Ce barreau ne connaît que le fonds qu'on lui a étiqueté à la main. Un fonds
- * français n'apprend rien de l'anglais : il y en a donc deux, vingt-huit
- * articles chacun, avec les mêmes quatre thèmes — deux articles en portent
+ * Ce niveau ne connaît que le fonds qu'on lui a étiqueté à la main, et ne pèse
+ * que les mots de ce fonds : il y en a donc deux, un par langue, vingt-huit
+ * articles chacun, avec les mêmes quatre thèmes — trois articles en portent
  * deux, un n'en porte aucun, parce qu'un article sans étiquette est un exemple
  * négatif utile et pas un trou. Les huit classifieurs, quatre par langue,
- * s'entraînent en une centaine de millisecondes au chargement de la page.
+ * s'entraînent au chargement de la page.
  *
  * Les thèmes sont nommés par une clé commune aux deux fonds, et traduits à
  * l'affichage : la taxonomie de la rédaction est la même dans les deux
@@ -190,8 +190,8 @@ export default {
         en: 'The region is funding part of the equipment bought by industrial companies, through a subsidy desk open until June.',
       },
       why: {
-        fr: 'L’article parle de subventions, un thème absent du fonds étiqueté : il n’existe pas pour le modèle, et rien ne peut le faire apparaître. Regardez le tableau — baisser le seuil ne fait pas surgir le thème manquant, il classe un article sur les subventions en télétravail. Chaque thème ajouté à la taxonomie redemande une passe d’étiquetage à la main sur tout le fonds.',
-        en: 'The article is about subsidies, a topic absent from the labelled archive: it does not exist for the model, and nothing can make it appear. Look at the table — lowering the threshold does not surface the missing topic, it files an article about subsidies under remote work. Every topic added to the taxonomy asks for another hand-labelling pass over the whole archive.',
+        fr: 'L’article parle de subventions, un thème absent du fonds étiqueté : il n’existe pas pour le modèle, et rien ne peut le faire apparaître. Regardez le tableau — baisser le seuil ne fait pas surgir le thème manquant, il classe un article sur les subventions en télétravail. Un thème ajouté à la taxonomie n’existe pour le modèle qu’une fois des articles étiquetés avec lui.',
+        en: 'The article is about subsidies, a topic absent from the labelled archive: it does not exist for the model, and nothing can make it appear. Look at the table — lowering the threshold does not surface the missing topic, it files an article about subsidies under remote work. A topic added to the taxonomy exists for the model only once articles have been tagged with it.',
       },
     },
   ],

@@ -267,11 +267,6 @@ def test_production_encodage_nfd_emoji_bom_ne_font_pas_lever():
         assert isinstance(tag(labeller, article), list)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : l'encodeur réel ne lit que 128 jetons (Python ; 512 en JavaScript) et ignore le reste sans "
-    "erreur ; l'extrait n'a ni borne, ni découpage, ni avertissement : la fin d'un article long ne compte pas",
-)
 def test_defaut_un_article_plus_long_que_la_fenetre_de_l_encodeur_est_juge_en_entier():
     filler = " ".join(["La campagne d'hameçonnage imitait un message de la banque."] * 20)
     article = filler + " La TVA, l'impôt et la déclaration fiscale des entreprises."
@@ -282,11 +277,6 @@ def test_defaut_un_article_plus_long_que_la_fenetre_de_l_encodeur_est_juge_en_en
     assert score(truncated, article)["fiscalité"] > score(truncated, filler)["fiscalité"] + 0.01
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un encodeur qui rend moins de vecteurs que de thèmes, des vecteurs de largeur différente ou "
-    "des NaN ne fait pas lever : `zip` tronque en silence et un NaN n'est jamais au-dessus du seuil",
-)
 def test_defaut_des_vecteurs_de_mauvaise_forme_levent():
     class Short:
         def encode(self, texts):

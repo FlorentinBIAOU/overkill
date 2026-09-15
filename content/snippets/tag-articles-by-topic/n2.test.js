@@ -226,19 +226,17 @@ test('production : encodage NFD, emoji, BOM ne font pas lever', async () => {
   }
 });
 
-test('DÉFAUT : un article plus long que la fenêtre de l’encodeur n’est jugé que sur son début', async () => {
+test('un article plus long que la fenêtre de l’encodeur n’est jugé que sur son début', async () => {
   const filler = Array(58).fill("La campagne d'hameçonnage imitait un message de la banque.").join(' ');
   const article = `${filler} La TVA, l'impôt et la déclaration fiscale des entreprises.`;
   // Témoin : sans fenêtre, la dernière phrase change le score de la fiscalité.
   const plain = await makeLabeller();
   assert.ok((await score(plain, article)).fiscalité > (await score(plain, filler)).fiscalité + 0.001);
   const truncated = await buildLabeller(TOPICS, new TruncatingEncoder(DIMENSIONS));
-  await assert.rejects(async () => {
-    assert.ok((await score(truncated, article)).fiscalité > (await score(truncated, filler)).fiscalité + 0.001);
-  }, assert.AssertionError);
+  assert.ok((await score(truncated, article)).fiscalité > (await score(truncated, filler)).fiscalité + 0.001);
 });
 
-test('DÉFAUT : des vecteurs de mauvaise forme ne font pas lever', async () => {
+test('des vecteurs de mauvaise forme ne font pas lever', async () => {
   // Moins de vecteurs que de thèmes : TypeError (vecteur absent). Largeurs
   // différentes ou NaN : le score vaut NaN et le thème disparaît en silence.
   const widths = () => {
@@ -249,9 +247,7 @@ test('DÉFAUT : des vecteurs de mauvaise forme ne font pas lever', async () => {
     let calls = 0;
     return { encode: async (texts) => texts.map(() => ((calls += 1) <= 2 ? [1, 0] : [Number.NaN, 0])) };
   };
-  await assert.rejects(async () => {
-    for (const encoder of [widths(), nan()]) {
-      await assert.rejects(async () => tag(await buildLabeller({ a: 'x', b: 'y' }, encoder), 'article'));
-    }
-  }, assert.AssertionError);
+  for (const encoder of [widths(), nan()]) {
+    await assert.rejects(async () => tag(await buildLabeller({ a: 'x', b: 'y' }, encoder), 'article'));
+  }
 });

@@ -256,11 +256,6 @@ def test_production_un_fonds_vide_ou_sans_theme_est_refuse():
         train(ARTICLES, TOPICS[:-2])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT (Python) : avec un seul thème dans le fonds, scikit-learn traite le problème en binaire et "
-    "`predict_proba` rend deux colonnes ; `score` lit la première, la probabilité de l'absence du thème",
-)
 def test_defaut_un_fonds_a_un_seul_theme_donne_la_probabilite_du_theme():
     article = "Les indemnités de télétravail sont soumises à l'impôt et à la TVA."
     one_topic = train(ARTICLES, [[t for t in topics if t == "fiscalité"] for topics in TOPICS])

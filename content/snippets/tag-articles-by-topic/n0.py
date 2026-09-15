@@ -1,5 +1,5 @@
 """
-Tag articles from a controlled vocabulary, matched after simple lemmatisation.
+Tag articles from a controlled vocabulary, matched after stripping common endings.
 
 Rung N0. Deterministic, standard library only, and auditable: every tag can be
 traced back to the term that produced it, which is what an editor asks for the
@@ -19,9 +19,10 @@ question nobody asked.
 import re
 import unicodedata
 
-# Endings stripped, longest first. This is a plural-and-suffix stripper, not a
-# linguist's lemmatiser. It only has to fold the spellings of one word onto
-# each other, and both sides of the comparison get the same treatment.
+# Endings stripped, longest of any two that overlap first. This is a
+# plural-and-suffix stripper, not a lemmatiser: "embauchons" does not become
+# "embaucher", "fiscaux" does not become "fiscal", and "poste" and "post" fold
+# onto the same stem. Both sides of the comparison get the same treatment.
 SUFFIXES = ("ements", "ement", "ations", "ation", "es", "s", "x", "e")
 
 WORD = re.compile(r"[^\W_]+")
@@ -29,8 +30,13 @@ WORD = re.compile(r"[^\W_]+")
 
 def normalise(text: str) -> str:
     """Lowercase and drop accents, so "Fiscalité" and "FISCALITE" meet."""
-    decomposed = unicodedata.normalize("NFD", text.lower())
-    return "".join(c for c in decomposed if not unicodedata.combining(c))
+    # NFD does not split the ligatures, and a soft hyphen or a zero-width
+    # space (format characters) would cut a word in two: both are handled here.
+    text = text.lower().replace("œ", "oe").replace("æ", "ae")
+    decomposed = unicodedata.normalize("NFD", text)
+    return "".join(
+        c for c in decomposed if not unicodedata.combining(c) and unicodedata.category(c) != "Cf"
+    )
 
 
 def lemmatise(word: str) -> str:
@@ -62,12 +68,21 @@ def tag(article: str, vocabulary: dict[str, list[str]], min_terms: int = 1) -> l
     `min_terms` is how many distinct terms a topic needs before it is claimed.
     Raise it when a single passing mention is not enough to file an article.
     """
+    if min_terms < 1:
+        raise ValueError("min_terms must be at least 1: a topic needs a term")
     haystack = stems(article)
     hits = {}
     for topic, terms in vocabulary.items():
-        found = sum(1 for term in terms if stems(term) in haystack)
+        remaining, found = haystack, 0
+        # Longest first, and a term found is removed from the text: "impot"
+        # inside "credit d impot" is the same mention, not a second term.
+        for term in sorted({stems(term) for term in terms}, key=len, reverse=True):
+            if term.strip() and term in remaining:
+                found += 1
+                remaining = remaining.replace(term, " ")
         if found >= min_terms:
             hits[topic] = found
-    # Best supported first, ties in alphabetical order: a tagging run has to be
+    # Best supported first, then by name once lowercased and stripped of
+    # accents, the same order in both languages: a tagging run has to be
     # replayable, and a set has no order to replay.
-    return sorted(hits, key=lambda topic: (-hits[topic], topic))
+    return sorted(hits, key=lambda topic: (-hits[topic], normalise(topic), topic))

@@ -77,11 +77,6 @@ def test_point_de_rupture_une_reponse_json_qui_n_est_pas_une_liste_leve():
         assert client.call_count == 3, answer
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : « avaler l'erreur rendrait la panne indiscernable du résultat correct […] L'extrait lève » ; "
-    "une liste JSON d'objets ou de nombres est filtrée en silence et rend [], la réponse légitime « aucun thème »",
-)
 def test_point_de_rupture_une_liste_d_un_autre_type_leve_une_erreur_nommee():
     for answer in ('[{"topic": "fiscalité"}]', "[1, 2]"):
         with pytest.raises(TaggingUnavailable):
@@ -213,21 +208,11 @@ def test_production_le_plafond_compte_des_caracteres():
     assert tag("🙂" * MAX_CHARACTERS, TOPICS, client=client) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : la taxonomie en NFD (un export de fichier sous macOS) ne rencontre pas la réponse du modèle en "
-    "NFC ; `lower()` ne normalise pas, le thème est écarté et l'article sort sans étiquette, sans erreur",
-)
 def test_defaut_un_theme_ecrit_dans_une_autre_forme_unicode_est_reconnu():
     topics = [unicodedata.normalize("NFD", t) for t in TOPICS]
     assert tag(ARTICLE, topics, client=FakeLLM(response='["fiscalité"]')) == [topics[1]]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une réponse dont aucun nom n'appartient à la taxonomie (le modèle a traduit les thèmes : "
-    "« tax », « remote work ») rend [] sans erreur, indiscernable d'un article sans thème",
-)
 def test_defaut_une_reponse_entierement_hors_taxonomie_leve():
     with pytest.raises(TaggingUnavailable):
         tag(ARTICLE, TOPICS, client=FakeLLM(response='["tax", "remote work"]'))

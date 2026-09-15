@@ -4,7 +4,7 @@
 
 n0: |
   Étiqueter des articles depuis un vocabulaire contrôlé, par correspondance
-  après une lemmatisation simple.
+  après retrait des terminaisons courantes.
 
   Niveau N0. Déterministe, bibliothèque standard seule, et vérifiable : chaque
   étiquette se remonte jusqu'au terme qui l'a produite, ce que demande un
@@ -33,11 +33,15 @@ n1.js: |
   Un classifieur par thème, chacun répondant à sa propre question par oui ou par
   non. C'est ce que veut dire un contre tous, et c'est ce qui garde l'étiquetage
   multi-étiquette : les thèmes ne se disputent pas un vainqueur unique, si bien
-  qu'un article peut ressortir avec trois étiquettes, ou avec aucune.
+  qu'un article peut ressortir avec deux étiquettes, ou avec aucune. Le vecteur
+  TF-IDF de l'article est de longueur un, cependant : plus il traite de thèmes,
+  moins chacun pèse. Dans le test, un article fait des articles d'entraînement
+  de trois thèmes ressort sans aucune étiquette.
 
-  Écrit à la main plutôt que tiré d'une bibliothèque, parce que TF-IDF et la
-  régression logistique tiennent sur une page à eux deux. Ce que coûte ce niveau
-  n'est pas le code ci-dessous : c'est le corpus étiqueté que quelqu'un doit
+  Écrit à la main plutôt que tiré d'une bibliothèque, avec des vecteurs creux,
+  pour que l'entraînement croisse avec les mots de chaque article plutôt
+  qu'avec le vocabulaire entier. Ce que coûte ce niveau n'est pas le code
+  ci-dessous : c'est le corpus étiqueté que quelqu'un doit
   étiqueter à la main, et étiqueter de nouveau chaque fois que la taxonomie
   bouge.
 
@@ -54,11 +58,14 @@ n1.py: |
   Un classifieur par thème, chacun répondant à sa propre question par oui ou par
   non. C'est ce que veut dire un contre tous, et c'est ce qui garde l'étiquetage
   multi-étiquette : les thèmes ne se disputent pas un vainqueur unique, si bien
-  qu'un article peut ressortir avec trois étiquettes, ou avec aucune.
+  qu'un article peut ressortir avec deux étiquettes, ou avec aucune. Le vecteur
+  TF-IDF de l'article est de longueur un, cependant : plus il traite de thèmes,
+  moins chacun pèse. Dans le test, un article fait des articles d'entraînement
+  de trois thèmes ressort sans aucune étiquette.
 
   Ce que coûte ce niveau n'est pas le code, qui est ci-dessous. C'est le corpus
-  étiqueté : quelques centaines d'articles que quelqu'un doit étiqueter à la
-  main, et étiqueter de nouveau chaque fois que la taxonomie bouge.
+  étiqueté : des articles que quelqu'un doit étiqueter à la main, et étiqueter
+  de nouveau chaque fois que la taxonomie bouge.
 
 n2: |
   Étiquetage sans exemple : comparer l'article aux étiquettes elles-mêmes.
@@ -70,24 +77,24 @@ n2: |
 
   C'est tout l'attrait du niveau, et il est réel. Ce qu'il coûte est un fichier
   de modèle à livrer et à tenir à jour, un processus chaud pour le garder en
-  mémoire, et un score qui est un cosinus plutôt qu'une probabilité — voyez le
-  test pour ce que cela veut dire quand il faut choisir un seul seuil pour tous
-  les thèmes.
+  mémoire, et un score qui est un cosinus plutôt qu'une probabilité : il peut
+  être négatif, les thèmes d'un même article ne somment pas à un, et un seul
+  seuil doit servir tous les thèmes.
 
 n3: |
   Étiqueter des articles en interrogeant un modèle généraliste.
 
-  Niveau N3. C'est l'option vers laquelle on se tourne d'abord, et sur cette
-  fiche c'est la seule qui ne demande ni liste de termes, ni corpus étiqueté, ni
-  fichier de modèle. Elle est là pour qu'on voie ce qu'elle coûte, pas parce que
-  cette fiche la recommande.
+  Niveau N3. Sur cette fiche, c'est le seul niveau qui ne demande ni liste de
+  termes, ni corpus étiqueté, ni fichier de modèle. Il est là pour qu'on voie ce
+  qu'il coûte, pas parce que cette fiche le recommande.
 
   Voyez ce que le code doit faire et que le niveau N0 n'avait pas à faire :
   borner la taille de l'entrée, réessayer en cas d'échec, analyser une réponse
   qui n'est que probablement du JSON valide, et ne garder que les thèmes qui
-  existent dans votre taxonomie. Ce dernier point n'est pas facultatif — un
-  modèle inventera volontiers un thème plausible — et c'est pourquoi le
-  vocabulaire reste un paramètre ici, exactement comme au niveau le plus bas.
+  existent dans votre taxonomie. Ce dernier point n'est pas facultatif — rien
+  n'empêche un modèle de répondre un nom absent de la liste — et c'est pourquoi
+  le vocabulaire reste un paramètre ici, exactement comme au niveau le plus bas.
 
   Cette plomberie est le vrai coût de ce niveau, et c'est la part que vos tests
-  doivent couvrir, puisque le modèle lui-même n'est pas testable.
+  doivent couvrir, parce qu'un test contre un double ne dit rien de la façon
+  dont le modèle étiquette.
