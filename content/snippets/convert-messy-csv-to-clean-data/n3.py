@@ -128,8 +128,12 @@ def _ask(client, prompt: str, attempts: int):
             continue
         if not isinstance(answer, str):  # a refusal comes back as no content
             return None
+        text = answer.strip()
+        # A JSON answer wrapped whole in one code fence is read; nothing else is.
+        if text.startswith("```") and text.endswith("```") and text.count("```") == 2:
+            text = text[3:-3].removeprefix("json")
         try:
-            parsed = json.loads(answer)
+            parsed = json.loads(text)
         except ValueError:
             return None
         return parsed if isinstance(parsed, dict) else None

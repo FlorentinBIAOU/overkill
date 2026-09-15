@@ -134,8 +134,13 @@ async function ask(client, prompt, attempts) {
       continue; // any provider failure is worth one more try
     }
     if (typeof answer !== 'string') return null; // a refusal comes back as no content
+    let text = answer.trim();
+    // A JSON answer wrapped whole in one code fence is read; nothing else is.
+    if (text.startsWith('```') && text.endsWith('```') && text.split('```').length === 3) {
+      text = text.slice(3, -3).replace(/^json/, '');
+    }
     try {
-      const parsed = JSON.parse(answer);
+      const parsed = JSON.parse(text);
       return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
     } catch {
       return null;
