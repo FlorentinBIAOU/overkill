@@ -3,7 +3,7 @@ id: convert-messy-csv-to-clean-data
 family: transform
 status: published
 verdict: N0
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Load a CSV file received from outside, without knowing its encoding, its delimiter or the type of its columns."
 
 scenario:
-  fr: "On voit passer le fichier entier dans un modèle généraliste, avec une demande de JSON propre en sortie. Le fichier a pourtant un séparateur, un encodage et des colonnes typées, toutes choses qui se lisent dans ses octets. Et ce qu’on paie n’est pas le nettoyage : c’est la perte de l’inventaire de ce qui n’a pas pu être nettoyé, puisqu’un modèle rend un tableau complet sans dire ce qu’il a deviné."
-  en: "The whole file gets handed to a general-purpose model with a request for clean JSON. Yet the file has a delimiter, an encoding and typed columns, all of which can be read from its bytes. And what you pay for is not the cleaning: it is the loss of any inventory of what could not be cleaned, because a model returns a complete table without saying what it guessed."
+  fr: "On voit passer le fichier entier dans un modèle généraliste, avec une demande de JSON propre en sortie. Le fichier a pourtant un séparateur, un encodage et des colonnes typées, toutes choses qui se lisent dans ses octets. Et ce qu’on paie n’est pas le nettoyage : c’est la perte de l’inventaire de ce qui n’a pas pu être nettoyé, puisque rien dans le tableau rendu ne distingue une valeur lue d’une valeur devinée."
+  en: "The whole file gets handed to a general-purpose model with a request for clean JSON. Yet the file has a delimiter, an encoding and typed columns, all of which can be read from its bytes. And what you pay for is not the cleaning: it is the loss of any inventory of what could not be cleaned, because nothing in the table handed back tells a value that was read from one that was guessed."
 
 rungs:
   - level: N0
@@ -56,7 +56,7 @@ rungs:
       fr: "Inférence du type de colonne par régression logistique sur des traits d’échantillon"
       en: "Column type inference by logistic regression on sample traits"
     cost: négligeable
-    latency: "~10 ms"
+    latency: "<1 ms"
     risks:
       data_egress: own-infra
       deterministic: true
@@ -84,8 +84,8 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Hors sujet ici : le type d’une colonne se lit dans la forme de ses valeurs, que huit proportions et une régression logistique décrivent déjà. Un modèle auto-hébergé pour deviner qu’une colonne contient des dates coûterait un service permanent à exploiter, sans rien voir de plus."
-      en: "Beside the point here: a column’s type is readable from the shape of its values, which eight proportions and a logistic regression already describe. A self-hosted model to guess that a column holds dates would cost a permanent service to operate, and would see nothing more."
+      fr: "Hors sujet ici : le type d’une colonne se lit dans la forme de ses valeurs, et c’est ce que N1 lit, sur huit traits. Un modèle auto-hébergé pour deviner qu’une colonne contient des dates ajouterait un modèle à charger et à tenir en service."
+      en: "Beside the point here: a column’s type is readable from the shape of its values, and that is what N1 reads, on eight traits. A self-hosted model to guess that a column holds dates would add a model to load and keep running."
 
   - level: N3
     available: true

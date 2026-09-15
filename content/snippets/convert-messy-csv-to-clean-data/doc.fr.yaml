@@ -47,8 +47,7 @@ n1.py: |
   d'une colonne prise dans son ensemble — la fréquence à laquelle une valeur
   est faite de chiffres seuls, celle à laquelle elle porte une marque
   décimale, le nombre de valeurs distinctes — et apprend quelle combinaison va
-  avec quel type. Le jeu d'entraînement, c'est quelques dizaines de colonnes
-  étiquetées à la main : un après-midi plutôt qu'un projet.
+  avec quel type, à partir de colonnes étiquetées à la main.
 
   La sortie est exactement le schéma que `clean_csv` du niveau N0 prend en
   second argument. Ce niveau remplace le typage, pas le nettoyage.
@@ -66,12 +65,10 @@ n1.js: |
   d'une colonne prise dans son ensemble — la fréquence à laquelle une valeur
   est faite de chiffres seuls, celle à laquelle elle porte une marque
   décimale, le nombre de valeurs distinctes — et apprend quelle combinaison va
-  avec quel type. Le jeu d'entraînement, c'est quelques dizaines de colonnes
-  étiquetées à la main : un après-midi plutôt qu'un projet.
+  avec quel type, à partir de colonnes étiquetées à la main.
 
-  Écrit en entier plutôt que tiré d'une bibliothèque, parce qu'une régression
-  logistique sur huit traits, c'est trente lignes. C'est l'argument de ce
-  niveau : l'outil classique est assez petit pour être lu.
+  Écrit en entier plutôt que tiré d'une bibliothèque : une régression
+  logistique par type, ajustée par descente de gradient.
 
   La sortie est exactement le schéma que `cleanCsv` du niveau N0 prend en
   second argument. Ce niveau remplace le typage, pas le nettoyage.

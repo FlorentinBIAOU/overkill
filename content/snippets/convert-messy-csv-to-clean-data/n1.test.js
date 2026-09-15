@@ -196,17 +196,15 @@ test('verdict : N1 devine le schéma que N0 réclame', () => {
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : un jeu d’entraînement vide donne un modèle qui rend undefined', () => {
+test('un jeu d’entraînement vide donne un modèle qui rend undefined', () => {
   // Python lève ValueError (jeu vide, ou une seule classe).
-  assert.throws(() => {
-    let model;
-    try {
-      model = train([], []);
-    } catch {
-      return;
-    }
-    assert.equal(typeof classify(model, ['1', '2']), 'string');
-  }, assert.AssertionError);
+  let model;
+  try {
+    model = train([], []);
+  } catch {
+    return;
+  }
+  assert.equal(typeof classify(model, ['1', '2']), 'string');
 });
 
 test('production : deux cents colonnes de deux mille lignes terminent', () => {

@@ -28,12 +28,34 @@ const PROMPT = [
   'cannot be repaired, answer with an empty object.',
 ].join('\n');
 
+// The provider named here is an example, not a recommendation: the reasoning
+// holds for any general-purpose model API, and the client is swappable. Pass
+// any object with a `complete({ prompt, temperature })` method.
+export const MODEL = 'gpt-4.1-mini'; // an example id: check the parameters your model accepts
+
+export async function providerClient(sdk, model = MODEL) {
+  if (!sdk) {
+    const { OpenAI } = await import('openai');
+    sdk = new OpenAI();
+  }
+  return {
+    async complete({ prompt, temperature }) {
+      const response = await sdk.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+      });
+      return response.choices[0].message.content;
+    },
+  };
+}
+
 /**
  * Return the rows that were repaired, and the ones that were not.
  *
  * `rejects` is the journal returned by `cleanCsv` of rung N0. Nothing else
- * from the file is read, and the number of calls made is exactly the length of
- * that journal.
+ * from the file is read: one call per entry of that journal, and up to
+ * `attempts` for an entry whose calls fail.
  *
  * A row that cannot be repaired comes back in `unrepairable`, carrying its
  * original line, column and fields, plus the reason the repair failed. It is
@@ -48,11 +70,8 @@ const PROMPT = [
  * @param {number} [options.attempts]
  */
 export async function repairRejectedRows(header, rejects, schema, { client, attempts = 3 } = {}) {
-  if (!client) {
-    // Needs a key and a network, so it is never reached in the tests.
-    const { OpenAI } = await import('openai');
-    client = new OpenAI();
-  }
+  if (rejects.length === 0) return { rows: [], unrepairable: [] };
+  client ??= await providerClient();
 
   const described = header.map((name) => `- ${name}: ${schema[name] ?? 'text'}`).join('\n');
   const rows = [];
@@ -71,9 +90,18 @@ export async function repairRejectedRows(header, rejects, schema, { client, atte
     } else if (Object.keys(answer).length === 0) {
       unrepairable.push({ ...reject, reason: 'the model could not repair the row' });
     } else {
-      // The answer is only a proposal. It goes through the same coercion every
-      // other row went through, and it is refused on the same terms.
-      const fields = header.map((name) => String(answer[name] ?? ''));
+      // The answer is only a proposal. Every column has to come back as text,
+      // and the refused value cannot come back empty: coercion would read an
+      // empty cell as missing and let the row through.
+      const fields = header.map((name) => answer[name]);
+      if (!fields.every((value) => typeof value === 'string')) {
+        unrepairable.push({ ...reject, reason: 'the answer does not give every column as text' });
+        continue;
+      }
+      if (reject.column && !answer[reject.column].trim()) {
+        unrepairable.push({ ...reject, reason: 'the answer empties the refused value' });
+        continue;
+      }
       try {
         rows.push(coerceRow(header, fields, schema));
       } catch (refusal) {
@@ -92,18 +120,20 @@ export async function repairRejectedRows(header, rejects, schema, { client, atte
 /**
  * Return the decoded object, or null when nothing usable came back.
  *
- * A failed call is retried; an unusable answer is not. At temperature zero the
- * same prompt gives the same answer, so asking a second time buys nothing but
- * a second bill.
+ * A failed call is retried; an unusable answer is not, and its row goes to
+ * `unrepairable` for a person to look at.
  */
 async function ask(client, prompt, attempts) {
   for (let i = 0; i < attempts; i += 1) {
     let answer;
     try {
+      // The lowest temperature: the SDK documents lower values as more
+      // focused and deterministic.
       answer = await client.complete({ prompt, temperature: 0 });
     } catch {
       continue; // any provider failure is worth one more try
     }
+    if (typeof answer !== 'string') return null; // a refusal comes back as no content
     try {
       const parsed = JSON.parse(answer);
       return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;

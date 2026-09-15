@@ -192,21 +192,11 @@ def test_les_cinq_octets_indefinis_de_cp1252_deviennent_le_caractere_de_remplace
     assert decode_text(bytes([0x63, 0x81, 0x8D, 0x8F, 0x90, 0x9D, 0xE9])) == "c�����é"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT (Python) : un fichier à marque UTF-8 qui contient un octet cp1252 fait lever UnicodeDecodeError ; "
-    "aucune ligne, aucun journal (JavaScript remplace l'octet et continue)",
-)
 def test_defaut_une_marque_utf8_suivie_d_un_octet_invalide_ne_fait_pas_lever():
     result = clean_csv(b"\xef\xbb\xbfcity\nBesan\xe7on\nNimes\n", {})
     assert len(result["rows"]) + len(result["rejects"]) == 2
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : UTF-16 sans marque, ou UTF-32 (sa marque commence comme celle d'UTF-16), est lu sans erreur en "
-    "colonnes pleines d'octets nuls ; rien au journal. « UTF-32 is left out on purpose » : il n'est pas refusé, il est mal lu",
-)
 def test_defaut_un_encodage_non_pris_en_charge_est_signale():
     for data in ("city\nBesançon\n".encode("utf-16-le"), "city\nBesançon\n".encode("utf-32")):
         result = clean_csv(data, {})
@@ -341,41 +331,21 @@ def test_production_une_cle_de_schema_a_la_mauvaise_casse_laisse_la_colonne_en_t
     assert clean_csv(b"id,Name\n1,Alice\n", {"name": "integer"})["rows"] == [{"id": "1", "Name": "Alice"}]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : l'apostrophe qu'Excel met devant un nombre à garder en texte (« '0612345678 ») est prise pour le "
-    "guillemet ; les lignes 2 et 3 fusionnent en un seul enregistrement, sans rien au journal",
-)
 def test_defaut_une_apostrophe_de_tableur_ne_fusionne_pas_des_lignes():
     result = clean_csv(b"id,phone\n1,'0612345678\n2,'0698765432\n3,'0611111111\n", {})
     assert len(result["rows"]) + len(result["rejects"]) == 3
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un guillemet ouvert jamais fermé avale la suite du fichier dans un seul champ ; les lignes "
-    "suivantes disparaissent sans une entrée au journal",
-)
 def test_defaut_un_guillemet_non_ferme_ne_fait_pas_disparaitre_la_suite():
     result = clean_csv(b'id,name\n1,"Alice\n2,Bob\n3,Carol\n', {})
     assert len(result["rows"]) + len(result["rejects"]) == 3
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : deux colonnes du même nom (« id,id ») : la seconde écrase la première dans la ligne rendue, "
-    "sans journal",
-)
 def test_defaut_deux_colonnes_du_meme_nom_ne_perdent_pas_de_valeur():
     result = clean_csv(b"id,id\n1,2\n", {})
     assert result["rejects"] or "1" in list(result["rows"][0].values())
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT (Python) : un champ de plus de 131 072 caractères fait lever csv.Error (limite du module csv) ; "
-    "rien n'est rendu, pas même les lignes saines (JavaScript le lit)",
-)
 def test_defaut_un_champ_tres_long_ne_fait_pas_lever():
     data = b"id,note\n1," + b"x" * 200_000 + b"\n2,ok\n"
     result = clean_csv(data, {})

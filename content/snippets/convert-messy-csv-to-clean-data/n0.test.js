@@ -169,14 +169,12 @@ test('production : une marque UTF-8 suivie d’un octet invalide est remplacée'
   assert.deepEqual(cleanCsv(data, {}).rows, [{ city: 'Besan�on' }, { city: 'Nimes' }]);
 });
 
-test('DÉFAUT : un encodage non pris en charge est lu en colonnes illisibles sans journal', () => {
+test('un encodage non pris en charge est lu en colonnes illisibles sans journal', () => {
   const utf32 = Buffer.from([0xff, 0xfe, 0x00, 0x00, ...[...'city\nBesançon\n'].flatMap((c) => [c.codePointAt(0), 0, 0, 0])]);
-  assert.throws(() => {
-    for (const data of [bytes('city\nBesançon\n', 'utf16le'), utf32]) {
-      const result = cleanCsv(data, {});
-      assert.ok(result.columns[0] === 'city' || result.rejects.length > 0, JSON.stringify(result.columns));
-    }
-  }, assert.AssertionError);
+  for (const data of [bytes('city\nBesançon\n', 'utf16le'), utf32]) {
+    const result = cleanCsv(data, {});
+    assert.ok(result.columns[0] === 'city' || result.rejects.length > 0, JSON.stringify(result.columns));
+  }
 });
 
 test('une virgule et un point : la dernière marque est décimale', () => {
@@ -296,12 +294,10 @@ test('production : encodage NFD, emoji, insécables', () => {
   assert.deepEqual(cleanCsv(bytes(`id;name;amount\n1;${name};1 234,5\n`), SCHEMA).rows, [{ id: 1, name, amount: 1234.5 }]);
 });
 
-test('DÉFAUT : un grand entier est arrondi sans journal', () => {
+test('un grand entier est arrondi sans journal', () => {
   // Python rend 123456789012345678901 et 9007199254740993 exacts.
   const result = cleanCsv(bytes('id\n123456789012345678901\n9007199254740993\n'), { id: 'integer' });
-  assert.throws(() => {
-    assert.deepEqual(result.rows.map((row) => String(row.id)), ['123456789012345678901', '9007199254740993']);
-  }, assert.AssertionError);
+  assert.deepEqual(result.rows.map((row) => String(row.id)), ['123456789012345678901', '9007199254740993']);
 });
 
 test('production : des chiffres non ASCII divisent les deux langages', () => {
@@ -313,19 +309,19 @@ test('production : une clé de schéma à la mauvaise casse laisse la colonne en
   assert.deepEqual(cleanCsv(bytes('id,Name\n1,Alice\n'), { name: 'integer' }).rows, [{ id: '1', Name: 'Alice' }]);
 });
 
-test('DÉFAUT : une apostrophe de tableur fusionne des lignes', () => {
+test('une apostrophe de tableur fusionne des lignes', () => {
   const result = cleanCsv(bytes("id,phone\n1,'0612345678\n2,'0698765432\n3,'0611111111\n"), {});
-  assert.throws(() => assert.equal(result.rows.length + result.rejects.length, 3), assert.AssertionError);
+  assert.equal(result.rows.length + result.rejects.length, 3);
 });
 
-test('DÉFAUT : un guillemet non fermé fait disparaître la suite', () => {
+test('un guillemet non fermé fait disparaître la suite', () => {
   const result = cleanCsv(bytes('id,name\n1,"Alice\n2,Bob\n3,Carol\n'), {});
-  assert.throws(() => assert.equal(result.rows.length + result.rejects.length, 3), assert.AssertionError);
+  assert.equal(result.rows.length + result.rejects.length, 3);
 });
 
-test('DÉFAUT : deux colonnes du même nom perdent une valeur', () => {
+test('deux colonnes du même nom perdent une valeur', () => {
   const result = cleanCsv(bytes('id,id\n1,2\n'), {});
-  assert.throws(() => assert.ok(result.rejects.length > 0 || Object.values(result.rows[0]).includes('1')), assert.AssertionError);
+  assert.ok(result.rejects.length > 0 || Object.values(result.rows[0]).includes('1'));
 });
 
 test('production : un champ très long est lu', () => {

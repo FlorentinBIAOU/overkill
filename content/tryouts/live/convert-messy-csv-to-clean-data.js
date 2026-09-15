@@ -159,8 +159,8 @@ export default {
         '43;Menuiserie Dubois;12/25/2023;45,00;oui\n',
       fails: true,
       why: {
-        fr: 'Les lignes 41 et 42 portent la même écriture et deux jours différents — l’une vient d’un export jour d’abord, l’autre mois d’abord — et ressortent toutes deux au 7 avril, sans un mot dans le journal. Seule la ligne 43 est refusée, par chance : aucun mois n’a vingt-cinq jours.',
-        en: 'Lines 41 and 42 carry the same spelling and two different days — one from a day-first export, one month-first — and both come out as 7 April, with nothing in the journal. Only line 43 is refused, and that is luck: no month has twenty-five days.',
+        fr: 'Les factures 41 et 42 portent la même écriture et deux jours différents — l’une vient d’un export jour d’abord, l’autre mois d’abord — et ressortent toutes deux au 7 avril, sans un mot dans le journal. Seule la facture 43 est refusée, par chance : aucun mois n’a vingt-cinq jours.',
+        en: 'Invoices 41 and 42 carry the same spelling and two different days — one from a day-first export, one month-first — and both come out as 7 April, with nothing in the journal. Only invoice 43 is refused, and that is luck: no month has twenty-five days.',
       },
     },
   ],

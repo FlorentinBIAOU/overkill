@@ -39,17 +39,16 @@ def decode_text(data: bytes) -> str:
     Turn bytes into text, guessing only when there is nothing else to go on.
 
     A byte order mark is a statement about the file, so it wins. Failing that,
-    strict UTF-8 either succeeds, and then it is almost certainly right, or
-    fails, and the file is one of the single-byte encodings a spreadsheet
-    still exports. cp1252 is by far the most common of those.
+    strict UTF-8 either succeeds, and the file is read as UTF-8, or
+    fails, and the file is read as cp1252, the Windows single-byte encoding
+    for Western European languages.
 
-    UTF-32 is left out on purpose: no spreadsheet writes it, and pretending to
-    support an encoding you have never seen in a real file is how a cleaner
-    acquires code nobody can test.
+    UTF-32, and UTF-16 without a mark, are not decoded: they come out full of
+    NUL characters, and `clean_csv` refuses such a file in its journal.
     """
     for bom, encoding in BOMS:
         if data.startswith(bom):
-            return data.decode(encoding)
+            return data.decode(encoding, errors="replace")
     try:
         return data.decode("utf-8")
     except UnicodeDecodeError:
@@ -99,24 +98,29 @@ def detect_dialect(text: str) -> tuple[str, str]:
         if score > best:
             delimiter, best = candidate, score
 
-    # A quote character only counts when it opens a field: at the start of a
-    # line, or straight after the delimiter.
-    opens = {}
+    # A quote character only counts when it both opens fields (at the start of
+    # a line, or straight after the delimiter) and closes them (straight before
+    # the delimiter, or at the end of a line). A lone apostrophe in front of a
+    # value opens and closes nothing.
+    wraps = {}
     for quote in ('"', "'"):
-        starts = sum(1 for line in sample if line.startswith(quote))
-        opens[quote] = starts + sum(line.count(delimiter + quote) for line in sample)
-    return delimiter, "'" if opens["'"] > opens['"'] else '"'
+        lines = [line.rstrip("\r") for line in sample]
+        opens = sum(line.startswith(quote) + line.count(delimiter + quote) for line in lines)
+        closes = sum(line.endswith(quote) + line.count(quote + delimiter) for line in lines)
+        wraps[quote] = min(opens, closes)
+    return delimiter, "'" if wraps["'"] > wraps['"'] else '"'
 
 
 # ---------------------------------------------------------------------------
 # 3. Types, and the journal of what did not fit
 # ---------------------------------------------------------------------------
 
+# ASCII digits only, as in JavaScript: "١٢" is refused rather than read as 12.
 _SPACES = re.compile(r"[\s\u00a0\u202f]")
-_INTEGER = re.compile(r"[+-]?\d+")
-_NUMBER = re.compile(r"[+-]?(?:\d+\.?\d*|\.\d+)")
-_ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
-_DAY_FIRST = re.compile(r"(\d{2})[/.](\d{2})[/.](\d{4})")
+_INTEGER = re.compile(r"[+-]?[0-9]+")
+_NUMBER = re.compile(r"[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)")
+_ISO_DATE = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2})")
+_DAY_FIRST = re.compile(r"([0-9]{2})[/.]([0-9]{2})[/.]([0-9]{4})")
 
 TRUE_WORDS = frozenset({"true", "yes", "y", "1", "vrai", "oui", "o"})
 FALSE_WORDS = frozenset({"false", "no", "n", "0", "faux", "non"})
@@ -217,6 +221,42 @@ def coerce_row(header: list[str], fields: list[str], schema: dict) -> dict:
     return row
 
 
+def _unreadable(error: csv.Error) -> str:
+    """Name what the csv module could not read, in words both versions share."""
+    message = str(error)
+    if "end of data" in message:
+        return "quote opened and never closed"
+    if "field limit" in message:
+        return f"field longer than {csv.field_size_limit()} characters"
+    return "text after a closing quote"
+
+
+def read_records(text: str, delimiter: str, quote: str):
+    """
+    Yield `(line, fields, problem)` for each record, `problem` being None when
+    the record was read.
+
+    A record the csv module cannot read is refused with the line it starts on,
+    and reading resumes on the next line. Without that, one quote opened and
+    never closed swallows the rest of the file into a single field.
+    """
+    lines = io.StringIO(text, newline="").readlines()
+    done = 0
+    while done < len(lines):
+        rest = (lines[k] for k in range(done, len(lines)))
+        reader = csv.reader(rest, delimiter=delimiter, quotechar=quote, strict=True)
+        previous = 0
+        try:
+            for fields in reader:
+                yield done + previous + 1, fields, None
+                previous = reader.line_num
+            return
+        except csv.Error as error:
+            start = done + previous
+            yield start + 1, [lines[start].rstrip("\r\n")], _unreadable(error)
+            done = start + 1
+
+
 def clean_csv(data: bytes, schema: dict) -> dict:
     """
     Return the rows that survived, and a journal of everything refused.
@@ -231,15 +271,24 @@ def clean_csv(data: bytes, schema: dict) -> dict:
     """
     text = decode_text(data)
     delimiter, quote = detect_dialect(text)
-    reader = csv.reader(io.StringIO(text, newline=""), delimiter=delimiter, quotechar=quote)
+    if "\x00" in text:
+        reason = "NUL characters: UTF-16 without a byte order mark, or UTF-32, not read"
+        return {"columns": [], "delimiter": delimiter, "quote": quote, "rows": [],
+                "rejects": [_journal(1, "", reason, [])]}
 
-    header, rows, rejects, previous = None, [], [], 0
-    for fields in reader:
-        line, previous = previous + 1, reader.line_num
+    header, rows, rejects, twice = None, [], [], []
+    for line, fields, problem in read_records(text, delimiter, quote):
+        if problem:
+            rejects.append(_journal(line, "", problem, fields))
+            continue
         if not fields or fields == [""]:
             continue  # a blank line carries nothing, in any dialect
         if header is None:
             header = [name.strip() for name in fields]
+            twice = sorted({name for name in header if header.count(name) > 1})
+            continue
+        if twice:  # a row keyed by name would lose one of the two values
+            rejects.append(_journal(line, twice[0], "column name used twice", fields))
             continue
         if len(fields) != len(header):
             plural = "" if len(header) == 1 else "s"

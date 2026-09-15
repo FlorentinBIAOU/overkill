@@ -9,12 +9,10 @@
  * The classifier never looks at a value on its own. It looks at eight traits
  * of a column taken as a whole — how often a value is all digits, how often it
  * carries a decimal mark, how many distinct values there are — and learns
- * which combination goes with which type. The training set is a few dozen
- * columns labelled by hand, which is an afternoon rather than a project.
+ * which combination goes with which type, from columns labelled by hand.
  *
- * Written out rather than pulled from a library, because logistic regression
- * on eight features is thirty lines. That is the argument of this rung: the
- * classical tool is small enough to read.
+ * Written out rather than pulled from a library: one logistic regression per
+ * type, fitted by gradient descent.
  *
  * The output is exactly the schema `cleanCsv` of rung N0 takes as its second
  * argument. This rung replaces the typing, not the cleaning.
@@ -45,11 +43,14 @@ export const FEATURE_NAMES = [
 /**
  * Describe one column with eight numbers, all between zero and one.
  *
- * Every trait is a proportion rather than a count, so a column sampled from
- * ten rows and one sampled from ten thousand are described on the same scale.
  * Blank values are set aside before the proportions are taken, and counted
  * separately: a column that is mostly empty is a fact about the file, not
  * about the type.
+ *
+ * The distinct ratio depends on the size of the sample: it falls as the
+ * sample grows. Small integers repeated, 0 to 3, read as integer on eight rows
+ * and as boolean on two hundred, and rung N0 then refuses every 2 and every 3,
+ * in its journal.
  */
 export function columnFeatures(values) {
   const filled = values.map((value) => value.trim()).filter((value) => value !== '');
@@ -95,6 +96,8 @@ function fitOne(rows, targets, epochs, rate) {
 export function train(columns, labels, { epochs = 600, rate = 0.5 } = {}) {
   const rows = columns.map(columnFeatures);
   const kinds = [...new Set(labels)].sort();
+  // As scikit-learn does: with fewer than two types there is nothing to learn.
+  if (kinds.length < 2) throw new RangeError('training needs columns of at least two types');
   const models = kinds.map((kind) =>
     fitOne(rows, labels.map((label) => (label === kind ? 1 : 0)), epochs, rate),
   );
@@ -127,8 +130,10 @@ export function classify(model, values) {
 /**
  * Build the schema that `cleanCsv` of rung N0 asks for.
  *
- * The whole file is not needed. A couple of hundred rows say as much about the
- * shape of a column as a million do, and reading them costs nothing.
+ * Only the first `sample` rows are read. On a file sorted, or one that changes
+ * as it goes, they are not the whole column: whole amounts on the first two
+ * hundred rows and decimals after give integer, and rung N0 then refuses every
+ * decimal, in its journal.
  */
 export function inferSchema(model, header, rows, sample = 200) {
   const schema = {};

@@ -60,18 +60,16 @@ test('point de rupture : une réponse malformée est attrapée et consignée', a
   assert.equal(client.callCount, 1);
 });
 
-test('DÉFAUT : une réponse qui vide le champ refusé passe pour une réparation', async () => {
+test('une réponse qui vide le champ refusé passe pour une réparation', async () => {
   // JavaScript : une valeur null est aussi lue comme vide (Python la rend « None »).
-  await assert.rejects(async () => {
-    for (const answer of [
-      { id: '3', name: 'Carol', joined: '', amount: '3.5', active: 'yes' },
-      { id: '3' },
-      { id: '3', name: 'Carol', joined: null, amount: '3.5', active: 'yes' },
-    ]) {
-      const result = await repairRejectedRows(HEADER, [REJECT], SCHEMA, { client: new FakeLLM({ response: JSON.stringify(answer) }) });
-      assert.deepEqual(result.rows, [], JSON.stringify(answer));
-    }
-  }, assert.AssertionError);
+  for (const answer of [
+    { id: '3', name: 'Carol', joined: '', amount: '3.5', active: 'yes' },
+    { id: '3' },
+    { id: '3', name: 'Carol', joined: null, amount: '3.5', active: 'yes' },
+  ]) {
+    const result = await repairRejectedRows(HEADER, [REJECT], SCHEMA, { client: new FakeLLM({ response: JSON.stringify(answer) }) });
+    assert.deepEqual(result.rows, [], JSON.stringify(answer));
+  }
 });
 
 // ---------------------------------------------------------------------------

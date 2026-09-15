@@ -9,8 +9,7 @@ happen, and the file gets loaded as text.
 The classifier never looks at a value on its own. It looks at eight traits of
 a column taken as a whole — how often a value is all digits, how often it
 carries a decimal mark, how many distinct values there are — and learns which
-combination goes with which type. The training set is a few dozen columns
-labelled by hand, which is an afternoon rather than a project.
+combination goes with which type, from columns labelled by hand.
 
 The output is exactly the schema `clean_csv` of rung N0 takes as its second
 argument. This rung replaces the typing, not the cleaning.
@@ -22,9 +21,9 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 _SPACES = re.compile(r"[\s\u00a0\u202f]")
-_ALL_DIGITS = re.compile(r"[+-]?\d+")
-_DECIMAL = re.compile(r"[+-]?\d*[.,]\d+")
-_DATE_SHAPE = re.compile(r"\d{2,4}[-/.]\d{1,2}[-/.]\d{2,4}")
+_ALL_DIGITS = re.compile(r"[+-]?[0-9]+")
+_DECIMAL = re.compile(r"[+-]?[0-9]*[.,][0-9]+")
+_DATE_SHAPE = re.compile(r"[0-9]{2,4}[-/.][0-9]{1,2}[-/.][0-9]{2,4}")
 _LETTER = re.compile(r"[^\W\d_]")
 
 BOOLEAN_WORDS = frozenset(
@@ -48,11 +47,14 @@ def column_features(values: list[str]) -> list[float]:
     """
     Describe one column with eight numbers, all between zero and one.
 
-    Every trait is a proportion rather than a count, so a column sampled from
-    ten rows and one sampled from ten thousand are described on the same
-    scale. Blank values are set aside before the proportions are taken, and
-    counted separately: a column that is mostly empty is a fact about the
-    file, not about the type.
+    Blank values are set aside before the proportions are taken, and counted
+    separately: a column that is mostly empty is a fact about the file, not
+    about the type.
+
+    The distinct ratio depends on the size of the sample: it falls as the
+    sample grows. Small integers repeated, 0 to 3, read as integer on eight
+    rows and as boolean on two hundred, and rung N0 then refuses every 2 and
+    every 3, in its journal.
     """
     filled = [value.strip() for value in values if value.strip()]
     if not filled:
@@ -99,11 +101,17 @@ def infer_schema(model, header: list[str], rows: list[list[str]], sample: int = 
     """
     Build the schema that `clean_csv` of rung N0 asks for.
 
-    The whole file is not needed. A couple of hundred rows say as much about
-    the shape of a column as a million do, and reading them costs nothing.
+    Only the first `sample` rows are read. On a file sorted, or one that
+    changes as it goes, they are not the whole column: whole amounts on the
+    first two hundred rows and decimals after give integer, and rung N0 then
+    refuses every decimal, in its journal.
     """
-    schema = {}
-    for index, name in enumerate(header):
-        values = [row[index] if index < len(row) else "" for row in rows[:sample]]
-        schema[name] = classify(model, values)
+    columns = [[row[i] if i < len(row) else "" for row in rows[:sample]] for i in range(len(header))]
+    schema = dict.fromkeys(header, "text")  # a column with nothing in it stays text
+    filled = [i for i, values in enumerate(columns) if any(value.strip() for value in values)]
+    if filled:
+        # One call to the model for the whole file, not one per column.
+        kinds = model.predict(np.array([column_features(columns[i]) for i in filled]))
+        for i, kind in zip(filled, kinds):
+            schema[header[i]] = str(kind)
     return schema

@@ -31,14 +31,38 @@ PROMPT = (
     "cannot be repaired, answer with an empty object."
 )
 
+# The provider named here is an example, not a recommendation: the reasoning
+# holds for any general-purpose model API, and the client is swappable. Pass
+# any object with a `complete(prompt=..., temperature=...)` method.
+MODEL = "gpt-4.1-mini"  # an example id: check the parameters your model accepts
+
+
+class ProviderClient:
+    """The one call this snippet makes, on top of the provider's SDK."""
+
+    def __init__(self, sdk=None, model: str = MODEL):
+        if sdk is None:  # pragma: no cover - needs a key and a network
+            from openai import OpenAI
+
+            sdk = OpenAI()
+        self.sdk, self.model = sdk, model
+
+    def complete(self, *, prompt: str, temperature: float) -> str:
+        response = self.sdk.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+        )
+        return response.choices[0].message.content
+
 
 def repair_rejected_rows(header, rejects, schema, client=None, *, attempts: int = 3) -> dict:
     """
     Return the rows that were repaired, and the ones that were not.
 
     `rejects` is the journal returned by `clean_csv` of rung N0. Nothing else
-    from the file is read, and the number of calls made is exactly the length
-    of that journal.
+    from the file is read: one call per entry of that journal, and up to
+    `attempts` for an entry whose calls fail.
 
     A row that cannot be repaired comes back in `unrepairable`, carrying its
     original line, column and fields, plus the reason the repair failed. It is
@@ -47,10 +71,9 @@ def repair_rejected_rows(header, rejects, schema, client=None, *, attempts: int 
     `client` is injected so this function can be tested without a network
     call. In production it defaults to a real provider client.
     """
-    if client is None:  # pragma: no cover - needs a key and a network
-        from openai import OpenAI
-
-        client = OpenAI()
+    if not rejects:
+        return {"rows": [], "unrepairable": []}
+    client = client or ProviderClient()
 
     described = "\n".join(f"- {name}: {schema.get(name, 'text')}" for name in header)
     rows, unrepairable = [], []
@@ -66,9 +89,16 @@ def repair_rejected_rows(header, rejects, schema, client=None, *, attempts: int 
         elif not answer:
             unrepairable.append({**reject, "reason": "the model could not repair the row"})
         else:
-            # The answer is only a proposal. It goes through the same coercion
-            # every other row went through, and it is refused on the same terms.
-            fields = [str(answer.get(name, "")) for name in header]
+            # The answer is only a proposal. Every column has to come back as
+            # text, and the refused value cannot come back empty: coercion
+            # would read an empty cell as missing and let the row through.
+            fields = [answer.get(name) for name in header]
+            if not all(isinstance(value, str) for value in fields):
+                unrepairable.append({**reject, "reason": "the answer does not give every column as text"})
+                continue
+            if reject["column"] and not answer[reject["column"]].strip():
+                unrepairable.append({**reject, "reason": "the answer empties the refused value"})
+                continue
             try:
                 rows.append(coerce_row(header, fields, schema))
             except Rejected as refusal:
@@ -86,15 +116,18 @@ def _ask(client, prompt: str, attempts: int):
     """
     Return the decoded object, or None when nothing usable came back.
 
-    A failed call is retried; an unusable answer is not. At temperature zero
-    the same prompt gives the same answer, so asking a second time buys
-    nothing but a second bill.
+    A failed call is retried; an unusable answer is not, and its row goes to
+    `unrepairable` for a person to look at.
     """
     for _ in range(attempts):
         try:
+            # The lowest temperature: the SDK documents lower values as more
+            # focused and deterministic.
             answer = client.complete(prompt=prompt, temperature=0)
         except Exception:  # noqa: BLE001 - any provider failure is worth one more try
             continue
+        if not isinstance(answer, str):  # a refusal comes back as no content
+            return None
         try:
             parsed = json.loads(answer)
         except ValueError:

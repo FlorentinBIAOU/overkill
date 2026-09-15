@@ -77,11 +77,6 @@ def test_point_de_rupture_une_reponse_malformee_est_attrapee_et_consignee():
     assert client.call_count == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une réponse qui vide le champ refusé, ou n'en rend qu'une partie ({\"id\": \"3\"}), passe pour une "
-    "réparation : une cellule vide est « missing, not malformed », la ligne rejoint les lignes propres avec des None",
-)
 def test_defaut_une_reponse_qui_vide_le_champ_refuse_n_est_pas_une_reparation():
     for answer in (
         {"id": "3", "name": "Carol", "joined": "", "amount": "3.5", "active": "yes"},
@@ -256,11 +251,6 @@ def test_production_accents_emoji_et_mille_lignes_refusees():
     assert len(result["rows"]) == 1000 and result["rows"][0]["name"] == "Zoé 🙂"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT (Python) : une valeur null dans la réponse devient la chaîne « None » par str() et passe en texte "
-    "(« name »: « None ») ; JavaScript la rend vide",
-)
 def test_defaut_une_valeur_null_ne_devient_pas_le_texte_none():
     answer = json.dumps({"id": "3", "name": None, "joined": "2024-03-02", "amount": "3.5", "active": "yes"})
     result = repair_rejected_rows(HEADER, [REJECT], SCHEMA, client=FakeLLM(response=answer))

@@ -36,13 +36,12 @@ const UNDEFINED_IN_CP1252 = /[\u0081\u008d\u008f\u0090\u009d]/g;
  * Turn bytes into text, guessing only when there is nothing else to go on.
  *
  * A byte order mark is a statement about the file, so it wins. Failing that,
- * strict UTF-8 either succeeds, and then it is almost certainly right, or
- * fails, and the file is one of the single-byte encodings a spreadsheet still
- * exports. cp1252 is by far the most common of those.
+ * strict UTF-8 either succeeds, and the file is read as UTF-8, or
+ * fails, and the file is read as cp1252, the Windows single-byte encoding for
+ * Western European languages.
  *
- * UTF-32 is left out on purpose: no spreadsheet writes it, and pretending to
- * support an encoding you have never seen in a real file is how a cleaner
- * acquires code nobody can test.
+ * UTF-32, and UTF-16 without a mark, are not decoded: they come out full of
+ * NUL characters, and `cleanCsv` refuses such a file in its journal.
  *
  * @param {Uint8Array} data
  * @returns {string}
@@ -107,42 +106,75 @@ export function detectDialect(text) {
     }
   }
 
-  // A quote character only counts when it opens a field: at the start of a
-  // line, or straight after the delimiter.
-  const opens = {};
+  // A quote character only counts when it both opens fields (at the start of
+  // a line, or straight after the delimiter) and closes them (straight before
+  // the delimiter, or at the end of a line). A lone apostrophe in front of a
+  // value opens and closes nothing.
+  const occurrences = (line, part) => line.split(part).length - 1;
+  const wraps = {};
   for (const quote of ['"', "'"]) {
-    opens[quote] = sample.reduce(
-      (total, line) => total + (line.startsWith(quote) ? 1 : 0) + (line.split(delimiter + quote).length - 1),
-      0,
-    );
+    const lines = sample.map((line) => line.replace(/\r$/, ''));
+    const opens = lines.reduce((n, line) => n + line.startsWith(quote) + occurrences(line, delimiter + quote), 0);
+    const closes = lines.reduce((n, line) => n + line.endsWith(quote) + occurrences(line, quote + delimiter), 0);
+    wraps[quote] = Math.min(opens, closes);
   }
-  return { delimiter, quote: opens["'"] > opens['"'] ? "'" : '"' };
+  return { delimiter, quote: wraps["'"] > wraps['"'] ? "'" : '"' };
 }
 
 // ---------------------------------------------------------------------------
 // 3. The parser
 // ---------------------------------------------------------------------------
 
+// The default field limit of Python's csv module, so that both versions of this
+// snippet refuse the same fields.
+const FIELD_LIMIT = 131072;
+const LINE_BREAK = /\r\n|\r|\n/g;
+
 /**
- * Read records, with the line each one starts on.
+ * Read records, with the line each one starts on and the problem, if any.
  *
  * Quoted fields, doubled quotes, delimiters and newlines inside a quoted
- * field: written out because a CSV parser is a thirty-line state machine, not
- * a dependency. A quote only opens a field at the start of one, which is what
- * lets `a"b` stay the three characters somebody actually typed.
+ * field. A quote only opens a field at the start of one, which is what lets
+ * `a"b` stay the three characters somebody actually typed.
  *
- * @returns {Array<[number, string[]]>}
+ * A record that cannot be read — a quote opened and never closed, text after a
+ * closing quote, a field over the limit — is refused with the line it starts
+ * on, and reading resumes on the next line. Without that, one quote opened and
+ * never closed swallows the rest of the file into a single field.
+ *
+ * @returns {Array<[number, string[], string?]>} the problem only on a refused record
  */
 export function parseRecords(text, delimiter, quote) {
   const records = [];
   let fields = [];
   let field = '';
   let quoted = false;
+  let closed = false;
   let atFieldStart = true;
   let line = 1;
   let start = 1;
+  let recordAt = 0;
 
-  for (let i = 0; i < text.length; i += 1) {
+  const begin = (at, lineNumber) => {
+    [fields, field, quoted, closed, atFieldStart] = [[], '', false, false, true];
+    [recordAt, line, start] = [at, lineNumber, lineNumber];
+  };
+  // Refuse the record being read, and return where reading resumes.
+  const refuse = (problem) => {
+    LINE_BREAK.lastIndex = recordAt;
+    const found = LINE_BREAK.exec(text);
+    const end = found ? found.index : text.length;
+    records.push([start, [text.slice(recordAt, end)], problem]);
+    begin(found ? end + found[0].length : text.length, start + 1);
+    return recordAt;
+  };
+
+  for (let i = 0; i <= text.length; i += 1) {
+    if (i === text.length) {
+      if (!quoted) break;
+      i = refuse('quote opened and never closed') - 1;
+      continue;
+    }
     const char = text[i];
     if (quoted) {
       if (char === quote && text[i + 1] === quote) {
@@ -150,33 +182,37 @@ export function parseRecords(text, delimiter, quote) {
         i += 1;
       } else if (char === quote) {
         quoted = false;
+        closed = true;
       } else {
         if (char === '\n') line += 1;
         field += char;
       }
+    } else if (closed && char !== delimiter && char !== '\n' && char !== '\r') {
+      i = refuse('text after a closing quote') - 1;
+      continue;
     } else if (char === quote && atFieldStart) {
       quoted = true;
       atFieldStart = false;
     } else if (char === delimiter) {
       fields.push(field);
       field = '';
+      closed = false;
       atFieldStart = true;
     } else if (char === '\n' || char === '\r') {
       if (char === '\r' && text[i + 1] === '\n') i += 1;
       fields.push(field);
       records.push([start, fields]);
-      fields = [];
-      field = '';
-      atFieldStart = true;
-      line += 1;
-      start = line;
+      begin(i + 1, line + 1);
     } else {
       field += char;
       atFieldStart = false;
     }
+    if (field.length > FIELD_LIMIT) {
+      i = refuse(`field longer than ${FIELD_LIMIT} characters`) - 1;
+    }
   }
   // A file that does not end with a newline still ends with a record.
-  if (field !== '' || fields.length > 0) {
+  if (field !== '' || fields.length > 0 || closed) {
     fields.push(field);
     records.push([start, fields]);
   }
@@ -200,7 +236,9 @@ const FALSE_WORDS = new Set(['false', 'no', 'n', '0', 'faux', 'non']);
 function toInteger(raw) {
   const text = raw.replace(SPACES, '');
   if (!INTEGER.test(text)) throw new TypeError('not an integer');
-  return Number(text);
+  // Past 2^53 a Number is rounded without a word: keep such an integer exact.
+  const value = Number(text);
+  return Number.isSafeInteger(value) ? value : BigInt(text);
 }
 
 /**
@@ -308,15 +346,28 @@ export function coerceRow(header, fields, schema) {
 export function cleanCsv(data, schema) {
   const text = decodeText(data);
   const { delimiter, quote } = detectDialect(text);
+  if (text.includes('\0')) {
+    const reason = 'NUL characters: UTF-16 without a byte order mark, or UTF-32, not read';
+    return { columns: [], delimiter, quote, rows: [], rejects: [{ line: 1, column: '', reason, fields: [] }] };
+  }
 
   let header = null;
+  let twice = [];
   const rows = [];
   const rejects = [];
-  for (const [line, fields] of parseRecords(text, delimiter, quote)) {
+  for (const [line, fields, problem] of parseRecords(text, delimiter, quote)) {
+    if (problem) {
+      rejects.push({ line, column: '', reason: problem, fields });
+      continue;
+    }
     // A blank line carries nothing, in any dialect.
     if (fields.length === 0 || (fields.length === 1 && fields[0] === '')) continue;
     if (header === null) {
       header = fields.map((name) => name.trim());
+      twice = [...new Set(header.filter((name, i) => header.indexOf(name) !== i))].sort();
+    } else if (twice.length > 0) {
+      // A row keyed by name would lose one of the two values.
+      rejects.push({ line, column: twice[0], reason: 'column name used twice', fields });
     } else if (fields.length !== header.length) {
       const plural = header.length === 1 ? '' : 's';
       const reason = `expected ${header.length} field${plural}, found ${fields.length}`;
