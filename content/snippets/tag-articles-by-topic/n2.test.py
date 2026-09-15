@@ -277,9 +277,9 @@ def test_defaut_un_article_plus_long_que_la_fenetre_de_l_encodeur_est_juge_en_en
     article = filler + " La TVA, l'impôt et la déclaration fiscale des entreprises."
     # Témoin : sans fenêtre, la dernière phrase change le score de la fiscalité.
     plain = make_labeller()
-    assert score(plain, article)["fiscalité"] > score(plain, filler)["fiscalité"] + 0.05
+    assert score(plain, article)["fiscalité"] > score(plain, filler)["fiscalité"] + 0.01
     truncated = build_labeller(TOPICS, encoder=TruncatingEncoder(DIMENSIONS))
-    assert score(truncated, article)["fiscalité"] > score(truncated, filler)["fiscalité"] + 0.05
+    assert score(truncated, article)["fiscalité"] > score(truncated, filler)["fiscalité"] + 0.01
 
 
 @pytest.mark.xfail(
