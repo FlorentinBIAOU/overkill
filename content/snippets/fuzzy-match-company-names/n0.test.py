@@ -218,20 +218,11 @@ def test_production_marque_d_ordre_espace_insecable_nfd_emoji():
     assert similarity("🍞 Boulangerie Martin", "BOULANGERIE MARTIN") == 1.0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un nom sans lettre latine est vidé par [a-z0-9] ; « Газпром » et « Лукойл », "
-    "« 東京電力 » et « 日立製作所 » obtiennent 1,0",
-)
 def test_defaut_deux_noms_non_latins_differents_ne_sont_pas_identiques():
     assert similarity("Газпром", "Лукойл") < THRESHOLD
     assert similarity("東京電力", "日立製作所") < THRESHOLD
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : « spa », « sa », « ag » sont aussi des mots ordinaires ; « Nordic Spa » et « Nordic SA » obtiennent 1,0",
-)
 def test_defaut_une_forme_juridique_homographe_d_un_mot_ordinaire_ne_fusionne_pas():
     assert similarity("Nordic Spa", "Nordic SA") < 1.0
 

@@ -27,15 +27,17 @@ const MAX_N = 4;
 function ngrams(text) {
   const out = [];
   for (const word of text.toLowerCase().split(/\s+/).filter(Boolean)) {
-    const padded = ` ${word} `;
+    // Code points, as scikit-learn counts them: an emoji is one character,
+    // not two UTF-16 units.
+    const padded = [...` ${word} `];
     for (let n = MIN_N; n <= MAX_N; n += 1) {
       // A word shorter than the window is counted once, whole, and no wider
       // window can tell you anything more about it.
       if (padded.length <= n) {
-        out.push(padded);
+        out.push(padded.join(''));
         break;
       }
-      for (let i = 0; i + n <= padded.length; i += 1) out.push(padded.slice(i, i + n));
+      for (let i = 0; i + n <= padded.length; i += 1) out.push(padded.slice(i, i + n).join(''));
     }
   }
   return out;

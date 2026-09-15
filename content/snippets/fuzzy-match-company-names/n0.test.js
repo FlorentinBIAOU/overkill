@@ -168,17 +168,13 @@ test("production : marque d'ordre, espace insécable, NFD, emoji", () => {
   assert.equal(similarity('🍞 Boulangerie Martin', 'BOULANGERIE MARTIN'), 1);
 });
 
-test('DÉFAUT : un nom sans lettre latine est vidé ; « Газпром » et « Лукойл » obtiennent 1,0', async () => {
-  await assert.rejects(async () => {
-    assert.ok(similarity('Газпром', 'Лукойл') < THRESHOLD);
-    assert.ok(similarity('東京電力', '日立製作所') < THRESHOLD);
-  }, assert.AssertionError);
+test('un nom sans lettre latine est vidé ; « Газпром » et « Лукойл » obtiennent 1,0', async () => {
+  assert.ok(similarity('Газпром', 'Лукойл') < THRESHOLD);
+  assert.ok(similarity('東京電力', '日立製作所') < THRESHOLD);
 });
 
-test('DÉFAUT : « Nordic Spa » et « Nordic SA » obtiennent 1,0', async () => {
-  await assert.rejects(async () => {
-    assert.ok(similarity('Nordic Spa', 'Nordic SA') < 1);
-  }, assert.AssertionError);
+test('« Nordic Spa » et « Nordic SA » obtiennent 1,0', async () => {
+  assert.ok(similarity('Nordic Spa', 'Nordic SA') < 1);
 });
 
 test('production : une lettre sans décomposition est perdue', () => {

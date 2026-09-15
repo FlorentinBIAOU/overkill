@@ -6,8 +6,8 @@ n0.py: |
   Rapprocher deux noms d'entreprises : normaliser, retirer la forme juridique,
   puis Jaro-Winkler.
 
-  Niveau N0. Déterministe, bibliothèque standard seule, et assez court pour se
-  lire d'une traite. Deux décisions portent tout le résultat.
+  Niveau N0. Déterministe, bibliothèque standard seule. Deux décisions portent
+  tout le résultat.
 
   D'abord, la forme juridique est retirée plutôt que comparée.
   « Boulangerie Martin SARL » et « Boulangerie Martin SAS » sont un seul nom
@@ -15,16 +15,15 @@ n0.py: |
   éloignerait pour une raison dont personne n'a à se soucier.
 
   Ensuite, Jaro-Winkler plutôt qu'une distance d'édition ordinaire. Il
-  récompense un début commun, et c'est bien ainsi que varient les noms
-  d'entreprises : la tête est la marque, la queue est une forme, une ville ou
-  un reste de ponctuation.
+  récompense un début commun, ce qui convient à des noms qui diffèrent par la
+  fin : une forme, une ville, un reste de ponctuation après la même marque.
 
 n0.js: |
   Rapprocher deux noms d'entreprises : normaliser, retirer la forme juridique,
   puis Jaro-Winkler.
 
-  Niveau N0. Déterministe, sans dépendance, et assez court pour se lire d'une
-  traite. Deux décisions portent tout le résultat.
+  Niveau N0. Déterministe, sans dépendance. Deux décisions portent tout le
+  résultat.
 
   D'abord, la forme juridique est retirée plutôt que comparée.
   « Boulangerie Martin SARL » et « Boulangerie Martin SAS » sont un seul nom
@@ -32,9 +31,8 @@ n0.js: |
   éloignerait pour une raison dont personne n'a à se soucier.
 
   Ensuite, Jaro-Winkler plutôt qu'une distance d'édition ordinaire. Il
-  récompense un début commun, et c'est bien ainsi que varient les noms
-  d'entreprises : la tête est la marque, la queue est une forme, une ville ou
-  un reste de ponctuation.
+  récompense un début commun, ce qui convient à des noms qui diffèrent par la
+  fin : une forme, une ville, un reste de ponctuation après la même marque.
 
   Écrit en entier plutôt que tiré d'un paquet : l'algorithme tient en trente
   lignes, et c'est l'argument de cette fiche.
@@ -92,15 +90,16 @@ n2: |
 
   Niveau N2. N0 et N1 comparent tous deux des caractères, et tous deux
   manquent donc la paire sur laquelle cette fiche revient sans cesse : un sigle
-  et la raison sociale qu'il abrège n'ont presque aucune lettre en commun. Un
-  encodeur projette chaque nom dans un vecteur selon le sens plutôt que selon
-  l'orthographe, seule façon pour cette paire de se rencontrer un jour.
+  et la raison sociale qu'il abrège n'ont presque aucune lettre en commun.
+  L'encodeur projette chaque nom dans un vecteur conçu pour la recherche
+  sémantique, où la proximité est censée suivre le sens plutôt que
+  l'orthographe. S'il rapproche cette paire, rien ici ne le mesure.
 
-  Ce que cela coûte : un fichier de modèle à livrer et à tenir à jour, un
-  processus chaud pour le porter, et un score que vous ne saurez pas expliquer
-  au collègue qui demande pourquoi deux noms ont été fusionnés. Le registre
-  doit en outre être réencodé à chaque montée de version du modèle, et les
-  anciens scores ne sont pas comparables aux nouveaux.
+  Ce que cela coûte : des poids de modèle à télécharger et à conserver, un
+  processus qui les garde en mémoire, et un score qui ne s'explique pas
+  fragment par fragment, contrairement à celui de N1. Le registre doit en
+  outre être réencodé à chaque changement de modèle : les vecteurs de deux
+  modèles ne sont pas interchangeables.
 
   Voyez ce qui n'est pas là : aucune forme juridique n'est retirée et rien
   n'est mis en minuscules. L'encodeur est censé s'en charger lui-même. Savoir

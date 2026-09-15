@@ -1,8 +1,8 @@
 """
 Match two company names: normalise, drop the legal form, then Jaro-Winkler.
 
-Rung N0. Deterministic, standard library only, and short enough to read in one
-sitting. Two decisions carry the whole result.
+Rung N0. Deterministic, standard library only. Two decisions carry the whole
+result.
 
 First, the legal form is removed rather than compared. "Boulangerie Martin
 SARL" and "Boulangerie Martin SAS" are one trading name under two statuses;
@@ -10,28 +10,31 @@ leaving SARL and SAS inside the strings would push them apart for a reason
 nobody cares about.
 
 Second, Jaro-Winkler rather than a plain edit distance. It rewards a shared
-opening, which is how company names actually vary: the head is the brand, the
-tail is a form, a city or a scrap of punctuation.
+opening, which suits names that differ at the tail: a form, a city, a scrap of
+punctuation after the same brand.
 """
 
 import re
 import unicodedata
 
 # Legal forms, French and foreign. This is business knowledge, not example
-# data: every real matching job carries a list like this one, and grows it.
+# data. No "spa": it is also a word of trading names, and dropping it would
+# merge "Nordic Spa" with "Nordic SA".
 LEGAL_FORMS = frozenset(("sarl sas sasu sa eurl sci snc ltd limited plc gmbh "
-                         "ag inc llc corp bv nv spa srl").split())
+                         "ag inc llc corp bv nv srl").split())
 
-# Winkler looks at the first four characters only, and never gives back more
-# than a tenth of the score Jaro withheld.
+# Winkler looks at the first four characters only, and gives back a tenth of
+# the score Jaro withheld for each of them that both names share.
 PREFIX_LENGTH, PREFIX_SCALING = 4, 0.1
 
 
 def normalise(name: str) -> str:
     """Lowercase, strip accents and punctuation, drop the legal form."""
     folded = unicodedata.normalize("NFKD", name.lower())
-    plain = "".join(c for c in folded if not unicodedata.combining(c))
-    words = re.findall(r"[a-z0-9]+", plain)
+    plain = "".join(c for c in folded if not unicodedata.category(c).startswith("M"))
+    # Letters and digits of every script: a Cyrillic or Japanese name is kept,
+    # not emptied into a string that would match every other emptied name.
+    words = re.findall(r"[^\W_]+", plain)
     kept = [w for w in words if w not in LEGAL_FORMS]
     # A name made of nothing but a legal form keeps it. Emptying it would make
     # it match every other emptied name perfectly, which is worse than useless.
@@ -42,8 +45,8 @@ def _jaro(a: str, b: str) -> float:
     """
     Share of characters found on both sides, discounted by their disorder.
 
-    A character counts as found only if its twin sits within half the length
-    of the longer name. That window is what separates Jaro from a plain count
+    A character counts as found only if its twin sits less than half the length
+    of the longer name away: at most that half, minus one. That window is what separates Jaro from a plain count
     of common letters.
     """
     if a == b:

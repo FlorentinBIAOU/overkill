@@ -93,8 +93,8 @@ export default {
     },
     {
       label: {
-        fr: 'Accents, esperluette, pluriel : rien de tout cela ne compte',
-        en: 'Accents, ampersands, plurals: none of it counts',
+        fr: 'Accents, esperluette, pluriel : tout reste au-dessus du seuil',
+        en: 'Accents, ampersands, plurals: all still above the cut',
       },
       input: 'Établissements Léon & Fils SA\nETABLISSEMENTS LEON ET FILS\nEtablissement Leon et Fils',
     },
@@ -113,8 +113,8 @@ export default {
       input: 'SNCF\nSociété Nationale des Chemins de fer Français\nSanofi',
       fails: true,
       why: {
-        fr: 'La vraie paire passe sous le seuil, et — plus embarrassant — sous le score de Sanofi, qui ne partage avec SNCF qu’une première lettre. L’extrait compare des caractères ; il ne peut pas savoir que le sigle est fait des initiales de la ligne au-dessus. Aucun seuil ne retient la première en écartant la seconde.',
-        en: 'The true pair falls below the cut and — worse — below Sanofi, which shares nothing with SNCF but a first letter. The snippet compares characters; it cannot know the acronym is built from the initials of the line above. No threshold keeps the first pair and rejects the second.',
+        fr: 'La vraie paire passe sous le seuil, et — plus embarrassant — sous le score de Sanofi, qui partage avec SNCF trois lettres sur quatre. L’extrait compare des caractères ; il ne peut pas savoir que le sigle est fait des initiales de la ligne au-dessus. Aucun seuil ne retient la première en écartant la seconde.',
+        en: 'The true pair falls below the cut and — worse — below Sanofi, which shares three of the four letters of SNCF. The snippet compares characters; it cannot know the acronym is built from the initials of the line above. No threshold keeps the first pair and rejects the second.',
       },
     },
   ],

@@ -1,8 +1,8 @@
 /**
  * Match two company names: normalise, drop the legal form, then Jaro-Winkler.
  *
- * Rung N0. Deterministic, no dependency, and short enough to read in one
- * sitting. Two decisions carry the whole result.
+ * Rung N0. Deterministic, no dependency. Two decisions carry the whole
+ * result.
  *
  * First, the legal form is removed rather than compared. "Boulangerie Martin
  * SARL" and "Boulangerie Martin SAS" are one trading name under two
@@ -10,28 +10,31 @@
  * a reason nobody cares about.
  *
  * Second, Jaro-Winkler rather than a plain edit distance. It rewards a shared
- * opening, which is how company names actually vary: the head is the brand,
- * the tail is a form, a city or a scrap of punctuation.
+ * opening, which suits names that differ at the tail: a form, a city, a scrap
+ * of punctuation after the same brand.
  *
  * Written out in full rather than pulled from a package: the algorithm is
  * thirty lines, and that is the argument of this entry.
  */
 
 // Legal forms, French and foreign. This is business knowledge, not example
-// data: every real matching job carries a list like this one, and grows it.
+// data. No "spa": it is also a word of trading names, and dropping it would
+// merge "Nordic Spa" with "Nordic SA".
 const LEGAL_FORMS = new Set(
-  'sarl sas sasu sa eurl sci snc ltd limited plc gmbh ag inc llc corp bv nv spa srl'.split(' '),
+  'sarl sas sasu sa eurl sci snc ltd limited plc gmbh ag inc llc corp bv nv srl'.split(' '),
 );
 
-// Winkler looks at the first four characters only, and never gives back more
-// than a tenth of the score Jaro withheld.
+// Winkler looks at the first four characters only, and gives back a tenth of
+// the score Jaro withheld for each of them that both names share.
 const PREFIX_LENGTH = 4;
 const PREFIX_SCALING = 0.1;
 
 /** Lowercase, strip accents and punctuation, drop the legal form. */
 export function normalise(name) {
   const plain = name.toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '');
-  const words = plain.match(/[a-z0-9]+/g) ?? [];
+  // Letters and digits of every script: a Cyrillic or Japanese name is kept,
+  // not emptied into a string that would match every other emptied name.
+  const words = plain.match(/[\p{L}\p{N}]+/gu) ?? [];
   const kept = words.filter((w) => !LEGAL_FORMS.has(w));
   // A name made of nothing but a legal form keeps it. Emptying it would make
   // it match every other emptied name perfectly, which is worse than useless.
@@ -41,12 +44,11 @@ export function normalise(name) {
 /**
  * Share of characters found on both sides, discounted by their disorder.
  *
- * A character counts as found only if its twin sits within half the length of
- * the longer name. That window is what separates Jaro from a plain count of
+ * A character counts as found only if its twin sits less than half the length
+ * of the longer name away: at most that half, minus one. That window is what separates Jaro from a plain count of
  * common letters.
  */
 function jaro(a, b) {
-  if (a === b) return 1;
   if (!a.length || !b.length) return 0;
   const window = Math.max(Math.floor(Math.max(a.length, b.length) / 2) - 1, 0);
   const hitA = new Array(a.length).fill(false);
@@ -60,8 +62,8 @@ function jaro(a, b) {
       }
     }
   }
-  const matchedA = [...a].filter((_, i) => hitA[i]);
-  const matchedB = [...b].filter((_, j) => hitB[j]);
+  const matchedA = a.filter((_, i) => hitA[i]);
+  const matchedB = b.filter((_, j) => hitB[j]);
   const m = matchedA.length;
   if (!m) return 0;
   const swaps = Math.floor(matchedA.filter((c, i) => c !== matchedB[i]).length / 2);
@@ -69,8 +71,10 @@ function jaro(a, b) {
 }
 
 /** Jaro, raised towards 1 in proportion to the shared opening. */
-export function jaroWinkler(a, b) {
-  const score = jaro(a, b);
+export function jaroWinkler(left, right) {
+  // Code points, as Python counts them, not UTF-16 units.
+  const [a, b] = [[...left], [...right]];
+  const score = left === right ? 1 : jaro(a, b);
   let prefix = 0;
   while (prefix < PREFIX_LENGTH && prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) {
     prefix += 1;

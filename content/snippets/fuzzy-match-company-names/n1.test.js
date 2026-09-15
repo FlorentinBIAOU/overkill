@@ -130,12 +130,10 @@ test('la même arithmétique que scikit-learn : valeurs épinglées en Python', 
   assert.equal(round12(ranked('İstanbul Ltd')['Boulangerie Martin SARL']), 0.178184011082);
 });
 
-test('INFIRMÉ : « la même arithmétique que scikit-learn » ; hors du plan multilingue de base, les n-grammes sont découpés en unités UTF-16', async () => {
+test('« la même arithmétique que scikit-learn » ; hors du plan multilingue de base, les n-grammes sont découpés en unités UTF-16', async () => {
   // Python : 0,475128643566 ; JavaScript : 0,606912036982.
   const emoji = buildIndex(['🍞🥐 Boulangerie Martin', 'Boulangerie Dupont', '𝔄𝔅 Conseil']);
-  await assert.rejects(async () => {
-    assert.equal(round12(match(emoji, '𝔄𝔅', 1)[0][1]), 0.475128643566);
-  }, assert.AssertionError);
+  assert.equal(round12(match(emoji, '𝔄𝔅', 1)[0][1]), 0.475128643566);
 });
 
 // ---------------------------------------------------------------------------

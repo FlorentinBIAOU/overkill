@@ -15,8 +15,8 @@ need:
   en: "Recognise that the same company appears under several spellings across two files of different origins."
 
 scenario:
-  fr: "Deux fichiers arrivent d’origines différentes, et la même société y figure sous deux graphies. Le réflexe est de soumettre chaque paire à un modèle généraliste pour lui demander s’il s’agit de la même entreprise. Ce qui varie d’une graphie à l’autre, pourtant, c’est une forme juridique en fin de chaîne, un accent, un pluriel, une esperluette écrite en toutes lettres : une comparaison de chaînes, et une comparaison bon marché. S’y ajoute une contrainte que l’appel de modèle ne tient pas : un rapprochement doit être rejouable, les mêmes fichiers rapprochés le mois prochain devant produire les mêmes paires."
-  en: "Two files arrive from different origins and the same company sits in both under two spellings. The reflex is to hand each pair to a general-purpose model and ask whether it is the same company. What varies from one spelling to the other, though, is a legal form at the end, an accent, a plural, an ampersand written out: a string comparison, and a cheap one. There is also a constraint a model call does not hold to — a matching run has to be replayable, and the same two files matched again next month have to produce the same pairs."
+  fr: "Deux fichiers arrivent d’origines différentes, et la même société y figure sous deux graphies. On peut soumettre chaque paire à un modèle généraliste en lui demandant s’il s’agit de la même entreprise. Ce qui varie d’une graphie à l’autre, pourtant, c’est une forme juridique en fin de chaîne, un accent, un pluriel, une esperluette écrite en toutes lettres : une comparaison de chaînes, et une comparaison bon marché. S’y ajoute une contrainte que l’appel de modèle ne tient pas : un rapprochement doit être rejouable, les mêmes fichiers rapprochés le mois prochain devant produire les mêmes paires."
+  en: "Two files arrive from different origins and the same company sits in both under two spellings. One option is to hand each pair to a general-purpose model and ask whether it is the same company. What varies from one spelling to the other, though, is a legal form at the end, an accent, a plural, an ampersand written out: a string comparison, and a cheap one. There is also a constraint a model call does not hold to — a matching run has to be replayable, and the same two files matched again next month have to produce the same pairs."
 
 rungs:
   - level: N0
@@ -108,21 +108,21 @@ rungs:
       javascript: snippets/fuzzy-match-company-names/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Des mots ordinaires partagés l’emportent sur l’identité. Dans le test, « Boulangerie du Vieux Port », qui est une autre société, passe devant « Le Vieux Moulin », qui est la même société sous son nom court, et aucun seuil ne démêle les deux. L’extrait est vérifié contre un double local, qui score à zéro la paire de sigles pour laquelle ce niveau existe : ce que l’encodeur réel y gagne, rien ici ne le mesure."
-      en: "Shared ordinary words beat identity. In the test, « Boulangerie du Vieux Port », which is a different company, outranks « Le Vieux Moulin », which is the same company under its short name, and no threshold separates them. The snippet is verified against a local double that scores the acronym pair — the very pair this level exists for — at zero: what a real encoder gains there, nothing here measures."
+      fr: "Non mesuré. L’extrait est vérifié contre un double local, un sac de mots, et ce que montre ce double ne vaut que pour lui : il score à zéro la paire de sigles pour laquelle ce niveau existe, et classe « Boulangerie du Vieux Port », une autre société, devant « Le Vieux Moulin », la même sous son nom court. Où casse l’encodeur réel, et ce qu’il gagne sur les sigles, rien dans cette fiche ne le mesure."
+      en: "Not measured. The snippet is verified against a local double, a bag of words, and what that double shows holds for the double alone: it scores the acronym pair — the very pair this level exists for — at zero, and ranks « Boulangerie du Vieux Port », a different company, above « Le Vieux Moulin », the same one under its short name. Where a real encoder breaks, and what it gains on acronyms, nothing in this entry measures."
     escalate_when:
-      fr: "Il n’y a pas de niveau au-dessus dans cette fiche. Ce qui vient ensuite n’est pas un autre algorithme, c’est quelqu’un qui tranche les paires que le score laisse en suspens."
-      en: "There is no level above this one in this entry. What comes next is not another algorithm, it is somebody deciding on the pairs the score leaves undecided."
+      fr: "Il n’y a pas de niveau au-dessus dans cette fiche : les paires que le score laisse en suspens vont à quelqu’un qui tranche."
+      en: "There is no level above this one in this entry: the pairs the score leaves undecided go to somebody who decides."
 
   - level: N3
     available: false
     unavailable_reason:
-      fr: "Le rapprochement est quadratique : sur dix mille noms, cela fait cinquante millions de paires, et un appel par paire n’existe pas. Un niveau du dessous doit de toute façon présélectionner les paires, et il ne reste alors au modèle que la question facile. S’y ajoute qu’un rapprochement doit pouvoir être rejoué : les extraits de cette fiche qui parcourent un registre fixent leur tri pour que deux exécutions rendent les mêmes paires, et un modèle généraliste ne se fixe pas ainsi."
-      en: "Matching is quadratic: ten thousand names make fifty million pairs, and one call per pair does not exist. A lower level has to shortlist the pairs anyway, leaving the model only the easy question. Replayability settles it: the snippets in this entry that walk a register pin their sort so that two runs return the same pairs, and a general-purpose model pins nothing."
+      fr: "Le rapprochement est quadratique : sur dix mille noms, cela fait cinquante millions de paires, donc cinquante millions d’appels. Un niveau du dessous doit de toute façon présélectionner les paires. S’y ajoute qu’un rapprochement doit pouvoir être rejoué : les extraits de cette fiche qui parcourent un registre fixent leur tri pour que deux exécutions rendent les mêmes paires, alors que le fournisseur pris en exemple ne garantit pas le déterminisme, même à graine fixée."
+      en: "Matching is quadratic: ten thousand names make fifty million pairs, so fifty million calls. A lower level has to shortlist the pairs anyway. Replayability settles it: the snippets in this entry that walk a register pin their sort so that two runs return the same pairs, whereas the provider taken as an example does not guarantee determinism, even with a fixed seed."
 
 verdict_rationale:
-  fr: "N0 ne coûte rien à exécuter, ne dépend de rien, et chacune de ses affirmations est un test unitaire — ce qui compte quand un faux rapprochement fusionne les dossiers de deux sociétés. N1 achète l’ordre des mots, la pondération des fragments rares et la recherche dans un registre entier ; son propre test dit ce qu’il n’achète pas, à savoir la paire sigle contre raison sociale, toujours manquée et toujours doublée par deux entreprises sans rapport. Montez à N1 quand vous cherchez un nom dans un registre au lieu de juger une paire, pas en espérant avoir plus souvent raison."
-  en: "N0 costs nothing to run, depends on nothing, and every claim it makes is a unit test — which matters when a wrong match merges two companies' files. N1 buys word order, rare-fragment weighting and search across a whole register; its own test says what it does not buy, namely the acronym against the spelled-out name, still missed and still beaten by two unrelated companies. Move up to N1 when you are looking a name up in a register instead of judging a pair, not in the hope of being right more often."
+  fr: "N0 ne coûte rien à exécuter, ne dépend de rien, et chacun de ses scores se vérifie par un test unitaire — ce qui compte quand un faux rapprochement fusionne les dossiers de deux sociétés. N1 achète l’ordre des mots, la pondération des fragments rares et la recherche dans un registre entier ; son propre test dit ce qu’il n’achète pas, à savoir la paire sigle contre raison sociale, toujours manquée et toujours doublée par deux entreprises sans rapport. Montez à N1 quand vous cherchez un nom dans un registre au lieu de juger une paire, pas en espérant avoir plus souvent raison."
+  en: "N0 costs nothing to run, depends on nothing, and every score it gives can be checked by a unit test — which matters when a wrong match merges two companies' files. N1 buys word order, rare-fragment weighting and search across a whole register; its own test says what it does not buy, namely the acronym against the spelled-out name, still missed and still beaten by two unrelated companies. Move up to N1 when you are looking a name up in a register instead of judging a pair, not in the hope of being right more often."
 
 further_reading:
   - label: "Wikipedia — Jaro-Winkler distance, la définition et le poids du préfixe commun"
@@ -134,5 +134,13 @@ further_reading:
   - label: "Sentence-Transformers — les encodeurs de phrases auto-hébergés"
     url: "https://www.sbert.net/"
 
-sources: []
+sources:
+  - label: "Hugging Face — fiche du modèle paraphrase-multilingual-MiniLM-L12-v2 : vecteurs pour le regroupement et la recherche sémantique"
+    url: "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+  - label: "Transformers.js — pipelines et option dtype (fp32, q8)"
+    url: "https://huggingface.co/docs/transformers.js/pipelines"
+  - label: "LlamaIndex — embeddings : changer de modèle d’encodage impose de réindexer"
+    url: "https://developers.llamaindex.ai/python/framework/module_guides/models/embeddings/"
+  - label: "OpenAI Cookbook — le paramètre seed : « Determinism is not guaranteed »"
+    url: "https://developers.openai.com/cookbook/examples/reproducible_outputs_with_the_seed_parameter"
 ---

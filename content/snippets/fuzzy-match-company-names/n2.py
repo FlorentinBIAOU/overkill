@@ -3,13 +3,14 @@ Match company names by meaning, with a self-hosted encoder.
 
 Rung N2. N0 and N1 both compare characters, so both miss the pair this entry
 keeps coming back to: an acronym and the name it stands for share almost no
-letters. An encoder maps each name to a vector by meaning rather than by
-spelling, which is the only way that pair can ever meet.
+letters. The encoder maps each name to a vector built for semantic search,
+where closeness is meant to follow meaning rather than spelling. Whether it
+brings that pair together, nothing here measures.
 
-What it costs: a model file to ship and keep in sync, a warm process to hold
-it, and a score you cannot explain to the colleague who asks why two names
-were merged. The register also has to be re-encoded whenever the model is
-upgraded, and the scores of the old version are not comparable to the new.
+What it costs: model weights to download and keep, a process that holds them
+in memory, and a score that cannot be explained fragment by fragment, as N1's
+can. The register also has to be re-encoded whenever the model changes:
+vectors from two models are not interchangeable.
 
 Note what is not here: no legal form is stripped and nothing is lowercased.
 The encoder is supposed to handle that itself. Whether it does is exactly the
