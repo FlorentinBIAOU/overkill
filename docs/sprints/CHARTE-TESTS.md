@@ -139,6 +139,12 @@ tests prouvent la plomberie :
 - une réponse bien formée est décodée ;
 - une réponse mal formée, vide, tronquée, ou d'un autre type lève une erreur
   nommée, et ne rend jamais une sortie qui passerait pour un résultat ;
+- une réponse entièrement enveloppée dans **une seule clôture de code**
+  (```` ```json … ``` ````) est décodée comme si elle ne l'était pas : c'est
+  une forme courante, et la refuser coûterait un réessai payé pour rien. Tout
+  autre écart — texte avant ou après, deux blocs, clôture non refermée — lève ;
+- `content` nul (refus du modèle) est une réponse inutilisable, traitée comme
+  telle, pas passée au décodeur JSON en comptant sur l'exception ;
 - une panne est retentée le nombre de fois annoncé, pas une de plus ;
 - une entrée trop grande est refusée **avant** l'appel ;
 - **le client par défaut a la forme du vrai kit de développement** : le test

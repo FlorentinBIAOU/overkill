@@ -60,3 +60,9 @@ Tenu au fil du lot. Chaque décision, avec l'alternative écartée.
     démontre. La fiche dit la limite et le paramètre ; le test `DÉFAUT` devient
     la démonstration de la limite au réglage par défaut et de sa levée avec le
     paramètre. Écarté : un plancher par défaut à un.
+12. **Une réponse N3 enveloppée d'une seule clôture ```json est décodée.** Deux
+    relevés la tenaient pour un défaut (non décodée), un troisième exigeait
+    qu'elle lève. Tranché pour le décodage, étroit : une clôture unique qui
+    enveloppe toute la réponse ; tout autre écart lève. Écarté : tout refuser
+    (un réessai facturé pour une forme courante et sans ambiguïté) ; chercher du
+    JSON n'importe où dans la prose (on décoderait ce que le modèle cite).
