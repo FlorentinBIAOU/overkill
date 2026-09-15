@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractFields, parseAmount } from './n0.js';
+import { readFileSync } from 'node:fs';
+import { AMOUNT, extractFields, findAfterLabel, parseAmount } from './n0.js';
 
 // Two invoices, two suppliers, both already turned into text. Nothing here is
 // unusual: this is what a French invoice looks like once the PDF has given up
@@ -38,55 +39,122 @@ Cartouche encre noire                2    38,50      77,00
                           NET A PAYER                92,40 EUR
 `;
 
-test('reads the invoice it was written for', () => {
-  assert.deepEqual(extractFields(LAMBERT), {
-    invoice_number: 'FA-2024-0187',
-    date: '14/03/2024',
-    total: 82.8,
-  });
-});
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
 
-test('reads uppercase labels and a grouped amount', () => {
-  // Same supplier, a later invoice: shouting labels, and a total large enough
-  // to carry a thousands separator.
-  const invoice = 'FACTURE N° FA-2024-0201\nDATE : 02/12/2024\nTOTAL TTC : 1 234,56 €';
-  assert.deepEqual(extractFields(invoice), {
-    invoice_number: 'FA-2024-0201',
-    date: '02/12/2024',
-    total: 1234.56,
-  });
-});
-
-test('ignores a label that carries no value', () => {
-  // "Total" is a column heading here before it is a label. Accepting the
-  // heading would return nothing at all instead of the amount below it.
-  const invoice = 'Qté   Prix   Total\n\nTotal TTC   45,00 €';
-  assert.equal(extractFields(invoice).total, 45);
-});
-
-test('an empty document returns no field', () => {
-  assert.deepEqual(extractFields(''), { invoice_number: null, date: null, total: null });
-});
-
-test('parseAmount reads both spellings', () => {
-  assert.equal(parseAmount('1.234,56 €'), 1234.56);
-  assert.equal(parseAmount('82,80'), 82.8);
-});
-
-test('breaking point: the next supplier lays the page out otherwise', () => {
-  // The rules are written against one supplier's page, and the next supplier
-  // does not use that page. Nord Fournitures writes "N°" where Lambert
-  // writes "Facture n°", spells the date out in words, and calls the total
-  // "NET A PAYER". Not one of the three fields survives. Two come back null,
-  // and that shows. The third failure is the one that does not: the total comes
-  // back as a confident, well-formed, wrong number, because "Sous-total"
-  // contains "total".
-  //
-  // Adding "net a payer" to the labels fixes this supplier and waits for the
-  // next one. That maintenance, invoice by invoice, is the real cost of N0.
+test('point de rupture : le fournisseur suivant fait tomber les trois champs', () => {
   const fields = extractFields(NORD);
   assert.equal(fields.invoice_number, null);
   assert.equal(fields.date, null);
-  assert.equal(fields.total, 77);
   assert.notEqual(fields.total, 92.4);
+  // Witness: the Lambert invoice is read in full.
+  assert.deepEqual(extractFields(LAMBERT), { invoice_number: 'FA-2024-0187', date: '14/03/2024', total: 82.8 });
+});
+
+test('point de rupture : deux champs tombent à vide, et cela se voit', () => {
+  const fields = extractFields(NORD);
+  assert.deepEqual(Object.keys(fields).filter((name) => fields[name] === null), ['invoice_number', 'date']);
+});
+
+test('point de rupture : le total revient bien formé et faux, parce que « Sous-total » contient « total »', () => {
+  assert.equal(extractFields(NORD).total, 77);
+  assert.equal(findAfterLabel(NORD, ['total'], AMOUNT), '77,00');
+  // Witness: without the word « Sous-total », the same line gives nothing.
+  assert.equal(extractFields(NORD.replace('Sous-total', 'Montant HT')).total, null);
+});
+
+// ---------------------------------------------------------------------------
+// Autres affirmations du niveau
+// ---------------------------------------------------------------------------
+
+test('lit la facture pour laquelle il a été écrit', () => {
+  assert.deepEqual(extractFields(LAMBERT), { invoice_number: 'FA-2024-0187', date: '14/03/2024', total: 82.8 });
+});
+
+test('lit des libellés en capitales et un montant groupé', () => {
+  const invoice = 'FACTURE N° FA-2024-0201\nDATE : 02/12/2024\nTOTAL TTC : 1 234,56 €';
+  assert.deepEqual(extractFields(invoice), { invoice_number: 'FA-2024-0201', date: '02/12/2024', total: 1234.56 });
+});
+
+test('un libellé sans valeur sur sa ligne est ignoré', () => {
+  assert.equal(extractFields('Qté   Prix   Total\n\nTotal TTC   45,00 €').total, 45);
+});
+
+test('les libellés sont rangés du plus précis au moins précis, Total TTC avant Total HT', () => {
+  assert.equal(extractFields(LAMBERT).total, 82.8);
+  // Witness: with the least specific label alone, the plausible wrong number comes back.
+  assert.equal(findAfterLabel(LAMBERT, ['total'], AMOUNT), '69,00');
+});
+
+test('parseAmount lit les deux graphies', () => {
+  assert.equal(parseAmount('1.234,56 €'), 1234.56);
+  assert.equal(parseAmount('82,80'), 82.8);
+  assert.equal(parseAmount('92.40'), 92.4);
+});
+
+test('INFIRMÉ : le commentaire dit qu’une quantité et un prix unitaire ne sont jamais lus comme un seul nombre, « 2 380,50 » l’est', async () => {
+  await assert.rejects(async () => {
+    assert.equal('Cartouche encre noire 2 380,50'.match(AMOUNT)[0], '380,50');
+  });
+});
+
+test('l’extrait n’importe rien', () => {
+  const source = readFileSync(new URL('./n0.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /^\s*import\s|\brequire\(|\bimport\(|\bfetch\(/m);
+  assert.deepEqual(extractFields(LAMBERT), extractFields(LAMBERT));
+});
+
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
+
+test('production : document vide ou blanc', () => {
+  assert.deepEqual(extractFields(''), { invoice_number: null, date: null, total: null });
+  assert.deepEqual(extractFields('\n   \n\t'), { invoice_number: null, date: null, total: null });
+});
+
+test('production : un document de neuf mégaoctets dans une borne large', () => {
+  const big = LAMBERT.repeat(20_000);
+  const debut = performance.now();
+  assert.equal(extractFields(big).total, 82.8);
+  assert.ok(performance.now() - debut < 10_000);
+});
+
+test('production : espace insécable et espace fine dans le montant', () => {
+  assert.equal(extractFields('Total TTC 1\u00a0234,56 €').total, 1234.56);
+  assert.equal(extractFields('Total TTC 1\u202f234,56 €').total, 1234.56);
+});
+
+test('DÉFAUT : une espace insécable dans « Total TTC » rend le Total HT', async () => {
+  await assert.rejects(async () => {
+    assert.equal(extractFields(LAMBERT.replace('Total TTC', 'Total\u00a0TTC')).total, 82.8);
+  });
+});
+
+test('DÉFAUT : un montant à l’anglaise est lu sans erreur et faux', async () => {
+  await assert.rejects(async () => {
+    assert.ok([1234.56, null].includes(extractFields('TOTAL TTC : 1,234.56 USD').total));
+  });
+});
+
+test('DÉFAUT : le total négatif d’un avoir perd son signe', async () => {
+  await assert.rejects(async () => {
+    assert.equal(extractFields("Facture d'avoir n° AV-2024-0012\nTotal TTC -82,80 €").total, -82.8);
+  });
+});
+
+test('production : valeurs aux limites du montant', () => {
+  assert.equal(extractFields('Total TTC 0,00 €').total, 0);
+  assert.equal(extractFields('Total TTC 999,99 €').total, 999.99);
+  assert.equal(extractFields('Total TTC 1 000,00 €').total, 1000);
+  assert.equal(extractFields('Total TTC 1 234 567,89 €').total, 1234567.89);
+  assert.equal(extractFields('Total TTC 12,5 €').total, null);
+});
+
+test('production : un motif conçu pour faire exploser la référence termine', () => {
+  const debut = performance.now();
+  extractFields(`Facture n° ${'1-'.repeat(50_000)}!`);
+  extractFields(`Total TTC ${'1 '.repeat(50_000)}x`);
+  assert.ok(performance.now() - debut < 10_000);
 });

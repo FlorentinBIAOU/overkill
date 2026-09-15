@@ -1,3 +1,10 @@
+import ast
+import pickle
+import time
+from pathlib import Path
+
+import pytest
+
 from n1 import extract_fields, line_features, page_lines, train
 
 # Two suppliers to learn from. Their pages have nothing in common but the fact
@@ -66,63 +73,16 @@ def labels_for(document, marks):
     ]
 
 
-def make_model():
-    documents = list(TRAINING)
-    return train(documents, [labels_for(d, TRAINING[d]) for d in documents])
+
+def make_model(extra=()):
+    documents = list(TRAINING) + [document for document, _ in extra]
+    labels = [labels_for(d, TRAINING[d]) for d in TRAINING] + [labels_for(d, marks) for d, marks in extra]
+    return train(documents, labels)
 
 
-def test_reads_a_supplier_it_was_never_trained_on():
-    # This is the invoice the keyword rules of N0 read wrong, silently.
-    fields = extract_fields(make_model(), NORD)
-    assert fields == {
-        "invoice_number": "2024-000431",
-        "date": "3 avril 2024",
-        "total": 92.40,
-    }
+MODEL = make_model()
 
-
-def test_still_reads_the_suppliers_it_learnt_from():
-    model = make_model()
-    assert extract_fields(model, LAMBERT)["total"] == 82.80
-    assert extract_fields(model, FERRAND)["total"] == 802.08
-
-
-def test_renaming_the_label_changes_nothing():
-    # The features never look at the words. Calling the total something else
-    # is the change that breaks N0 and leaves this rung untouched.
-    renamed = LAMBERT.replace("Total TTC", "Net à payer")
-    assert extract_fields(make_model(), renamed)["total"] == 82.80
-
-
-def test_features_read_position_and_shape():
-    features = line_features("        Total TTC     82,80 €", 9, 10)
-    assert features[1] == 1.0                      # the last line of the page
-    assert features[2] > 0.0                       # indented
-    assert features[8] == 1.0                      # the amount hangs on the right
-
-
-def test_an_empty_document_returns_no_field():
-    assert extract_fields(make_model(), "") == {
-        "invoice_number": None,
-        "date": None,
-        "total": None,
-    }
-
-
-def test_breaking_point_a_legal_footer_below_the_totals():
-    """
-    The breaking point of this rung: the features are the whole model, and one
-    of them says "the amount at the bottom right of the page".
-
-    Every French invoice ends with the fixed recovery indemnity, an amount, at
-    the bottom, on the right, on a line of its own. It looks more like a total
-    than the total does, and nothing in the training set said otherwise.
-
-    The fix is not a better classifier, it is more labelled invoices, of every
-    layout you will ever receive. Each new supplier costs annotation, which is
-    the running cost this rung is usually assumed not to have.
-    """
-    verrerie = """
+VERRERIE = """
 VERRERIE DU CENTRE
 Facture V-2451 du 12/09/2024
 
@@ -134,7 +94,162 @@ Total TTC                                    360,00 €
 Escompte pour paiement anticipé : néant
 Indemnité forfaitaire de recouvrement        40,00 €
 """
-    fields = extract_fields(make_model(), verrerie)
+INDEMNITY = "Indemnité forfaitaire de recouvrement        40,00 €"
+
+
+class PointingModel:
+    """A classifier whose preferred line per field is given, to exercise the reading walk."""
+
+    classes_ = ["date", "invoice_number", "other", "total"]
+
+    def __init__(self, favourite_total_line):
+        self.favourite = favourite_total_line
+
+    def predict_proba(self, rows):
+        return [
+            [0.1, 0.1, 0.1, 0.9 if i == self.favourite else (0.5 if i == len(rows) - 1 else 0.0)]
+            for i in range(len(rows))
+        ]
+
+
+# ---------------------------------------------------------------------------
+# Point de rupture
+# ---------------------------------------------------------------------------
+
+
+def test_point_de_rupture_l_indemnite_forfaitaire_de_recouvrement_est_retenue_comme_montant_du():
+    """
+    breaking_point : « L'indemnité forfaitaire de recouvrement […] le classifieur
+    la retient ». Témoin : sans cette ligne, la même facture rend 360,00.
+    """
+    fields = extract_fields(MODEL, VERRERIE)
     assert fields["invoice_number"] == "V-2451"
     assert fields["total"] == 40.00
-    assert fields["total"] != 360.00
+    assert extract_fields(MODEL, VERRERIE.replace(INDEMNITY, ""))["total"] == 360.00
+
+
+def test_point_de_rupture_l_indemnite_a_les_traits_d_un_total_montant_seul_en_bas_a_droite():
+    """breaking_point : « C'est un montant, seul sur sa ligne, en bas et à droite »."""
+    lines = page_lines(VERRERIE)
+    features = line_features(lines[-1], len(lines) - 1, len(lines))
+    assert features[1] == 1.0   # the very last line
+    assert features[5] == 1 / 3  # one amount
+    assert features[8] == 1.0   # hanging on the right
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "INFIRMÉ : la fiche dit « Rien dans le jeu d'entraînement ne disait le "
+        "contraire », et le test d'origine que la correction est d'annoter davantage ; "
+        "entraîné sur cette facture même, l'indemnité étiquetée « other », le "
+        "classifieur rend encore 40,00 : les traits ne séparent pas les deux lignes"
+    ),
+)
+def test_infirme_annoter_la_facture_a_indemnite_suffit_a_corriger_la_lecture():
+    model = make_model(extra=[(VERRERIE, {"Facture V": "invoice_number", "Total TTC": "total"})])
+    assert extract_fields(model, VERRERIE)["total"] == 360.00
+
+
+# ---------------------------------------------------------------------------
+# Autres affirmations du niveau
+# ---------------------------------------------------------------------------
+
+
+def test_lit_un_fournisseur_jamais_vu_a_l_entrainement():
+    """name : « Traits de position et de mise en forme, puis classifieur de lignes » ; docstring : « Ces traits survivent à un changement de fournisseur »."""
+    assert extract_fields(MODEL, NORD) == {
+        "invoice_number": "2024-000431",
+        "date": "3 avril 2024",
+        "total": 92.40,
+    }
+
+
+def test_lit_encore_les_fournisseurs_appris():
+    assert extract_fields(MODEL, LAMBERT)["total"] == 82.80
+    assert extract_fields(MODEL, FERRAND)["total"] == 802.08
+
+
+def test_renommer_le_libelle_ne_change_rien():
+    renamed = LAMBERT.replace("Total TTC", "Net à payer")
+    assert extract_fields(MODEL, renamed)["total"] == 82.80
+
+
+def test_les_traits_ne_lisent_jamais_ce_que_dit_la_ligne():
+    """commentaire de line_features : « Where the line sits and what it looks like. Never what it says »."""
+    assert line_features("Total TTC 82,80 €", 3, 10) == line_features("Solde TTC 82,80 €", 3, 10)
+
+
+def test_les_traits_lisent_la_position_et_la_forme():
+    features = line_features("        Total TTC     82,80 €", 9, 10)
+    assert features[0] == 1.0   # how far down the page
+    assert features[1] == 1.0   # the last line of the page
+    assert features[2] > 0.0    # indented
+    assert features[8] == 1.0   # the amount hangs on the right
+
+
+def test_une_ligne_preferee_qui_ne_porte_aucune_valeur_n_est_pas_une_reponse():
+    """docstring de extract_fields : « a line the model likes but that holds no value is not an answer »."""
+    text = "SOCIÉTÉ EXEMPLE\nTotal TTC 82,80 €"
+    assert extract_fields(PointingModel(favourite_total_line=0), text)["total"] == 82.80
+
+
+def test_l_entrainement_tient_en_quelques_dizaines_de_lignes_et_le_modele_en_quelques_kilooctets():
+    """docstring : « L'entraînement tient en quelques dizaines de lignes étiquetées, le modèle pèse quelques kilooctets, et rien ne se télécharge »."""
+    assert sum(len(page_lines(d)) for d in TRAINING) == 21
+    assert len(pickle.dumps(MODEL)) < 10_000
+    source = ast.parse(Path(__file__).with_name("n1.py").read_text(encoding="utf-8"))
+    imported = {a.name.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
+    imported |= {n.module.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
+    assert imported == {"re", "sklearn"}
+
+
+def test_deux_entrainements_rendent_les_memes_lectures():
+    """risks.deterministic: true."""
+    assert extract_fields(make_model(), NORD) == extract_fields(MODEL, NORD)
+
+
+def test_verdict_n1_prend_pour_le_montant_du_une_mention_legale_de_bas_de_page():
+    """verdict_rationale : « N1 prend pour le montant dû une mention légale que toute facture entre professionnels porte en bas de page »."""
+    assert extract_fields(MODEL, VERRERIE)["total"] == 40.00
+
+
+# ---------------------------------------------------------------------------
+# Cas de production
+# ---------------------------------------------------------------------------
+
+
+def test_production_document_vide_ou_blanc():
+    empty = {"invoice_number": None, "date": None, "total": None}
+    assert extract_fields(MODEL, "") == empty
+    assert extract_fields(MODEL, "  \n\t\n") == empty
+
+
+def test_production_une_seule_ligne():
+    assert extract_fields(MODEL, "Total TTC 82,80 €")["total"] == 82.80
+
+
+def test_production_dix_mille_lignes_dans_une_borne_large():
+    big = LAMBERT * 800
+    debut = time.perf_counter()
+    assert extract_fields(MODEL, big)["total"] is not None
+    assert time.perf_counter() - debut < 20
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "DÉFAUT : la date en lettres n'est lue qu'en minuscules accentuées : « 3 Avril "
+        "2024 » ou « 1 fevrier 2024 » ne rendent aucune date"
+    ),
+)
+def test_defaut_une_date_en_lettres_avec_majuscule_ou_sans_accent_n_est_pas_lue():
+    assert extract_fields(MODEL, NORD.replace("3 avril 2024", "3 Avril 2024"))["date"] == "3 Avril 2024"
+    assert extract_fields(MODEL, NORD.replace("3 avril 2024", "1 fevrier 2024"))["date"] == "1 fevrier 2024"
+
+
+def test_production_espaces_insecables_dans_le_montant_et_la_date():
+    text = NORD.replace("92,40", "1\u202f092,40").replace("3 avril 2024", "3\u00a0avril\u00a02024")
+    fields = extract_fields(MODEL, text)
+    assert fields["total"] == 1092.40
+    assert fields["date"] == "3\u00a0avril\u00a02024"

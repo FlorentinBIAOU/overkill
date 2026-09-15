@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { extractFields, lineFeatures, pageLines, train } from './n1.js';
 
 // Two suppliers to learn from. Their pages have nothing in common but the fact
@@ -66,58 +67,14 @@ function labelsFor(document, marks) {
   );
 }
 
-const model = train(
-  TRAINING.map(([document]) => document),
-  TRAINING.map(([document, marks]) => labelsFor(document, marks)),
+const makeModel = (extra = []) => train(
+  [...TRAINING.map(([document]) => document), ...extra.map(([document]) => document)],
+  [...TRAINING.map(([document, marks]) => labelsFor(document, marks)), ...extra.map(([document, marks]) => labelsFor(document, marks))],
 );
 
-test('reads a supplier it was never trained on', () => {
-  // This is the invoice the keyword rules of N0 read wrong, silently.
-  assert.deepEqual(extractFields(model, NORD), {
-    invoice_number: '2024-000431',
-    date: '3 avril 2024',
-    total: 92.4,
-  });
-});
+const model = makeModel();
 
-test('still reads the suppliers it learnt from', () => {
-  assert.equal(extractFields(model, LAMBERT).total, 82.8);
-  assert.equal(extractFields(model, FERRAND).total, 802.08);
-});
-
-test('renaming the label changes nothing', () => {
-  // The features never look at the words. Calling the total something else is
-  // the change that breaks N0 and leaves this rung untouched.
-  const renamed = LAMBERT.replace('Total TTC', 'Net à payer');
-  assert.equal(extractFields(model, renamed).total, 82.8);
-});
-
-test('features read position and shape', () => {
-  const features = lineFeatures('        Total TTC     82,80 €', 9, 10);
-  assert.equal(features[1], 1); //  the last line of the page
-  assert.ok(features[2] > 0); //    indented
-  assert.equal(features[8], 1); //  the amount hangs on the right
-});
-
-test('an empty document returns no field', () => {
-  assert.deepEqual(extractFields(model, ''), {
-    invoice_number: null,
-    date: null,
-    total: null,
-  });
-});
-
-test('breaking point: a legal footer below the totals', () => {
-  // The features are the whole model, and one of them says "the amount at the
-  // bottom right of the page". Every French invoice ends with the fixed
-  // recovery indemnity, an amount, at the bottom, on the right, on a line of
-  // its own. It looks more like a total than the total does, and nothing in
-  // the training set said otherwise.
-  //
-  // The fix is not a better classifier, it is more labelled invoices, of every
-  // layout you will ever receive. Each new supplier costs annotation, which is
-  // the running cost this rung is usually assumed not to have.
-  const verrerie = `
+const VERRERIE = `
 VERRERIE DU CENTRE
 Facture V-2451 du 12/09/2024
 
@@ -129,8 +86,117 @@ Total TTC                                    360,00 €
 Escompte pour paiement anticipé : néant
 Indemnité forfaitaire de recouvrement        40,00 €
 `;
-  const fields = extractFields(model, verrerie);
+const INDEMNITY = 'Indemnité forfaitaire de recouvrement        40,00 €';
+
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
+
+test('point de rupture : l’indemnité forfaitaire de recouvrement est retenue comme montant dû', () => {
+  const fields = extractFields(model, VERRERIE);
   assert.equal(fields.invoice_number, 'V-2451');
   assert.equal(fields.total, 40);
-  assert.notEqual(fields.total, 360);
+  // Witness: without that line, the same invoice reads 360,00.
+  assert.equal(extractFields(model, VERRERIE.replace(INDEMNITY, '')).total, 360);
+});
+
+test('point de rupture : l’indemnité a les traits d’un total, montant seul en bas à droite', () => {
+  const lines = pageLines(VERRERIE);
+  const features = lineFeatures(lines.at(-1), lines.length - 1, lines.length);
+  assert.equal(features[1], 1);
+  assert.equal(features[5], 1 / 3);
+  assert.equal(features[8], 1);
+});
+
+test('INFIRMÉ : la fiche laisse entendre qu’annoter cette facture corrigerait la lecture, entraîné dessus il rend encore 40,00', async () => {
+  await assert.rejects(async () => {
+    const retrained = makeModel([[VERRERIE, { 'Facture V': 'invoice_number', 'Total TTC': 'total' }]]);
+    assert.equal(extractFields(retrained, VERRERIE).total, 360);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Autres affirmations du niveau
+// ---------------------------------------------------------------------------
+
+test('lit un fournisseur jamais vu à l’entraînement', () => {
+  assert.deepEqual(extractFields(model, NORD), { invoice_number: '2024-000431', date: '3 avril 2024', total: 92.4 });
+});
+
+test('lit encore les fournisseurs appris', () => {
+  assert.equal(extractFields(model, LAMBERT).total, 82.8);
+  assert.equal(extractFields(model, FERRAND).total, 802.08);
+});
+
+test('renommer le libellé ne change rien', () => {
+  assert.equal(extractFields(model, LAMBERT.replace('Total TTC', 'Net à payer')).total, 82.8);
+});
+
+test('les traits ne lisent jamais ce que dit la ligne', () => {
+  assert.deepEqual(lineFeatures('Total TTC 82,80 €', 3, 10), lineFeatures('Solde TTC 82,80 €', 3, 10));
+});
+
+test('les traits lisent la position et la forme', () => {
+  const features = lineFeatures('        Total TTC     82,80 €', 9, 10);
+  assert.equal(features[0], 1);
+  assert.equal(features[1], 1);
+  assert.ok(features[2] > 0);
+  assert.equal(features[8], 1);
+});
+
+test('une ligne préférée qui ne porte aucune valeur n’est pas une réponse', () => {
+  // A hand-set model: the total classifier loves an all-capitals line.
+  const zero = () => ({ weights: new Float64Array(10), bias: 0 });
+  const loveCapitals = { weights: Float64Array.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 10]), bias: 0 };
+  const pointing = { classes: ['date', 'invoice_number', 'other', 'total'], models: [zero(), zero(), zero(), loveCapitals] };
+  assert.equal(extractFields(pointing, 'SOCIÉTÉ EXEMPLE\nTotal TTC 82,80 €').total, 82.8);
+});
+
+test('l’entraînement tient en quelques dizaines de lignes, et la régression est lue plutôt qu’importée', () => {
+  assert.equal(TRAINING.reduce((n, [document]) => n + pageLines(document).length, 0), 21);
+  const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /^\s*import\s|\brequire\(|\bimport\(|\bfetch\(/m);
+});
+
+test('deux entraînements rendent les mêmes lectures', () => {
+  assert.deepEqual(extractFields(makeModel(), NORD), extractFields(model, NORD));
+});
+
+test('verdict : N1 prend pour le montant dû une mention légale de bas de page', () => {
+  assert.equal(extractFields(model, VERRERIE).total, 40);
+});
+
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
+
+test('production : document vide ou blanc', () => {
+  const empty = { invoice_number: null, date: null, total: null };
+  assert.deepEqual(extractFields(model, ''), empty);
+  assert.deepEqual(extractFields(model, '  \n\t\n'), empty);
+});
+
+test('production : une seule ligne', () => {
+  assert.equal(extractFields(model, 'Total TTC 82,80 €').total, 82.8);
+});
+
+test('production : dix mille lignes dans une borne large', () => {
+  const big = LAMBERT.repeat(800);
+  const debut = performance.now();
+  assert.notEqual(extractFields(model, big).total, null);
+  assert.ok(performance.now() - debut < 20_000);
+});
+
+test('DÉFAUT : une date en lettres avec majuscule ou sans accent n’est pas lue', async () => {
+  await assert.rejects(async () => {
+    assert.equal(extractFields(model, NORD.replace('3 avril 2024', '3 Avril 2024')).date, '3 Avril 2024');
+    assert.equal(extractFields(model, NORD.replace('3 avril 2024', '1 fevrier 2024')).date, '1 fevrier 2024');
+  });
+});
+
+test('production : espaces insécables dans le montant et la date', () => {
+  const text = NORD.replace('92,40', '1\u202f092,40').replace('3 avril 2024', '3\u00a0avril\u00a02024');
+  const fields = extractFields(model, text);
+  assert.equal(fields.total, 1092.4);
+  assert.equal(fields.date, '3\u00a0avril\u00a02024');
 });
