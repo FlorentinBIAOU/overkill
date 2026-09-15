@@ -1,16 +1,19 @@
 /**
  * Spot anomalies in several metrics at once with an isolation forest.
  *
- * Rung N1. The robust threshold of N0 watches one metric at a time, and some
- * incidents are invisible that way: every metric stays inside its usual
- * range, and only the combination is impossible. Night-time traffic with
- * daytime errors is one such minute, and no single-series threshold will ever
- * ring for it.
+ * Rung N1. The robust threshold of N0 watches one metric at a time, each
+ * against its own recent window. An isolation forest watches the metrics
+ * together, against everything it was trained on: night-time traffic with
+ * daytime errors is a minute whose values each sit inside the range the
+ * service has known, and whose combination does not. A threshold on each
+ * series rings for such a minute only if one of its values leaves that series'
+ * own window.
  *
  * The forest cuts the space at random and measures how few cuts it takes to
  * leave a point on its own. A point in the middle of the crowd needs many; a
  * point out on its own needs three or four. There is nothing to label, and
- * the only real knob is the size of the forest.
+ * the knob that changes what rings is the threshold, not the size of the
+ * forest.
  *
  * Written out in full rather than pulled from a library, because that is the
  * whole argument of this rung: the classical tool is small enough to read.
@@ -77,21 +80,34 @@ function subsample(rows, size, random) {
  * milliseconds and one counted in requests weigh the same.
  */
 export function train(rows, { trees = 100, seed = 0 } = {}) {
+  // A row with a missing value would put NaN in every cut drawn on its metric.
+  const complete = rows.filter((row) => row.every(Number.isFinite));
+  if (complete.length === 0) throw new RangeError('no complete row to train on');
   const random = generator(seed);
-  const size = Math.min(256, rows.length);
+  const size = Math.min(256, complete.length);
   const maxDepth = Math.ceil(Math.log2(size));
   const forest = [];
   for (let i = 0; i < trees; i += 1) {
-    forest.push(grow(subsample(rows, size, random), random, 0, maxDepth));
+    forest.push(grow(subsample(complete, size, random), random, 0, maxDepth));
   }
-  return { forest, normaliser: averageDepth(size) };
+  const bounds = complete[0].map((_, k) => complete.reduce(
+    ([low, high], row) => [Math.min(low, row[k]), Math.max(high, row[k])],
+    [Infinity, -Infinity],
+  ));
+  return { forest, normaliser: averageDepth(size), bounds };
 }
 
 /**
  * Between zero and one. Above one half, the point took fewer cuts to isolate
  * than the crowd did, which is the whole definition of an anomaly here.
+ *
+ * A value past the range its metric was trained on scores one: no cut was
+ * ever drawn out there, and the forest would file it with the largest values
+ * it saw.
  */
 export function score(model, row) {
+  if (row.some((value, k) => value < model.bounds[k][0] || value > model.bounds[k][1])) return 1;
+  if (model.normaliser === 0) return 0.5; // a single training row: no crowd to compare with
   const total = model.forest.reduce((sum, tree) => sum + depthOf(tree, row, 0), 0);
   return 2 ** (-total / model.forest.length / model.normaliser);
 }

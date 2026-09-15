@@ -129,16 +129,6 @@ def test_un_point_a_l_ecart_demande_trois_ou_quatre_coupes():
     assert cuts(score(model, ORDINARY[0]), 92) > 5.5
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : une minute bien au-delà de tout ce que la forêt a vu (un million de "
-        "requêtes, un million d'erreurs, mille secondes de latence) n'est pas signalée "
-        "au seuil de 0,65 : elle suit toujours la même branche et finit dans la feuille "
-        "des plus grandes valeurs d'entraînement, 5,7 coupes, score 0,616, à peine plus "
-        "qu'une minute ordinaire (0,610). En JavaScript, 0,605"
-    ),
-)
 def test_defaut_une_minute_hors_de_toute_plage_n_est_pas_signalee():
     model = train(ROWS)
     assert score(model, [1e6, 1e6, 1e6]) > THRESHOLD
@@ -249,15 +239,6 @@ def test_production_score_egal_au_seuil_n_est_pas_signale():
     assert 90 in anomalies(model, ROWS, exact - 1e-12)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : anomalies appelle score_samples ligne par ligne ; 4 600 minutes "
-        "(cinquante fois le cas des tests, trois jours à la minute) prennent une dizaine "
-        "de secondes, quand un seul appel groupé sur les mêmes lignes en prend quelques "
-        "dizaines de millisecondes"
-    ),
-)
 def test_defaut_quatre_mille_six_cents_minutes_se_jugent_en_moins_de_deux_secondes():
     rng = random.Random(0)
     rows = [[rng.gauss(1000, 50), rng.gauss(10, 1), rng.gauss(130, 10)] for _ in range(4600)]

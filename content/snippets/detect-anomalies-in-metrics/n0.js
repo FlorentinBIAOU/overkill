@@ -6,8 +6,10 @@
  *
  * The mean and the standard deviation are the wrong tools here. One incident
  * drags both, so a large enough spike widens the very band that was supposed
- * to catch it. The median and the median absolute deviation ignore up to half
- * the window, which is exactly the property an alert needs.
+ * to catch it. The median and the median absolute deviation hold while
+ * outliers fill less than half the window: the usual value stays among
+ * ordinary values, and the tolerated gap widens as the outliers pile up
+ * instead of jumping with the first one. That is the property an alert needs.
  *
  * Every verdict carries the numbers it was made of. "Anomaly at 03:12" leaves
  * whoever was woken up to reconstruct the reasoning before they can act;
@@ -16,8 +18,9 @@
  */
 
 // Scaling that puts the median absolute deviation on the same footing as a
-// standard deviation for normally distributed data, so that a threshold of
-// 3.5 keeps the meaning it has everywhere else.
+// standard deviation for normally distributed data. Estimated on a short
+// window it is noisy: pure Gaussian noise crosses 3.5 of these far more often
+// than it crosses 3.5 true standard deviations, and the tests measure how often.
 const NORMAL_SCALE = 1.4826;
 
 /** Middle value, or the average of the two middle ones on an even count. */
@@ -34,15 +37,20 @@ function median(values) {
  * with a history that does not exist yet, and saying nothing is more honest
  * than comparing it with a shorter, noisier window.
  *
+ * `minSpread` is the smallest spread the metric may have, in its own unit. A
+ * count that is zero most minutes, such as errors, has a median absolute
+ * deviation of zero, and every single error would ring: pass 1 for it.
+ *
  * Each verdict is the whole reasoning: the value, what the window called
  * usual, how far the value sat from it, and how far it was allowed to sit.
  */
-export function scan(series, { window = 24, threshold = 3.5 } = {}) {
+export function scan(series, { window = 24, threshold = 3.5, minSpread = 0 } = {}) {
+  if (!(window >= 1)) throw new RangeError('window must hold at least one point');
   const verdicts = [];
   for (let index = window; index < series.length; index += 1) {
     const reference = series.slice(index - window, index);
     const usual = median(reference);
-    const spread = NORMAL_SCALE * median(reference.map((value) => Math.abs(value - usual)));
+    const spread = Math.max(NORMAL_SCALE * median(reference.map((value) => Math.abs(value - usual))), minSpread);
     const deviation = Math.abs(series[index] - usual);
     const limit = threshold * spread;
     verdicts.push({

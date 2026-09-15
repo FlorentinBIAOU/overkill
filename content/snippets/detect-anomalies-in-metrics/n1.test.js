@@ -81,10 +81,8 @@ test('un point à l’écart demande trois ou quatre coupes', () => {
   assert.ok(cuts(score(model, ORDINARY[0]), 92) > 5.5);
 });
 
-test('DÉFAUT : une minute hors de toute plage n’est pas signalée', async () => {
-  await assert.rejects(async () => {
-    assert.ok(score(train(ROWS), [1e6, 1e6, 1e6]) > THRESHOLD);
-  });
+test('une minute hors de toute plage n’est pas signalée', async () => {
+  assert.ok(score(train(ROWS), [1e6, 1e6, 1e6]) > THRESHOLD);
 });
 
 test('au-dessus d’un demi, le point a demandé moins de coupes que la foule', () => {
@@ -164,14 +162,10 @@ test('l’extrait n’importe rien', () => {
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : aucune ligne ou une seule ligne rend des scores NaN au lieu de lever', async () => {
+test('aucune ligne ou une seule ligne rend des scores NaN au lieu de lever', async () => {
   // Python lève ValueError sur zéro ligne et rend 0,5 sur une.
-  await assert.rejects(async () => {
-    assert.throws(() => train([]));
-  });
-  await assert.rejects(async () => {
-    assert.ok(Number.isFinite(score(train([[1, 2, 3]]), [1, 2, 3])));
-  });
+  assert.throws(() => train([]));
+  assert.ok(Number.isFinite(score(train([[1, 2, 3]]), [1, 2, 3])));
 });
 
 test('DÉFAUT : une valeur manquante fait signaler presque toutes les minutes', async () => {

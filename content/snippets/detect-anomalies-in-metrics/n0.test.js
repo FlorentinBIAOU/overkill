@@ -251,10 +251,8 @@ test('DÉFAUT : une métrique de comptage presque toujours nulle sonne à chaque
   });
 });
 
-test('DÉFAUT : une fenêtre nulle rend des verdicts à NaN au lieu d’être refusée', async () => {
-  await assert.rejects(async () => {
-    assert.throws(() => scan([1, 2, 3], { window: 0 }), RangeError);
-  });
+test('une fenêtre nulle rend des verdicts à NaN au lieu d’être refusée', async () => {
+  assert.throws(() => scan([1, 2, 3], { window: 0 }), RangeError);
 });
 
 // ---------------------------------------------------------------------------

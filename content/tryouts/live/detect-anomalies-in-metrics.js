@@ -40,11 +40,25 @@ const T = {
   },
 };
 
-const NOMBRE = /-?\d+(?:[.,]\d+)?/g;
+/**
+ * Un nombre tel que chaque langue l'écrit. En anglais, une virgule suivie de
+ * trois chiffres sépare les milliers (4,800) et le point marque les décimales.
+ * En français, la virgule marque les décimales et les milliers se séparent par
+ * une espace insécable (4 800). Une espace ordinaire sépare deux minutes :
+ * « 1080 1120 » est deux points, et « 4 800 » aussi.
+ */
+const NOMBRE = {
+  en: /-?\d{1,3}(?:,\d{3})+(?:\.\d+)?(?!\d)|-?\d+(?:\.\d+)?/g,
+  fr: /-?\d{1,3}(?:[\u00a0\u202f]\d{3})+(?:[.,]\d+)?(?!\d)|-?\d+(?:[.,]\d+)?/g,
+};
+
+const lire = (texte, lang) => Number(lang === 'en'
+  ? texte.replaceAll(',', '')
+  : texte.replace(/[\u00a0\u202f]/g, '').replace(',', '.'));
 
 /** La saisie telle qu'on la tape : des nombres séparés par ce qu'on veut. */
-function serie(saisie) {
-  return (saisie.match(NOMBRE) ?? []).map((n) => Number(n.replace(',', '.')));
+function serie(saisie, lang) {
+  return (saisie.match(NOMBRE[lang]) ?? []).map((n) => lire(n, lang));
 }
 
 /**
@@ -52,8 +66,8 @@ function serie(saisie) {
  * minutes par leur rang dans la série ; ce rang est le même que celui des
  * occurrences du nombre dans le texte, puisque la série vient de là.
  */
-function emplacements(saisie) {
-  return [...saisie.matchAll(NOMBRE)].map((m) => ({
+function emplacements(saisie, lang) {
+  return [...saisie.matchAll(NOMBRE[lang])].map((m) => ({
     start: m.index,
     end: m.index + m[0].length,
   }));
@@ -69,7 +83,7 @@ export default {
 
   run(saisie, lang) {
     const t = T[lang];
-    const points = serie(saisie);
+    const points = serie(saisie, lang);
     if (points.length === 0) return { error: t.illisible };
 
     const verdicts = scan(points, OPTIONS);
@@ -92,7 +106,7 @@ export default {
       };
     }
 
-    const places = emplacements(saisie);
+    const places = emplacements(saisie, lang);
     return {
       /* La minute signalée est surlignée dans la série elle-même : sans cela,
          il fallait compter les nombres à la main pour savoir laquelle. */
@@ -129,12 +143,12 @@ export default {
       input: '1080 1120 1160 1200 1240 1280 1320 1080 1120 1160 1200 1240 2680 2720 2480 2520 2560 2600 2640 2680 2720 2480 2520 2560 2600 2640 2680 2720 2480 2520 2560 2600 2640 2680 2720 2480 2520 2560 2600 2640 2680 2720 2480 2520 2560 2600 2640 2680',
     },
     {
-      label: { fr: 'La même hausse, étalée sur trente-six minutes', en: 'The same rise, spread over thirty-six minutes' },
+      label: { fr: 'Une hausse de 1 440, étalée sur trente-six minutes', en: 'A rise of 1,440, spread over thirty-six minutes' },
       input: '1080 1120 1160 1200 1240 1280 1320 1080 1120 1160 1200 1240 1320 1400 1200 1280 1360 1440 1520 1600 1680 1480 1560 1640 1720 1800 1880 1960 1760 1840 1920 2000 2080 2160 2240 2040 2120 2200 2280 2360 2440 2520 2320 2400 2480 2560 2640 2720',
       fails: true,
       why: {
-        fr: 'La métrique finit à 2 720 en partant de 1 080, et pas une minute n’est signalée. La hausse est de quarante requêtes par minute, aucun écart d’une minute à la suivante n’approche l’écart toléré, et la fenêtre a déjà avalé les pas précédents : douze minutes plus tard, la hausse fait partie du normal. La même hausse totale livrée d’un coup, au cas précédent, est signalée dès sa première minute — puis cesse de l’être, pour la même raison.',
-        en: 'The metric ends at 2,720 having started at 1,080, and not one minute is ever flagged. The rise is forty requests a minute, and no gap from one minute to the next comes anywhere near the allowed one, and the window has already swallowed the steps before it: twelve minutes later, the rise is part of normal. The same total rise delivered in one step, in the previous case, is caught on its first minute — and then stops being caught, for the same reason.',
+        fr: 'La métrique finit à 2 720 en partant de 1 080, et pas une minute n’est signalée. La hausse est de quarante requêtes par minute, bien moins que l’écart toléré, et la fenêtre a déjà avalé les pas précédents : l’habituel monte avec la série, et l’écart ne franchit jamais la limite. Une marche de 1 400 livrée d’un coup, au cas précédent, est signalée dès sa première minute — puis cesse de l’être, pour la même raison.',
+        en: 'The metric ends at 2,720 having started at 1,080, and not one minute is ever flagged. The rise is forty requests a minute, far below the allowed gap, and the window has already swallowed the steps before it: the usual value climbs with the series, and the gap never crosses the limit. A step of 1,400 delivered all at once, in the previous case, is caught on its first minute — and then stops being caught, for the same reason.',
       },
     },
   ],
