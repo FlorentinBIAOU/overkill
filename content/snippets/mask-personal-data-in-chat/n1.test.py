@@ -5,9 +5,7 @@ import unicodedata
 from pathlib import Path
 
 import pytest
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
 
 from n0 import mask as mask_n0
 from n1 import is_hiding_contact_details, shape, train
@@ -55,7 +53,7 @@ def score(model, message):
 def test_point_de_rupture_des_homoglyphes_cyrilliques_passent_au_travers(model):
     """
     « Des homoglyphes venus d'un autre alphabet […] ne portent ni chiffre ni mot
-    connu : rien ne survit à la mise en forme, et le message passe. »
+    connu : aucun chiffre ne survit à la mise en forme, et le message passe. »
     """
     cyrillic = "reach me at Об Іb ЗЧ"
     assert "D" not in shape(cyrillic).split()  # aucun chiffre ne survit
@@ -68,6 +66,7 @@ def test_point_de_rupture_des_homoglyphes_cyrilliques_passent_au_travers(model):
 def test_point_de_rupture_des_chiffres_romains_passent_au_travers(model):
     """« […] ou des chiffres romains, ne portent ni chiffre ni mot connu. »"""
     roman = "call me on VI XII XXXIV LVI"
+    assert "D" not in shape(roman).split()  # aucun chiffre ne survit
     assert shape(roman) == "call me on vi xii xxxiv lvi"
     assert not is_hiding_contact_details(model, roman)
     # Témoin : le même message en chiffres écrits en lettres est attrapé.
@@ -165,18 +164,19 @@ def test_entraine_sur_des_formes_il_attrape_un_numero_jamais_vu(model):
     assert is_hiding_contact_details(model, unseen)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring de shape dit qu'un classifieur entraîné sur le texte brut mémorise les numéros ; "
-    "sur ce jeu, il attrape aussi un numéro jamais vu (score 0,57)",
-)
-def test_un_classifieur_sur_texte_brut_memorise_les_numeros_d_entrainement():
-    raw = make_pipeline(
-        TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4), min_df=1),
-        LogisticRegression(class_weight="balanced", max_iter=1000),
-    )
-    raw.fit(HIDING + ORDINARY, LABELS)
-    assert raw.predict_proba(["reach me at 07 98 76 54 32"])[0][1] < 0.5
+def test_chaque_chiffre_cache_devient_le_meme_symbole_quelle_que_soit_son_ecriture(model):
+    """
+    Docstring de shape : « Every hidden digit becomes the same symbol, whatever its spelling,
+    so the classifier learns what a hidden number looks like rather than which digits it held. »
+    """
+    spellings = ("06 12 34 56 78", "07 98 76 54 32", "O6 I2 34 56 78", "o6 i2 3S 56 78", "０６ １２ ３４ ５６ ７８")
+    assert {shape(f"reach me at {written}") for written in spellings} == {"reach me at DD DD DD DD DD"}
+    assert shape("call me on zero six") == shape("call me on nine one") == "call me on D D"
+    # Le classifieur ne voit donc pas quels chiffres le numéro portait : même score, au bit près.
+    scores = {score(model, f"reach me at {written}") for written in spellings}
+    assert len(scores) == 1
+    # Témoin : un message d'une autre forme a un autre score.
+    assert score(model, "reach me at the office") not in scores
 
 
 def test_les_poids_sont_assez_petits_pour_vivre_dans_le_depot(model):
@@ -184,13 +184,19 @@ def test_les_poids_sont_assez_petits_pour_vivre_dans_le_depot(model):
     assert len(pickle.dumps(model)) < 100_000
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : unavailable_reason N2 dit que N1 traite déjà les adresses ; la mise en forme retire @ et le point, "
-    "une adresse électronique a la même forme que les mêmes mots séparés par des espaces",
-)
-def test_n1_distingue_une_adresse_electronique_des_memes_mots(model):
-    assert shape("write to jean.dupont@example.com") != shape("write to jean dupont example com")
+def test_n0_masque_numero_adresse_et_iban_n1_attrape_le_numero_deguise_que_n0_laisse_passer(model):
+    """
+    unavailable_reason N2 : « des motifs aussi structurés qu'un numéro, une adresse électronique ou
+    un IBAN, que N0 masque déjà. Les numéros déguisés, que N0 laisse passer, sont le terrain de N1. »
+    """
+    assert mask_n0("call 06 12 34 56 78, write jean@example.com, pay FR76 3000 6000 0112 3456 7890 189") == (
+        "call [phone], write [email], pay [iban]"
+    )
+    for disguised in ("reach me at O6 I2 34 56 78", "call me on zero six twelve thirty four"):
+        assert mask_n0(disguised) == disguised
+        assert is_hiding_contact_details(model, disguised)
+    # Une adresse n'est pas le terrain de N1 : la mise en forme en retire @ et le point.
+    assert shape("write to jean.dupont@example.com") == shape("write to jean dupont example com")
 
 
 def test_n1_est_une_regression_logistique_de_bibliotheque(model):
@@ -203,7 +209,7 @@ def test_n1_est_une_regression_logistique_de_bibliotheque(model):
             modules |= {alias.name.split(".")[0] for alias in node.names}
         elif isinstance(node, ast.ImportFrom):
             modules.add(node.module.split(".")[0])
-    assert modules == {"re", "sklearn"}
+    assert modules == {"re", "sklearn", "unicodedata"}
 
 
 def test_n1_est_deterministe(model):
@@ -244,7 +250,8 @@ def test_production_les_chiffres_pleine_largeur_sont_replies():
     assert shape("call me on ０６ １２") == "call me on DD DD"
 
 
-def test_defaut_un_chiffre_en_lettres_decompose_est_reconnu():
+def test_production_un_chiffre_en_lettres_decompose_est_reconnu():
+    """Commentaire : « a decomposed "zéro" becomes one word again »."""
     composed = "appelle au zéro six"
     assert shape(unicodedata.normalize("NFD", composed)) == shape(composed)
 
@@ -252,3 +259,10 @@ def test_defaut_un_chiffre_en_lettres_decompose_est_reconnu():
 def test_production_un_jeu_d_entrainement_vide_est_refuse():
     with pytest.raises(ValueError):
         train([], [])
+
+
+def test_production_un_jeu_d_une_seule_etiquette_ou_de_longueurs_differentes_est_refuse():
+    with pytest.raises(ValueError):
+        train(["call me on 06 12 34 56 78", "reach me at O6 I2"], [1, 1])
+    with pytest.raises(ValueError):
+        train(["call me on 06 12 34 56 78", "the meeting is at ten"], [1, 0, 1])

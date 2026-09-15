@@ -1,5 +1,17 @@
 # mask-personal-data-in-chat — relevé du testeur
 
+> **Tour 2 — contre-épreuve : deux marquages restent, à reprendre par le rédacteur.**
+> - **DÉFAUT T2-7 (N0, py/js)** : le motif d'IBAN rendu insensible à la casse
+>   masque une date ordinaire dont la clé tombe juste par coïncidence :
+>   « rendez-vous le 10 mars 2023 pour la signature » → « rendez-vous [iban] la
+>   signature » (1,4 % des phrases « le J mars|juin AAAA mot la salle »). La
+>   réparation #31 annonçait que la clé écartait ce cas : elle l'écarte le plus
+>   souvent, pas toujours.
+> - **DÉFAUT T2-20 (N3, py/js)** : une réponse entièrement enveloppée dans une
+>   seule clôture ```` ```json ```` n'est pas décodée (charte des tests, décision
+>   n° 12, postérieures à la correction) : trois appels payés, puis
+>   `MaskingUnavailable`.
+
 Passe 1 du lot 15. Tests : `content/snippets/mask-personal-data-in-chat/n{0,1,3}.test.{py,js}`.
 Un test nommé ci-dessous existe dans les deux langages (`test_…` en Python,
 `'…'` en JavaScript), sauf mention « py seul » ou « js seul ».
@@ -161,3 +173,72 @@ et 4 `DÉFAUT` en JavaScript.
 - **Réponse « d'un autre type »** : la charte cite la réponse mal formée, vide, tronquée ; elle devrait citer explicitement la liste JSON bien formée mais aux mauvaises clés, qui est le cas que les extraits laissent passer.
 - **Divergence entre langages** : `\w` et `\d` sans drapeau `u` en JavaScript ne couvrent que l'ASCII, contrairement à Python. Tout extrait qui utilise ces classes sur du texte humain devrait être testé sur une lettre accentuée dans les deux langages ; la charte pourrait l'imposer dans « encodage inattendu ».
 - **Lignes de code** : la charte des extraits plafonne à 40 lignes utiles ; aucune vérification automatique n'existe. Le test JS #55 compte les lignes hors commentaires ; un contrôle commun serait plus juste.
+
+## Tour 2 — contre-épreuve
+
+Après `0aee1ba` (corrections du rédacteur, tour 1). Tests : n0.py 31 → 42,
+n0.js 31 → 42, n1.py 25 → 26, n1.js 24 → 27, n3.py 19 → 30, n3.js 19 → 30.
+`node scripts/test-snippets.mjs mask-personal-data-in-chat` : vert, avec deux
+marquages `DÉFAUT` par langage (T2-7, T2-20), signalés en tête.
+
+Retirés : n1 py `test_un_classifieur_sur_texte_brut_memorise_les_numeros_d_entrainement`
+(la phrase a disparu, remplacée par T2-10) ; n1 py/js
+`…distingue_une_adresse_electronique_des_memes_mots` (remplacé par T2-11) ; n1 js
+`INFIRMÉ : … forty lines` (remplacé par T2-12) ; n3 py/js
+`…le_client_par_defaut_a_la_forme_du_vrai_kit` et les doubles locaux
+`RealShapedClient` / `realShapedClient` (remplacés par T2-17, sur
+`_harness/fake_sdk.py` / `fake-sdk.mjs`). Aucune autre assertion retirée.
+
+### Lignes « À retester »
+
+| # | Ligne | Désormais | Test |
+|---|---|---|---|
+| 4 | N0 point de rupture IBAN | démontrée (py, js) : « DE 86 3456 7890 1234 » a une clé valide et est masquée ; témoins : « DE 12 … » et « 86 3456 … » sans pays intacts, un vrai IBAN masqué ; sur les cent clés 00 à 99, seule 86 est masquée | test_point_de_rupture_une_reference_de_commande_est_masquee_comme_un_iban, test_point_de_rupture_sur_les_cent_cles_de_la_reference_une_seule_est_masquee |
+| 57 | N1 `vendor_lock: library` (py) | démontrée : imports {re, sklearn, unicodedata} | test_n1_est_une_regression_logistique_de_bibliotheque |
+| 47 | N1 docstring de `shape` (py) | phrase remplacée : voir T2-10 | — |
+| 60 | N2 unavailable_reason | voir T2-11 | — |
+| 55 | N1 docstring js | voir T2-12 | — |
+| 77 | N3 client par défaut | démontrée (py, js) : voir T2-17 à T2-19 | — |
+| 12, 14, 16, 28–33, 62–64, 67, 80–82 | tests démarqués | renommés pour dire ce qu'ils prouvent (`production : …`, `point de rupture : …`) ; assertions resserrées là où elles toléraient les deux issues (n3 texte absent, étiquette hors liste : `try/except … continue` remplacé par l'erreur exigée et le nombre d'essais ; n1 js jeu vide : `try/catch … return` remplacé par `assert.throws(RangeError)`) | voir T2-1 à T2-9, T2-13 à T2-16 |
+| 91 | nouveaux cas N0 | démontrés (py, js) : T2-5 à T2-9 | — |
+| 92 | n1 js : une seule étiquette, longueurs différentes | démontrée (py `ValueError`, js `RangeError`), témoin | test_production_un_jeu_d_une_seule_etiquette_ou_de_longueurs_differentes_est_refuse |
+| 93 | n3 : content nul, texte vide, non-objet, `kind` hors liste, plafond en points de code | démontrés (py, js) : T2-14 à T2-16, T2-19 | — |
+| 94 | Essai, cas 4 | phrase retirée ; le reste du `why` est démontré (#22) | test_l_essai_masque_ses_trois_premiers_cas_et_laisse_passer_le_numero_en_lettres |
+
+### Phrases nouvelles ou modifiées, code modifié
+
+| # | Où | Affirmation (citée) | Statut | Test |
+|---|---|---|---|---|
+| T2-1 | N0 docstring (py, js, fr) | « the spaces of French typography, the zero-width characters and the soft hyphen become a plain space » ; commentaire « the soft hyphen, the zero-width space and joiners, the word joiner and the byte order mark » | démontrée (py, js) : U+00A0, U+2007, U+2009, U+200A, U+202F, U+200B, U+200C, U+200D, U+2060, U+00AD, U+FEFF | test_la_normalisation_replie_les_espaces_de_la_typographie_francaise, test_les_caracteres_sans_chasse_et_le_trait_d_union_conditionnel_deviennent_une_espace, test_production_un_caractere_de_largeur_nulle_ne_laisse_pas_passer_un_numero |
+| T2-2 | N0 docstring | « The labels are then put into the message as it was written » | démontrée (py, js) : « … », « m² », « ﬁ », espaces fines et insécables gardés autour d'un numéro ; chiffres pleine largeur remplacés en entier ; « ﷺ » (dix-huit caractères après repli) ne décale pas l'étiquette ; js : un emoji hors plan de base avant le numéro non plus | test_les_etiquettes_sont_posees_dans_le_message_tel_qu_il_a_ete_ecrit |
+| T2-3 | N0 docstring | « a message with nothing to mask comes back unchanged, apart from the composition of its accents (NFC), which changes nothing on screen » | démontrée (py, js) : message typographié intact ; message NFD rendu en NFC | test_un_message_sans_coordonnee_ressort_inchange_a_la_composition_des_accents_pres, test_production_un_message_sans_coordonnee_ressort_intact |
+| T2-4 | N0 docstring + commentaire | « the phone pattern tolerates […] a space, a dot, a dash or a slash, one or two of them » ; « +33 (0)X XX XX XX XX » | démontrée (py, js) : barre, double espace, « . », « / », « +33  (0) 6.12… » masqués ; limite : trois séparateurs (« 06   12 », « 06 . 12 ») non masqués | test_masque_un_numero_avec_espace_point_tiret_barre_ou_sans_separateur, test_le_motif_de_telephone_tolere_un_ou_deux_separateurs_pas_trois, test_production_le_format_international_avec_zero_entre_parentheses_est_masque |
+| T2-5 | N0 commentaire | « the account number in groups of four, spaced or not, in either case. The check digits decide, not the pattern » ; « an IBAN is only masked when its check digits add up » | démontrée (py, js) : IBAN russe (33) groupé ou collé ; 15 caractères (Norvège) et 34 masqués ; 14 caractères à clé juste non masqué ; minuscules et casse mixte (« gb82 west … ») masqués | test_un_iban_russe_de_trente_trois_caracteres_est_masque_groupe_ou_non, test_la_cle_decide_pas_le_motif_limites_de_longueur, test_production_un_iban_en_minuscules_est_masque |
+| T2-6 | N0 docstring de `iban_prefix` / `ibanPrefix` | « cut at a space: the pattern may swallow the next word » | démontrée (py, js) : « BE68 … 7034 dans », « … abcd ok », « … abc » → l'IBAN seul est masqué, le mot reste | test_production_un_iban_suivi_d_un_mot_est_masque_et_le_mot_reste |
+| T2-7 | N0 production (réparation #31) | motif insensible à la casse, clé vérifiée : « le 12 mars 2024 dans la salle » n'est pas masqué | démontrée pour les deux phrases citées ; **DÉFAUT (py, js)** : quand la clé tombe juste par coïncidence, une date ordinaire est masquée. « rendez-vous le 10 mars 2023 pour la signature » → « rendez-vous [iban] la signature ». Mesuré : 195 phrases « le J mars\|juin AAAA {dans, pour, avec, chez, vers, sans, tous} la salle » sur 13 454 (1,4 %). Le point de rupture parle d'une « référence de commande » : le lecteur n'y lit pas qu'une phrase en minuscules sur soixante-dix de ce type perd sa date | test_production_une_phrase_ordinaire_en_minuscules_n_est_pas_masquee ; DÉFAUT : test_defaut_une_date_en_minuscules_n_est_pas_masquee_comme_un_iban |
+| T2-8 | N0 commentaire de EMAIL | « The lookbehind starts a match only at the beginning of a word: without it, a long run of letters with no @ takes quadratic time » | démontrée (py, js) : le même motif lu dans le code, regard arrière retiré, est plus de vingt fois plus lent sur 10 000 « a » et plus que double quand la longueur double ; avec le regard arrière, 300 000 « a » < 3 s (mesuré 0,18 s py, 61 ms js) ; une adresse précédée de 10 000 « a » reste masquée | test_sans_le_regard_arriere_une_longue_suite_de_lettres_prend_un_temps_quadratique, test_production_une_longue_suite_de_lettres_sans_arobase_se_traite_vite |
+| T2-9 | N0 production (code modifié) | suites longues : 300 000 chiffres, 60 000 blocs de quatre, 100 000 « 06 », « a. » × 100 000 + « @ », 100 000 « ﷺ » ; séquence d'emoji à liant ; chiffres arabes-indiens | démontrée (py, js) : < 3 s chacune (observé ≤ 0,3 s) ; « 👨‍👩‍👧 » conservée ; « ٠٦ ١٢ … » non lu comme numéro, même sortie dans les deux langages | test_production_de_longues_suites_de_chiffres_de_blocs_ou_de_points_se_traitent_vite, test_production_une_sequence_d_emoji_a_liant_est_conservee, test_production_les_chiffres_arabes_indiens_ne_sont_pas_lus_comme_des_chiffres |
+| T2-10 | N1 docstring de `shape` (py) | « Every hidden digit becomes the same symbol, whatever its spelling, so the classifier learns what a hidden number looks like rather than which digits it held » | démontrée (py, js) : « 06 12 … », « 07 98 … », « O6 I2 … », « o6 i2 3S … », pleine largeur donnent la même forme et exactement le même score ; témoin : une autre forme, un autre score | test_chaque_chiffre_cache_devient_le_meme_symbole_quelle_que_soit_son_ecriture |
+| T2-11 | N2 unavailable_reason | « des motifs aussi structurés qu'un numéro, une adresse électronique ou un IBAN, que N0 masque déjà. Les numéros déguisés, que N0 laisse passer, sont le terrain de N1 » | démontrée (py, js) : N0 masque les trois ; deux numéros déguisés passent N0 et sont signalés par N1 ; constat : N1 ne voit pas une adresse (mise en forme sans `@`). « des poids à télécharger et à tenir à jour » : non testable, niveau sans code | test_n0_masque_numero_adresse_et_iban_n1_attrape_le_numero_deguise_que_n0_laisse_passer |
+| T2-12 | N1 docstring js + fr | « hashing the character n-grams, training and deciding take three short functions » | démontrée pour « trois fonctions » : `features`, `train`, `isHidingContactDetails`, seules fonctions avec `isDigitsInDisguise` et `shape` (mise en forme) ; seule la décision lit les poids du modèle. « short » : non testable, appréciation (décision n° 10 : aucun test ne compte plus les lignes) | hacher les n-grammes, entraîner et décider tiennent en trois fonctions (js seul) |
+| T2-13 | N1 breaking_point + commentaire de `shape` | « aucun chiffre ne survit à la mise en forme » ; « Compatibility folding first: full-width digits become digits, and a decomposed "zéro" becomes one word again » | démontrée (py, js) : aucun `D` pour cyrillique et romains ; pleine largeur → `DD`, « zéro » NFD = composé | tests de rupture, test_production_les_chiffres_pleine_largeur_sont_replies, test_production_un_chiffre_en_lettres_decompose_est_reconnu |
+| T2-14 | N1 commentaire de `train` (js) | « An untrained model would score every message 0.5 and block them all » ; `RangeError` | démontrée (js) : poids nuls → tout message signalé au seuil 0,5, aucun juste au-dessus ; jeu vide, une étiquette, longueurs différentes refusés | un modèle non entraîné donnerait 0,5 à tout message et les bloquerait tous, production : un jeu d'entraînement vide est refusé |
+| T2-15 | N3 breaking_point | « Une invite n'est qu'une demande : rien dans la requête n'oblige la réponse à suivre le format voulu » | démontrée pour la requête (py, js) : l'adaptateur n'envoie que `model`, `messages`, `temperature`, sans `response_format` ni schéma. Ce que le modèle répond : non testable | test_point_de_rupture_rien_dans_la_requete_n_impose_le_format |
+| T2-16 | N3 breaking_point + docstring + code (`_is_usable` / `isUsable`) | « De la prose, une liste aux mauvaises clés, un texte qui ne figure pas dans le message, une étiquette hors de la liste […] L'extrait vérifie chaque élément, réessaie, puis lève une erreur » ; « check every item of it against the message » | démontrée (py, js) pour les quatre, chacune avec trois appels puis `MaskingUnavailable` ; un bon élément ne fait pas passer un mauvais ; texte vide, `null`, chaîne, nombre, liste, texte numérique refusés ; témoins : les quatre étiquettes demandées acceptées, un texte présent masqué, une mauvaise réponse puis une bonne masque au troisième essai | test_point_de_rupture_une_liste_aux_mauvaises_cles_leve_une_erreur_nommee, …_un_texte_qui_ne_figure_pas_dans_le_message_…, …_une_etiquette_hors_de_la_liste_…, …_un_seul_element_invalide_…, test_production_un_element_a_texte_vide_ou_qui_n_est_pas_un_objet_est_inutilisable, test_production_une_reponse_mal_formee_puis_bien_formee_masque_au_troisieme_essai |
+| T2-17 | N3 `ProviderClient` / `providerClient` ; docstring « defaults to a real provider client » ; `MODEL` « an example id » | démontrée (py, js) avec le double du harnais (sans `complete`) : `chat.completions.create`, `model == "gpt-4.1-mini"`, un seul message `user` qui porte l'invite, `temperature: 0`, réponse lue dans `choices[0].message.content` ; le modèle passé est transmis. Sans client : py, `openai` remplacé dans `sys.modules` ; js, crochet de résolution qui remplace le paquet `openai` : le kit est construit et appelé | test_production_l_adaptateur_parle_au_kit_par_chat_completions_create, test_production_l_adaptateur_transmet_le_modele_choisi, test_production_sans_client_le_kit_openai_est_construit_et_appele |
+| T2-18 | N3 commentaire | « Pass any object with a `complete(prompt=..., temperature=...)` method » | démontrée (py, js) : le double `FakeLLM` ne reçoit que `prompt` et `temperature` | test_le_client_est_injecte_pour_tester_sans_reseau |
+| T2-19 | N3 code + commentaire | « a refusal carries no content: unusable, not empty » ; panne du kit ; plafond « counts characters (code points, as Python does), not tokens » ; « Refusing oversized input before the call » | démontrée (py, js) : `content` nul → trois appels puis `MaskingUnavailable` « no content » ; deux pannes du kit puis succès en trois appels, trois pannes → erreur nommée ; 8 000 emojis acceptés, 8 001 refusés sans appel ; sans client, un message trop long ne part pas. « The provider bills every token of the prompt » : non testable, tarif | test_production_un_content_nul_est_une_reponse_inutilisable_retentee_puis_levee, test_production_une_panne_du_kit_est_retentee_par_l_adaptateur, test_production_le_plafond_compte_des_caracteres_et_pas_des_jetons, test_production_sans_client_un_message_trop_long_ne_part_pas |
+| T2-20 | N3 production (charte des tests, décision n° 12) | une réponse entièrement enveloppée dans une seule clôture ```` ```json ```` est décodée ; tout autre écart lève | **DÉFAUT (py, js)** : ```` ```json\n[…]\n``` ```` et ```` ```\n[…]\n``` ```` vont tels quels à `json.loads` / `JSON.parse`, échouent, sont retentés, et sortent en `MaskingUnavailable` après trois appels payés. Les autres écarts (texte avant, texte après, deux blocs, clôture non refermée) lèvent : démontrée | DÉFAUT : test_defaut_une_reponse_enveloppee_dans_une_seule_cloture_json_est_decodee ; test_production_une_cloture_entouree_de_texte_double_ou_non_refermee_leve |
+| T2-21 | scenario, verdict_rationale, further_reading, sources | RFC 2822 (2001), dix chiffres (1996), UTS 39 | non testable : faits historiques et bibliographie | — |
+
+### Constats sans marquage
+
+- Le client par défaut est construit avant le contrôle de taille (py et js) :
+  sans clé d'API, un message trop long lève l'erreur du kit au lieu de
+  `ValueError` / `RangeError`. Aucun appel ne part (démontré, T2-19) ; aucune
+  phrase ne dit l'ordre.
+- Le motif d'IBAN accepte jusqu'à 35 caractères compacts (un IBAN en compte au
+  plus 34) : un 35 à clé juste est masqué. Aucune phrase ne fixe de maximum.
+- « 06 12 34 56 78 90 » rend « [phone] 90 » : le regard avant `(?!\d)` ne voit
+  pas les chiffres après un séparateur. Inchangé depuis le tour 1, non annoncé,
+  sans effet de fuite.

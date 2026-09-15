@@ -9,29 +9,16 @@ Ce qu'ils ne prouvent pas : que le modèle trouve les bonnes coordonnées.
 """
 
 import json
+import sys
 from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_CHARACTERS, PROMPT, MaskingUnavailable, mask
+from _harness.fake_sdk import FakeSDK
+from n3 import KINDS, MAX_CHARACTERS, MODEL, PROMPT, MaskingUnavailable, ProviderClient, mask
 
-
-class RealShapedClient:
-    """
-    Imite la surface du kit `openai` publié (3.x) : `client.chat.completions.create(model=..., messages=[...])`,
-    réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
-    """
-
-    def __init__(self, content: str):
-        self.content = content
-        self.requests = []
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-    def _create(self, **kwargs):
-        self.requests.append(kwargs)
-        message = SimpleNamespace(role="assistant", content=self.content)
-        return SimpleNamespace(choices=[SimpleNamespace(index=0, message=message, finish_reason="stop")])
+PHONE_ANSWER = '[{"text": "06 12 34 56 78", "kind": "phone"}]'
 
 
 # ---------------------------------------------------------------------------
@@ -41,8 +28,8 @@ class RealShapedClient:
 
 def test_point_de_rupture_une_reponse_en_prose_leve_une_erreur_plutot_que_de_laisser_passer():
     """
-    « Le modèle peut répondre […] de la prose là où du JSON était demandé. […]
-    L'extrait lève une erreur, et c'est à l'appelant de décider. »
+    « De la prose […] : le comportement dangereux serait de hausser les épaules et de renvoyer
+    le message tel quel […]. L'extrait vérifie chaque élément, réessaie, puis lève une erreur. »
     """
     client = FakeLLM(response="Sure! Here are the details I found:")
     with pytest.raises(MaskingUnavailable):
@@ -52,32 +39,62 @@ def test_point_de_rupture_une_reponse_en_prose_leve_une_erreur_plutot_que_de_lai
     assert mask("call 06 12 34 56 78", client=good) == "call [phone]"
 
 
-def test_point_de_rupture_une_liste_json_de_mauvaise_forme_leve_une_erreur_nommee():
+def test_point_de_rupture_une_liste_aux_mauvaises_cles_leve_une_erreur_nommee():
+    """« une liste aux mauvaises clés » : essais épuisés, erreur nommée, jamais le message en clair."""
     for answer in ('[{"value": "06 12 34 56 78", "type": "phone"}]', '["06 12 34 56 78"]', "[1, 2]"):
+        client = FakeLLM(response=answer)
+        with pytest.raises(MaskingUnavailable):
+            mask("call 06 12 34 56 78", client=client)
+        assert client.call_count == 3, answer
+
+
+def test_point_de_rupture_un_texte_qui_ne_figure_pas_dans_le_message_leve_une_erreur_nommee():
+    """« un texte qui ne figure pas dans le message » : espaces retirés, forme composée contre décomposée."""
+    cases = [
+        ("call 06 12 34 56 78", '[{"text": "0612345678", "kind": "phone"}]'),
+        ("écris à jose\u0301@exemple.fr", '[{"text": "jos\u00e9@exemple.fr", "kind": "email"}]'),
+    ]
+    for message, answer in cases:
+        client = FakeLLM(response=answer)
+        with pytest.raises(MaskingUnavailable, match="items found in the message"):
+            mask(message, client=client)
+        assert client.call_count == 3
+    # Témoin : le texte tel qu'il figure dans le message est masqué.
+    assert mask("call 06 12 34 56 78", client=FakeLLM(response=PHONE_ANSWER)) == "call [phone]"
+
+
+def test_point_de_rupture_une_etiquette_hors_de_la_liste_leve_une_erreur_nommee():
+    """« une étiquette hors de la liste » : « [<script>] » n'est jamais écrit dans le message."""
+    for kind in ("<script>", "PHONE", "name", None):
+        answer = json.dumps([{"text": "06 12 34 56 78", "kind": kind}])
         with pytest.raises(MaskingUnavailable):
             mask("call 06 12 34 56 78", client=FakeLLM(response=answer))
+    # Témoin : chacune des quatre étiquettes demandées est acceptée.
+    for kind in KINDS:
+        answer = json.dumps([{"text": "06 12 34 56 78", "kind": kind}])
+        assert mask("call 06 12 34 56 78", client=FakeLLM(response=answer)) == f"call [{kind}]"
 
 
-def test_defaut_un_texte_signale_absent_du_message_ne_le_rend_pas_en_clair():
-    cases = [
-        ("call 06 12 34 56 78", '[{"text": "0612345678", "kind": "phone"}]', "06 12 34 56 78"),
-        ("écris à josé@exemple.fr", '[{"text": "josé@exemple.fr", "kind": "email"}]', "@exemple.fr"),
-    ]
-    for message, answer, secret in cases:
-        try:
-            out = mask(message, client=FakeLLM(response=answer))
-        except MaskingUnavailable:
-            continue
-        assert secret not in out
+def test_point_de_rupture_un_seul_element_invalide_fait_rejeter_toute_la_reponse():
+    """« L'extrait vérifie chaque élément » : un bon élément ne fait pas passer un mauvais."""
+    answer = json.dumps([
+        {"text": "jean@example.com", "kind": "email"},
+        {"text": "0612345678", "kind": "phone"},
+    ])
+    with pytest.raises(MaskingUnavailable):
+        mask("write jean@example.com or call 06 12 34 56 78", client=FakeLLM(response=answer))
 
 
-def test_defaut_une_etiquette_hors_liste_est_refusee():
-    client = FakeLLM(response='[{"text": "06 12 34 56 78", "kind": "<script>"}]')
-    try:
-        out = mask("call 06 12 34 56 78", client=client)
-    except MaskingUnavailable:
-        return
-    assert out in {"call [email]", "call [phone]", "call [iban]", "call [address]"}
+def test_point_de_rupture_rien_dans_la_requete_n_impose_le_format():
+    """
+    « Une invite n'est qu'une demande : rien dans la requête n'oblige la réponse à suivre le format
+    voulu. » La requête au kit ne porte que le modèle, les messages et la température : ni
+    `response_format`, ni schéma, ni outil.
+    """
+    sdk = FakeSDK(content="[]")
+    mask("hello", client=ProviderClient(sdk=sdk))
+    assert set(sdk.last_request) == {"endpoint", "model", "messages", "temperature"}
+    assert "JSON only" in sdk.last_request["messages"][0]["content"]
 
 
 # ---------------------------------------------------------------------------
@@ -158,21 +175,72 @@ def test_une_reponse_json_qui_n_est_pas_une_liste_vide_tronquee_leve_l_erreur_no
 
 
 def test_le_client_est_injecte_pour_tester_sans_reseau():
-    """Docstring : « `client` is injected so this function can be tested without a network call. »"""
+    """
+    Docstring : « `client` is injected so this function can be tested without a network call. » ;
+    commentaire : « Pass any object with a `complete(prompt=..., temperature=...)` method. »
+    """
     client = FakeLLM(response="[]")
     mask("hello", client=client)
     assert client.call_count == 1
+    assert set(client.last_request) == {"prompt", "temperature"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le client par défaut `OpenAI()` n'a pas de méthode `complete` ; la surface réelle est "
-    "chat.completions.create(model=..., messages=[...]). L'AttributeError est avalée par `except Exception`, "
-    "retentée trois fois, et sort en MaskingUnavailable",
-)
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    client = RealShapedClient('[{"text": "06 12 34 56 78", "kind": "phone"}]')
-    assert mask("call 06 12 34 56 78", client=client) == "call [phone]"
+def test_production_l_adaptateur_parle_au_kit_par_chat_completions_create():
+    """
+    Docstring : « In production it defaults to a real provider client. » `ProviderClient` sur le
+    double du harnais, à la forme du kit `openai` publié, sans méthode `complete`.
+    """
+    sdk = FakeSDK(content=PHONE_ANSWER)
+    assert not hasattr(sdk, "complete")
+    assert mask("call 06 12 34 56 78", client=ProviderClient(sdk=sdk)) == "call [phone]"
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL == "gpt-4.1-mini"
+    assert request["messages"] == [{"role": "user", "content": PROMPT.format(message="call 06 12 34 56 78")}]
+    assert request["temperature"] == 0
+    assert len(sdk.requests) == 1
+
+
+def test_production_l_adaptateur_transmet_le_modele_choisi():
+    """Commentaire : « an example id: check the parameters your model accepts » : le modèle se change."""
+    sdk = FakeSDK(content="[]")
+    mask("hello", client=ProviderClient(sdk=sdk, model="another-model"))
+    assert sdk.last_request["model"] == "another-model"
+
+
+def test_production_sans_client_le_kit_openai_est_construit_et_appele(monkeypatch):
+    """`client = client or ProviderClient()` : `from openai import OpenAI`, puis `OpenAI()`."""
+    sdk = FakeSDK(content=PHONE_ANSWER)
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=lambda: sdk))
+    assert mask("call 06 12 34 56 78") == "call [phone]"
+    assert sdk.last_request["endpoint"] == "chat.completions"
+
+
+def test_production_sans_client_un_message_trop_long_ne_part_pas(monkeypatch):
+    """Le client par défaut est construit, mais le plafond refuse avant tout appel."""
+    sdk = FakeSDK(content="[]")
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=lambda: sdk))
+    with pytest.raises(ValueError):
+        mask("x" * (MAX_CHARACTERS + 1))
+    assert sdk.requests == []
+
+
+def test_production_un_content_nul_est_une_reponse_inutilisable_retentee_puis_levee():
+    """Commentaire : « a refusal carries no content: unusable, not empty »."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(MaskingUnavailable, match="no content"):
+        mask("call 06 12 34 56 78", client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_une_panne_du_kit_est_retentee_par_l_adaptateur():
+    sdk = FakeSDK(content=PHONE_ANSWER, fail_times=2)
+    assert mask("call 06 12 34 56 78", client=ProviderClient(sdk=sdk)) == "call [phone]"
+    assert len(sdk.requests) == 3
+    never = FakeSDK(content=PHONE_ANSWER, fail_times=3)
+    with pytest.raises(MaskingUnavailable, match="simulated provider failure"):
+        mask("call 06 12 34 56 78", client=ProviderClient(sdk=never))
+    assert len(never.requests) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -199,9 +267,62 @@ def test_production_un_message_au_plafond_avec_deux_cents_trouvailles_termine_vi
 
 
 def test_production_le_plafond_compte_des_caracteres_et_pas_des_jetons():
-    """4 001 emojis : 4 001 caractères pour Python, accepté (voir le relevé pour JavaScript)."""
+    """Commentaire : « the cap counts characters, not tokens » : 8 000 emojis acceptés, 8 001 refusés avant l'appel."""
     client = FakeLLM(response="[]")
     assert len(mask("😀" * 4001, client=client)) == 4001
+    assert mask("😀" * MAX_CHARACTERS, client=client) == "😀" * MAX_CHARACTERS
+    calls = client.call_count
+    with pytest.raises(ValueError):
+        mask("😀" * (MAX_CHARACTERS + 1), client=client)
+    assert client.call_count == calls
+
+
+def test_production_un_element_a_texte_vide_ou_qui_n_est_pas_un_objet_est_inutilisable():
+    for answer in ('[{"text": "", "kind": "phone"}]', "[null]", '["06 12 34 56 78"]', "[42]", '[[]]', '[{"text": 612345678, "kind": "phone"}]'):
+        client = FakeLLM(response=answer)
+        with pytest.raises(MaskingUnavailable):
+            mask("call 06 12 34 56 78", client=client)
+        assert client.call_count == 3, answer
+
+
+def test_production_une_reponse_mal_formee_puis_bien_formee_masque_au_troisieme_essai():
+    class Sequence(FakeLLM):
+        def __init__(self, answers):
+            super().__init__()
+            self.answers = list(answers)
+
+        def complete(self, **kwargs):
+            self._record(**kwargs)
+            return self.answers.pop(0)
+
+    client = Sequence([None, '[{"text": "0612345678", "kind": "phone"}]', PHONE_ANSWER])
+    assert mask("call 06 12 34 56 78", client=client) == "call [phone]"
+    assert client.call_count == 3
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="DÉFAUT : une réponse entièrement enveloppée dans une seule clôture ```json est passée telle quelle à "
+    "json.loads, échoue, est retentée et sort en MaskingUnavailable après trois appels payés "
+    "(charte des tests et DECISIONS n° 12 : elle doit être décodée)",
+)
+def test_defaut_une_reponse_enveloppee_dans_une_seule_cloture_json_est_decodee():
+    for answer in (f"```json\n{PHONE_ANSWER}\n```", f"```\n{PHONE_ANSWER}\n```"):
+        client = FakeLLM(response=answer)
+        assert mask("call 06 12 34 56 78", client=client) == "call [phone]"
+        assert client.call_count == 1
+
+
+def test_production_une_cloture_entouree_de_texte_double_ou_non_refermee_leve():
+    """Tout autre écart que la clôture unique qui enveloppe toute la réponse lève."""
+    for answer in (
+        f"Here you go:\n```json\n{PHONE_ANSWER}\n```",
+        f"```json\n{PHONE_ANSWER}\n```\nHope this helps.",
+        f"```json\n{PHONE_ANSWER}\n```\n```json\n[]\n```",
+        f"```json\n{PHONE_ANSWER}",
+    ):
+        with pytest.raises(MaskingUnavailable):
+            mask("call 06 12 34 56 78", client=FakeLLM(response=answer))
 
 
 def test_production_une_injection_dans_le_message_reste_apres_les_consignes():

@@ -57,6 +57,7 @@ test('point de rupture : des homoglyphes cyrilliques passent au travers', () => 
 
 test('point de rupture : des chiffres romains passent au travers', () => {
   const roman = 'call me on VI XII XXXIV LVI';
+  assert.ok(!shape(roman).split(' ').includes('D')); // aucun chiffre ne survit
   assert.equal(shape(roman), 'call me on vi xii xxxiv lvi');
   assert.ok(!isHidingContactDetails(model, roman));
   assert.ok(isHidingContactDetails(model, 'call me on zero six twelve thirty four'));
@@ -134,10 +135,28 @@ test('entraîné sur des formes, il attrape un numéro jamais vu', () => {
   assert.ok(isHidingContactDetails(model, unseen));
 });
 
-test('INFIRMÉ : unavailable_reason N2 dit que N1 traite déjà les adresses ; la mise en forme retire @ et le point', async () => {
-  await assert.rejects(async () => {
-    assert.notEqual(shape('write to jean.dupont@example.com'), shape('write to jean dupont example com'));
-  }, assert.AssertionError);
+test('chaque chiffre caché devient le même symbole, quelle que soit son écriture', () => {
+  const spellings = ['06 12 34 56 78', '07 98 76 54 32', 'O6 I2 34 56 78', 'o6 i2 3S 56 78', '０６ １２ ３４ ５６ ７８'];
+  assert.deepEqual([...new Set(spellings.map((w) => shape(`reach me at ${w}`)))], ['reach me at DD DD DD DD DD']);
+  assert.equal(shape('call me on zero six'), 'call me on D D');
+  assert.equal(shape('call me on nine one'), 'call me on D D');
+  // Le classifieur ne voit donc pas quels chiffres le numéro portait : même décision à tout seuil.
+  const scores = new Set(spellings.map((w) => score(model, `reach me at ${w}`)));
+  assert.equal(scores.size, 1);
+  assert.ok(!scores.has(score(model, 'reach me at the office')));
+});
+
+test('N0 masque numéro, adresse et IBAN ; N1 attrape le numéro déguisé que N0 laisse passer', () => {
+  assert.equal(
+    maskN0('call 06 12 34 56 78, write jean@example.com, pay FR76 3000 6000 0112 3456 7890 189'),
+    'call [phone], write [email], pay [iban]',
+  );
+  for (const disguised of ['reach me at O6 I2 34 56 78', 'call me on zero six twelve thirty four']) {
+    assert.equal(maskN0(disguised), disguised);
+    assert.ok(isHidingContactDetails(model, disguised), disguised);
+  }
+  // Une adresse n'est pas le terrain de N1 : la mise en forme en retire @ et le point.
+  assert.equal(shape('write to jean.dupont@example.com'), shape('write to jean dupont example com'));
 });
 
 test('n1 est écrit en entier, sans dépendance, avec un vecteur haché de taille fixe', () => {
@@ -148,12 +167,13 @@ test('n1 est écrit en entier, sans dépendance, avec un vecteur haché de taill
   assert.equal(model.weights.length, 512);
 });
 
-test('INFIRMÉ : « logistic regression on hashed character n-grams is forty lines » ; n1.js compte 55 lignes de code', async () => {
+test('hacher les n-grammes, entraîner et décider tiennent en trois fonctions', () => {
+  // Docstring : « hashing the character n-grams, training and deciding take three short functions ».
   const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
-  const codeLines = source.split('\n').filter((line) => !/^\s*(\/\/|\*|\/\*\*|$)/.test(line));
-  await assert.rejects(async () => {
-    assert.ok(codeLines.length <= 40, `${codeLines.length} lignes`);
-  }, assert.AssertionError);
+  const functions = [...source.matchAll(/^(?:export )?function (\w+)\(/gm)].map((m) => m[1]);
+  assert.deepEqual(functions, ['isDigitsInDisguise', 'shape', 'features', 'train', 'isHidingContactDetails']);
+  // train entraîne, isHidingContactDetails décide : aucun autre code ne produit ni ne lit les poids.
+  assert.equal((source.match(/model\.weights/g) ?? []).length, 1);
 });
 
 test('n1 est déterministe', () => {
@@ -188,21 +208,31 @@ test('production : un message de cent Ko termine vite', () => {
   assert.ok(performance.now() - start < 2000);
 });
 
-test('les chiffres pleine largeur ne sont pas repliés (\\d sans drapeau u), Python les replie', async () => {
+test('production : les chiffres pleine largeur sont repliés', () => {
   assert.equal(shape('call me on ０６ １２'), 'call me on DD DD');
 });
 
-test('sans normalisation, « zéro » en NFD est coupé et n’est plus un chiffre en lettres', async () => {
+test('production : un chiffre en lettres décomposé est reconnu', () => {
   const composed = 'appelle au zéro six';
   assert.equal(shape(composed.normalize('NFD')), shape(composed));
 });
 
-test("un jeu d'entraînement vide est accepté, et le modèle obtenu signale tous les messages", async () => {
-  let empty;
-  try {
-    empty = train([], []);
-  } catch {
-    return;
+test("production : un jeu d'entraînement vide est refusé", () => {
+  assert.throws(() => train([], []), RangeError);
+});
+
+test("production : un jeu d'une seule étiquette ou de longueurs différentes est refusé", () => {
+  assert.throws(() => train(['call me on 06 12 34 56 78', 'reach me at O6 I2'], [1, 1]), RangeError);
+  assert.throws(() => train(['call me on 06 12 34 56 78', 'the meeting is at ten'], [1, 0, 1]), RangeError);
+  // Témoin : deux étiquettes, une par message, entraîne.
+  assert.doesNotThrow(() => train(['call me on 06 12 34 56 78', 'the meeting is at ten'], [1, 0]));
+});
+
+test('un modèle non entraîné donnerait 0,5 à tout message et les bloquerait tous', () => {
+  // Commentaire de train : « An untrained model would score every message 0.5 and block them all. »
+  const untrained = { weights: new Float64Array(512), bias: 0 };
+  for (const message of ['bonjour', ...ORDINARY]) {
+    assert.equal(isHidingContactDetails(untrained, message), true, message);
+    assert.equal(isHidingContactDetails(untrained, message, 0.5000001), false, message);
   }
-  assert.equal(isHidingContactDetails(empty, 'bonjour'), false);
 });

@@ -9,26 +9,36 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { register } from 'node:module';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { MAX_CHARACTERS, MaskingUnavailable, mask } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import { MAX_CHARACTERS, MODEL, MaskingUnavailable, mask, providerClient } from './n3.js';
 
-/**
- * Imite la surface du kit `openai` publié (7.x) : `client.chat.completions.create({ model, messages })`,
- * réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
- */
-function realShapedClient(content) {
-  const requests = [];
-  return {
-    requests,
-    chat: {
-      completions: {
-        async create(body) {
-          requests.push(body);
-          return { choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] };
-        },
-      },
-    },
-  };
+const PHONE_ANSWER = '[{"text": "06 12 34 56 78", "kind": "phone"}]';
+const KINDS = ['email', 'phone', 'iban', 'address'];
+
+// Le client par défaut importe 'openai', absent de l'environnement des tests. Un crochet de
+// résolution, posé pour ce seul processus, le remplace par un module dont le constructeur rend
+// le double du harnais que le test a rangé dans globalThis.__openaiSdk.
+const FAKE_OPENAI = 'export class OpenAI { constructor() { return globalThis.__openaiSdk(); } }';
+register(`data:text/javascript,${encodeURIComponent(`export async function resolve(specifier, context, next) {
+  if (specifier === 'openai') {
+    return { url: 'data:text/javascript,' + encodeURIComponent(${JSON.stringify(FAKE_OPENAI)}), shortCircuit: true };
+  }
+  return next(specifier, context);
+}`)}`);
+
+/** Un client qui rend tour à tour les réponses données. */
+class Sequence extends FakeLLM {
+  constructor(answers) {
+    super();
+    this.answers = [...answers];
+  }
+
+  async complete(request) {
+    this.requests.push(request);
+    return this.answers.shift();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -43,40 +53,52 @@ test('point de rupture : une réponse en prose lève une erreur plutôt que de l
   assert.equal(await mask('call 06 12 34 56 78', { client: good }), 'call [phone]');
 });
 
-test('la fiche dit que l’extrait lève au lieu de rendre le message non masqué ; une liste JSON de mauvaise forme le rend en clair', async () => {
-  // Mauvaises clés, liste de chaînes, liste de nombres : les trois rendent « call 06 12 34 56 78 ».
+test('point de rupture : une liste aux mauvaises clés lève une erreur nommée', async () => {
   for (const answer of ['[{"value": "06 12 34 56 78", "type": "phone"}]', '["06 12 34 56 78"]', '[1, 2]']) {
-    await assert.rejects(() => mask('call 06 12 34 56 78', { client: new FakeLLM({ response: answer }) }), MaskingUnavailable);
+    const client = new FakeLLM({ response: answer });
+    await assert.rejects(() => mask('call 06 12 34 56 78', { client }), MaskingUnavailable);
+    assert.equal(client.callCount, 3, answer);
   }
 });
 
-test('un texte signalé absent du message (espaces retirés, NFC contre NFD) le rend en clair, sans erreur', async () => {
+test('point de rupture : un texte qui ne figure pas dans le message lève une erreur nommée', async () => {
   const cases = [
-    ['call 06 12 34 56 78', '[{"text": "0612345678", "kind": "phone"}]', '06 12 34 56 78'],
-    ['écris à josé@exemple.fr', '[{"text": "josé@exemple.fr", "kind": "email"}]', '@exemple.fr'],
+    ['call 06 12 34 56 78', '[{"text": "0612345678", "kind": "phone"}]'],
+    ['écris à jose\u0301@exemple.fr', '[{"text": "jos\u00e9@exemple.fr", "kind": "email"}]'],
   ];
-  for (const [message, answer, secret] of cases) {
-    let out;
-    try {
-      out = await mask(message, { client: new FakeLLM({ response: answer }) });
-    } catch (error) {
-      if (error instanceof MaskingUnavailable) continue;
-      throw error;
-    }
-    assert.ok(!out.includes(secret));
+  for (const [message, answer] of cases) {
+    const client = new FakeLLM({ response: answer });
+    await assert.rejects(() => mask(message, { client }), (error) => (
+      error instanceof MaskingUnavailable && /items found in the message/.test(error.message)
+    ));
+    assert.equal(client.callCount, 3);
+  }
+  // Témoin : le texte tel qu'il figure dans le message est masqué.
+  assert.equal(await mask('call 06 12 34 56 78', { client: new FakeLLM({ response: PHONE_ANSWER }) }), 'call [phone]');
+});
+
+test('point de rupture : une étiquette hors de la liste lève une erreur nommée', async () => {
+  for (const kind of ['<script>', 'PHONE', 'name', null]) {
+    const response = JSON.stringify([{ text: '06 12 34 56 78', kind }]);
+    await assert.rejects(() => mask('call 06 12 34 56 78', { client: new FakeLLM({ response }) }), MaskingUnavailable, String(kind));
+  }
+  // Témoin : chacune des quatre étiquettes demandées est acceptée.
+  for (const kind of KINDS) {
+    const response = JSON.stringify([{ text: '06 12 34 56 78', kind }]);
+    assert.equal(await mask('call 06 12 34 56 78', { client: new FakeLLM({ response }) }), `call [${kind}]`);
   }
 });
 
-test('`kind` n’est pas contrôlé ; le modèle peut écrire « [<script>] » dans le message', async () => {
-  const client = new FakeLLM({ response: '[{"text": "06 12 34 56 78", "kind": "<script>"}]' });
-  let out;
-  try {
-    out = await mask('call 06 12 34 56 78', { client });
-  } catch (error) {
-    if (error instanceof MaskingUnavailable) return;
-    throw error;
-  }
-  assert.ok(['call [email]', 'call [phone]', 'call [iban]', 'call [address]'].includes(out));
+test('point de rupture : un seul élément invalide fait rejeter toute la réponse', async () => {
+  const response = JSON.stringify([{ text: 'jean@example.com', kind: 'email' }, { text: '0612345678', kind: 'phone' }]);
+  await assert.rejects(() => mask('write jean@example.com or call 06 12 34 56 78', { client: new FakeLLM({ response }) }), MaskingUnavailable);
+});
+
+test('point de rupture : rien dans la requête n’impose le format', async () => {
+  const sdk = new FakeSDK({ content: '[]' });
+  await mask('hello', { client: await providerClient(sdk) });
+  assert.deepEqual(Object.keys(sdk.lastRequest).sort(), ['endpoint', 'messages', 'model', 'temperature']);
+  assert.ok(sdk.lastRequest.messages[0].content.includes('JSON only'));
 });
 
 // ---------------------------------------------------------------------------
@@ -148,20 +170,61 @@ test('le client est injecté pour tester sans réseau', async () => {
   const client = new FakeLLM({ response: '[]' });
   await mask('hello', { client });
   assert.equal(client.callCount, 1);
+  assert.deepEqual(Object.keys(client.lastRequest).sort(), ['prompt', 'temperature']);
 });
 
-test('DÉFAUT : le client par défaut `new OpenAI()` n’a pas de méthode `complete` ; la surface réelle est chat.completions.create', async () => {
-  // Le TypeError « client.complete is not a function » est avalé, retenté trois fois, et sort en MaskingUnavailable.
-  const client = realShapedClient('[{"text": "06 12 34 56 78", "kind": "phone"}]');
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await mask('call 06 12 34 56 78', { client });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(out, 'call [phone]');
-  }, assert.AssertionError);
+test('production : l’adaptateur parle au kit par chat.completions.create', async () => {
+  const sdk = new FakeSDK({ content: PHONE_ANSWER });
+  assert.equal(sdk.complete, undefined);
+  assert.equal(await mask('call 06 12 34 56 78', { client: await providerClient(sdk) }), 'call [phone]');
+  const request = sdk.lastRequest;
+  assert.equal(request.endpoint, 'chat.completions');
+  assert.equal(request.model, MODEL);
+  assert.equal(MODEL, 'gpt-4.1-mini');
+  assert.equal(request.messages.length, 1);
+  assert.equal(request.messages[0].role, 'user');
+  assert.ok(request.messages[0].content.endsWith('Message:\ncall 06 12 34 56 78'));
+  assert.equal(request.temperature, 0);
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('production : l’adaptateur transmet le modèle choisi', async () => {
+  const sdk = new FakeSDK({ content: '[]' });
+  await mask('hello', { client: await providerClient(sdk, 'another-model') });
+  assert.equal(sdk.lastRequest.model, 'another-model');
+});
+
+test('production : sans client, le kit openai est construit et appelé', async () => {
+  const sdk = new FakeSDK({ content: PHONE_ANSWER });
+  globalThis.__openaiSdk = () => sdk;
+  assert.equal(await mask('call 06 12 34 56 78'), 'call [phone]');
+  assert.equal(sdk.lastRequest.endpoint, 'chat.completions');
+});
+
+test('production : sans client, un message trop long ne part pas', async () => {
+  const sdk = new FakeSDK({ content: '[]' });
+  globalThis.__openaiSdk = () => sdk;
+  await assert.rejects(() => mask('x'.repeat(MAX_CHARACTERS + 1)), RangeError);
+  assert.deepEqual(sdk.requests, []);
+});
+
+test('production : un content nul est une réponse inutilisable, retentée puis levée', async () => {
+  const sdk = new FakeSDK({ content: null });
+  await assert.rejects(async () => mask('call 06 12 34 56 78', { client: await providerClient(sdk) }), (error) => (
+    error instanceof MaskingUnavailable && /no content/.test(error.message)
+  ));
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : une panne du kit est retentée par l’adaptateur', async () => {
+  const sdk = new FakeSDK({ content: PHONE_ANSWER, failTimes: 2 });
+  assert.equal(await mask('call 06 12 34 56 78', { client: await providerClient(sdk) }), 'call [phone]');
+  assert.equal(sdk.requests.length, 3);
+  const never = new FakeSDK({ content: PHONE_ANSWER, failTimes: 3 });
+  await assert.rejects(async () => mask('call 06 12 34 56 78', { client: await providerClient(never) }), (error) => (
+    error instanceof MaskingUnavailable && /simulated provider failure/.test(error.message)
+  ));
+  assert.equal(never.requests.length, 3);
 });
 
 // ---------------------------------------------------------------------------
@@ -184,15 +247,56 @@ test('production : un message au plafond avec deux cents trouvailles termine vit
   assert.ok(!out.includes('34 56 78'));
 });
 
-test('le plafond compte des unités UTF-16 ; 4 001 emojis sont refusés en JavaScript, acceptés en Python', async () => {
+test('production : le plafond compte des caractères et pas des jetons', async () => {
+  // Commentaire : « the cap counts characters (code points, as Python does), not tokens ».
   const client = new FakeLLM({ response: '[]' });
-  let out;
-  try {
-    out = await mask('😀'.repeat(4001), { client });
-  } catch (error) {
-    assert.fail(`${error.name}: ${error.message}`);
+  assert.equal([...(await mask('😀'.repeat(4001), { client }))].length, 4001);
+  assert.equal(await mask('😀'.repeat(MAX_CHARACTERS), { client }), '😀'.repeat(MAX_CHARACTERS));
+  const calls = client.callCount;
+  await assert.rejects(() => mask('😀'.repeat(MAX_CHARACTERS + 1), { client }), RangeError);
+  assert.equal(client.callCount, calls);
+});
+
+test('production : un élément à texte vide ou qui n’est pas un objet est inutilisable', async () => {
+  for (const response of ['[{"text": "", "kind": "phone"}]', '[null]', '["06 12 34 56 78"]', '[42]', '[[]]', '[{"text": 612345678, "kind": "phone"}]']) {
+    const client = new FakeLLM({ response });
+    await assert.rejects(() => mask('call 06 12 34 56 78', { client }), MaskingUnavailable, response);
+    assert.equal(client.callCount, 3, response);
   }
-  assert.equal([...out].length, 4001);
+});
+
+test('production : une réponse mal formée puis bien formée masque au troisième essai', async () => {
+  const client = new Sequence([null, '[{"text": "0612345678", "kind": "phone"}]', PHONE_ANSWER]);
+  assert.equal(await mask('call 06 12 34 56 78', { client }), 'call [phone]');
+  assert.equal(client.callCount, 3);
+});
+
+test('DÉFAUT : une réponse enveloppée dans une seule clôture ```json est passée telle quelle à JSON.parse, retentée, puis levée', async () => {
+  await assert.rejects(async () => {
+    for (const response of [`\`\`\`json\n${PHONE_ANSWER}\n\`\`\``, `\`\`\`\n${PHONE_ANSWER}\n\`\`\``]) {
+      const client = new FakeLLM({ response });
+      let out;
+      try {
+        out = await mask('call 06 12 34 56 78', { client });
+      } catch (error) {
+        assert.fail(`${error.name}: ${error.message}`);
+      }
+      assert.equal(out, 'call [phone]');
+      assert.equal(client.callCount, 1);
+    }
+  }, assert.AssertionError);
+});
+
+test('production : une clôture entourée de texte, double ou non refermée lève', async () => {
+  const fence = (body) => `\`\`\`json\n${body}\n\`\`\``;
+  for (const response of [
+    `Here you go:\n${fence(PHONE_ANSWER)}`,
+    `${fence(PHONE_ANSWER)}\nHope this helps.`,
+    `${fence(PHONE_ANSWER)}\n${fence('[]')}`,
+    `\`\`\`json\n${PHONE_ANSWER}`,
+  ]) {
+    await assert.rejects(() => mask('call 06 12 34 56 78', { client: new FakeLLM({ response }) }), MaskingUnavailable);
+  }
 });
 
 test('production : une injection dans le message reste après les consignes', async () => {
