@@ -151,28 +151,22 @@ test('DÉFAUT : le client par défaut n’a pas la forme du vrai kit, « complet
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('INFIRMÉ : la docstring dit que la taille de ce qui part est bornée, un texte d’un million de caractères part', async () => {
-  await assert.rejects(async () => {
-    const client = llm(JSON.stringify(ANSWER));
-    await assert.rejects(() => extractFields('x'.repeat(1_000_000), PAGE, { client }), RangeError);
-    assert.equal(client.callCount, 0);
-  });
+test('la docstring dit que la taille de ce qui part est bornée, un texte d’un million de caractères part', async () => {
+  const client = llm(JSON.stringify(ANSWER));
+  await assert.rejects(() => extractFields('x'.repeat(1_000_000), PAGE, { client }), RangeError);
+  assert.equal(client.callCount, 0);
 });
 
-test('DÉFAUT : une facture vide coûte un appel', async () => {
-  await assert.rejects(async () => {
-    const client = llm('{"invoice_number": null, "date": null, "total": null}');
-    await extractFields('', new Uint8Array(0), { client }).catch(() => {});
-    assert.equal(client.callCount, 0);
-  });
+test('une facture vide coûte un appel', async () => {
+  const client = llm('{"invoice_number": null, "date": null, "total": null}');
+  await extractFields('', new Uint8Array(0), { client }).catch(() => {});
+  assert.equal(client.callCount, 0);
 });
 
-test('DÉFAUT : un numéro ou une date d’un autre type passe sans erreur', async () => {
-  await assert.rejects(async () => {
-    for (const response of ['{"invoice_number": 42, "date": null, "total": 1.0}', '{"invoice_number": "A", "date": ["x"], "total": 1.0}']) {
-      await assert.rejects(() => extractFields(TEXT, PAGE, { client: llm(response) }), ExtractionUnavailable);
-    }
-  });
+test('un numéro ou une date d’un autre type passe sans erreur', async () => {
+  for (const response of ['{"invoice_number": 42, "date": null, "total": 1.0}', '{"invoice_number": "A", "date": ["x"], "total": 1.0}']) {
+    await assert.rejects(() => extractFields(TEXT, PAGE, { client: llm(response) }), ExtractionUnavailable);
+  }
 });
 
 test('production : une injection dans le texte dicte un total qui passe', async () => {

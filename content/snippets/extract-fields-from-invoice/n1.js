@@ -12,8 +12,9 @@
  */
 
 const AMOUNT = /\d{1,3}(?:[\s.]\d{3})*[,.]\d{2}/g;
-const MONTHS = 'janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre';
-const DATE = new RegExp(`\\d{1,2}/\\d{1,2}/\\d{2,4}|\\d{1,2}\\s+(?:${MONTHS})\\s+\\d{4}`);
+// Month names in any case, accents typed or not.
+const MONTHS = 'janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[ûu]t|septembre|octobre|novembre|d[ée]cembre';
+const DATE = new RegExp(`\\d{1,2}/\\d{1,2}/\\d{2,4}|\\d{1,2}\\s+(?:${MONTHS})\\s+\\d{4}`, 'i');
 const REFERENCE = /\b(?:[A-Za-z]{1,3}[-/])?\d[\dA-Za-z/-]{3,}/;
 
 /** The lines that carry something, indentation kept: it is a feature. */
@@ -45,9 +46,8 @@ export function lineFeatures(line, index, count) {
 /**
  * One binary classifier per label, each trained on every line.
  *
- * The weighting matters more than the optimiser: three lines out of thirty
- * carry a field, and an unweighted fit answers "other" to everything and is
- * right nine times in ten.
+ * Each line is weighted so that the lines carrying the label weigh, together,
+ * as much as the lines that do not: on a page, they are the few.
  */
 function trainOne(rows, targets, label, epochs, rate) {
   const wanted = targets.map((t) => (t === label ? 1 : 0));

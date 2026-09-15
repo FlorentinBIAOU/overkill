@@ -236,13 +236,6 @@ def test_production_dix_mille_lignes_dans_une_borne_large():
     assert time.perf_counter() - debut < 20
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : la date en lettres n'est lue qu'en minuscules accentuées : « 3 Avril "
-        "2024 » ou « 1 fevrier 2024 » ne rendent aucune date"
-    ),
-)
 def test_defaut_une_date_en_lettres_avec_majuscule_ou_sans_accent_n_est_pas_lue():
     assert extract_fields(MODEL, NORD.replace("3 avril 2024", "3 Avril 2024"))["date"] == "3 Avril 2024"
     assert extract_fields(MODEL, NORD.replace("3 avril 2024", "1 fevrier 2024"))["date"] == "1 fevrier 2024"

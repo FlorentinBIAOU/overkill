@@ -1,9 +1,14 @@
 ---
 id: extract-fields-from-invoice
 family: extract
-status: published
+# Brouillon (lot 15, rédacteur, tour 1) : le niveau recommandé ne tourne pas.
+# Le modèle par défaut de N2 appelle un pipeline sous une forme qui n'existe pas,
+# @huggingface/transformers ne connaît aucune architecture LayoutLM, et le point
+# de contrôle nommé est la base non affinée, sous licence non commerciale.
+# Détail dans le compte rendu de corrections du lot 15 pour cette fiche.
+status: draft
 verdict: N2
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -75,11 +80,11 @@ rungs:
       javascript: snippets/extract-fields-from-invoice/n1.js
       verification: executed
     breaking_point:
-      fr: "L’indemnité forfaitaire de recouvrement, que toute facture entre professionnels porte en bas de page. C’est un montant, seul sur sa ligne, en bas et à droite : au regard des traits, elle ressemble davantage à un total que le total lui-même, et le classifieur la retient. Rien dans le jeu d’entraînement ne disait le contraire."
-      en: "The fixed recovery indemnity that every business-to-business invoice carries in its footer. It is an amount, alone on its line, at the bottom and on the right: to the features, it looks more like a total than the total does, and the classifier keeps it. Nothing in the training set said otherwise."
+      fr: "L’indemnité forfaitaire de recouvrement, que toute facture entre professionnels porte en bas de page. C’est un montant, seul sur sa ligne, en bas et à droite : au regard des traits, elle ressemble davantage à un total que le total lui-même, et le classifieur la retient. Et l’annoter ne suffit pas : entraîné sur cette facture même, l’indemnité étiquetée comme une ligne sans champ, il la retient encore, parce que ses traits ne la distinguent pas du total."
+      en: "The fixed recovery indemnity that every business-to-business invoice carries in its footer. It is an amount, alone on its line, at the bottom and on the right: to the features, it looks more like a total than the total does, and the classifier keeps it. Labelling it does not help: trained on that very invoice, with the indemnity labelled as a line carrying no field, it still keeps it, because its features do not tell it apart from the total."
     escalate_when:
-      fr: "Vous recevez plus de mises en page différentes que vous ne pouvez en annoter, et un montant de bas de page passe pour le montant dû."
-      en: "You receive more distinct layouts than you can label, and a footer amount passes for the amount due."
+      fr: "Un montant de bas de page passe pour le montant dû, et l’ajouter annoté au jeu d’entraînement ne change pas la lecture."
+      en: "A footer amount passes for the amount due, and adding it, labelled, to the training set does not change the reading."
 
   - level: N2
     available: true
@@ -98,18 +103,18 @@ rungs:
         fr:
           - "Traitement de factures sur votre infrastructure, poids du modèle compris"
           - "Le corpus d’affinage contient des factures réelles : il entre dans votre registre des traitements si vous en tenez un"
-          - "Licence et provenance du point de contrôle à établir avant mise en production"
+          - "Licence et provenance du point de contrôle à établir avant mise en production : microsoft/layoutlmv3-base, nommé par l’extrait, est publié sous Creative Commons BY-NC-SA, une licence d’usage non commercial"
         en:
           - "Processing of invoices on your own infrastructure, model weights included"
           - "The fine-tuning corpus holds real invoices: it belongs in your record of processing activities, where you keep one"
-          - "Licence and provenance of the checkpoint to be established before production use"
+          - "Licence and provenance of the checkpoint to be established before production use: microsoft/layoutlmv3-base, named by the snippet, is published under Creative Commons BY-NC-SA, a non-commercial licence"
     code:
       python: snippets/extract-fields-from-invoice/n2.py
       javascript: snippets/extract-fields-from-invoice/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Une erreur sûre d’elle passe tous les seuils. Sur une facture portant un acompte, mise en page que l’affinage n’a jamais vue, le modèle désigne la ligne de l’acompte comme montant dû et lui donne un score haut : le champ revient avec un nombre, un bon score, et aucun drapeau de relecture. Relever le seuil n’y change rien, l’erreur score au-dessus de la bonne réponse."
-      en: "A confident mistake clears every threshold. On an invoice carrying a deposit, a layout the fine-tuning never saw, the model points at the deposit line as the amount due and scores it high: the field comes back with a number, a good score, and no review flag. Raising the threshold does not help, because the mistake outscores the right answer."
+      fr: "Un score haut sur la mauvaise ligne passe le seuil. Si, sur une facture portant un acompte, le modèle désigne la ligne de l’acompte comme montant dû avec un score de 0,96, le champ revient avec 120,00, ce score, et aucun drapeau de relecture. Relever le seuil au-dessus de 0,96 envoie ce champ en relecture, et avec lui tous les champs notés plus bas ; la valeur lue, elle, ne change pas."
+      en: "A high score on the wrong line clears the threshold. If, on an invoice carrying a deposit, the model points at the deposit line as the amount due with a score of 0.96, the field comes back with 120.00, that score, and no review flag. Raising the threshold above 0.96 sends that field to review, and every field scored lower along with it; the value read does not change."
     escalate_when:
       fr: "Vos factures arrivent en image, sans couche de texte exploitable : il ne reste plus de géométrie à donner au modèle."
       en: "Your invoices arrive as images with no usable text layer: there is no geometry left to hand the model."
@@ -141,19 +146,19 @@ rungs:
       javascript: snippets/extract-fields-from-invoice/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Toutes les vérifications portent sur la forme de la réponse, aucune sur sa véracité. Le modèle renvoie un objet parfaitement valide dont le montant n’apparaît nulle part sur la facture, et le code ne peut pas s’en apercevoir : s’en apercevoir supposerait de retrouver le montant dans la page, c’est-à-dire de refaire le travail que ce niveau devait éviter."
-      en: "Every check here is a check on the shape of the answer, none on its truth. The model returns a perfectly valid object whose total appears nowhere on the invoice, and the code cannot tell: telling would mean finding the total in the page itself, which is the work this level was picked to avoid."
+      fr: "Toutes les vérifications portent sur la forme de la réponse, aucune sur sa véracité. Un objet parfaitement valide dont le montant n’apparaît nulle part sur la facture passe, et le code ne peut pas s’en apercevoir : s’en apercevoir supposerait de retrouver le montant dans la page, c’est-à-dire de refaire le travail que ce niveau devait éviter."
+      en: "Every check here is a check on the shape of the answer, none on its truth. A perfectly valid object whose total appears nowhere on the invoice gets through, and the code cannot tell: telling would mean finding the total in the page itself, which is the work this level was picked to avoid."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2, parce que la mise en page est le signal et que c’est le seul niveau qui la lise sans qu’on la lui décrive : N0 tient pour un fournisseur et tombe au suivant, N1 prend pour le montant dû une mention légale que toute facture entre professionnels porte en bas de page, et N3 rend une réponse dont la forme se vérifie mais pas la véracité. Le prix est réel, un corpus de factures annotées et un service d’inférence à exploiter, et ce niveau ne vous met pas à l’abri d’une erreur sûre d’elle ; ce qu’il vous donne, c’est un score par champ, donc une file de relecture. Si vous recevez de trois fournisseurs qui ne changent jamais de gabarit, N0 reste la réponse honnête, et vous le saurez le jour où la liste des libellés s’allonge."
-  en: "N2, because layout is the signal and this is the only level that reads it without being told how: N0 holds for one supplier and falls over on the next, N1 mistakes a legal footer that every business-to-business invoice carries for the amount due, and N3 returns an answer whose shape you can check but whose truth you cannot. The price is real — an annotated corpus of invoices, and an inference service to run — and the level does not save you from a confident mistake; what it gives you is a score per field, and therefore a review queue. If you receive from three suppliers who never change their template, N0 stays the honest answer, and you will know it the day the label list starts growing."
+  fr: "N2, parce que la mise en page est le signal, et qu’un modèle de document affiné la reçoit avec le texte au lieu de traits écrits à la main : N0 tient pour un fournisseur et tombe au suivant, N1 prend pour le montant dû une mention légale que toute facture entre professionnels porte en bas de page, et N3 rend une réponse dont la forme se vérifie mais pas la véracité. Le prix est réel, un corpus de factures annotées et un service d’inférence à exploiter, et ce niveau ne vous met pas à l’abri d’une erreur sûre d’elle ; ce qu’il vous donne, c’est un score par champ, donc une file de relecture. Si vous recevez de trois fournisseurs qui ne changent jamais de gabarit, N0 reste la réponse honnête, et vous le saurez le jour où la liste des libellés s’allonge."
+  en: "N2, because layout is the signal, and a fine-tuned document model takes it in along with the text instead of hand-written features: N0 holds for one supplier and falls over on the next, N1 mistakes a legal footer that every business-to-business invoice carries for the amount due, and N3 returns an answer whose shape you can check but whose truth you cannot. The price is real — an annotated corpus of invoices, and an inference service to run — and the level does not save you from a confident mistake; what it gives you is a score per field, and therefore a review queue. If you receive from three suppliers who never change their template, N0 stays the honest answer, and you will know it the day the label list starts growing."
 
 further_reading:
   - label: "Service-Public Entreprendre — Mentions obligatoires sur une facture"
-    url: "https://entreprendre.service-public.fr/vosdroits/F31808"
+    url: "https://entreprendre.service-public.gouv.fr/vosdroits/F31808"
   - label: "LayoutLMv3 — Pre-training for Document AI with Unified Text and Image Masking"
     url: "https://arxiv.org/abs/2204.08387"
   - label: "microsoft/layoutlmv3-base — le point de contrôle nommé par l’extrait N2"
@@ -161,5 +166,15 @@ further_reading:
   - label: "Factur-X — la facture hybride PDF et XML, quand il n’y a plus rien à extraire"
     url: "https://fnfe-mpe.org/factur-x/"
 
-sources: []
+sources:
+  - label: "Service-Public Entreprendre — mention obligatoire de l’indemnité forfaitaire pour frais de recouvrement, réclamable à un client professionnel"
+    url: "https://entreprendre.service-public.gouv.fr/vosdroits/F31808"
+  - label: "Hugging Face — carte de microsoft/layoutlmv3-base : licence CC BY-NC-SA 4.0"
+    url: "https://huggingface.co/microsoft/layoutlmv3-base"
+  - label: "Transformers — documentation LayoutLMv3 : processeur, mots et boîtes sur la grille 0-1000, 512 positions de jetons"
+    url: "https://huggingface.co/docs/transformers/model_doc/layoutlmv3"
+  - label: "Transformers.js — liste des architectures prises en charge, sans LayoutLM"
+    url: "https://github.com/huggingface/transformers.js"
+  - label: "OpenAI — Images and vision : image en URL de données, facturation par dimensions, formats acceptés"
+    url: "https://developers.openai.com/api/docs/guides/images-vision"
 ---

@@ -2,8 +2,8 @@
  * Read the header fields of an invoice from text that has already been
  * extracted: keyword anchors, then regular expressions.
  *
- * Rung N0. No model, no training set, no service. Two hours of work and you
- * can read every invoice from the supplier you wrote it for.
+ * Rung N0. No model, no training set, no service. It reads the invoices of the
+ * supplier whose labels it was written for.
  *
  * The method is the one anybody reaches for: find the line carrying the label,
  * then read the value that follows it on that line. The labels are ordered
@@ -13,19 +13,21 @@
  * That ordering is also where the approach ends. See the test.
  */
 
-// French amounts: a comma before the decimals, a space or a dot every three
-// digits. Requiring exactly three digits per group is what keeps the pattern
-// from swallowing a quantity and a unit price as one number.
-export const AMOUNT = /\d{1,3}(?:[\s.]\d{3})*[,.]\d{2}/;
+// An amount, signed or not, with two decimals: "1 234,56" and "1.234,56" in French,
+// "1,234.56" in English. Exactly three digits per group keeps "2 38,50" apart,
+// a quantity then a price; "2 380,50" still reads as one number. At most four
+// groups, up to the trillions, so that a long run of digit groups is read in
+// linear time.
+export const AMOUNT = /[-\u2212]?(?<![\d.,])\d{1,3}(?:(?:[\s.]\d{3}){0,4},|(?:[\s,]\d{3}){0,4}\.)\d{2}(?![.,]?\d)/;
 const DATE = /\d{1,2}\/\d{1,2}\/\d{2,4}/;
 const REFERENCE = /\b(?:[A-Za-z]{1,3}[-/])?\d[\dA-Za-z/-]{3,}/;
 
 /** Turn a written amount into a number the caller can compute with. */
 export function parseAmount(raw) {
-  let cleaned = raw.replace(/[^\d,.]/g, '');
-  // A comma means French spelling: the dots left are thousands separators.
-  if (cleaned.includes(',')) cleaned = cleaned.replaceAll('.', '').replace(',', '.');
-  return Number(cleaned);
+  // An AMOUNT match always ends on two decimals: whatever the separators, the
+  // last two digits are the cents.
+  const cents = Number(raw.replace(/\D/g, '')) / 100;
+  return ['-', '\u2212'].includes(raw.trimStart()[0]) ? -cents : cents;
 }
 
 const trim = (raw) => raw.trim();
@@ -45,7 +47,8 @@ const FIELDS = {
  * accepted, because a column heading is a label too.
  */
 export function findAfterLabel(text, labels, pattern) {
-  const lines = text.split('\n');
+  // Every run of spaces, a non-breaking one included, reads as one space.
+  const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, ' '));
   for (const label of labels) {
     for (const line of lines) {
       const position = line.toLowerCase().indexOf(label);

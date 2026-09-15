@@ -1,9 +1,9 @@
 /**
  * Ask a general-purpose multimodal model to read the invoice.
  *
- * Rung N3. This is the option people reach for first, and on this task it has
- * a real argument: the model is given a picture of the page, so it sees the
- * column an amount sits in, which the extracted text has already lost.
+ * Rung N3. The model is sent a picture of the page along with its text, and
+ * the picture still holds what the extracted text has lost: the column an
+ * amount sits in.
  *
  * Note what the code has to do that N0 did not: cap the size of what it sends,
  * retry on failure, parse an answer that is only probably JSON, and check the
@@ -21,11 +21,40 @@ const PROMPT = [
   'Extracted text:',
 ].join('\n');
 
-// A model charges by the token, and a scanned page is a lot of them. Refusing
-// an oversized image is not an optimisation, it is a cost control.
+// The provider bills every token of the prompt: the text is capped before the
+// call, in characters (code points, as in Python), not tokens. An image is
+// billed by its dimensions, not its bytes, so its cap only bounds what is
+// encoded and uploaded.
+export const MAX_CHARACTERS = 8000;
 export const MAX_IMAGE_BYTES = 4_000_000;
 
 const FIELDS = ['invoice_number', 'date', 'total'];
+
+// The provider named here is an example, not a recommendation: the reasoning
+// holds for any general-purpose model API, and the client is swappable. Pass
+// any object with a `complete({ prompt, imageUrl, temperature })` method.
+export const MODEL = 'gpt-4.1-mini'; // an example id: check the parameters your model accepts
+
+export async function providerClient(sdk, model = MODEL) {
+  if (!sdk) {
+    const { OpenAI } = await import('openai');
+    sdk = new OpenAI();
+  }
+  return {
+    async complete({ prompt, imageUrl, temperature }) {
+      const response = await sdk.chat.completions.create({
+        model,
+        // The page travels inside the message, as a data URL.
+        messages: [{ role: 'user', content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: imageUrl } },
+        ] }],
+        temperature,
+      });
+      return response.choices[0].message.content;
+    },
+  };
+}
 
 export class ExtractionUnavailable extends Error {}
 
@@ -40,32 +69,31 @@ export class ExtractionUnavailable extends Error {}
  * @param {number} [options.attempts]
  */
 export async function extractFields(text, pageImage, { client, attempts = 3 } = {}) {
-  let provider = client;
-  if (!provider) {
-    // Needs a key and a network, so it is never reached in the tests.
-    const { OpenAI } = await import('openai');
-    provider = new OpenAI();
+  if (text.length > MAX_CHARACTERS && [...text].length > MAX_CHARACTERS) {
+    throw new RangeError(`text longer than ${MAX_CHARACTERS} characters`);
   }
-
-  if (pageImage.length > MAX_IMAGE_BYTES) {
-    throw new RangeError(`page image larger than ${MAX_IMAGE_BYTES} bytes`);
+  if (pageImage.length === 0 || pageImage.length > MAX_IMAGE_BYTES) {
+    throw new RangeError(`page image empty or larger than ${MAX_IMAGE_BYTES} bytes`);
   }
+  client ??= await providerClient();
 
   const imageUrl = `data:image/png;base64,${Buffer.from(pageImage).toString('base64')}`;
-  return decode(await ask(provider, text, imageUrl, attempts));
+  return decode(await ask(client, text, imageUrl, attempts));
 }
 
 async function ask(client, text, imageUrl, attempts) {
   let lastError;
   for (let i = 0; i < attempts; i += 1) {
     try {
-      return await client.complete({
+      const answer = await client.complete({
         prompt: `${PROMPT}\n${text}`,
         imageUrl,
         // Temperature zero, because an amount that changes between two
         // identical calls cannot be reconciled with anything.
         temperature: 0,
       });
+      if (typeof answer === 'string') return answer;
+      lastError = new Error('the model returned no content'); // a refusal: unusable, not empty
     } catch (error) {
       lastError = error;
     }
@@ -92,6 +120,11 @@ function decode(answer) {
   }
 
   const fields = Object.fromEntries(FIELDS.map((field) => [field, parsed[field] ?? null]));
+  for (const field of ['invoice_number', 'date']) {
+    if (fields[field] !== null && typeof fields[field] !== 'string') {
+      throw new ExtractionUnavailable(`the model answered a ${field} that is not text: ${fields[field]}`);
+    }
+  }
   // A total nobody can compute with is worse than no total at all: it would
   // travel down the pipeline looking like a number.
   if (fields.total !== null && typeof fields.total !== 'number') {

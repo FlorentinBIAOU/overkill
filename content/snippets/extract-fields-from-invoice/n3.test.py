@@ -183,14 +183,6 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring dit que le code doit « borner la taille de ce qu'il "
-        "envoie » ; seule l'image est bornée, un texte d'un million de caractères part "
-        "tel quel dans le prompt"
-    ),
-)
 def test_infirme_la_taille_de_tout_ce_qui_part_est_bornee_texte_compris():
     client = FakeLLM(response=json.dumps(ANSWER))
     with pytest.raises(ValueError):
@@ -198,10 +190,6 @@ def test_infirme_la_taille_de_tout_ce_qui_part_est_bornee_texte_compris():
     assert client.call_count == 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un texte vide et une image vide partent quand même, un appel payé pour rien",
-)
 def test_defaut_une_facture_vide_ne_coute_aucun_appel():
     client = FakeLLM(response='{"invoice_number": null, "date": null, "total": null}')
     try:
@@ -211,14 +199,6 @@ def test_defaut_une_facture_vide_ne_coute_aucun_appel():
     assert client.call_count == 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : seule la forme du total est vérifiée ; un numéro de facture entier "
-        "ou une date en liste passent tels quels, alors que la docstring annonce "
-        "« check the shape of what came back »"
-    ),
-)
 def test_defaut_un_numero_ou_une_date_d_un_autre_type_leve():
     for response in ('{"invoice_number": 42, "date": null, "total": 1.0}', '{"invoice_number": "A", "date": ["x"], "total": 1.0}'):
         with pytest.raises(ExtractionUnavailable):

@@ -22,7 +22,9 @@ MODEL_NAME = "microsoft/layoutlmv3-base"
 
 DEFAULT_THRESHOLD = 0.75
 
-# One pass reads one page. Beyond that the model would truncate in silence.
+# A cap on the page, checked before the model runs. It is not the model's own
+# limit: LayoutLMv3 reads at most 512 tokens, and a page under this cap can
+# still hold more.
 MAX_LINES = 120
 
 AMOUNT = r"\d{1,3}(?:[\s.]\d{3})*[,.]\d{2}"

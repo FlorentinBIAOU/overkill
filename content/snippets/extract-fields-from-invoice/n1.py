@@ -15,8 +15,9 @@ import re
 from sklearn.linear_model import LogisticRegression
 
 AMOUNT = r"\d{1,3}(?:[\s.]\d{3})*[,.]\d{2}"
-MONTHS = "janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre"
-DATE = rf"\d{{1,2}}/\d{{1,2}}/\d{{2,4}}|\d{{1,2}}\s+(?:{MONTHS})\s+\d{{4}}"
+# Month names in any case, accents typed or not.
+MONTHS = "janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[ûu]t|septembre|octobre|novembre|d[ée]cembre"
+DATE = re.compile(rf"\d{{1,2}}/\d{{1,2}}/\d{{2,4}}|\d{{1,2}}\s+(?:{MONTHS})\s+\d{{4}}", re.I)
 REFERENCE = r"\b(?:[A-Za-z]{1,3}[-/])?\d[\dA-Za-z/-]{3,}"
 
 

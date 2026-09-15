@@ -126,22 +126,16 @@ test('production : espace insécable et espace fine dans le montant', () => {
   assert.equal(extractFields('Total TTC 1\u202f234,56 €').total, 1234.56);
 });
 
-test('DÉFAUT : une espace insécable dans « Total TTC » rend le Total HT', async () => {
-  await assert.rejects(async () => {
-    assert.equal(extractFields(LAMBERT.replace('Total TTC', 'Total\u00a0TTC')).total, 82.8);
-  });
+test('une espace insécable dans « Total TTC » rend le Total HT', async () => {
+  assert.equal(extractFields(LAMBERT.replace('Total TTC', 'Total\u00a0TTC')).total, 82.8);
 });
 
-test('DÉFAUT : un montant à l’anglaise est lu sans erreur et faux', async () => {
-  await assert.rejects(async () => {
-    assert.ok([1234.56, null].includes(extractFields('TOTAL TTC : 1,234.56 USD').total));
-  });
+test('un montant à l’anglaise est lu sans erreur et faux', async () => {
+  assert.ok([1234.56, null].includes(extractFields('TOTAL TTC : 1,234.56 USD').total));
 });
 
-test('DÉFAUT : le total négatif d’un avoir perd son signe', async () => {
-  await assert.rejects(async () => {
-    assert.equal(extractFields("Facture d'avoir n° AV-2024-0012\nTotal TTC -82,80 €").total, -82.8);
-  });
+test('le total négatif d’un avoir perd son signe', async () => {
+  assert.equal(extractFields("Facture d'avoir n° AV-2024-0012\nTotal TTC -82,80 €").total, -82.8);
 });
 
 test('production : valeurs aux limites du montant', () => {

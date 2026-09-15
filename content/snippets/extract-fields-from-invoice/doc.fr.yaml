@@ -6,9 +6,8 @@ n0: |
   Lire les champs d'en-tête d'une facture dans un texte déjà extrait : ancrage
   sur des mots-clés, puis expressions régulières.
 
-  Niveau N0. Aucun modèle, aucun jeu d'entraînement, aucun service. Deux heures
-  de travail, et vous lisez toutes les factures du fournisseur pour lequel vous
-  l'avez écrit.
+  Niveau N0. Aucun modèle, aucun jeu d'entraînement, aucun service. Il lit les
+  factures du fournisseur dont il connaît les libellés.
 
   La méthode est celle que tout le monde trouve : repérer la ligne qui porte le
   libellé, puis lire la valeur qui le suit sur cette ligne. Les libellés sont
@@ -60,10 +59,9 @@ n2: |
 n3: |
   Demander à un modèle généraliste multimodal de lire la facture.
 
-  Niveau N3. C'est l'option vers laquelle on va d'abord, et sur cette tâche elle
-  a un argument réel : on donne au modèle une image de la page, il voit donc la
-  colonne dans laquelle se trouve un montant, ce que le texte extrait a déjà
-  perdu.
+  Niveau N3. Le modèle reçoit une image de la page avec son texte, et l'image
+  garde ce que le texte extrait a perdu : la colonne dans laquelle se trouve un
+  montant.
 
   Notez ce que le code doit faire et que N0 ne faisait pas : borner la taille de
   ce qu'il envoie, réessayer après un échec, analyser une réponse qui n'est que

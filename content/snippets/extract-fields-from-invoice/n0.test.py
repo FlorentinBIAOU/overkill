@@ -165,30 +165,14 @@ def test_production_espace_insecable_et_espace_fine_dans_le_montant():
     assert extract_fields("Total TTC 1\u202f234,56 €")["total"] == 1234.56
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : une espace insécable dans le libellé, « Total\\u00a0TTC », courante "
-        "dans un texte tiré d'un PDF, fait tomber sur « total » seul, et c'est le Total "
-        "HT (69,00) qui revient, bien formé et faux"
-    ),
-)
 def test_defaut_une_espace_insecable_dans_total_ttc_rend_le_total_ht():
     assert extract_fields(LAMBERT.replace("Total TTC", "Total\u00a0TTC"))["total"] == 82.80
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un montant à l'anglaise « 1,234.56 » est lu 1,23, sans erreur",
-)
 def test_defaut_un_montant_a_l_anglaise_est_lu_sans_erreur_et_faux():
     assert extract_fields("TOTAL TTC : 1,234.56 USD")["total"] in (1234.56, None)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le signe est perdu, une facture d'avoir à « -82,80 » ressort à 82,80",
-)
 def test_defaut_le_total_negatif_d_un_avoir_perd_son_signe():
     assert extract_fields("Facture d'avoir n° AV-2024-0012\nTotal TTC -82,80 €")["total"] == -82.80
 

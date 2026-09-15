@@ -187,11 +187,9 @@ test('production : dix mille lignes dans une borne large', () => {
   assert.ok(performance.now() - debut < 20_000);
 });
 
-test('DÉFAUT : une date en lettres avec majuscule ou sans accent n’est pas lue', async () => {
-  await assert.rejects(async () => {
-    assert.equal(extractFields(model, NORD.replace('3 avril 2024', '3 Avril 2024')).date, '3 Avril 2024');
-    assert.equal(extractFields(model, NORD.replace('3 avril 2024', '1 fevrier 2024')).date, '1 fevrier 2024');
-  });
+test('une date en lettres avec majuscule ou sans accent n’est pas lue', async () => {
+  assert.equal(extractFields(model, NORD.replace('3 avril 2024', '3 Avril 2024')).date, '3 Avril 2024');
+  assert.equal(extractFields(model, NORD.replace('3 avril 2024', '1 fevrier 2024')).date, '1 fevrier 2024');
 });
 
 test('production : espaces insécables dans le montant et la date', () => {
