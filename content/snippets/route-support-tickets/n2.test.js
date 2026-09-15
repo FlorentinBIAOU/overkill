@@ -13,8 +13,10 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { register } from 'node:module';
+import { performance } from 'node:perf_hooks';
 import { FakeEncoder } from '../_harness/fake-model.mjs';
-import { DEFAULT_TEAM, buildIndex, neighbours, route } from './n2.js';
+import { DEFAULT_TEAM, MODEL_NAME, buildIndex, neighbours, route } from './n2.js';
 
 // Resolved tickets, and the team that resolved each one.
 const ARCHIVE = [
@@ -36,83 +38,201 @@ const TEAMS = ARCHIVE.map(([, team]) => team);
 // is asked for the same width, so the test exercises the real shape.
 const DIMENSIONS = 384;
 
-const makeIndex = (encoder) => buildIndex(TICKETS, TEAMS, encoder ?? new FakeEncoder(DIMENSIONS));
+const POLITENESS = 'Bonjour, merci de me confirmer que vous avez bien reçu mon dossier';
 
-test('routes a ticket to the team of its nearest neighbours', async () => {
+const makeIndex = (encoder, tickets = TICKETS, teams = TEAMS) =>
+  buildIndex(tickets, teams, encoder ?? new FakeEncoder(DIMENSIONS));
+
+/** Un encodeur dont chaque vecteur est écrit dans le test. */
+const vecteursDonnes = (vecteurs) => ({ encode: async (texts) => texts.map((t) => vecteurs[t]) });
+
+/*
+ * Un faux module `@xenova/transformers` à la forme publiée : `pipeline(task,
+ * model)` rend une fonction `extract(texts, { pooling })` dont le résultat a
+ * `.tolist()`. Servi par un crochet de résolution, le paquet n'étant pas installé.
+ */
+const FAUX_TRANSFORMERS = `
+const words = (t) => t.toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, ' ').split(' ').filter(Boolean);
+const hash = (w) => { let h = 2166136261; for (const c of w) h = Math.imul(h ^ c.codePointAt(0), 16777619) >>> 0; return h; };
+export async function pipeline(task, model) {
+  globalThis.__transformers.loads.push([task, model]);
+  return async (texts, options) => {
+    globalThis.__transformers.calls.push(options);
+    return { tolist: () => texts.map((t) => { const v = new Array(384).fill(0); for (const w of words(t)) v[hash(w) % 384] += 1; return v; }) };
+  };
+}`;
+globalThis.__transformers = { loads: [], calls: [] };
+register(`data:text/javascript,${encodeURIComponent(`
+export async function resolve(specifier, context, next) {
+  if (specifier === '@xenova/transformers') {
+    return { url: 'data:text/javascript,' + ${JSON.stringify(encodeURIComponent(FAUX_TRANSFORMERS))}, shortCircuit: true };
+  }
+  return next(specifier, context);
+}`)}`);
+
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
+
+test('point de rupture : un ticket qui ne s’adresse à personne part chez facturation', async () => {
+  const index = await makeIndex();
+  const [[similarity, team]] = await neighbours(index, POLITENESS, 1);
+  assert.equal(team, 'billing');
+  assert.equal(Number(similarity.toFixed(12)), 0.617213399848);
+  assert.equal(await route(index, POLITENESS), 'billing');
+  // Le voisin est bien le ticket de facturation poli : seul, il rend le même score.
+  const seul = await makeIndex(undefined, [TICKETS[2]], [TEAMS[2]]);
+  assert.equal(Number((await neighbours(seul, POLITENESS, 1))[0][0].toFixed(12)), 0.617213399848);
+});
+
+test('point de rupture : témoin, sans ce ticket dans l’archive l’accident se déplace', async () => {
+  const gardes = ARCHIVE.filter(([t]) => !t.startsWith('Bonjour'));
+  const index = await makeIndex(undefined, gardes.map(([t]) => t), gardes.map(([, e]) => e));
+  assert.equal(await route(index, POLITENESS), 'technical');
+});
+
+test('point de rupture : le vote tranche de justesse', async () => {
+  const found = await neighbours(await makeIndex(), POLITENESS);
+  assert.deepEqual(found.map(([, team]) => team), ['billing', 'technical', 'technical']);
+  assert.equal(Number((found[0][0] - (found[1][0] + found[2][0])).toFixed(3)), 0.011);
+});
+
+// ---------------------------------------------------------------------------
+// Les autres affirmations du niveau
+// ---------------------------------------------------------------------------
+
+test('route un ticket vers l’équipe de ses voisins les plus proches', async () => {
   assert.equal(await route(await makeIndex(), 'Ma facture de février est trop élevée'), 'billing');
 });
 
-test('the nearest neighbour is the reason shown to the agent', async () => {
+test('le voisin le plus proche et son score', async () => {
   const [[similarity, team]] = await neighbours(await makeIndex(), 'Ma facture de février est trop élevée', 1);
   assert.equal(team, 'billing');
-  // The same number as the Python version of this snippet, because both run
-  // the same double. Six of the seven words are shared with the archived
-  // ticket, and the cosine says exactly that.
   assert.equal(Number(similarity.toFixed(12)), 0.857142857143);
 });
 
-test('the archive is encoded once, not once per query', async () => {
-  // The point of an index: the expensive call happens at build time.
+test('INFIRMÉ : les voisins montrés à l’agent disent quel ticket a décidé', async () => {
+  // `neighbours` rend [score, équipe], sans le ticket archivé.
+  const [premier] = await neighbours(await makeIndex(), POLITENESS, 1);
+  assert.throws(() => assert.ok(premier.some((part) => typeof part === 'string' && TICKETS.includes(part))));
+});
+
+test('l’archive est encodée une fois et non à chaque question', async () => {
   const encoder = new FakeEncoder(DIMENSIONS);
   const index = await makeIndex(encoder);
   assert.deepEqual(encoder.calls, [TICKETS]);
   await route(index, 'Mon colis est en retard chez le transporteur');
-  assert.deepEqual(encoder.calls[1], ['Mon colis est en retard chez le transporteur']);
+  await route(index, 'Ma facture est fausse');
+  assert.deepEqual(encoder.calls.slice(1), [['Mon colis est en retard chez le transporteur'], ['Ma facture est fausse']]);
 });
 
-test('the vote counts the neighbourhood, not only the best match', async () => {
-  // The closest neighbour is a shipping ticket, the second is a billing one
-  // that clears the floor as well; two shipping tickets outvote it.
+test('l’index est une copie de l’archive', async () => {
+  const tickets = [...TICKETS];
+  const index = await makeIndex(undefined, tickets);
+  tickets.shift();
+  assert.deepEqual(index.tickets, TICKETS);
+  assert.equal(index.vectors.length, TICKETS.length);
+});
+
+test('le vote compte le voisinage, et pas seulement le meilleur', async () => {
   const ticket = 'Mon colis est en retard chez le transporteur';
-  const found = await neighbours(await makeIndex(), ticket);
-  assert.deepEqual(found.map(([, team]) => team), ['shipping', 'billing', 'shipping']);
+  assert.deepEqual((await neighbours(await makeIndex(), ticket)).map(([, t]) => t), ['shipping', 'billing', 'shipping']);
   assert.equal(await route(await makeIndex(), ticket), 'shipping');
+  const vecteurs = { q: [1, 0], a: [0.9, 0.1], b: [0.8, 0.2], c: [0.8, 0.2] };
+  const index = await buildIndex(['a', 'b', 'c'], ['x', 'y', 'y'], vecteursDonnes(vecteurs));
+  assert.equal(await route(index, 'q', { k: 1 }), 'x');
+  assert.equal(await route(index, 'q', { k: 3 }), 'y');
 });
 
-test('an empty ticket goes to the default queue', async () => {
-  assert.equal(await route(await makeIndex(), ''), DEFAULT_TEAM);
+test('à égalité de score, le tri garde l’ordre de l’archive', async () => {
+  const vecteurs = { q: [1, 0], a: [0.6, 0.8], b: [0.6, 0.8], c: [0.6, 0.8] };
+  const index = await buildIndex(['a', 'b', 'c'], ['x', 'y', 'z'], vecteursDonnes(vecteurs));
+  assert.deepEqual((await neighbours(index, 'q')).map(([, t]) => t), ['x', 'y', 'z']);
 });
 
-test('a ticket the archive has never seen goes to the default queue', async () => {
-  // Nothing in the archive shares anything with it, so every score is zero and
-  // the floor does its job.
-  const ticket = "Votre entrepôt accepte-t-il les visites scolaires";
-  const found = await neighbours(await makeIndex(), ticket);
-  assert.deepEqual(found.map(([similarity]) => similarity), [0, 0, 0]);
+test('à égalité de vote, l’équipe du plus proche l’emporte', async () => {
+  const vecteurs = { q: [1, 0, 0, 0, 0], a: [0.5, 0.5, 0.5, 0.5, 0], b: [0.25, 0.75, 0.5, 0.25, 0.25], c: [0.25, 0.25, 0.25, 0.5, 0.75] };
+  let index = await buildIndex(['a', 'b', 'c'], ['x', 'y', 'y'], vecteursDonnes(vecteurs));
+  assert.equal(await route(index, 'q'), 'x');
+  assert.deepEqual((await neighbours(index, 'q')).map(([s]) => s), [0.5, 0.25, 0.25]);
+  index = await buildIndex(['a', 'b', 'c'], ['y', 'x', 'x'], vecteursDonnes(vecteurs));
+  assert.equal(await route(index, 'q'), 'y');
+});
+
+test('le plancher juste au-dessus et juste en dessous', async () => {
+  const vecteurs = { q: [1, 0], a: [0.25, 0.9682458365518543] };
+  const index = await buildIndex(['a'], ['x'], vecteursDonnes(vecteurs));
+  assert.equal(await route(index, 'q', { k: 1 }), 'x');
+  assert.equal(await route(index, 'q', { k: 1, minSimilarity: 0.2500001 }), DEFAULT_TEAM);
+});
+
+test('un ticket que l’archive n’a jamais vu part dans la file par défaut', async () => {
+  const ticket = 'Votre entrepôt accepte-t-il les visites scolaires';
+  assert.deepEqual((await neighbours(await makeIndex(), ticket)).map(([s]) => s), [0, 0, 0]);
   assert.equal(await route(await makeIndex(), ticket), DEFAULT_TEAM);
 });
 
-test('what the double cannot prove', async () => {
-  // The reason this rung exists is the paraphrase, and the double cannot show
-  // it: it is a bag of words, exactly like N1. "Je n'arrive plus à entrer
-  // dans mon espace client" is the lost password of the archive said in other
-  // words. The double puts the password ticket third, behind two parcel
-  // tickets that merely share "mon" and "plus", and the routing falls to
-  // the default queue. Only the real encoder closes that gap. This test
-  // asserts the double's silence instead of implying a win nobody measured.
+test('ce que le double ne peut pas prouver', async () => {
   const index = await makeIndex();
   const ticket = "Je n'arrive plus à entrer dans mon espace client";
-  const found = await neighbours(index, ticket);
-  assert.deepEqual(found.map(([, team]) => team), ['shipping', 'shipping', 'technical']);
+  assert.deepEqual((await neighbours(index, ticket)).map(([, team]) => team), ['shipping', 'shipping', 'technical']);
   assert.equal(await route(index, ticket), DEFAULT_TEAM);
 });
 
-test('breaking point: the archive is the policy', async () => {
-  // There is no model of the teams on this rung, only an archive, and the
-  // nearest ticket is not always a relevant one. This customer asks whether
-  // their file arrived. It is a question for nobody in particular, and it is
-  // routed to billing with a high score — the archive happens to hold one
-  // billing ticket written with the same politeness formulas, and the vote
-  // sees a strong match.
-  //
-  // The double makes the mechanism visible in its crudest form, by counting
-  // words. A real encoder moves where the accident happens, it does not remove
-  // it: whatever the archive is made of is the routing policy, including the
-  // parts nobody chose.
-  const index = await makeIndex();
-  const ticket = 'Bonjour, merci de me confirmer que vous avez bien reçu mon dossier';
-  const [[similarity, team]] = await neighbours(index, ticket, 1);
-  assert.equal(team, 'billing');
-  assert.equal(Number(similarity.toFixed(12)), 0.617213399848);
-  assert.equal(await route(index, ticket), 'billing');
+test('l’encodeur par défaut a la forme de transformers.js', async () => {
+  // `pipeline('feature-extraction', name)` puis `extract(texts, { pooling: 'mean' }).tolist()`.
+  globalThis.__transformers = { loads: [], calls: [] };
+  const index = await buildIndex(TICKETS, TEAMS);
+  assert.equal(await route(index, 'Ma facture de février est trop élevée'), 'billing');
+  await route(index, 'Mon colis est perdu');
+  assert.deepEqual(globalThis.__transformers.loads, [['feature-extraction', MODEL_NAME]]);
+  assert.deepEqual(globalThis.__transformers.calls[0], { pooling: 'mean' });
+});
+
+test('déterministe', async () => {
+  assert.deepEqual(await neighbours(await makeIndex(), POLITENESS), await neighbours(await makeIndex(), POLITENESS));
+});
+
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
+
+test('production : ticket vide, archive vide et k nul', async () => {
+  assert.equal(await route(await makeIndex(), ''), DEFAULT_TEAM);
+  assert.equal(await route(await makeIndex(undefined, [], []), 'Ma facture'), DEFAULT_TEAM);
+  assert.equal(await route(await makeIndex(), 'Ma facture de janvier est trop élevée', { k: 0 }), DEFAULT_TEAM);
+  assert.equal((await neighbours(await makeIndex(), 'Ma facture', 50)).length, TICKETS.length);
+});
+
+test('production : NFD, emoji, BOM et casse arrivent à l’encodeur tels quels', async () => {
+  const encoder = new FakeEncoder(DIMENSIONS);
+  const index = await makeIndex(encoder);
+  const ticket = '\ufeff📦 COLIS perdu, cafe\u0301\u00a0!';
+  await route(index, ticket);
+  assert.deepEqual(encoder.calls.at(-1), [ticket]);
+});
+
+test('production : une archive de 900 tickets répond vite', async () => {
+  const tickets = [];
+  const teams = [];
+  for (let i = 0; i < 100; i += 1) for (const [t, e] of ARCHIVE) { tickets.push(`${t} numero ${i}`); teams.push(e); }
+  const index = await makeIndex(undefined, tickets, teams);
+  const debut = performance.now();
+  assert.equal(await route(index, 'Ma facture de février est trop élevée'), 'billing');
+  assert.ok(performance.now() - debut < 5000);
+});
+
+test('DÉFAUT : un index encodé par un autre modèle est refusé', async () => {
+  // Rien ne vérifie la dimension. Encodeur plus large (768 contre 384) : le
+  // produit scalaire est tronqué et le ticket routé sur un score faux (facturation).
+  // Encodeur plus étroit : NaN, et tout part en file par défaut.
+  let index = await makeIndex();
+  index.encoder = new FakeEncoder(768);
+  assert.equal(await route(index, 'Ma facture de janvier'), 'billing');
+  index = await makeIndex(new FakeEncoder(768));
+  index.encoder = new FakeEncoder(DIMENSIONS);
+  assert.equal(await route(index, 'Ma facture de janvier'), DEFAULT_TEAM);
+  await assert.rejects(async () => {
+    await assert.rejects(() => route(index, 'Ma facture de janvier'));
+  });
 });
