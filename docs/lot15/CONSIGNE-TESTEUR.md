@@ -79,3 +79,35 @@ l'appel du code existe.
 Un compte rendu court : pour chaque fiche, le nombre de tests ajoutés, le nombre
 d'affirmations démontrées, infirmées, non testables, de défauts, et le hash du
 commit. Rien d'autre : le détail est dans les relevés.
+
+---
+
+## Contre-épreuve : après le rédacteur
+
+Toute correction repasse par les tests. Quand le rédacteur a corrigé une fiche,
+le testeur y revient — **pas celui qui a écrit les tests du tour précédent si
+c'est possible**, et jamais le rédacteur.
+
+Pour chaque fiche :
+
+1. Lis `docs/lot15/corrections/<id>.md` (le dernier tour), le diff du rédacteur
+   (`git log --oneline -- content/entries/<id>.mdx content/snippets/<id>` puis
+   `git show`), et ton relevé.
+2. Traite **chaque ligne de « À retester »**, et en plus :
+   - toute phrase nouvelle ou modifiée de la fiche, des docstrings, de
+     `doc.fr.yaml` et de l'essai est une affirmation : elle a son test, ou sa
+     ligne `non testable` au relevé ;
+   - tout code modifié a ses cas de production, dans les deux langages ;
+   - un test démarqué par le rédacteur est renommé pour dire ce qu'il prouve
+     désormais (`production : …`), pas ce que le défaut était ;
+   - pour un N3, l'adaptateur par défaut est testé avec
+     `_harness/fake_sdk.py` / `_harness/fake-sdk.mjs` (forme du vrai kit, sans
+     méthode `complete`), y compris `content` nul. Remplace les doubles locaux
+     `RealShapedClient` par celui du harnais.
+3. Plus aucun marquage `INFIRMÉ` ou `DÉFAUT` ne doit rester, sauf une
+   affirmation que le rédacteur n'a pas traitée : dans ce cas, garde-la marquée
+   et signale-la en tête du relevé.
+4. Mets le relevé à jour : ajoute une section `## Tour N — contre-épreuve` qui
+   dit, ligne par ligne, ce qui est désormais démontré, et ce qui ne l'est pas.
+5. `node scripts/test-snippets.mjs <id>` **vert**. Commit de la fiche seule :
+   `test(<id>): reprendre les tests après correction`.

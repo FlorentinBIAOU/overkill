@@ -33,7 +33,7 @@ JavaScript, jamais l'un sans l'autre. Chaque extrait a son test à côté de lui
 
 | Règle | Détail |
 |---|---|
-| **Court** | 40 lignes de code utile au maximum, commentaires non compris. Au-delà, c'est un projet, pas un extrait. |
+| **Court** | 40 lignes de code utile au maximum, commentaires non compris. Au-delà, c'est un projet, pas un extrait. L'adaptateur commun du client de fournisseur des niveaux N3 (section « Les barreaux N2 et N3 ») n'entre pas dans le décompte : il est identique d'une fiche à l'autre et ne porte aucune logique de la fiche. |
 | **Autonome** | Il s'exécute seul. Aucun fichier de données externe, aucun état partagé entre extraits. |
 | **Hors ligne** | Aucun accès réseau, jamais. Ni pendant l'exécution, ni pendant le test. |
 | **Sans effet de bord** | Aucune écriture de fichier hors d'un répertoire temporaire. Aucune variable d'environnement modifiée. |
@@ -119,6 +119,16 @@ def test_construit_la_bonne_requete():
     assert summarise("texte long", client=fake) == "un résumé"
     assert "texte long" in fake.last_request["prompt"]
 ```
+
+**Le client par défaut doit exister.** Au lot 15, les trente-deux extraits N3
+appelaient `client.complete(...)` sur un client `OpenAI()` qui n'a pas cette
+méthode : aucun test ne l'avait vu, parce que tous injectaient un double qui,
+lui, l'avait. Le défaut est désormais un petit adaptateur écrit dans l'extrait
+(`ProviderClient` en Python, `providerClient` en JavaScript), bâti sur la vraie
+surface du kit (`chat.completions.create`, `choices[0].message.content`), et
+testé avec `_harness/fake_sdk.py` / `_harness/fake-sdk.mjs`, qui imitent cette
+surface et n'ont pas de méthode `complete`. La surface imitée est vérifiée
+contre le kit publié, transport remplacé, dans `docs/lot15/verification-sdk/`.
 
 Ce que ce test prouve réellement : que la requête est bien formée, que la réponse est bien
 décodée, et que les cas d'erreur sont traités. C'est la part du code qui contient les bugs.
