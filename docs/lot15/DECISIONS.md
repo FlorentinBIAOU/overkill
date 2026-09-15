@@ -66,3 +66,9 @@ Tenu au fil du lot. Chaque décision, avec l'alternative écartée.
     enveloppe toute la réponse ; tout autre écart lève. Écarté : tout refuser
     (un réessai facturé pour une forme courante et sans ambiguïté) ; chercher du
     JSON n'importe où dans la prose (on décoderait ce que le modèle cite).
+13. **La classe de latence se mesure sur l'entrée nominale du test.** Pour un
+    traitement dont le temps dépend de la taille (un fichier CSV, une mémoire
+    de traduction), la classe déclarée est celle de l'entrée nominale du test ;
+    la fiche dit en toutes lettres quand elle change de classe avec la taille.
+    Écarté : déclarer la classe du pire cas (tout serait `>1 s`) ; une classe
+    par taille (le schéma n'en porte qu'une).
