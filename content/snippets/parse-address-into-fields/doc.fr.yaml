@@ -6,8 +6,7 @@ n0: |
   Découper une adresse postale en champs : des expressions régulières ancrées
   sur le code postal.
 
-  Niveau N0. Déterministe, bibliothèque standard seule, et assez court pour se
-  lire d'une traite.
+  Niveau N0. Déterministe, bibliothèque standard seule.
 
   Deux choses font que ça marche.
 
@@ -36,8 +35,7 @@ n1.js: |
 
   Une régression binaire par étiquette, entraînée par simple descente de
   gradient, et la plus forte l'emporte. Écrite ici plutôt que tirée d'une
-  bibliothèque, parce que cela fait quarante lignes et que c'est l'argument de
-  ce niveau.
+  bibliothèque : aucune dépendance à installer pour un modèle de cette taille.
 
 n1.py: |
   Étiqueter chaque jeton d'une adresse par une régression logistique sur des
@@ -53,19 +51,20 @@ n1.py: |
   voie, parce que « Bâtiment » est un mot que le modèle a déjà vu à cette place,
   et non un jeton imprévu dans un motif figé.
 
-  Le prix est un jeu d'entraînement étiqueté. Quelques dizaines d'adresses
-  étiquetées à la main suffisent pour commencer, et toute convention absente de
-  ce jeu est une convention que le modèle ne connaît pas.
+  Le prix est un jeu d'entraînement étiqueté. Le test et l'essai l'entraînent
+  sur dix-huit adresses étiquetées à la main, et il lit déjà une rue, une
+  résidence et une ville qu'il n'a jamais vues ; toute convention absente de ce
+  jeu est une convention que le modèle ne connaît pas.
 
 n2: |
   Découper une adresse avec un analyseur statistique auto-hébergé.
 
-  Niveau N2. libpostal est un analyseur entraîné sur des dizaines de millions
-  d'adresses issues de données ouvertes mondiales. Il étiquette un jeton d'après
-  son contexte, comme au niveau N1, mais son jeu d'entraînement est la planète :
-  le numéro allemand qui suit la rue, le code postal britannique qui ne fait pas
-  cinq chiffres, l'ordre japonais qui commence par la préfecture. Il tourne sur
-  votre machine, donc aucune adresse n'en sort.
+  Niveau N2. libpostal est un analyseur entraîné sur plus d'un milliard
+  d'adresses de tous les pays habités. Il étiquette un jeton d'après son
+  contexte, comme au niveau N1, mais là où N1 connaît les dix-huit adresses
+  françaises qu'on lui a étiquetées, l'entraînement de libpostal couvre aussi
+  les conventions des autres pays. S'il en lit une correctement, rien ici ne le
+  mesure. Il tourne sur votre machine, donc aucune adresse n'en sort.
 
   Ce qui vous appartient à ce niveau n'est pas le modèle. C'est le lot, la borne
   de taille, la correspondance entre son jeu d'étiquettes et le vôtre, et la
@@ -77,16 +76,15 @@ n2: |
 n3: |
   Découper une adresse en appelant un modèle généraliste.
 
-  Niveau N3. C'est l'option vers laquelle on va d'abord. Elle est ici pour qu'on
-  voie ce qu'elle coûte, pas parce que cette fiche la recommande.
+  Niveau N3. Il est ici pour qu'on voie ce qu'il coûte, pas parce que cette
+  fiche le recommande.
 
   Notez ce que le code doit faire et que N0 ne faisait pas : borner la taille de
   l'entrée, réessayer après un échec, analyser une réponse qui n'est que
   probablement du JSON valide, et vérifier que les champs rendus étaient bien
-  dans l'adresse. Ce dernier point est propre à l'extraction : un modèle à qui
-  l'on demande un code postal et qui n'en a pas en fournira volontiers un
-  plausible, et un code postal plausible est pire qu'un champ vide, parce que
-  rien en aval ne le mettra jamais en doute.
+  dans l'adresse. Ce dernier point est propre à l'extraction : une valeur que
+  l'adresse ne contient pas est écartée, parce qu'un code postal plausible est
+  pire qu'un champ vide — rien en aval ne le mettra jamais en doute.
 
   Cette plomberie est le vrai coût de ce niveau, et c'est la part que vos tests
   doivent couvrir, parce que le modèle lui-même n'est pas testable.

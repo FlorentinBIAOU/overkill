@@ -87,20 +87,11 @@ def test_un_champ_invente_est_ecarte():
     assert parse("rue des Lilas, Paris", client=client) == {**EMPTY, "street": "rue des Lilas", "city": "Paris"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : la garde teste une sous-chaîne ; un code postal inventé qui est un fragment d'un autre champ "
-    "(« 12 » tiré d'« Appartement 12 ») passe",
-)
 def test_defaut_un_fragment_d_un_autre_champ_ne_passe_pas_pour_un_code_postal():
     client = FakeLLM(response='{"street": "rue des Lilas", "complement": "Appartement 12", "postcode": "12", "city": "Paris"}')
     assert parse("rue des Lilas, Appartement 12, Paris", client=client)["postcode"] == ""
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une valeur rendue en nombre JSON (« postcode »: 75011) est écartée sans erreur alors qu'elle est dans l'adresse",
-)
 def test_defaut_un_code_postal_rendu_en_nombre_n_est_pas_perdu():
     client = FakeLLM(response='{"number": 8, "street": "rue des Lilas", "postcode": 75011, "city": "Paris"}')
     parsed = parse(FRENCH, client=client)

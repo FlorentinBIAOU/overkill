@@ -83,11 +83,6 @@ def test_les_abreviations_tapees_ressortent_sous_une_seule_orthographe():
         assert parse(f"{written} 69003 Lyon")["street_type"] == "avenue", written
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : « r » est dans le dictionnaire, mais après un numéro l'expression du numéro le prend pour "
-    "un indice de répétition : « 8 r des Lilas » donne le numéro « 8 r » et aucune rue",
-)
 def test_defaut_l_abreviation_r_apres_un_numero_est_lue_comme_rue():
     assert STREET_TYPES["r"] == "rue"
     assert parse("8 r des Lilas 75011 Paris") == LILAS
@@ -175,19 +170,10 @@ def test_production_chiffres_pleine_largeur_espaces_insecables_nfd():
     assert parse("3 Allée du Château 33000 Bordeaux")["street_type"] == "allée"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une marque d'ordre des octets en tête n'est retirée ni par NFKC ni par strip() ; le numéro revient vide "
-    "et « \\ufeff8 rue des Lilas » passe en rue (JavaScript la retire avec trim())",
-)
 def test_defaut_une_marque_d_ordre_des_octets_ne_casse_pas_le_numero():
     assert parse("﻿8 rue des Lilas, 75011 Paris") == LILAS
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une plage de numéros « 8-10 » donne le numéro « 8 » et la rue « -10 rue des Lilas », sans type de voie",
-)
 def test_defaut_une_plage_de_numeros_ne_passe_pas_dans_la_rue():
     parsed = parse("8-10 rue des Lilas 75011 Paris")
     assert parsed["street"] == "rue des Lilas" and parsed["street_type"] == "rue"

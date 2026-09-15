@@ -2,8 +2,7 @@
  * Parse a postal address into fields: regular expressions anchored on the
  * postcode.
  *
- * Rung N0. Deterministic, no dependency, and short enough to read in one
- * sitting.
+ * Rung N0. Deterministic, no dependency.
  *
  * Two things make this work.
  *
@@ -37,13 +36,15 @@ export const STREET_TYPES = {
 
 export const FIELDS = ['number', 'street_type', 'street', 'postcode', 'city'];
 
-// A house number, and the repetition index that may follow it: 8, 8 bis, 12B.
-const HOUSE_NUMBER = /^(\d{1,4})\s*(bis|ter|quater|[a-z])?\b/i;
+// A house number or a range of them, and the repetition index that may follow:
+// 8, 8-10, 8 bis, 12B. A lone letter counts only when it touches the number, so
+// the "r" of "8 r des Lilas" stays a street type.
+const HOUSE_NUMBER = /^(\d{1,4}(?:-\d{1,4})?)(?:\s*(bis|ter|quater)\b|([a-z])\b)?/i;
 
 // A French postcode: five digits standing alone.
 const POSTCODE = /\b\d{5}\b/g;
 
-/** Reduce commas, line breaks and exotic spaces to a single plain space. */
+/** Reduce commas, line breaks, exotic spaces and byte order marks to a single plain space. */
 export function normalise(text) {
   return text.normalize('NFKC').replaceAll(',', ' ').replace(/\s+/g, ' ').trim();
 }
@@ -64,8 +65,9 @@ export function parse(address) {
   const fields = Object.fromEntries(FIELDS.map((name) => [name, '']));
   let text = normalise(address);
 
-  // The anchor. Take the last postcode: a street name may carry a year, and a
-  // town never comes before its postcode in the French convention.
+  // The anchor. Take the last run of five digits: in a French address the
+  // postcode and the town close the address, so a five-digit number earlier in
+  // the line is not taken for the postcode.
   const postcodes = [...text.matchAll(POSTCODE)];
   if (postcodes.length > 0) {
     const found = postcodes.at(-1);

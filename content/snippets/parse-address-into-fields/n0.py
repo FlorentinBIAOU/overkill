@@ -2,8 +2,7 @@
 Parse a postal address into fields: regular expressions anchored on the
 postcode.
 
-Rung N0. Deterministic, standard library only, and short enough to read in one
-sitting.
+Rung N0. Deterministic, standard library only.
 
 Two things make this work.
 
@@ -40,17 +39,19 @@ STREET_TYPES = {
 
 FIELDS = ("number", "street_type", "street", "postcode", "city")
 
-# A house number, and the repetition index that may follow it: 8, 8 bis, 12B.
-HOUSE_NUMBER = re.compile(r"^(\d{1,4})\s*(bis|ter|quater|[a-z])?\b", re.IGNORECASE)
+# A house number or a range of them, and the repetition index that may follow:
+# 8, 8-10, 8 bis, 12B. A lone letter counts only when it touches the number, so
+# the "r" of "8 r des Lilas" stays a street type.
+HOUSE_NUMBER = re.compile(r"^(\d{1,4}(?:-\d{1,4})?)(?:\s*(bis|ter|quater)\b|([a-z])\b)?", re.IGNORECASE)
 
 # A French postcode: five digits standing alone.
 POSTCODE = re.compile(r"\b\d{5}\b")
 
 
 def normalise(text: str) -> str:
-    """Reduce commas, line breaks and exotic spaces to a single plain space."""
+    """Reduce commas, line breaks, exotic spaces and byte order marks to a single plain space."""
     text = unicodedata.normalize("NFKC", text).replace(",", " ")
-    return re.sub(r"\s+", " ", text).strip()
+    return re.sub(r"[\s\ufeff]+", " ", text).strip()
 
 
 def fold(word: str) -> str:
@@ -70,8 +71,9 @@ def parse(address: str) -> dict:
     fields = dict.fromkeys(FIELDS, "")
     text = normalise(address)
 
-    # The anchor. Take the last postcode: a street name may carry a year, and a
-    # town never comes before its postcode in the French convention.
+    # The anchor. Take the last run of five digits: in a French address the
+    # postcode and the town close the address, so a five-digit number earlier in
+    # the line is not taken for the postcode.
     postcodes = list(POSTCODE.finditer(text))
     if postcodes:
         found = postcodes[-1]

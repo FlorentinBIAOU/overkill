@@ -184,16 +184,14 @@ test('production : une chaîne vide et de la ponctuation seule', () => {
   assert.deepEqual(parse(model, ' ,;. '), EMPTY);
 });
 
-test("DÉFAUT : un modèle entraîné sur un jeu vide est accepté, puis parse lève TypeError (reduce d'un tableau vide)", async () => {
-  await assert.rejects(async () => {
-    let empty;
-    try {
-      empty = train([]);
-    } catch {
-      return;
-    }
-    assert.doesNotThrow(() => parse(empty, '8 rue des Lilas'));
-  }, assert.AssertionError);
+test("un modèle entraîné sur un jeu vide est accepté, puis parse lève TypeError (reduce d'un tableau vide)", async () => {
+  let empty;
+  try {
+    empty = train([]);
+  } catch {
+    return;
+  }
+  assert.doesNotThrow(() => parse(empty, '8 rue des Lilas'));
 });
 
 test('production : une adresse de trois mille caractères termine', () => {

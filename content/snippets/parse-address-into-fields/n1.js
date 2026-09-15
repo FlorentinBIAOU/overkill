@@ -11,8 +11,8 @@
  * that position, not an unexpected token in a fixed pattern.
  *
  * One binary regression per label, trained by plain gradient descent, and the
- * strongest one wins. Written out rather than pulled from a library, because
- * that is forty lines and it is the argument of this rung.
+ * strongest one wins. Written out rather than pulled from a library: no
+ * dependency to install for a model this size.
  */
 
 // The labels are the fields, so the mapping back is a grouping and nothing more.
@@ -35,8 +35,10 @@ const isDigits = (token) => /^\d+$/.test(token);
 /**
  * What the token looks like, and what surrounds it.
  *
- * The neighbours carry most of the signal: five digits followed by one
- * capitalised word is a postcode and a town, wherever it sits in the line.
+ * The neighbours carry much of the signal: five digits followed by a
+ * capitalised word look like a postcode and a town. Position counts as well:
+ * on "75011 Paris, 8 rue des Lilas" the end of the line wins, and the town
+ * comes out as "Lilas".
  */
 export function features(tokens, i) {
   const token = tokens[i];
@@ -73,6 +75,10 @@ export function train(examples, { epochs = 300, rate = 0.3 } = {}) {
       targets.push(labels[i]);
     });
   }
+
+  // Two labels at least, as scikit-learn demands: with one, every token would
+  // get it, and with none, parsing would have no label to pick.
+  if (new Set(targets).size < 2) throw new RangeError('train needs at least two different labels');
 
   // One column per trait seen in training. A trait absent from this map is a
   // word the model never met, and it simply contributes nothing at prediction.

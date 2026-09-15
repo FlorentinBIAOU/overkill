@@ -204,11 +204,6 @@ def test_l_analyseur_est_injecte_et_par_defaut_c_est_le_vrai():
         parse_addresses([FRENCH])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une ligne d'un autre type (les paires brutes de parse_address au lieu d'un dictionnaire) lève "
-    "AttributeError au lieu de ParsingUnavailable",
-)
 def test_defaut_une_ligne_d_un_autre_type_leve_l_erreur_nommee():
     parser = FakeClassifier({FRENCH: [("8", "house_number"), ("rue des lilas", "road")]})
     with pytest.raises(ParsingUnavailable):

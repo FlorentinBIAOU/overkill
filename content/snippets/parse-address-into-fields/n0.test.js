@@ -64,11 +64,9 @@ test('les abréviations tapées ressortent sous une seule orthographe', () => {
   }
 });
 
-test('DÉFAUT : « r » est dans le dictionnaire, mais « 8 r des Lilas » donne le numéro « 8 r » et aucune rue', async () => {
+test('« r » est dans le dictionnaire, mais « 8 r des Lilas » donne le numéro « 8 r » et aucune rue', async () => {
   assert.equal(STREET_TYPES.r, 'rue');
-  await assert.rejects(async () => {
-    assert.deepEqual(parse('8 r des Lilas 75011 Paris'), LILAS);
-  }, assert.AssertionError);
+  assert.deepEqual(parse('8 r des Lilas 75011 Paris'), LILAS);
 });
 
 test("garde l'indice de répétition avec le numéro", () => {
@@ -146,10 +144,8 @@ test("production : chiffres pleine largeur, espaces insécables, NFD, marque d'o
   assert.deepEqual(parse('﻿8 rue des Lilas, 75011 Paris'), LILAS);
 });
 
-test('DÉFAUT : une plage « 8-10 » donne le numéro « 8 » et la rue « -10 rue des Lilas »', async () => {
-  await assert.rejects(async () => {
-    const parsed = parse('8-10 rue des Lilas 75011 Paris');
-    assert.equal(parsed.street, 'rue des Lilas');
-    assert.equal(parsed.street_type, 'rue');
-  }, assert.AssertionError);
+test('une plage « 8-10 » donne le numéro « 8 » et la rue « -10 rue des Lilas »', async () => {
+  const parsed = parse('8-10 rue des Lilas 75011 Paris');
+  assert.equal(parsed.street, 'rue des Lilas');
+  assert.equal(parsed.street_type, 'rue');
 });

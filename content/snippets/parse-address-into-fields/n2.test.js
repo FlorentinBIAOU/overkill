@@ -179,11 +179,9 @@ test("l'analyseur est injecté, et par défaut c'est le vrai", async () => {
   await assert.rejects(() => parseAddresses([FRENCH]), { code: 'ERR_MODULE_NOT_FOUND', message: /node-postal/ });
 });
 
-test("DÉFAUT : une ligne d'un autre type (tableau de paires) devient des champs vides, sans erreur", async () => {
+test("une ligne d'un autre type (tableau de paires) devient des champs vides, sans erreur", async () => {
   const parser = new FakeClassifier({ [FRENCH]: [{ component: 'house_number', value: '8' }, { component: 'road', value: 'rue des lilas' }] });
-  await assert.rejects(async () => {
-    await assert.rejects(() => parseAddresses([FRENCH], parser), ParsingUnavailable);
-  }, assert.AssertionError);
+  await assert.rejects(() => parseAddresses([FRENCH], parser), ParsingUnavailable);
 });
 
 // ---------------------------------------------------------------------------
@@ -206,15 +204,13 @@ test('production : accents NFD, emoji, marque d’ordre', async () => {
   assert.deepEqual(parser.calls, [batch]);
 });
 
-test('DÉFAUT : le plafond compte des unités UTF-16 ; 300 emojis sont refusés en JavaScript, acceptés en Python', async () => {
+test('le plafond compte des unités UTF-16 ; 300 emojis sont refusés en JavaScript, acceptés en Python', async () => {
   const parser = new FakeClassifier({}, { city: 'paris' });
-  await assert.rejects(async () => {
-    let rows;
-    try {
-      rows = await parseAddresses(['🏠'.repeat(MAX_CHARACTERS)], parser);
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(rows.length, 1);
-  }, assert.AssertionError);
+  let rows;
+  try {
+    rows = await parseAddresses(['🏠'.repeat(MAX_CHARACTERS)], parser);
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.equal(rows.length, 1);
 });

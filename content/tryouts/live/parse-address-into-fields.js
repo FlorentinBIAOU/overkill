@@ -7,8 +7,8 @@
  * Une adresse postale française ne se traduit pas : les exemples sont donc les
  * mêmes dans les deux langues, et seuls les noms de champs changent. Un seul
  * modèle, entraîné une fois au chargement de la page sur dix-huit adresses
- * étiquetées mot par mot — la forme que prend le travail de ce barreau, et son
- * coût réel. Compter environ 120 millisecondes.
+ * étiquetées mot par mot — la forme que prend le travail de ce niveau, et son
+ * coût réel.
  *
  * Aucune de ces adresses n'est le domicile de quelqu'un ni le siège d'une
  * société : elles sont inventées, comme celles des tests.
@@ -16,7 +16,7 @@
 import { parse, tokenise, train } from '../../snippets/parse-address-into-fields/n1.js';
 
 /* Étiqueté par segments et non par mot : c'est la forme qu'un humain peut
-   relire, et l'erreur d'alignement est ce qui fait rater ce barreau. */
+   relire, et l'erreur d'alignement est ce qui fait rater ce niveau. */
 const ETIQUETEES = [
   [['8', 'number'], ['rue', 'street_type'], ['des Lilas', 'street'], ['75011', 'postcode'], ['Paris', 'city']],
   [['14', 'number'], ['avenue', 'street_type'], ['des Cerisiers', 'street'], ['69003', 'postcode'], ['Lyon', 'city']],
@@ -154,8 +154,8 @@ export default {
       input: 'Hauptstrasse 5, 10115 Berlin',
       fails: true,
       why: {
-        fr: 'Toutes les adresses étiquetées placent le numéro devant et cinq chiffres avant la ville. Ici le nom de la rue porte le type de voie et passe en complément, la voie ressort vide, et le 5 devient un numéro alors qu’il est le numéro… par accident de position. Rien ne permet au modèle de dire qu’il n’a jamais vu ça : il étiquette quand même, et avec le même aplomb. Couvrir un pays de plus, c’est une campagne d’étiquetage de plus.',
-        en: 'Every tagged address puts the number first and five digits before the town. Here the street name carries its own street type and lands in the complement, the street comes back empty, and the 5 becomes a house number — right, but by accident of position. Nothing lets the model say it has never seen this: it labels the tokens anyway, with exactly the same confidence. Covering one more country means one more round of hand tagging.',
+        fr: 'Toutes les adresses étiquetées placent le numéro devant et cinq chiffres avant la ville. Ici le nom de la rue porte le type de voie et passe en complément, la voie ressort vide, et le 5 devient un numéro alors qu’il est le numéro… par accident de position. Rien ne permet au modèle de dire qu’il n’a jamais vu ça : il étiquette quand même. Couvrir un pays de plus, c’est une campagne d’étiquetage de plus.',
+        en: 'Every tagged address puts the number first and five digits before the town. Here the street name carries its own street type and lands in the complement, the street comes back empty, and the 5 becomes a house number — right, but by accident of position. Nothing lets the model say it has never seen this: it labels the tokens anyway. Covering one more country means one more round of hand tagging.',
       },
     },
   ],

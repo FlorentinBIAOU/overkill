@@ -66,21 +66,17 @@ test('un champ inventé est écarté', async () => {
   assert.deepEqual(await parse('rue des Lilas, Paris', { client }), { ...EMPTY, street: 'rue des Lilas', city: 'Paris' });
 });
 
-test('DÉFAUT : la garde teste une sous-chaîne ; « 12 » tiré d’« Appartement 12 » passe pour un code postal', async () => {
+test('la garde teste une sous-chaîne ; « 12 » tiré d’« Appartement 12 » passe pour un code postal', async () => {
   const client = new FakeLLM({ response: '{"street": "rue des Lilas", "complement": "Appartement 12", "postcode": "12", "city": "Paris"}' });
   const parsed = await parse('rue des Lilas, Appartement 12, Paris', { client });
-  await assert.rejects(async () => {
-    assert.equal(parsed.postcode, '');
-  }, assert.AssertionError);
+  assert.equal(parsed.postcode, '');
 });
 
-test('DÉFAUT : un code postal rendu en nombre JSON est écarté sans erreur', async () => {
+test('un code postal rendu en nombre JSON est écarté sans erreur', async () => {
   const client = new FakeLLM({ response: '{"number": 8, "street": "rue des Lilas", "postcode": 75011, "city": "Paris"}' });
   const parsed = await parse(FRENCH, { client });
-  await assert.rejects(async () => {
-    assert.equal(parsed.postcode, '75011');
-    assert.equal(parsed.number, '8');
-  }, assert.AssertionError);
+  assert.equal(parsed.postcode, '75011');
+  assert.equal(parsed.number, '8');
 });
 
 test('refuse une adresse trop longue avant toute dépense', async () => {
@@ -144,16 +140,14 @@ test('production : NFD contre NFC', async () => {
   assert.equal((await parse('3 Allée du Château, 33000 Bordeaux', { client })).street, 'allée du Château');
 });
 
-test('DÉFAUT : le plafond compte des unités UTF-16 ; 300 emojis sont refusés en JavaScript, acceptés en Python', async () => {
-  await assert.rejects(async () => {
-    let parsed;
-    try {
-      parsed = await parse('🏠'.repeat(MAX_CHARACTERS), { client: new FakeLLM({ response: '{}' }) });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.deepEqual(parsed, EMPTY);
-  }, assert.AssertionError);
+test('le plafond compte des unités UTF-16 ; 300 emojis sont refusés en JavaScript, acceptés en Python', async () => {
+  let parsed;
+  try {
+    parsed = await parse('🏠'.repeat(MAX_CHARACTERS), { client: new FakeLLM({ response: '{}' }) });
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.deepEqual(parsed, EMPTY);
 });
 
 test("production : zéro essai lève l'erreur nommée sans appel", async () => {

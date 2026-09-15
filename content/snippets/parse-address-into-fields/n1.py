@@ -10,9 +10,10 @@ That is the whole gain: a complement in the middle of the line no longer
 swallows the street, because "Bâtiment" is a word the model has seen in that
 position, not an unexpected token in a fixed pattern.
 
-The price is a labelled training set. A few dozen addresses tagged by hand are
-enough to start, and every convention absent from that set is a convention the
-model does not know.
+The price is a labelled training set. The test and the tryout train it on
+eighteen addresses tagged by hand, and it already reads a street, a residence
+and a town it never saw; every convention absent from that set is a convention
+the model does not know.
 """
 
 import re
@@ -43,8 +44,10 @@ def features(tokens: list[str], i: int) -> dict:
     """
     What the token looks like, and what surrounds it.
 
-    The neighbours carry most of the signal: five digits followed by one
-    capitalised word is a postcode and a town, wherever it sits in the line.
+    The neighbours carry much of the signal: five digits followed by a
+    capitalised word look like a postcode and a town. Position counts as well:
+    on "75011 Paris, 8 rue des Lilas" the end of the line wins, and the town
+    comes out as "Lilas".
     """
     token = tokens[i]
     return {
