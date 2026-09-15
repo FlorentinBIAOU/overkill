@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { similarity } from './n0.js';
 import { buildIndex, match } from './n1.js';
 
-// A register the size of a small trade directory. Example data lives here,
-// never in the snippet.
+// Un registre de la taille d'un petit annuaire professionnel.
 const REGISTER = [
   'Boulangerie Martin SARL',
   'Boulangerie Dupont',
@@ -13,60 +14,157 @@ const REGISTER = [
   'SNCF',
   'Société Nationale des Chemins de fer Français',
 ];
+const SNCF_DEVELOPPEE = REGISTER.at(-1);
 
 const INDEX = buildIndex(REGISTER);
+const ranked = (query, index = INDEX, size = REGISTER.length) => Object.fromEntries(match(index, query, size));
+const round12 = (x) => Number(x.toFixed(12));
 
-/** The whole register, ranked, as a name to score map. */
-function ranked(query) {
-  return Object.fromEntries(match(INDEX, query, REGISTER.length));
-}
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
 
-test('finds the right company first', () => {
-  const [name, score] = match(INDEX, 'Boulangerie Martin')[0];
-  assert.equal(name, 'Boulangerie Martin SARL');
-  // Pinned to twelve decimals: the Python snippet returns this number.
-  assert.equal(Number(score.toFixed(12)), 0.883177974427);
+test("point de rupture : le sigle n'atteint pas les trois premiers, doublé par deux sociétés sans rapport", () => {
+  const top = match(INDEX, 'SNCF', 4);
+  assert.deepEqual(top.map(([name]) => name), ['SNCF', 'Menuiserie Dubois SA', 'Boulangerie Martin SARL', SNCF_DEVELOPPEE]);
+  // Doublée par un score, pas par l'ordre du registre.
+  assert.ok(top[1][1] > top[3][1] && top[2][1] > top[3][1] && top[3][1] > 0);
+  assert.equal(round12(top[3][1]), 0.010394932704);
 });
 
-test('word order costs nothing', () => {
-  // Where N0 collapses on a swap, n-grams inside word boundaries do not.
+test("point de rupture : pondérer répare l'ordre des mots et classe la bonne boulangerie", () => {
   assert.deepEqual(match(INDEX, 'MARTIN BOULANGERIE'), match(INDEX, 'Boulangerie Martin'));
-});
-
-test('a rare fragment outweighs a common one', () => {
-  // "boulangerie" is shared by two entries and settles nothing; the surname
-  // is what separates them.
   const scores = ranked('Boulangerie Martin');
   assert.ok(scores['Boulangerie Martin SARL'] > scores['Boulangerie Dupont']);
 });
 
-test('a plural and a swap at once', () => {
+// ---------------------------------------------------------------------------
+// Autres affirmations du niveau
+// ---------------------------------------------------------------------------
+
+test('trouve la bonne société en premier', () => {
+  const [name, score] = match(INDEX, 'Boulangerie Martin')[0];
+  assert.equal(name, 'Boulangerie Martin SARL');
+  assert.equal(round12(score), 0.883177974427); // le même nombre en Python
+});
+
+test("un fragment rare pèse plus qu'un fragment courant", () => {
+  const register = ['Boulangerie Martin', 'Boulangerie Dupont', 'Boulangerie de la Quiquengrogne',
+    'Boulangerie Petit', 'Garage Lemoine', 'Fleurs Roux'];
+  const index = buildIndex(register);
+  assert.ok(index.idf.get('quiq') > index.idf.get('boul'));
+  const [name, score] = match(index, 'Quiquengrogne', 1)[0];
+  assert.equal(name, 'Boulangerie de la Quiquengrogne');
+  assert.ok(Math.abs(score - 0.8013573) < 1e-6);
+  assert.deepEqual(match(index, 'Boulangerie', 4).map(([n]) => n),
+    ['Boulangerie Petit', 'Boulangerie Martin', 'Boulangerie Dupont', 'Boulangerie de la Quiquengrogne']);
+});
+
+test('Jaro-Winkler traite tous les caractères de la même façon', () => {
+  assert.ok(similarity('Boulangerie Martin', 'Boulangerie Dupont') > 0.85);
+  assert.ok(ranked('Boulangerie Martin')['Boulangerie Dupont'] < 0.6);
+});
+
+test('les fragments ne chevauchent jamais deux mots', () => {
+  assert.deepEqual([...INDEX.idf.keys()].filter((g) => g.trim().includes(' ')), []);
+});
+
+test("l'ordre des mots ne coûte rien ici, au contraire de N0", () => {
+  assert.deepEqual(match(INDEX, 'Martin Dubois', REGISTER.length), match(INDEX, 'Dubois Martin', REGISTER.length));
+  assert.ok(similarity('Martin Dubois', 'Dubois Martin') < 0.5);
+});
+
+test('un pluriel et une inversion à la fois', () => {
   assert.equal(match(INDEX, 'Menuiseries Dubois')[0][0], 'Dubois Menuiserie');
 });
 
-test('an empty query scores nothing anywhere', () => {
+test('des fragments de deux à quatre caractères survivent à une faute de frappe', () => {
+  const [name, score] = match(INDEX, 'Boulangrie Martin')[0];
+  assert.equal(name, 'Boulangerie Martin SARL');
+  assert.equal(round12(score), 0.818982690918);
+});
+
+test('les lignes sont ramenées à la longueur un, donc le cosinus est un produit scalaire', () => {
+  for (const vector of INDEX.vectors) {
+    assert.ok(Math.abs(Math.hypot(...vector.values()) - 1) < 1e-12);
+  }
+  for (const name of REGISTER) assert.ok(Math.abs(ranked(name)[name] - 1) < 1e-12, name);
+});
+
+test('une recherche dans dix mille noms termine vite', () => {
+  const names = Array.from({ length: 10_000 }, (_, i) => `Entreprise ${i} ${String.fromCharCode(97 + (i % 26))}${String.fromCharCode(97 + (Math.floor(i / 26) % 26))}`);
+  const index = buildIndex(names);
+  const start = performance.now();
+  const top = match(index, names[4242]);
+  assert.ok(performance.now() - start < 500);
+  assert.equal(top[0][0], names[4242]);
+});
+
+test("les égalités reviennent dans l'ordre du registre", () => {
+  const register = ['Dupont SA', 'Martin', 'Dupont SA', 'Garage', 'Dupont SA'];
+  const index = buildIndex(register);
+  assert.deepEqual(match(index, '', 5).map(([n]) => n), register);
+  const duplicates = match(index, 'Dupont', 3);
+  assert.deepEqual(duplicates.map(([n]) => n), ['Dupont SA', 'Dupont SA', 'Dupont SA']);
+  assert.equal(new Set(duplicates.map(([, s]) => s)).size, 1);
+});
+
+test("un nom que personne n'a écrit obtient quand même un classement", () => {
+  const [name, score] = match(INDEX, 'Kwyjibo')[0];
+  assert.ok(REGISTER.includes(name) && score > 0);
+});
+
+test('n1 est déterministe', () => {
+  const first = match(buildIndex(REGISTER), 'Boulangerie Martin', 7);
+  for (let i = 0; i < 10; i += 1) assert.deepEqual(match(buildIndex(REGISTER), 'Boulangerie Martin', 7), first);
+});
+
+test("n1 est écrit en entier, sans dépendance", () => {
+  const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /^\s*import\s|require\(/m);
+});
+
+test('la même arithmétique que scikit-learn : valeurs épinglées en Python', () => {
+  assert.equal(round12(ranked('Société Générale')[SNCF_DEVELOPPEE]), 0.469061234241);
+  assert.equal(round12(ranked('A B')['Café de la Gare']), 0.105066545124);
+  assert.equal(round12(ranked('İstanbul Ltd')['Boulangerie Martin SARL']), 0.178184011082);
+});
+
+test('INFIRMÉ : « la même arithmétique que scikit-learn » ; hors du plan multilingue de base, les n-grammes sont découpés en unités UTF-16', async () => {
+  // Python : 0,475128643566 ; JavaScript : 0,606912036982.
+  const emoji = buildIndex(['🍞🥐 Boulangerie Martin', 'Boulangerie Dupont', '𝔄𝔅 Conseil']);
+  await assert.rejects(async () => {
+    assert.equal(round12(match(emoji, '𝔄𝔅', 1)[0][1]), 0.475128643566);
+  }, assert.AssertionError);
+});
+
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
+
+test('production : une requête vide ne marque rien', () => {
   assert.ok(match(INDEX, '', REGISTER.length).every(([, score]) => score === 0));
 });
 
-test('ties come back in register order', () => {
-  // A matching run has to be replayable, so the sort is stable.
-  assert.deepEqual(match(INDEX, '', REGISTER.length).map(([name]) => name), REGISTER);
+test('production : un registre vide rend une liste vide', () => {
+  assert.deepEqual(match(buildIndex([]), 'Martin'), []);
 });
 
-test('a name nobody wrote still gets a ranking', () => {
-  // Cosine always answers. A top hit is a candidate, not a decision: the
-  // caller keeps a floor under which nothing is accepted.
-  const [name, score] = match(INDEX, 'Kwyjibo')[0];
-  assert.ok(REGISTER.includes(name));
-  assert.ok(score > 0);
+test('production : topK nul ou plus grand que le registre', () => {
+  assert.deepEqual(match(INDEX, 'Martin', 0), []);
+  assert.equal(match(INDEX, 'Martin', 100).length, REGISTER.length);
 });
 
-test('breaking point: the acronym that N0 missed is still missed', () => {
-  // TF-IDF weighs fragments better than Jaro-Winkler ever did, but it still
-  // only sees fragments. The expanded name shares almost no character n-gram
-  // with its own acronym, so it does not even reach the top three: two
-  // unrelated names beat it. That failure is the whole reason N2 exists.
-  const expanded = 'Société Nationale des Chemins de fer Français';
-  assert.ok(ranked('SNCF')[expanded] < 0.05);
-  assert.ok(!match(INDEX, 'SNCF', 3).some(([name]) => name === expanded));
+test('production : accent décomposé ou absent garde la bonne réponse en tête', () => {
+  for (const [query, expected] of [['Café de la Gare', 0.887063254874], ['CAFE DE LA GARE', 0.884139130742]]) {
+    const [name, score] = match(INDEX, query)[0];
+    assert.equal(name, 'Café de la Gare');
+    assert.equal(round12(score), expected);
+  }
+});
+
+test('production : une requête de cent Ko termine', () => {
+  const start = performance.now();
+  match(INDEX, 'boulangerie martin '.repeat(5000));
+  assert.ok(performance.now() - start < 2000);
 });
