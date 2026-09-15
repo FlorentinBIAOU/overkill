@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from n0 import PROFILE_SIZE, detect, distance, profile, ranked, trigrams
+from n0 import PROFILE_SIZE, WORDS, detect, distance, profile, ranked, trigrams
 
 # One paragraph per language is enough to rank three hundred trigrams. The
 # samples live here, not in the snippet: the snippet builds a profile from
@@ -74,18 +74,23 @@ def test_point_de_rupture_chat_ressort_en_anglais():
     assert detect(FRENCH, PROFILES) == "fr"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la fiche dit « ses quatre trigrammes étant ceux que l'anglais "
-        "emploie dans « that » et « what » » ; seuls « hat » et « at␣ » sont dans le "
-        "profil anglais, « ␣ch » et « cha » ne sont dans aucun profil"
-    ),
-)
-def test_infirme_les_quatre_trigrammes_de_chat_sont_dans_le_profil_anglais():
+def test_point_de_rupture_de_ses_quatre_trigrammes_les_deux_derniers_sont_dans_le_profil_anglais_aucun_ailleurs():
+    """
+    breaking_point : « de ses quatre trigrammes, les deux derniers figurent dans
+    le profil anglais, qui les tient de « that » et de « at », et aucun ne figure
+    dans les profils français et espagnol ».
+    """
     grams = list(trigrams("chat"))
     assert grams == [" ch", "cha", "hat", "at "]
-    assert all(gram in PROFILES["en"] for gram in grams)
+    assert [gram in PROFILES["en"] for gram in grams] == [False, False, True, True]
+    assert not any(gram in PROFILES["fr"] or gram in PROFILES["es"] for gram in grams)
+    # « qui les tient de « that » et de « at » » : ce sont les seuls mots de
+    # l'échantillon anglais qui produisent l'un de ces deux trigrammes.
+    source = {w for w in WORDS.findall(SAMPLES["en"].lower()) if {"hat", "at "} & set(trigrams(w))}
+    assert source == {"that", "at"}
+    # Témoin : c'est bien ce qui fait gagner l'anglais, les deux autres restent au maximum.
+    scores = dict(ranked("chat", PROFILES))
+    assert scores["fr"] == scores["es"] == PROFILE_SIZE > scores["en"]
 
 
 def test_point_de_rupture_sur_ca_va_les_trois_langues_sont_a_la_distance_maximale_et_l_ordre_alphabetique_repond():
@@ -139,7 +144,11 @@ def test_le_modele_entier_tient_en_quelques_centaines_de_chaines_de_trois_caract
 
 
 def test_chaque_langue_classe_ses_trigrammes_cites_mieux_que_les_autres_langues():
-    """docstring : « "ent", "les", "eur" en français, "the", "ing" en anglais, "que", "los" en espagnol »."""
+    """
+    docstring : « Each language uses some trigrams far more than others: "ent",
+    "les", "eur" in French, "the", "ing" in English, "que", "los" in Spanish ».
+    Chacun est mieux classé dans sa langue que dans les deux autres.
+    """
     cited = {"fr": ["ent", "les", "eur"], "en": ["the", "ing"], "es": ["que", "los"]}
     for language, grams in cited.items():
         for gram in grams:
@@ -157,12 +166,15 @@ def test_le_bourrage_d_espaces_distingue_l_article_du_milieu_de_mot():
     assert " le" not in inside
 
 
-def test_un_rang_survit_a_un_echantillon_quatre_fois_plus_long_et_a_un_texte_quatre_fois_plus_court():
+def test_le_meme_texte_repete_quatre_fois_garde_tous_ses_rangs_et_sa_distance():
     """
-    docstring : « Un rang survit sans changer à un échantillon quatre fois plus
-    long, et à un texte quatre fois plus court ». Vrai pour la répétition du
-    même texte ; un échantillon différent et plus long change les rangs.
+    docstring : « A count grows with the length of the text, a rank does not:
+    the same text repeated four times keeps every rank. And the distance is
+    divided by the number of trigrams, so a long text and a short one land on
+    the same scale ».
     """
+    counts = lambda text: {g: list(trigrams(text)).count(g) for g in (" le", "les")}
+    assert counts(" ".join([FRENCH] * 4)) == {g: 4 * c for g, c in counts(FRENCH).items()}
     sample = SAMPLES["fr"]
     assert profile(" ".join([sample] * 4)) == PROFILES["fr"]
     long_text = " ".join([FRENCH] * 4)

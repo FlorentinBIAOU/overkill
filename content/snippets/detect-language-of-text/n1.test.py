@@ -117,7 +117,8 @@ def test_detecte_une_phrase_dans_chaque_langue():
 
 def test_les_traits_sont_des_n_grammes_d_un_a_trois_caracteres_bornes_aux_mots():
     """
-    docstring : « Les mêmes traits qu'en N0, un à trois caractères » ; docstring
+    docstring : « Features close to those of N0, n-grams of one to three
+    characters cut at word boundaries » ; docstring
     de train : « char_wb cuts n-grams inside word boundaries […] exactly as the
     padding of N0 did ».
     """
@@ -195,17 +196,23 @@ def test_verdict_la_probabilite_de_n1_monte_a_la_quasi_certitude_quand_l_ecart_d
     assert probabilities(MODEL, MIXED)["fr"] > 0.99
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : verdict_rationale dit que le seuil de N1 « vous protège des textes "
-        "courts » ; sur « chat », quatre lettres, la probabilité anglaise dépasse 0,99 "
-        "et le seuil de 0,9 laisse passer la mauvaise langue"
-    ),
-)
-def test_infirme_le_seuil_de_n1_protege_des_textes_courts():
+def test_verdict_le_seuil_s_abstient_sur_ca_va_mais_laisse_passer_chat_en_anglais_et_ne_connait_que_les_langues_apprises():
+    """
+    verdict_rationale : « il s'abstient sur « ça va » mais laisse passer « chat »
+    en anglais au-dessus du seuil, et […] il ne connaît que les langues apprises ».
+    """
     assert detect(MODEL, "ça va", minimum=THRESHOLD) is None
-    assert detect(MODEL, "chat", minimum=THRESHOLD) is None
+    assert detect(MODEL, "chat", minimum=THRESHOLD) == "en"
+    assert probabilities(MODEL, "chat")["en"] > THRESHOLD
+    assert set(probabilities(MODEL, GERMAN)) == {"fr", "en", "es"}
+    assert detect(MODEL, GERMAN, minimum=THRESHOLD) == "en"
+
+
+def test_verdict_n0_ne_se_tait_pas_non_plus_sur_chat():
+    """verdict_rationale : « N0 l'emporte sur […] savoir quand se taire » ; sur « chat », N0 répond aussi « en », avec un écart large."""
+    scores = n0.ranked("chat", N0_PROFILES)
+    assert scores[0][0] == "en"
+    assert scores[1][1] - scores[0][1] > 100
 
 
 def test_chat_est_anglais_avec_certitude():

@@ -150,3 +150,54 @@ es), inchangés. Seuil N1 : 0,9, celui des tests d'origine.
 - Le double `FakeLLM` expose `complete`, qui n'existe pas dans le vrai kit : il
   entretient le défaut 62 dans toutes les fiches N3. Le test de forme du vrai
   client est écrit dans chaque fichier de test, faute de double partagé.
+
+## Tour 2 — contre-épreuve
+
+Après `90e0aba` (corrections du rédacteur, tour 1). Tests : n0.py 25, n0.js 29
+(inchangés en nombre), n1.py 24 → 25, n1.js 24 → 25, n3.py 25 → 32, n3.js 25 →
+32 ; 16 tests ajoutés, 5 marqués réécrits sur la nouvelle phrase, 8 renommés,
+aucun retiré. Les doubles locaux `RealShapedClient` sont remplacés par
+`_harness/fake_sdk.py` / `fake-sdk.mjs`. **Plus aucun marquage.**
+`node scripts/test-snippets.mjs detect-language-of-text` : vert.
+
+### Lignes « À retester »
+
+| # | Ligne du tour 1 | Désormais | Test |
+|---|---|---|---|
+| 2 | N0 breaking_point : « de ses quatre trigrammes, les deux derniers figurent dans le profil anglais, qui les tient de « that » et de « at », et aucun ne figure dans les profils français et espagnol » | démontrée (py, js) : présence dans le profil anglais `[False, False, True, True]` ; aucun dans fr ni es ; les seuls mots de l'échantillon anglais qui produisent « hat » ou « at␣ » sont « that » et « at » ; témoin : fr et es restent à 300, en descend | test_point_de_rupture_de_ses_quatre_trigrammes_les_deux_derniers_sont_dans_le_profil_anglais_aucun_ailleurs |
+| 82 | essai, why de « chat » : « dont deux, « hat » et « at », que l'échantillon anglais emploie dans « that » et « at », et qu'aucun des deux autres n'emploie » | démontrée (js) : seul l'échantillon anglais produit l'un des deux trigrammes ; les distances affichées par l'essai sont celles des échantillons des tests | essai : « chat » ressort en anglais avec un écart large, et le cas est marqué en échec |
+| 76, 77 | verdict_rationale : « il s'abstient sur « ça va » mais laisse passer « chat » en anglais au-dessus du seuil, et qu'il ne connaît que les langues apprises » | démontrée (py, js) au seuil 0,9 ; l'allemand ressort en anglais au-dessus du seuil, les probabilités ne portent que sur fr, en, es. Ajout : N0 ne se tait pas non plus sur « chat » (écart > 100) | test_verdict_le_seuil_s_abstient_sur_ca_va_mais_laisse_passer_chat_en_anglais_et_ne_connait_que_les_langues_apprises, test_verdict_n0_ne_se_tait_pas_non_plus_sur_chat |
+| 52 | N3 breaking_point : « Une confiance écrite par le modèle n'est pas mesurée, et l'extrait n'en lit aucune » | démontrée (py, js) : le prompt ne contient plus « confidence » ; absente, textuelle ou négative, elle ne change pas le code rendu. Les tests « 0,99 puis 0,01 » existants démontrent la suite de la phrase | test_point_de_rupture_l_extrait_ne_lit_aucune_confiance_et_n_en_demande_pas |
+| 59 | N3 commentaire : « "fr", "FR", "fr-CA" and the locale form "fr_CA" are all read as "fr". A language name such as "French" is not a code, and is refused below » | démontrée (py, js), scindée : « fr_CA » et « FR_ca » rendent « fr » ; « French » et « français » lèvent `DetectionUnavailable` après un seul appel | test_normalise_les_formes_courantes_d_un_code, test_un_nom_de_langue_comme_french_n_est_pas_un_code_et_il_est_refuse |
+| 58 | N3 docstring : « normalise a code the model may write in capitals, with a region or with stray spaces » | démontrée (py, js) | test_normalise_les_formes_courantes_d_un_code |
+| 62 | N3 client par défaut | démontrée (py, js) contre le double du harnais, sans méthode `complete` : endpoint `chat.completions`, `model == MODEL == "gpt-4.1-mini"`, `messages == [{role: user, content: prompt exact}]`, `temperature == 0`, un seul appel ; `content` nul → `DetectionUnavailable` après trois appels au kit ; panne du kit retentée deux fois puis réussie, trois pannes → erreur. Python : sans client, `from openai import OpenAI` puis `OpenAI()` est bien appelé (module remplacé dans `sys.modules`). JavaScript : un modèle passé à `providerClient` est celui envoyé | test_production_l_adaptateur_par_defaut_appelle_la_surface_du_vrai_kit, test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_trois_essais, test_production_l_adaptateur_une_panne_du_kit_est_retentee, test_production_sans_client_le_kit_openai_est_construit_et_appele (py), l'adaptateur, un modèle passé en argument est celui envoyé (js) |
+| 62 | « le défaut n'est construit qu'après les contrôles d'entrée » (corrections) | démontrée (py, js) : sans client, texte vide, blanc et trop long ne construisent rien ; témoin js : un texte ordinaire va jusqu'à l'import du kit absent | test_production_le_client_par_defaut_n_est_construit_qu_apres_les_controles_d_entree |
+| 68 | texte vide ou blanc | démontrée (py, js), renommé | test_production_un_texte_vide_ou_blanc_ne_coute_aucun_appel |
+| 69 | js : emoji à la frontière de l'extrait ; commentaire « Counted in characters, as Python counts them » | démontrée (py, js), renommé | production : un emoji à la frontière de l'extrait n'est pas coupé en deux |
+| 70 | js : 5 000 emoji | démontrée (py, js) ; ajout js : 8 000 emoji passent, 8 001 sont refusés, l'extrait envoyé fait 600 emoji | production : cinq mille emoji font cinq mille caractères, pas dix mille |
+| — | nouveaux cas : blancs Unicode, 8 001 blancs | démontrée : NBSP, U+3000, U+2028 seuls → `None` sans appel (py, js) ; U+200B seul → un appel (py, js) ; 8 001 espaces → `ValueError` / `RangeError` avant le test de blancheur, 8 000 espaces → `None` sans appel | test_production_espaces_insecables_et_ideographiques_seuls_ne_coutent_aucun_appel, test_production_un_caractere_de_largeur_nulle_seul_n_est_pas_blanc_et_coute_un_appel, test_production_8001_caracteres_blancs_sont_refuses_avant_le_test_de_blancheur |
+
+### Phrases nouvelles ou modifiées
+
+| # | Où | Affirmation (citée) | Statut | Test |
+|---|---|---|---|---|
+| T2-1 | N0 docstring | « The idea comes from Cavnar and Trenkle, in 1994 » | non testable : fait bibliographique, sourcé en lecture complémentaire | — |
+| T2-2 | N0 docstring | « Each language uses some trigrams far more than others: "ent", "les", "eur" in French… » | démontrée (py, js) : chaque trigramme cité est mieux classé dans sa langue que dans les deux autres | test_chaque_langue_classe_ses_trigrammes_cites_mieux_que_les_autres_langues |
+| T2-3 | N0 docstring | « A count grows with the length of the text, a rank does not: the same text repeated four times keeps every rank. And the distance is divided by the number of trigrams, so a long text and a short one land on the same scale » | démontrée (py, js) : compte de « les » multiplié par quatre, profil et distance identiques. Le test d'origine (échantillon répété) est gardé et renommé | test_le_meme_texte_repete_quatre_fois_garde_tous_ses_rangs_et_sa_distance |
+| T2-4 | N1 docstring | « Features close to those of N0, n-grams of one to three characters cut at word boundaries » | démontrée (py, js) | test_les_traits_sont_des_n_grammes_d_un_a_trois_caracteres_bornes_aux_mots |
+| T2-5 | N1 docstring js | « multinomial naive Bayes is nothing but counting, and fits in this file » | démontrée pour « nothing but counting » (test_le_modele_est_une_table_de_comptes) et « in this file » (aucun import) ; plus aucun nombre de lignes n'est affirmé, aucun test n'en épingle | l'extrait n'importe rien |
+| T2-6 | N3 commentaire d'EXCERPT_CHARACTERS | « N0 and N1 already name the language of a single sentence, and the model bills every token past it » | démontrée pour la première moitié par les tests N0 et N1 (« détecte une phrase dans chaque langue », une phrase par langue) ; la facturation au jeton est non testable ici | test_detecte_une_phrase_dans_chaque_langue (n0, n1), test_n_envoie_qu_un_extrait_des_600_premiers_caracteres |
+| T2-7 | N3 commentaire | « Pass any object with a `complete(prompt=..., temperature=...)` method » | démontrée (py, js) : tous les tests à `FakeLLM` passent par cette seule méthode | (suite n3) |
+| T2-8 | N3 commentaire | « No content at all (a refusal) is as unusable as prose » | démontrée (py, js) | test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_trois_essais |
+| T2-9 | N3 MODEL | « an example id: check the parameters your model accepts » | non testable : conseil ; la valeur envoyée est démontrée (T2 ligne 62) | — |
+| T2-10 | N2 unavailable_reason | fastText : 176 langues, Wikipédia et deux autres corpus, CC BY-SA 3.0 ; « un paragraphe par langue suffit à N0 et N1 » ; indices gratuits (Accept-Language…) | non testable : pas de code N2, faits sourcés à l'extérieur. « Un paragraphe par langue suffit » est démontré par les suites N0 et N1, entraînées sur un paragraphe | — |
+| T2-11 | N0, N3 retirés | « half a dozen ways », « a fraction of a second », « trente lignes », « what » | retirés : plus d'affirmation, plus de test | — |
+
+### Constat sans marquage, pour le relecteur
+
+- **U+FEFF seul** : Python appelle le modèle (`str.strip` ne retire pas la
+  marque d'ordre des octets), JavaScript rend `null` sans appel (`trim` la
+  retire). La fiche dit « None when the text is blank » dans les deux
+  langages ; une BOM seule n'est pas clairement « blanche », le coût est d'un
+  appel. Démontré tel quel dans chaque langage, non marqué.
+- U+200B seul coûte un appel dans les deux langages, identiquement.

@@ -95,6 +95,8 @@ test('détecte une phrase dans chaque langue', () => {
 });
 
 test('les traits sont des n-grammes d’un à trois caractères bornés aux mots', () => {
+  // docstring : « Features close to those of N0, n-grams of one to three
+  // characters cut at word boundaries ».
   const grams = ngrams('les tables');
   assert.deepEqual(new Set(grams.map((gram) => gram.length)), new Set([1, 2, 3]));
   assert.ok(grams.includes(' le') && grams.includes('les'));
@@ -159,11 +161,20 @@ test('verdict : la probabilité de N1 monte à la quasi-certitude quand l’éca
   assert.ok(probabilities(MODEL, MIXED).fr > 0.99);
 });
 
-test('INFIRMÉ : verdict_rationale dit que le seuil de N1 protège des textes courts, « chat » passe le seuil en anglais', async () => {
-  await assert.rejects(async () => {
-    assert.equal(detect(MODEL, 'ça va', THRESHOLD), null);
-    assert.equal(detect(MODEL, 'chat', THRESHOLD), null);
-  });
+test('verdict : le seuil s’abstient sur « ça va » mais laisse passer « chat » en anglais, et ne connaît que les langues apprises', () => {
+  // verdict_rationale : « il s'abstient sur « ça va » mais laisse passer « chat »
+  // en anglais au-dessus du seuil, et […] il ne connaît que les langues apprises ».
+  assert.equal(detect(MODEL, 'ça va', THRESHOLD), null);
+  assert.equal(detect(MODEL, 'chat', THRESHOLD), 'en');
+  assert.ok(probabilities(MODEL, 'chat').en > THRESHOLD);
+  assert.deepEqual(Object.keys(probabilities(MODEL, GERMAN)).sort(), ['en', 'es', 'fr']);
+  assert.equal(detect(MODEL, GERMAN, THRESHOLD), 'en');
+});
+
+test('verdict : N0 ne se tait pas non plus sur « chat »', () => {
+  const scores = n0.ranked('chat', N0_PROFILES);
+  assert.equal(scores[0][0], 'en');
+  assert.ok(scores[1][1] - scores[0][1] > 100);
 });
 
 test('« chat » est anglais avec certitude', () => {
@@ -175,7 +186,9 @@ test('deux entraînements sur les mêmes échantillons rendent les mêmes probab
 });
 
 test('l’extrait n’importe rien', () => {
-  // docstring js : « Written out in full rather than pulled from a library » ; data_egress: none.
+  // docstring js : « Written out in full rather than pulled from a library, because
+  // multinomial naive Bayes is nothing but counting, and fits in this file » ;
+  // data_egress: none. Le nombre de lignes n'est plus affirmé : aucun test ne l'épingle.
   const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /^\s*import\s|\brequire\(|\bimport\(|\bfetch\(/m);
 });

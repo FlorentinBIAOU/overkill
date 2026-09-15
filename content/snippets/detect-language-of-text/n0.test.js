@@ -63,14 +63,24 @@ test('point de rupture : « chat » ressort en anglais', () => {
   assert.equal(detect(FRENCH, PROFILES), 'fr');
 });
 
-test('INFIRMÉ : la fiche dit que les quatre trigrammes de « chat » sont ceux de l’anglais, deux seulement sont dans le profil anglais', async () => {
-  // « hat » et « at␣ » sont dans le profil anglais ; « ␣ch » et « cha » ne sont
-  // dans aucun profil et coûtent le maximum partout.
-  await assert.rejects(async () => {
-    const grams = trigrams('chat');
-    assert.deepEqual(grams, [' ch', 'cha', 'hat', 'at ']);
-    assert.ok(grams.every((gram) => PROFILES.get('en').has(gram)));
-  });
+test('point de rupture : de ses quatre trigrammes, les deux derniers sont dans le profil anglais, aucun ailleurs', () => {
+  // breaking_point : « de ses quatre trigrammes, les deux derniers figurent dans
+  // le profil anglais, qui les tient de « that » et de « at », et aucun ne figure
+  // dans les profils français et espagnol ».
+  const grams = trigrams('chat');
+  assert.deepEqual(grams, [' ch', 'cha', 'hat', 'at ']);
+  assert.deepEqual(grams.map((gram) => PROFILES.get('en').has(gram)), [false, false, true, true]);
+  assert.ok(!grams.some((gram) => PROFILES.get('fr').has(gram) || PROFILES.get('es').has(gram)));
+  // « qui les tient de « that » et de « at » » : les seuls mots de l'échantillon
+  // anglais qui produisent l'un de ces deux trigrammes.
+  const words = new Set(SAMPLES.en.toLowerCase().match(/\p{L}+/gu)
+    .filter((word) => trigrams(word).some((gram) => gram === 'hat' || gram === 'at ')));
+  assert.deepEqual([...words].sort(), ['at', 'that']);
+  // Témoin : c'est ce qui fait gagner l'anglais, les deux autres restent au maximum.
+  const scores = Object.fromEntries(ranked('chat', PROFILES));
+  assert.equal(scores.fr, PROFILE_SIZE);
+  assert.equal(scores.es, PROFILE_SIZE);
+  assert.ok(scores.en < PROFILE_SIZE);
 });
 
 test('point de rupture : sur « ça va », les trois langues sont à la distance maximale et l’ordre alphabétique répond', () => {
@@ -115,6 +125,8 @@ test('le modèle entier tient en quelques centaines de chaînes de trois caract�
 });
 
 test('chaque langue classe ses trigrammes cités mieux que les autres langues', () => {
+  // docstring : « Each language uses some trigrams far more than others: "ent",
+  // "les", "eur" in French, "the", "ing" in English, "que", "los" in Spanish ».
   const cited = { fr: ['ent', 'les', 'eur'], en: ['the', 'ing'], es: ['que', 'los'] };
   for (const [language, grams] of Object.entries(cited)) {
     for (const gram of grams) {
@@ -133,8 +145,12 @@ test('le bourrage d’espaces distingue l’article du milieu de mot', () => {
   assert.ok(!inside.includes(' le'));
 });
 
-test('un rang survit à un échantillon quatre fois plus long et à un texte quatre fois plus court', () => {
-  // Vrai pour la répétition du même texte ; un échantillon différent change les rangs.
+test('le même texte répété quatre fois garde tous ses rangs et sa distance', () => {
+  // docstring : « A count grows with the length of the text, a rank does not: the
+  // same text repeated four times keeps every rank. And the distance is divided
+  // by the number of trigrams, so a long text and a short one land on the same scale ».
+  const count = (text, gram) => trigrams(text).filter((g) => g === gram).length;
+  assert.equal(count(Array(4).fill(FRENCH).join(' '), 'les'), 4 * count(FRENCH, 'les'));
   assert.deepEqual(profile(Array(4).fill(SAMPLES.fr).join(' ')), PROFILES.get('fr'));
   const longText = Array(4).fill(FRENCH).join(' ');
   for (const reference of PROFILES.values()) {
@@ -257,6 +273,15 @@ test('essai : « chat » ressort en anglais avec un écart large, et le cas est 
   const cas = essai.cases.find((c) => c.input === 'chat');
   assert.equal(cas.fails, true);
   assert.equal(essai.run('chat', 'fr').verdict.label, 'anglais');
+  // why (tour 2) : « dont deux, « hat » et « at », que l'échantillon anglais
+  // emploie dans « that » et « at », et qu'aucun des deux autres n'emploie ».
+  // Les échantillons de l'essai sont ceux des tests : mêmes distances affichées.
+  const affichees = essai.run('chat', 'en').rows.rows.map(([, { v }]) => Number(v));
+  assert.deepEqual(affichees, ranked('chat', PROFILES).map(([, d]) => Math.round(d * 10) / 10));
+  for (const [nom, echantillon] of Object.entries(SAMPLES)) {
+    const emploie = trigrams(echantillon).filter((g) => g === 'hat' || g === 'at ').length > 0;
+    assert.equal(emploie, nom === 'en', nom);
+  }
   assert.equal(trigrams('chat').length, 4);
   assert.ok(gap('chat') > gap(FRENCH));
 });

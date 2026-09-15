@@ -11,34 +11,25 @@ page says so next to the code.
 """
 
 import json
+import sys
 from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import EXCERPT_CHARACTERS, MAX_CHARACTERS, PROMPT, DetectionUnavailable, detect
+from _harness.fake_sdk import FakeSDK
+from n3 import (
+    EXCERPT_CHARACTERS,
+    MAX_CHARACTERS,
+    MODEL,
+    PROMPT,
+    DetectionUnavailable,
+    ProviderClient,
+    detect,
+)
 
 LANGUAGES = ("fr", "en", "es")
 FRENCH = "Bonjour à tous, la réunion de lundi est reportée."
-
-
-class RealShapedClient:
-    """
-    A double with the surface of the published `openai` kit (3.x):
-    `client.chat.completions.create(model=..., messages=[...])`, answer read
-    from `choices[0].message.content`. It has no `complete` method, because the
-    real client has none.
-    """
-
-    def __init__(self, content):
-        self.calls = []
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-        self._content = content
-
-    def _create(self, **request):
-        self.calls.append(request)
-        message = SimpleNamespace(content=self._content)
-        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
 
 # ---------------------------------------------------------------------------
@@ -48,9 +39,10 @@ class RealShapedClient:
 
 def test_point_de_rupture_la_confiance_est_ecrite_par_le_modele_l_extrait_rend_es_sur_une_phrase_francaise():
     """
-    breaking_point : « Le test lui fait répondre « es », assorti d'une confiance
-    de son cru, sur une phrase manifestement française : l'extrait […] rend le
-    mauvais code ». Témoin : la même phrase, réponse « fr », rend « fr ».
+    breaking_point : « Le test lui fait répondre « es » sur une phrase
+    manifestement française, assorti d'une confiance de 0,99 puis de 0,01 : le
+    code est dans la liste, l'extrait le rend les deux fois ». Témoin : la même
+    phrase, réponse « fr », rend « fr ».
     """
     wrong = FakeLLM(response='{"language": "es", "confidence": 0.99}')
     assert detect(FRENCH, LANGUAGES, client=wrong) == "es"
@@ -59,7 +51,7 @@ def test_point_de_rupture_la_confiance_est_ecrite_par_le_modele_l_extrait_rend_e
 
 
 def test_point_de_rupture_la_confiance_n_est_pas_mesuree_une_confiance_de_un_pour_cent_rend_le_meme_code():
-    """breaking_point : « La confiance est écrite par le modèle, pas mesurée » : rien dans le code ne la lit."""
+    """breaking_point : « assorti d'une confiance […] de 0,01 : […] l'extrait le rend les deux fois »."""
     client = FakeLLM(response='{"language": "es", "confidence": 0.01}')
     assert detect(FRENCH, LANGUAGES, client=client) == "es"
 
@@ -79,18 +71,18 @@ def test_point_de_rupture_une_langue_absente_de_la_liste_leve_une_erreur():
     assert off_list.call_count == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la fiche dit « l'extrait valide la forme, la trouve parfaite » ; "
-        "il ne lit que `language`, une réponse sans confiance ou avec une confiance "
-        "« très sûr » passe sans erreur"
-    ),
-)
-def test_infirme_l_extrait_valide_la_forme_de_la_reponse_confiance_comprise():
-    for response in ('{"language": "fr"}', '{"language": "fr", "confidence": "très sûr"}'):
-        with pytest.raises(DetectionUnavailable):
-            detect(FRENCH, LANGUAGES, client=FakeLLM(response=response))
+def test_point_de_rupture_l_extrait_ne_lit_aucune_confiance_et_n_en_demande_pas():
+    """
+    breaking_point : « Une confiance écrite par le modèle n'est pas mesurée, et
+    l'extrait n'en lit aucune ». Le prompt ne la demande pas ; absente, textuelle
+    ou numérique, elle ne change rien au code rendu.
+    """
+    client = FakeLLM(response='{"language": "fr"}')
+    assert detect(FRENCH, LANGUAGES, client=client) == "fr"
+    assert "confidence" not in client.last_request["prompt"].lower()
+    assert "confidence" not in PROMPT.lower()
+    for response in ('{"language": "fr", "confidence": "très sûr"}', '{"language": "fr", "confidence": -4}'):
+        assert detect(FRENCH, LANGUAGES, client=FakeLLM(response=response)) == "fr"
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +108,12 @@ def test_envoie_le_texte_et_la_liste_triee_a_temperature_zero():
 
 
 def test_n_envoie_qu_un_extrait_des_600_premiers_caracteres():
-    """docstring : « send only an excerpt » ; commentaire : « Sending the whole document is […] paying by the token for nothing »."""
+    """
+    docstring : « send only an excerpt » ; commentaire d'EXCERPT_CHARACTERS :
+    « Only the first characters are sent ». Que N0 et N1 nomment la langue d'une
+    seule phrase est démontré par leurs tests (« détecte une phrase dans chaque
+    langue ») ; ce que le modèle facture est non testable ici.
+    """
     client = FakeLLM(response='{"language": "en"}')
     document = "The meeting is on Monday. " * 200 + "and the last line is never read"
     detect(document, LANGUAGES, client=client)
@@ -127,24 +124,23 @@ def test_n_envoie_qu_un_extrait_des_600_premiers_caracteres():
 
 
 def test_normalise_les_formes_courantes_d_un_code():
-    """docstring : « normalise a code the model may write in half a dozen ways »."""
-    for written in ("fr", "FR", " fr ", "fr-CA", "FR-ca"):
+    """
+    docstring : « normalise a code the model may write in capitals, with a region
+    or with stray spaces » ; commentaire : « "fr", "FR", "fr-CA" and the locale
+    form "fr_CA" are all read as "fr" ».
+    """
+    for written in ("fr", "FR", " fr ", "fr-CA", "FR-ca", "fr_CA", "FR_ca"):
         client = FakeLLM(response=json.dumps({"language": written}))
         assert detect("Bonjour à tous.", LANGUAGES, client=client) == "fr", written
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : le commentaire cite « French » parmi les formes qu'un modèle écrit "
-        "pour « fr », et la docstring dit que le code les normalise ; « French » et "
-        "« fr_CA » lèvent DetectionUnavailable"
-    ),
-)
-def test_infirme_french_et_fr_ca_sont_normalises_en_fr():
-    for written in ("French", "fr_CA"):
+def test_un_nom_de_langue_comme_french_n_est_pas_un_code_et_il_est_refuse():
+    """commentaire : « A language name such as "French" is not a code, and is refused below » ; sans nouvel essai."""
+    for written in ("French", "français"):
         client = FakeLLM(response=json.dumps({"language": written}))
-        assert detect("Bonjour à tous.", LANGUAGES, client=client) == "fr", written
+        with pytest.raises(DetectionUnavailable):
+            detect("Bonjour à tous.", LANGUAGES, client=client)
+        assert client.call_count == 1, written
 
 
 def test_rend_none_quand_le_modele_dit_und():
@@ -186,20 +182,62 @@ def test_le_texte_part_tel_quel_chez_le_fournisseur_donnees_personnelles_compris
     assert "jean.dupont@exemple.fr" in prompt
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle "
-        "`client.complete(prompt=..., temperature=0)`, qui n'existe pas dans le kit "
-        "`openai` publié (surface réelle : chat.completions.create(model=..., "
-        "messages=[...]), réponse dans choices[0].message.content). L'AttributeError "
-        "est avalée par la boucle de réessai et ressort en DetectionUnavailable"
-    ),
-)
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    client = RealShapedClient('{"language": "fr", "confidence": 0.9}')
-    assert detect(FRENCH, LANGUAGES, client=client) == "fr"
-    assert client.calls and "messages" in client.calls[0] and "model" in client.calls[0]
+def test_production_l_adaptateur_par_defaut_appelle_la_surface_du_vrai_kit():
+    """
+    docstring de detect : « In production it defaults to a real provider client ».
+    L'adaptateur `ProviderClient` sur un double à la forme du kit `openai`
+    publié, sans méthode `complete` : `chat.completions.create(model=...,
+    messages=[...], temperature=...)`, réponse lue dans `choices[0].message.content`.
+    """
+    sdk = FakeSDK(content='{"language": "fr"}')
+    assert not hasattr(sdk, "complete")
+    assert detect(FRENCH, LANGUAGES, client=ProviderClient(sdk=sdk)) == "fr"
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL == "gpt-4.1-mini"
+    assert request["messages"] == [
+        {"role": "user", "content": PROMPT.format(languages="en, es, fr", excerpt=FRENCH)}
+    ]
+    assert request["temperature"] == 0
+    assert len(sdk.requests) == 1
+
+
+def test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_trois_essais():
+    """commentaire : « No content at all (a refusal) is as unusable as prose » ; `content` vaut None."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(DetectionUnavailable):
+        detect(FRENCH, LANGUAGES, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content='{"language": "fr"}', fail_times=2)
+    assert detect(FRENCH, LANGUAGES, client=ProviderClient(sdk=sdk)) == "fr"
+    assert len(sdk.requests) == 3
+    sdk = FakeSDK(content='{"language": "fr"}', fail_times=3)
+    with pytest.raises(DetectionUnavailable):
+        detect(FRENCH, LANGUAGES, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_sans_client_le_kit_openai_est_construit_et_appele(monkeypatch):
+    """`client = client or ProviderClient()` : `from openai import OpenAI`, puis `OpenAI()`."""
+    sdk = FakeSDK(content='{"language": "es"}')
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=lambda: sdk))
+    assert detect("La reunión del lunes.", LANGUAGES) == "es"
+    assert sdk.last_request["model"] == MODEL
+
+
+def test_production_le_client_par_defaut_n_est_construit_qu_apres_les_controles_d_entree(monkeypatch):
+    """Ni texte blanc ni texte trop long ne construisent le client (ni ne demandent une clé)."""
+    def interdit():
+        raise AssertionError("client construit avant les contrôles")
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=interdit))
+    assert detect("", LANGUAGES) is None
+    assert detect("  \n ", LANGUAGES) is None
+    with pytest.raises(ValueError):
+        detect("x" * (MAX_CHARACTERS + 1), LANGUAGES)
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +245,8 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-def test_defaut_un_texte_vide_ne_coute_aucun_appel():
+def test_production_un_texte_vide_ou_blanc_ne_coute_aucun_appel():
+    """commentaire : « Refusing oversized input, and blank input, is not an optimisation, it is a cost control »."""
     for text in ("", "   \n "):
         client = FakeLLM(response='{"language": "und"}')
         assert detect(text, LANGUAGES, client=client) is None
@@ -265,6 +304,30 @@ def test_production_une_injection_qui_obtient_une_langue_hors_liste_est_refusee(
     with pytest.raises(DetectionUnavailable):
         detect(text, LANGUAGES, client=client)
     assert text in client.last_request["prompt"]
+
+
+def test_production_espaces_insecables_et_ideographiques_seuls_ne_coutent_aucun_appel():
+    """docstring de detect : « or None when the text is blank »."""
+    for text in ("\u00a0\u00a0\u00a0", "\u3000", "\u2028\t"):
+        client = FakeLLM(response='{"language": "fr"}')
+        assert detect(text, LANGUAGES, client=client) is None
+        assert client.call_count == 0, repr(text)
+
+
+def test_production_un_caractere_de_largeur_nulle_seul_n_est_pas_blanc_et_coute_un_appel():
+    """`str.strip` ne retire ni U+200B ni U+FEFF : le modèle est appelé (JavaScript : U+200B seulement, voir le relevé)."""
+    for text in ("\u200b", "\ufeff"):
+        client = FakeLLM(response='{"language": "und"}')
+        assert detect(text, LANGUAGES, client=client) is None
+        assert client.call_count == 1, repr(text)
+
+
+def test_production_8001_caracteres_blancs_sont_refuses_avant_le_test_de_blancheur():
+    client = FakeLLM(response='{"language": "und"}')
+    with pytest.raises(ValueError):
+        detect(" " * (MAX_CHARACTERS + 1), LANGUAGES, client=client)
+    assert detect(" " * MAX_CHARACTERS, LANGUAGES, client=client) is None
+    assert client.call_count == 0
 
 
 def test_production_zero_essai_leve_sans_appel():

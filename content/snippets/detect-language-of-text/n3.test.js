@@ -13,30 +13,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { EXCERPT_CHARACTERS, MAX_CHARACTERS, DetectionUnavailable, buildPrompt, detect } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import {
+  EXCERPT_CHARACTERS,
+  MAX_CHARACTERS,
+  MODEL,
+  DetectionUnavailable,
+  buildPrompt,
+  detect,
+  providerClient,
+} from './n3.js';
 
 const LANGUAGES = ['fr', 'en', 'es'];
 const FRENCH = 'Bonjour à tous, la réunion de lundi est reportée.';
-
-/**
- * A double with the surface of the published `openai` kit (7.x):
- * `client.chat.completions.create({ model, messages })`, answer read from
- * `choices[0].message.content`. It has no `complete` method, because the real
- * client has none.
- */
-class RealShapedClient {
-  constructor(content) {
-    this.calls = [];
-    this.chat = {
-      completions: {
-        create: async (request) => {
-          this.calls.push(request);
-          return { choices: [{ message: { content } }] };
-        },
-      },
-    };
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Point de rupture
@@ -65,12 +54,15 @@ test('point de rupture : une langue absente de la liste lève une erreur', async
   assert.equal(offList.callCount, 1);
 });
 
-test('INFIRMÉ : la fiche dit que l’extrait valide la forme, il ne lit jamais la confiance', async () => {
-  await assert.rejects(async () => {
-    for (const response of ['{"language": "fr"}', '{"language": "fr", "confidence": "très sûr"}']) {
-      await assert.rejects(() => detect(FRENCH, LANGUAGES, { client: new FakeLLM({ response }) }), DetectionUnavailable);
-    }
-  });
+test('point de rupture : l’extrait ne lit aucune confiance et n’en demande pas', async () => {
+  // breaking_point : « Une confiance écrite par le modèle n'est pas mesurée, et
+  // l'extrait n'en lit aucune ».
+  const client = new FakeLLM({ response: '{"language": "fr"}' });
+  assert.equal(await detect(FRENCH, LANGUAGES, { client }), 'fr');
+  assert.ok(!client.lastRequest.prompt.toLowerCase().includes('confidence'));
+  for (const response of ['{"language": "fr", "confidence": "très sûr"}', '{"language": "fr", "confidence": -4}']) {
+    assert.equal(await detect(FRENCH, LANGUAGES, { client: new FakeLLM({ response }) }), 'fr');
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -93,6 +85,7 @@ test('envoie le texte et la liste triée, à température zéro', async () => {
 });
 
 test('n’envoie qu’un extrait des 600 premiers caractères', async () => {
+  // Commentaire d'EXCERPT_CHARACTERS : « Only the first characters are sent ».
   const client = new FakeLLM({ response: '{"language": "en"}' });
   const document = 'The meeting is on Monday. '.repeat(200) + 'and the last line is never read';
   await detect(document, LANGUAGES, { client });
@@ -103,19 +96,22 @@ test('n’envoie qu’un extrait des 600 premiers caractères', async () => {
 });
 
 test('normalise les formes courantes d’un code', async () => {
-  for (const written of ['fr', 'FR', ' fr ', 'fr-CA', 'FR-ca']) {
+  // docstring : « normalise a code the model may write in capitals, with a region
+  // or with stray spaces » ; commentaire : « "fr", "FR", "fr-CA" and the locale
+  // form "fr_CA" are all read as "fr" ».
+  for (const written of ['fr', 'FR', ' fr ', 'fr-CA', 'FR-ca', 'fr_CA', 'FR_ca']) {
     const client = new FakeLLM({ response: JSON.stringify({ language: written }) });
     assert.equal(await detect('Bonjour à tous.', LANGUAGES, { client }), 'fr', written);
   }
 });
 
-test('INFIRMÉ : le commentaire cite « French » parmi les formes normalisées, « French » et « fr_CA » lèvent une erreur', async () => {
-  await assert.rejects(async () => {
-    for (const written of ['French', 'fr_CA']) {
-      const client = new FakeLLM({ response: JSON.stringify({ language: written }) });
-      assert.equal(await detect('Bonjour à tous.', LANGUAGES, { client }), 'fr', written);
-    }
-  });
+test('un nom de langue comme « French » n’est pas un code, et il est refusé', async () => {
+  // Commentaire : « A language name such as "French" is not a code, and is refused below ».
+  for (const written of ['French', 'français']) {
+    const client = new FakeLLM({ response: JSON.stringify({ language: written }) });
+    await assert.rejects(() => detect('Bonjour à tous.', LANGUAGES, { client }), DetectionUnavailable);
+    assert.equal(client.callCount, 1, written);
+  }
 });
 
 test('rend null quand le modèle dit « und »', async () => {
@@ -150,22 +146,60 @@ test('le texte part tel quel chez le fournisseur, données personnelles comprise
   assert.ok(prompt.includes('jean.dupont@exemple.fr'));
 });
 
-test('DÉFAUT : le client par défaut n’a pas la forme du vrai kit, « complete » n’existe pas', async () => {
-  // new OpenAI() puis client.complete(...) : la surface publiée est
-  // chat.completions.create({ model, messages }). L'erreur est avalée par la
-  // boucle de réessai et ressort en DetectionUnavailable.
-  await assert.rejects(async () => {
-    const client = new RealShapedClient('{"language": "fr", "confidence": 0.9}');
-    assert.equal(await detect(FRENCH, LANGUAGES, { client }), 'fr');
-    assert.ok(client.calls.length && 'messages' in client.calls[0] && 'model' in client.calls[0]);
-  });
+test('production : l’adaptateur par défaut appelle la surface du vrai kit', async () => {
+  // providerClient sur un double à la forme du kit `openai` publié, sans
+  // méthode `complete` : chat.completions.create({ model, messages, temperature }),
+  // réponse lue dans choices[0].message.content.
+  const sdk = new FakeSDK({ content: '{"language": "fr"}' });
+  assert.equal('complete' in sdk, false);
+  assert.equal(await detect(FRENCH, LANGUAGES, { client: await providerClient(sdk) }), 'fr');
+  const request = sdk.lastRequest;
+  assert.equal(request.endpoint, 'chat.completions');
+  assert.equal(request.model, MODEL);
+  assert.equal(MODEL, 'gpt-4.1-mini');
+  assert.deepEqual(request.messages, [{ role: 'user', content: buildPrompt(LANGUAGES, FRENCH) }]);
+  assert.equal(request.temperature, 0);
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('production : l’adaptateur, une réponse sans contenu lève après trois essais', async () => {
+  // Commentaire : « No content at all (a refusal) is as unusable as prose » ; content vaut null.
+  const sdk = new FakeSDK({ content: null });
+  await assert.rejects(async () => detect(FRENCH, LANGUAGES, { client: await providerClient(sdk) }), DetectionUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  let sdk = new FakeSDK({ content: '{"language": "fr"}', failTimes: 2 });
+  assert.equal(await detect(FRENCH, LANGUAGES, { client: await providerClient(sdk) }), 'fr');
+  assert.equal(sdk.requests.length, 3);
+  sdk = new FakeSDK({ content: '{"language": "fr"}', failTimes: 3 });
+  await assert.rejects(async () => detect(FRENCH, LANGUAGES, { client: await providerClient(sdk) }), DetectionUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, un modèle passé en argument est celui envoyé', async () => {
+  const sdk = new FakeSDK({ content: '{"language": "en"}' });
+  await detect('The meeting is on Monday.', LANGUAGES, { client: await providerClient(sdk, 'autre-modele') });
+  assert.equal(sdk.lastRequest.model, 'autre-modele');
+});
+
+test('production : le client par défaut n’est construit qu’après les contrôles d’entrée', async () => {
+  // Le kit n'est pas installé ici : s'il était importé avant les contrôles, ces
+  // appels sans client échoueraient sur l'import. Témoin : un texte ordinaire,
+  // lui, va jusqu'à l'import.
+  assert.equal(await detect('', LANGUAGES), null);
+  assert.equal(await detect('  \n ', LANGUAGES), null);
+  await assert.rejects(() => detect('x'.repeat(MAX_CHARACTERS + 1), LANGUAGES), RangeError);
+  await assert.rejects(() => detect(FRENCH, LANGUAGES), /openai/i);
 });
 
 // ---------------------------------------------------------------------------
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('un texte vide coûte un appel', async () => {
+test('production : un texte vide ou blanc ne coûte aucun appel', async () => {
+  // Commentaire : « Refusing oversized input, and blank input, is not an optimisation, it is a cost control ».
   for (const text of ['', '   \n ']) {
     const client = new FakeLLM({ response: '{"language": "und"}' });
     assert.equal(await detect(text, LANGUAGES, { client }), null);
@@ -181,8 +215,8 @@ test('production : exactement 8 000 caractères passent et 8 001 sont refusés',
   assert.equal(client.callCount, 1);
 });
 
-test('un emoji à la frontière de l’extrait est coupé en deux', async () => {
-  // slice compte en unités UTF-16 : la moitié haute du 😀 part seule.
+test('production : un emoji à la frontière de l’extrait n’est pas coupé en deux', async () => {
+  // Commentaire : « Counted in characters, as Python counts them: […] `slice` could cut one in half ».
   const client = new FakeLLM({ response: '{"language": "en"}' });
   await detect(`${'a'.repeat(EXCERPT_CHARACTERS - 1)}😀b`, LANGUAGES, { client });
   const { prompt } = client.lastRequest;
@@ -190,8 +224,13 @@ test('un emoji à la frontière de l’extrait est coupé en deux', async () => 
   assert.ok(prompt.endsWith('a😀'));
 });
 
-test('cinq mille emoji comptent pour dix mille caractères et sont refusés', async () => {
-  // text.length compte les unités UTF-16 ; Python compte les caractères et accepte.
+test('production : cinq mille emoji font cinq mille caractères, pas dix mille', async () => {
+  // Commentaire : « `length` would count an emoji twice ». Plafond compté comme en Python :
+  // 8 000 emoji passent, 8 001 sont refusés.
+  const bord = new FakeLLM({ response: '{"language": "en"}' });
+  assert.equal(await detect('😀'.repeat(MAX_CHARACTERS), LANGUAGES, { client: bord }), 'en');
+  await assert.rejects(() => detect('😀'.repeat(MAX_CHARACTERS + 1), LANGUAGES, { client: bord }), RangeError);
+  assert.ok(bord.lastRequest.prompt.endsWith('😀'.repeat(EXCERPT_CHARACTERS)));
   const client = new FakeLLM({ response: '{"language": "en"}' });
   assert.equal(await detect('😀'.repeat(5000), LANGUAGES, { client }), 'en');
 });
@@ -222,6 +261,31 @@ test('production : une injection qui obtient une langue hors liste est refusée'
   const client = new FakeLLM({ response: '{"language": "it", "confidence": 1}' });
   await assert.rejects(() => detect(text, LANGUAGES, { client }), DetectionUnavailable);
   assert.ok(client.lastRequest.prompt.includes(text));
+});
+
+test('production : espaces insécables et idéographiques seuls ne coûtent aucun appel', async () => {
+  for (const text of ['\u00a0\u00a0\u00a0', '\u3000', '\u2028\t']) {
+    const client = new FakeLLM({ response: '{"language": "fr"}' });
+    assert.equal(await detect(text, LANGUAGES, { client }), null);
+    assert.equal(client.callCount, 0, JSON.stringify(text));
+  }
+});
+
+test('production : un caractère de largeur nulle seul n’est pas blanc et coûte un appel', async () => {
+  // `trim` ne retire pas U+200B. Il retire U+FEFF, que Python garde : voir le relevé.
+  const client = new FakeLLM({ response: '{"language": "und"}' });
+  assert.equal(await detect('\u200b', LANGUAGES, { client }), null);
+  assert.equal(client.callCount, 1);
+  const bom = new FakeLLM({ response: '{"language": "und"}' });
+  assert.equal(await detect('\ufeff', LANGUAGES, { client: bom }), null);
+  assert.equal(bom.callCount, 0);
+});
+
+test('production : 8 001 caractères blancs sont refusés avant le test de blancheur', async () => {
+  const client = new FakeLLM({ response: '{"language": "und"}' });
+  await assert.rejects(() => detect(' '.repeat(MAX_CHARACTERS + 1), LANGUAGES, { client }), RangeError);
+  assert.equal(await detect(' '.repeat(MAX_CHARACTERS), LANGUAGES, { client }), null);
+  assert.equal(client.callCount, 0);
 });
 
 test('production : zéro essai lève sans appel', async () => {
