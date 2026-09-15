@@ -82,8 +82,8 @@ test('la normalisation replie les accents sans toucher aux lettres', () => {
 });
 
 test('un caractère NUL dans un terme ne se confond pas avec la marque de fin', () => {
-  // Commentaire : « A character can never collide with it ». En JavaScript la
-  // marque est un Symbol : l'affirmation tient.
+  // Commentaire de END : « A character can never collide with it ». La marque
+  // est un Symbol : l'affirmation tient.
   assert.deepEqual(suggest(build([['a\0b', 1]]), 'a'), ['a\0b']);
   assert.deepEqual(suggest(build([['a\0b', 1], ['a', 2]]), 'a'), ['a', 'a\0b']);
 });
@@ -125,8 +125,9 @@ test('production : cent mille termes se construisent et se parcourent dans une b
   assert.ok(performance.now() - debut < 20_000);
 });
 
-test('un terme de 100 000 caractères dans le journal fait planter la barre vide', async () => {
-  // collect est récursif : « Maximum call stack size exceeded » sur le préfixe vide.
+test('production : un terme de 100 000 caractères dans le journal ne fait pas planter la barre vide', () => {
+  // docstring de collect : « A stack rather than recursion: one term of a hundred
+  // thousand characters in the search log would otherwise overflow the call stack ».
   const long = build([['x'.repeat(100_000), 1], ['chemise en lin', 2]]);
   assert.deepEqual(suggest(long, ''), ['chemise en lin', 'x'.repeat(100_000)]);
 });
@@ -141,24 +142,27 @@ test('production : casse mixte et emoji sont retrouvés', () => {
   assert.deepEqual(suggest(build([['🎁 coffret cadeau', 3]]), '🎁'), ['🎁 coffret cadeau']);
 });
 
-test('« strasse » ne retrouve pas « Straße » en JavaScript, alors que Python le retrouve', async () => {
-  // toLowerCase garde « ß », casefold le replie en « ss » : les deux extraits
-  // ne proposent pas la même chose pour la même frappe.
+test('production : « strasse » retrouve « Straße » avec eszett, dans les deux langages', () => {
+  // Commentaire de normalise : « Upper then lower case folds "ß" into "ss", the
+  // same way in both languages ».
   assert.deepEqual(suggest(build([['Straße', 1]]), 'strasse'), ['Straße']);
 });
 
-test('un caractère invisible dans la saisie vide la liste', async () => {
+test('production : espace insécable, largeur nulle et BOM dans la saisie retrouvent le terme', () => {
+  // docstring de normalise : « Invisible characters (zero-width space, byte order mark) are dropped ».
   assert.deepEqual(suggest(tree, 'écharpe\u00a0en'), ['écharpe en laine']);
   assert.deepEqual(suggest(tree, '\u200bech'), ['écharpe en laine', 'échelle télescopique']);
   assert.deepEqual(suggest(tree, '\ufeffech'), ['écharpe en laine', 'échelle télescopique']);
 });
 
-test('une espace en tête de saisie vide la liste', async () => {
+test('production : une espace en tête de saisie retrouve le terme', () => {
+  // docstring de normalise : « one space with none at either end ».
   assert.deepEqual(suggest(tree, ' cha'), ['chaussures de running', 'chaussettes de sport']);
 });
 
-test('production : à compte égal, l’ordre est alphabétique', () => {
-  // Python départage par point de code et rend l'inverse : voir son test DÉFAUT.
+test('production : à compte égal, l’orthographe normalisée départage, « écharpe » avant « zèbre »', () => {
+  // Commentaire de suggest : « Equal counts fall back to the normalised spelling,
+  // so "écharpe" comes before "zèbre" ». Même ordre en Python.
   assert.deepEqual(suggest(build([['zèbre', 1], ['écharpe', 1]]), ''), ['écharpe', 'zèbre']);
 });
 
@@ -172,6 +176,143 @@ test('production : limite à zéro, à un, et au nombre exact de candidats', () 
 test('production : un préfixe plus long que tout terme ne rend rien', () => {
   assert.deepEqual(suggest(tree, 'chemise en lin bleue'), []);
   assert.deepEqual(suggest(tree, 'chemise en lin'), ['chemise en lin']);
+});
+
+// ---------------------------------------------------------------------------
+// Contre-épreuve, tour 2 : ce que la correction affirme désormais
+// ---------------------------------------------------------------------------
+
+const symbole = (node, description) =>
+  [...node.keys()].find((k) => typeof k === 'symbol' && k.description === description);
+
+const feuille = (arbre, terme) => {
+  let node = arbre;
+  for (const char of normalise(terme)) node = node.get(char);
+  return node;
+};
+
+test('le classement est calculé une fois par nœud, puis relu', () => {
+  // docstring : « done once per node and kept there ». Un terme glissé après le
+  // premier appel n'est pas vu du nœud déjà classé ; témoin : un nœud jamais
+  // demandé le voit.
+  const arbre = build(CATALOGUE);
+  assert.deepEqual(suggest(arbre, 'ch', 1), ['chaussures de running']);
+  const fin = feuille(arbre, 'chemise en lin');
+  fin.get(symbole(fin, 'term')).push([10_000, 'chemise en lin', 'chemise en lin bis']);
+  assert.deepEqual(suggest(arbre, 'ch', 1), ['chaussures de running']);
+  assert.deepEqual(suggest(arbre, 'che', 1), ['chemise en lin bis']);
+});
+
+test('le second appel ne reparcourt pas le sous-arbre', () => {
+  // collect n'est pas exporté : on compte les parcours par les lectures de la
+  // marque de fin, qui n'ont lieu qu'en descendant le sous-arbre.
+  const arbre = build(CATALOGUE);
+  let parcours = 0;
+  const espionner = (node) => {
+    const original = node[Symbol.iterator].bind(node);
+    node[Symbol.iterator] = () => { parcours += 1; return original(); };
+  };
+  suggest(arbre, 'ch');
+  const ch = arbre.get('c').get('h');
+  espionner(ch);
+  suggest(arbre, 'ch', 1);
+  suggest(arbre, 'CH');
+  assert.equal(parcours, 0);
+  suggest(arbre, 'c');
+  assert.ok(parcours > 0);
+});
+
+test('le classement gardé reste juste pour des limites différentes et des nœuds emboîtés', () => {
+  const arbre = build(CATALOGUE);
+  assert.deepEqual(suggest(arbre, 'ch', 1), ['chaussures de running']);
+  assert.deepEqual(suggest(arbre, 'ch', 3), [
+    'chaussures de running',
+    'chaussettes de sport',
+    'chemise en lin',
+  ]);
+  suggest(arbre, 'cha');
+  assert.deepEqual(suggest(arbre, '', 10), CATALOGUE.map(([terme]) => terme));
+});
+
+test('le prix en mémoire est au plus une référence par terme pour chaque nœud atteint', () => {
+  // docstring : « at most one reference per term for each node a keystroke has reached ».
+  const arbre = build(CATALOGUE);
+  suggest(arbre, '');
+  suggest(arbre, 'ech');
+  const rang = symbole(arbre, 'ranked');
+  assert.equal(arbre.get(rang).length, CATALOGUE.length);
+  assert.equal(arbre.get('e').get('c').get('h').get(rang).length, 2);
+  assert.equal(arbre.get('e').has(rang), false);
+  assert.equal(arbre.get('c').has(rang), false);
+});
+
+test('production : un préfixe inconnu ne greffe rien dans l’arbre', () => {
+  // Commentaire : « an unknown prefix walks into an empty node, which holds nothing to suggest ».
+  const arbre = build(CATALOGUE);
+  assert.deepEqual(suggest(arbre, 'zzz'), []);
+  assert.equal(arbre.has('z'), false);
+});
+
+test('production : la barre vide d’un index de cent mille termes se relit vite une fois classée', () => {
+  // Borne large, pas un chiffre publié : premier appel observé vers 60 ms, mille
+  // appels suivants en quelques millisecondes.
+  let graine = 2;
+  const alea = () => (graine = (graine * 1103515245 + 12345) % 2147483648);
+  const lettres = 'abcdefghijklmnopqrstuvwxyz ';
+  const arbre = build(Array.from({ length: 100_000 }, () => [
+    Array.from({ length: 20 }, () => lettres[alea() % lettres.length]).join(''),
+    alea() % 1000,
+  ]));
+  let debut = performance.now();
+  const premier = suggest(arbre, '', 10);
+  assert.ok(performance.now() - debut < 20_000);
+  debut = performance.now();
+  for (let i = 0; i < 1000; i += 1) assert.deepEqual(suggest(arbre, '', 10), premier);
+  assert.ok(performance.now() - debut < 1000);
+});
+
+test('production : une espace en queue et des espaces répétées sont ignorées', () => {
+  assert.deepEqual(suggest(tree, 'cha '), ['chaussures de running', 'chaussettes de sport']);
+  assert.deepEqual(suggest(tree, 'chemise   en\u3000lin'), ['chemise en lin']);
+  assert.equal(normalise('  cha\u2003\t\nssures '), 'cha ssures');
+});
+
+test('production : la normalisation est la même dans les deux langages', () => {
+  // Le jumeau Python attend les mêmes sorties.
+  const attendus = [
+    ['Straße', 'strasse'],
+    ['\u039f\u0394\u039f\u03a3', '\u03bf\u03b4\u03bf\u03c3'],
+    ['\u03bf\u03b4\u03bf\u03c2', '\u03bf\u03b4\u03bf\u03c3'],
+    ['\ufb01let', 'filet'],
+    ['\u0130stanbul', 'istanbul'],
+    ['\u216b', 'xii'],
+    ['\u00adcha', 'cha'],
+    ['a\u200db', 'ab'],
+    ['\ufeff\u00e9charpe\u00a0', 'echarpe'],
+  ];
+  for (const [texte, attendu] of attendus) assert.equal(normalise(texte), attendu, texte);
+});
+
+test('production : un sigma final frappé atteint le sigma du milieu de mot', () => {
+  assert.deepEqual(suggest(build([['οδοστρωτήρας', 1]]), 'οδος'), ['οδοστρωτήρας']);
+});
+
+test('production : une ligature fi est retrouvée par f, i', () => {
+  assert.deepEqual(suggest(build([['\ufb01let de bœuf', 1]]), 'filet'), ['\ufb01let de bœuf']);
+});
+
+test('production : à compte égal et même orthographe normalisée, le terme d’origine départage', () => {
+  const attendu = ['echarpe', 'ÉCHARPE', 'Écharpe'];
+  assert.deepEqual(suggest(build([['Écharpe', 1], ['echarpe', 1], ['ÉCHARPE', 1]]), ''), attendu);
+  assert.deepEqual(suggest(build([['ÉCHARPE', 1], ['Écharpe', 1], ['echarpe', 1]]), ''), attendu);
+});
+
+test('INFIRMÉ : la docstring dit « Fold case », or « ẞ » majuscule reste « ß » quand « ß » devient « ss »', async () => {
+  // Témoin hors marquage : « strasse » retrouve « Straße » plus haut.
+  await assert.rejects(async () => {
+    assert.equal(normalise('STRA\u1e9eE'), normalise('Straße'));
+    assert.deepEqual(suggest(build([['STRA\u1e9eE', 1]]), 'strasse'), ['STRA\u1e9eE']);
+  });
 });
 
 // ---------------------------------------------------------------------------

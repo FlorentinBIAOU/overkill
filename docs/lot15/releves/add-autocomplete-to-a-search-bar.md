@@ -1,5 +1,13 @@
 # add-autocomplete-to-a-search-bar — relevé du testeur
 
+> **Contre-épreuve (tour 2) : une affirmation infirmée par la correction elle-même.**
+> Le repli « majuscule puis minuscule » qui remplace `casefold` laisse « ẞ »
+> (U+1E9E, eszett majuscule) en « ß », alors que « ß » devient « ss » : la
+> docstring « Fold case » / « casse abandonnée » est fausse pour ce couple, dans
+> les deux langages. En Python, c'est une régression : `casefold` repliait
+> « ẞ » en « ss ». Test marqué `INFIRMÉ :` dans `n0.test.py` et `n0.test.js`
+> (ligne T2-12 plus bas).
+
 Passe 1 du lot 15. Tests : `content/snippets/add-autocomplete-to-a-search-bar/n{0,1}.test.{py,js}`.
 Avant : 32 tests (8 par fichier). Après : 92 tests (n0.py 24, n0.js 28, n1.py 20,
 n1.js 20). Les 32 tests d'origine sont renommés en français, assertions gardées ;
@@ -125,3 +133,59 @@ les marquages ci-dessous.
 - L'outil d'écriture de fichiers de l'environnement décode les séquences
   `\uXXXX` : les caractères invisibles des tests ont été ré-échappés à la main
   pour rester lisibles. À signaler aux prochains testeurs.
+
+## Tour 2 — contre-épreuve
+
+Après `e868dda` (corrections du rédacteur, tour 1). Tests : n0.py 24 → 36,
+n0.js 28 → 40, n1.py 20 → 27, n1.js 20 → 27 ; 38 tests ajoutés, 13 renommés,
+aucun retiré. `node scripts/test-snippets.mjs add-autocomplete-to-a-search-bar` :
+vert, avec un seul marquage (`INFIRMÉ`, T2-12).
+
+### Lignes « À retester »
+
+| # | Ligne du tour 1 | Désormais | Test |
+|---|---|---|---|
+| 14 | N0 py commentaire de END, « It is not a string, so no character can collide with it » | démontrée (py, js) ; renommé sans le préfixe infirmé | test_un_caractere_nul_dans_un_terme_ne_se_confond_pas_avec_la_marque_de_fin |
+| 21 | N0 terme de 100 000 caractères ; docstring de `_collect` / `collect`, « A stack rather than recursion » | démontrée (py, js) | test_production_un_terme_de_100000_caracteres_dans_le_journal_ne_fait_pas_planter_la_barre_vide |
+| 24 | espace insécable, largeur nulle, BOM ; docstring de normalise « Invisible characters […] are dropped » | démontrée (py, js) | test_production_espace_insecable_largeur_nulle_et_bom_dans_la_saisie_retrouvent_le_terme |
+| 25 | espace en tête ; « none at either end » | démontrée (py, js) | test_production_une_espace_en_tete_de_saisie_retrouve_le_terme |
+| 3 | N0 breaking_point « là et seulement là » | démontrée : 24 et 25 ne vident plus la liste, seule la faute de frappe reste | tests de 1, 2, 24, 25 |
+| 26 | « strasse » / « Straße » ; « Upper then lower case folds "ß" into "ss", the same way in both languages » | démontrée (py, js) pour « ß » ; voir T2-12 pour « ẞ » | test_production_strasse_retrouve_strasse_avec_eszett_dans_les_deux_langages |
+| 27 | départage à compte égal ; « Equal counts fall back to the normalised spelling, so "écharpe" comes before "zèbre" » | démontrée (py, js), même ordre | test_production_a_compte_egal_l_orthographe_normalisee_departage_echarpe_avant_zebre |
+| 39 | N1 js commentaire de key, « A tab never occurs inside a normalised prefix, since normalise turns it into a space » | démontrée (js : `normalise("a\tb") == "a b"` et aucun clic fantôme ; py : même repli, clés en tuples) | test_production_une_tabulation_dans_la_saisie_ne_cree_pas_de_clic_fantome |
+| 44 | N1 mémoire sur une requête longue ; commentaire de MAX_TYPED | démontrée (py, js) : 65 clés, somme des longueurs de préfixe = 2 080 | test_production_une_requete_collee_de_10000_caracteres_ne_compte_que_ses_64_premiers_caracteres |
+
+### Phrases nouvelles ou modifiées
+
+| # | Où | Affirmation (citée) | Statut | Test |
+|---|---|---|---|---|
+| T2-1 | N0 docstring | « the ordering is a plain sort on the usage count, done once per node and kept there » | démontrée (py, js) : un terme glissé après le premier appel n'est pas vu du nœud classé, un nœud neuf le voit ; `_collect` (py) n'est appelé qu'une fois par nœud, le nœud (js) n'est plus itéré au second appel | test_le_classement_est_calcule_une_fois_par_noeud_puis_relu, test_le_second_appel_ne_reparcourt_pas_le_sous_arbre |
+| T2-2 | N0 (nouveau code) | le classement gardé sert toute limite, et un parent classé après un enfant ne relit pas le `RANKED` de l'enfant | démontrée (py, js) | test_le_classement_garde_reste_juste_pour_des_limites_differentes_et_des_noeuds_emboites |
+| T2-3 | N0 docstring | « The price is memory, at most one reference per term for each node a keystroke has reached » | démontrée (py, js) : `RANKED` de la racine = 6 termes, du nœud « ech » = 2, absent des nœuds non demandés | test_le_prix_en_memoire_est_au_plus_une_reference_par_terme_pour_chaque_noeud_atteint |
+| T2-4 | N0 docstring | « sorting them again at each keystroke is where the time would go » | démontrée par borne large (py, js) : premier appel sur la barre vide de 100 000 termes observé à 0,4 s (py) et 60 ms (js), mille appels suivants en quelques millisecondes, borne 1 s | test_production_la_barre_vide_d_un_index_de_cent_mille_termes_se_relit_vite_une_fois_classee |
+| T2-5 | N0 docstring de `_descend` (py) / commentaire (js) | « empty if none does » / « an unknown prefix walks into an empty node » | démontrée (py, js) : rien n'est greffé dans l'arbre | test_production_un_prefixe_inconnu_ne_greffe_rien_dans_l_arbre |
+| T2-6 | N0, N1 docstring de normalise | « runs of spaces, non-breaking ones included, become one space with none at either end » | démontrée (py, js) : espace en queue, espaces répétées, U+3000, U+2003, tabulation, saut de ligne | test_production_une_espace_en_queue_et_des_espaces_repetees_sont_ignorees ; N1 : test_production_une_espace_en_queue_de_saisie_retrouve_les_memes_clics |
+| T2-7 | N0, N1 commentaires | « The final sigma is folded by hand: JavaScript keeps it » | démontrée (py, js) : « οδος » en cours de frappe atteint « οδοστρωτήρας » | test_production_un_sigma_final_frappe_atteint_le_sigma_du_milieu_de_mot |
+| T2-8 | N0, N1 (correction) | mêmes sorties de normalise en Python et en JavaScript | démontrée : les deux jumeaux attendent les mêmes valeurs écrites (ß, Σ, ς, ﬁ, İ, Ⅻ, trait d'union conditionnel, ZWJ, BOM, NBSP) | test_production_la_normalisation_est_la_meme_dans_les_deux_langages |
+| T2-9 | N0 further_reading | « la décomposition de compatibilité (NFKD) employée par les deux niveaux » | démontrée (py, js) : la ligature « ﬁ » est retrouvée par « filet », ce que NFD ne ferait pas | test_production_une_ligature_fi_est_retrouvee_par_f_i |
+| T2-10 | N0 clé de tri | départage final sur le terme d'origine à orthographe normalisée égale | démontrée (py, js), indépendant de l'ordre d'insertion | test_production_a_compte_egal_et_meme_orthographe_normalisee_le_terme_d_origine_departage |
+| T2-11 | N1 normalise | « Same folding as the prefix tree, so both rungs agree on what was typed » | démontrée (py, js) sur les cas difficiles, ẞ compris (N0 et N1 se trompent pareil) | test_production_la_normalisation_de_n1_est_celle_de_n0_sur_les_cas_difficiles |
+| T2-12 | N0, N1 docstring de normalise ; doc.fr « casse abandonnée » | « Fold case » | **INFIRMÉE (py, js)** : `normalise("STRAẞE") == "straße"`, `normalise("Straße") == "strasse"`. « strasse » ne trouve pas « STRAẞE », « STRAẞE » ne trouve pas « Straße ». `casefold` (l'ancien code Python) donnait « strasse » | INFIRMÉ : test_infirme_le_eszett_majuscule_se_replie_comme_le_eszett_minuscule |
+| T2-13 | N1 commentaire de MAX_TYPED | « Only the first characters of a query are counted » | démontrée (py, js) : 64 et 65 caractères donnent la même clé la plus longue, 63 non ; la coupe a lieu après normalisation ; `rerank` coupe aussi | test_le_plafond_une_saisie_de_65_caracteres_et_une_de_64_comptent_la_meme_cle_la_plus_longue, test_le_plafond_porte_sur_la_saisie_normalisee, test_la_saisie_lue_par_rerank_est_plafonnee_elle_aussi |
+| T2-14 | N1 commentaire de MAX_TYPED | « the memory grows with the square of its length, and so does the lookup » (sans plafond) | démontrée pour la partie observable : avec plafond, mille candidats jamais cliqués sous une saisie de 10 000 caractères tiennent dans une borne de 5 s | test_production_un_journal_d_une_requete_de_10000_caracteres_se_relit_dans_une_borne_large |
+| T2-15 | N1 docstring (py, js, fr) | « read back with dictionary lookups, at most one per prefix length for each candidate, on a query whose counted length is capped » | démontrée (py, js) : un modèle qui compte ses lectures en voit exactement 65 par candidat jamais cliqué sous une saisie de 10 000 caractères, et une seule quand le préfixe entier a un clic | test_au_plus_une_lecture_par_longueur_de_prefixe_pour_chaque_candidat |
+| T2-16 | N1 docstring de `_evidence` | « past queries that do » (« hundreds » retiré) | non testable : formulation, le mécanisme est démontré en 33 | — |
+| T2-17 | scenario | « Chaque frappe paie un appel réseau pour une liste que l'index du site contient déjà » | non testable : description du problème, pas de code | — |
+| T2-18 | N2, N3 unavailable_reason | « un appel à chaque touche » ; « La facture se multiplie par la longueur de la requête » | non testable : niveaux sans code | — |
+| T2-19 | verdict_rationale | « Le réordonnancement ne fait que lire des compteurs en mémoire, sans appel » | démontrée pour « sans appel » : n1 n'importe rien d'autre que `unicodedata` et les tests tournent sous garde réseau ; la lecture est démontrée en T2-15 | test_au_plus_une_lecture_par_longueur_de_prefixe_pour_chaque_candidat |
+| T2-20 | essai, en-tête | « Ce qui se rejoue à chaque frappe n'est que la descente dans l'arbre, puis la lecture du classement que le nœud garde » | non testable depuis l'essai : l'arbre `ARBRES` n'est pas exporté. La propriété est démontrée sur l'extrait importé tel quel (T2-1) | — |
+| T2-21 | N0 `latency: "<1 ms"` | gardé par le rédacteur | non testable : chiffre publié. Constat : le premier appel sur la barre vide d'un index de 100 000 termes coûte le tri entier (0,4 s en Python, 60 ms en JavaScript sur la machine de test), une fois par nœud et par processus | — |
+
+### Constats sans marquage
+
+- Écart signalé par le rédacteur et non corrigé : Python compte et coupe par
+  point de code, JavaScript par unité de code. Aucune phrase de la fiche ne dit
+  le contraire ; non marqué.
+- U+0085 et U+2028 ne sont pas ramenés à une espace, dans les deux langages
+  identiquement. La docstring parle d'« espaces » et ces caractères sont des
+  séparateurs de ligne : non marqué.

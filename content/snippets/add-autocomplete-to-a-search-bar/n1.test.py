@@ -4,7 +4,7 @@ import time
 import pytest
 
 import n0
-from n1 import learn, normalise, rerank
+from n1 import MAX_TYPED, learn, normalise, rerank
 
 # A slice of a click log: what was typed, and which suggestion was chosen.
 # The kind of file a search bar already writes without being asked.
@@ -195,9 +195,16 @@ def test_production_une_requete_collee_de_10000_caracteres_termine_dans_une_born
     assert time.perf_counter() - debut < 10
 
 
-def test_defaut_une_requete_collee_de_10000_caracteres_laisse_cinquante_millions_de_caracteres_de_cles():
+def test_production_une_requete_collee_de_10000_caracteres_ne_compte_que_ses_64_premiers_caracteres():
+    """
+    commentaire de MAX_TYPED : « Only the first characters of a query are
+    counted ». Sans plafond, 50 005 000 caractères de clés ; avec, la somme des
+    longueurs de 0 à 64.
+    """
     model = learn([("q" * 10_000, "chemise en lin")])
     assert sum(len(prefix) for prefix, _ in model) <= 100 * 10_000
+    assert sum(len(prefix) for prefix, _ in model) == MAX_TYPED * (MAX_TYPED + 1) // 2
+    assert len(model) == MAX_TYPED + 1
 
 
 def test_production_une_saisie_en_accents_decomposes_retrouve_les_clics_du_terme_compose():
@@ -209,7 +216,13 @@ def test_production_une_saisie_en_accents_decomposes_retrouve_les_clics_du_terme
 
 
 def test_production_une_tabulation_dans_la_saisie_ne_cree_pas_de_clic_fantome():
-    """Une saisie « a<TAB>b » cliquée sur « c » ne donne aucun clic à « b<TAB>c » sous « a »."""
+    """
+    Une saisie « a<TAB>b » cliquée sur « c » ne donne aucun clic à « b<TAB>c »
+    sous « a » (en Python les clés sont des tuples ; en JavaScript, le commentaire
+    « A tab never occurs inside a normalised prefix, since normalise turns it into
+    a space »).
+    """
+    assert normalise("a\tb") == "a b"
     model = learn([("a\tb", "c")])
     assert rerank(model, "a", ["x", "b\tc"]) == ["x", "b\tc"]
 
@@ -222,3 +235,79 @@ def test_production_limite_a_zero_et_au_nombre_exact_de_candidats():
         "chaussures de running",
     ]
     assert len(rerank(model, "cha", BY_FREQUENCY, limit=3)) == 2
+
+
+# ---------------------------------------------------------------------------
+# Contre-épreuve, tour 2 : ce que la correction affirme désormais
+# ---------------------------------------------------------------------------
+
+
+class LecturesComptees(dict):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.lectures = 0
+
+    def get(self, *args):
+        self.lectures += 1
+        return super().get(*args)
+
+
+def test_le_plafond_une_saisie_de_65_caracteres_et_une_de_64_comptent_la_meme_cle_la_plus_longue():
+    """commentaire de MAX_TYPED : seuls les 64 premiers caractères normalisés sont comptés."""
+    assert MAX_TYPED == 64
+    model = learn([("a" * 64, "t"), ("a" * 65, "u")])
+    assert max(len(prefix) for prefix, term in model if term == "t") == 64
+    assert max(len(prefix) for prefix, term in model if term == "u") == 64
+    assert model[("a" * 64, "u")] == 1
+    # Témoin : sous le plafond, la clé suit la saisie.
+    assert max(len(prefix) for prefix, term in learn([("a" * 63, "v")])) == 63
+
+
+def test_le_plafond_porte_sur_la_saisie_normalisee():
+    """Le code coupe après normalise (`normalise(typed)[:MAX_TYPED]`) : les espaces de tête ne mangent pas le plafond."""
+    model = learn([(" " * 100 + "b" * 64, "t")])
+    assert ("b" * 64, "t") in model
+
+
+def test_la_saisie_lue_par_rerank_est_plafonnee_elle_aussi():
+    """Un clic appris sur une longue saisie sert la même longue saisie, et une plus longue encore."""
+    model = learn([("q" * 10_000, "chemise en lin")])
+    assert rerank(model, "q" * 64 + "zzz", ["x", "chemise en lin"]) == ["chemise en lin", "x"]
+
+
+def test_au_plus_une_lecture_par_longueur_de_prefixe_pour_chaque_candidat():
+    """
+    docstring : « read back with dictionary lookups, at most one per prefix length
+    for each candidate, on a query whose counted length is capped ».
+    """
+    model = LecturesComptees(learn(CLICKS))
+    candidats = ["x", "y", "z"]
+    rerank(model, "q" * 10_000, candidats)
+    assert model.lectures == (MAX_TYPED + 1) * len(candidats)
+    model.lectures = 0
+    rerank(model, "cha", ["chaussettes de sport"])
+    assert model.lectures == 1
+
+
+def test_production_un_journal_d_une_requete_de_10000_caracteres_se_relit_dans_une_borne_large():
+    """Sans plafond la lecture croissait avec le carré de la saisie ; mille candidats jamais cliqués."""
+    model = learn([("q" * 10_000, "chemise en lin")])
+    debut = time.perf_counter()
+    assert rerank(model, "q" * 10_000, ["x"] * 999 + ["chemise en lin"])[0] == "chemise en lin"
+    assert time.perf_counter() - debut < 5
+
+
+def test_production_la_normalisation_de_n1_est_celle_de_n0_sur_les_cas_difficiles():
+    """commentaire de normalise : « Same folding as the prefix tree, so both rungs agree on what was typed »."""
+    for texte in (
+        "Straße", "\u039f\u0394\u039f\u03a3", "\u03bf\u03b4\u03bf\u03c2", "\ufb01let",
+        "\u0130stanbul", "\u216b", "\u00adcha", "a\u200db", "\ufeff\u00e9charpe\u00a0",
+        "  cha\u3000\u2003ssures\t\n", "STRA\u1e9eE",
+    ):
+        assert normalise(texte) == n0.normalise(texte), texte
+
+
+def test_production_une_espace_en_queue_de_saisie_retrouve_les_memes_clics():
+    model = make_model()
+    assert rerank(model, "cha ", BY_FREQUENCY) == rerank(model, "cha", BY_FREQUENCY)
+    assert learn([("cha ", "t")]) == learn([("cha", "t")])

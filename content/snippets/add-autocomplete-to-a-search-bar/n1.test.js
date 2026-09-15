@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { learn, normalise, rerank } from './n1.js';
+import { MAX_TYPED, learn, normalise, rerank } from './n1.js';
 import * as n0 from './n0.js';
 
 const repeat = (times, event) => Array.from({ length: times }, () => event);
@@ -173,12 +173,16 @@ test('production : une requête collée de 10 000 caractères termine dans une b
   assert.ok(performance.now() - debut < 10_000);
 });
 
-test('une requête collée de 10 000 caractères laisse cinquante millions de caractères de clés', async () => {
-  // Une clé par préfixe, chacune copie du préfixe : 50 025 002 caractères.
+test('production : une requête collée de 10 000 caractères ne compte que ses 64 premiers caractères', () => {
+  // Commentaire de MAX_TYPED : « Only the first characters of a query are counted ».
+  // Sans plafond, 50 025 002 caractères de clés ; avec, la somme des longueurs de
+  // 0 à 64, plus la tabulation et le terme de chaque clé.
   const m = learn([['q'.repeat(10_000), 'chemise en lin']]);
   let total = 0;
   for (const k of m.keys()) total += k.length;
   assert.ok(total <= 100 * 10_000, `${total} caractères de clés`);
+  assert.equal(total, (MAX_TYPED * (MAX_TYPED + 1)) / 2 + (MAX_TYPED + 1) * '\tchemise en lin'.length);
+  assert.equal(m.size, MAX_TYPED + 1);
 });
 
 test('production : une saisie en accents décomposés retrouve les clics du terme composé', () => {
@@ -189,9 +193,11 @@ test('production : une saisie en accents décomposés retrouve les clics du term
   ]);
 });
 
-test('le commentaire dit « a tab never occurs inside a prefix », une tabulation dans la saisie crée un clic fantôme', async () => {
-  // La clé est `${prefix}\t${term}` : la saisie « a<TAB>b » cliquée sur « c »
-  // produit la même clé que la saisie « a » cliquée sur « b<TAB>c ».
+test('production : une tabulation dans la saisie ne crée pas de clic fantôme', () => {
+  // Commentaire de key : « A tab never occurs inside a normalised prefix, since
+  // normalise turns it into a space ». Sans ce repli, la saisie « a<TAB>b »
+  // cliquée sur « c » produirait la clé de la saisie « a » cliquée sur « b<TAB>c ».
+  assert.equal(normalise('a\tb'), 'a b');
   const m = learn([['a\tb', 'c']]);
   assert.deepEqual(rerank(m, 'a', ['x', 'b\tc']), ['x', 'b\tc']);
 });
@@ -203,4 +209,77 @@ test('production : limite à zéro et au nombre exact de candidats', () => {
     'chaussures de running',
   ]);
   assert.equal(rerank(model, 'cha', BY_FREQUENCY, 3).length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// Contre-épreuve, tour 2 : ce que la correction affirme désormais
+// ---------------------------------------------------------------------------
+
+class LecturesComptees extends Map {
+  lectures = 0;
+
+  get(k) {
+    this.lectures += 1;
+    return super.get(k);
+  }
+}
+
+const longueurMax = (m, terme) =>
+  Math.max(...[...m.keys()].filter((k) => k.endsWith(`\t${terme}`)).map((k) => k.length - terme.length - 1));
+
+test('le plafond : une saisie de 65 caractères et une de 64 comptent la même clé la plus longue', () => {
+  assert.equal(MAX_TYPED, 64);
+  const m = learn([['a'.repeat(64), 't'], ['a'.repeat(65), 'u']]);
+  assert.equal(longueurMax(m, 't'), 64);
+  assert.equal(longueurMax(m, 'u'), 64);
+  assert.equal(m.get(`${'a'.repeat(64)}\tu`), 1);
+  // Témoin : sous le plafond, la clé suit la saisie.
+  assert.equal(longueurMax(learn([['a'.repeat(63), 'v']]), 'v'), 63);
+});
+
+test('le plafond porte sur la saisie normalisée', () => {
+  // Le code coupe après normalise : les espaces de tête ne mangent pas le plafond.
+  const m = learn([[' '.repeat(100) + 'b'.repeat(64), 't']]);
+  assert.equal(m.has(`${'b'.repeat(64)}\tt`), true);
+});
+
+test('la saisie lue par rerank est plafonnée elle aussi', () => {
+  const m = learn([['q'.repeat(10_000), 'chemise en lin']]);
+  assert.deepEqual(rerank(m, 'q'.repeat(64) + 'zzz', ['x', 'chemise en lin']), ['chemise en lin', 'x']);
+});
+
+test('au plus une lecture par longueur de préfixe pour chaque candidat', () => {
+  // docstring : « read back with map lookups, at most one per prefix length for
+  // each candidate, on a query whose counted length is capped ».
+  const m = new LecturesComptees(learn(CLICKS));
+  const candidats = ['x', 'y', 'z'];
+  rerank(m, 'q'.repeat(10_000), candidats);
+  assert.equal(m.lectures, (MAX_TYPED + 1) * candidats.length);
+  m.lectures = 0;
+  rerank(m, 'cha', ['chaussettes de sport']);
+  assert.equal(m.lectures, 1);
+});
+
+test('production : un journal d’une requête de 10 000 caractères se relit dans une borne large', () => {
+  // Sans plafond la lecture croissait avec le carré de la saisie ; mille candidats jamais cliqués.
+  const m = learn([['q'.repeat(10_000), 'chemise en lin']]);
+  const debut = performance.now();
+  assert.equal(rerank(m, 'q'.repeat(10_000), [...repeat(999, 'x'), 'chemise en lin'])[0], 'chemise en lin');
+  assert.ok(performance.now() - debut < 5000);
+});
+
+test('production : la normalisation de N1 est celle de N0 sur les cas difficiles', () => {
+  // Commentaire de normalise : « Same folding as the prefix tree, so both rungs agree on what was typed ».
+  for (const texte of [
+    'Straße', '\u039f\u0394\u039f\u03a3', '\u03bf\u03b4\u03bf\u03c2', '\ufb01let',
+    '\u0130stanbul', '\u216b', '\u00adcha', 'a\u200db', '\ufeff\u00e9charpe\u00a0',
+    '  cha\u3000\u2003ssures\t\n', 'STRA\u1e9eE',
+  ]) {
+    assert.equal(normalise(texte), n0.normalise(texte), texte);
+  }
+});
+
+test('production : une espace en queue de saisie retrouve les mêmes clics', () => {
+  assert.deepEqual(rerank(model, 'cha ', BY_FREQUENCY), rerank(model, 'cha', BY_FREQUENCY));
+  assert.deepEqual([...learn([['cha ', 't']])], [...learn([['cha', 't']])]);
 });
