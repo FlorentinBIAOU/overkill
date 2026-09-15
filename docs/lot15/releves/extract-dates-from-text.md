@@ -3,7 +3,7 @@
 Passe 1 du lot 15. Tests : `content/snippets/extract-dates-from-text/n{0,1,3}.test.{py,js}`.
 Avant : 48 tests. Après : 147 (n0.py 26, n0.js 31, n1.py 22, n1.js 22, n3.py 23,
 n3.js 23). Les tests d'origine sont renommés en français, assertions gardées,
-sauf le point de rupture N1 d'origine (voir 23). Les quatre tests de l'essai
+sauf le point de rupture N1 d'origine (voir 27). Les quatre tests de l'essai
 vivent dans `n0.test.js`.
 
 `node scripts/test-snippets.mjs extract-dates-from-text` : vert, avec les
@@ -36,7 +36,7 @@ Jeu d'entraînement N1 : les seize phrases des tests d'origine (8 jour-mois,
 | 19 | N0 production | espace insécable, espace fine insécable, BOM, largeur nulle ; « 3 AVRIL 2024 » | démontrée (py, js) | test_production_espaces_insecables_bom_et_largeur_nulle_autour_de_la_date, test_production_casse_mixte_dans_le_nom_du_mois |
 | 20 | N0 production | « LE 1ER MARS 2024 » | DÉFAUT (py, js) : `(?:er)?` est sensible à la casse, rien n'est trouvé | test_defaut_1er_en_capitales_n_est_pas_lu |
 | 21 | N0 production | « Payment due March 3, 2024. » | DÉFAUT (py, js) : la forme anglaise ordinaire d'un mois en lettres n'est pas reconnue, en silence, alors que l'extrait annonce les mois anglais | test_defaut_la_forme_anglaise_mois_jour_annee_n_est_pas_lue |
-| 22 | N0 production | « 1er février 2024 » (NFD) | DÉFAUT (py, js) : l'accent combinant n'est pas une lettre pour l'expression, le mot est coupé avant que `_fold` / `fold` ne replie l'accent | test_defaut_un_mois_en_accents_decomposes_n_est_pas_lu |
+| 22 | N0 production | « 1er fe\u0301vrier 2024 » (NFD) | DÉFAUT (py, js) : l'accent combinant n'est pas une lettre pour l'expression, le mot est coupé avant que `_fold` / `fold` ne replie l'accent | test_defaut_un_mois_en_accents_decomposes_n_est_pas_lu |
 | 23 | N0 production | chiffres pleine chasse « １２/０３/２０２４ » | py : démontrée (`\d` Unicode) ; js : DÉFAUT, `\d` ASCII, rien n'est lu. Les deux extraits divergent | test_production_des_chiffres_pleine_chasse_sont_lus_dans_les_deux_langages / DÉFAUT : des chiffres pleine chasse ne sont pas lus en JavaScript |
 | 24 | N0 production | 31/12/9999, jour 00, mois 13, 31/01, 32/01 | démontrée (py, js) | test_production_valeurs_aux_limites_du_calendrier |
 | 25 | verdict_rationale | « Ce que ce niveau ne sait pas faire, il ne le fait pas à moitié, il rend une liste vide » | INFIRMÉE (py, js) : sur un document mois-jour lu en jour-mois, N0 rend une date plausible et fausse, ce qu'escalate_when dit lui-même (16). Même constat pour les numéros de version (13) | test_infirme_ce_que_n0_ne_sait_pas_faire_il_rend_une_liste_vide |
