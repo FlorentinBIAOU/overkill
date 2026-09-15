@@ -6,20 +6,22 @@ n0: |
   Masquer les coordonnées dans un message : normalisation, puis expressions
   régulières.
 
-  Niveau N0. Déterministe, bibliothèque standard seule, assez rapide pour que
-  vous ne le retrouviez jamais dans un profil d'exécution.
+  Niveau N0. Déterministe, bibliothèque standard seule.
 
   Deux choses font que ça marche.
 
-  D'abord, la normalisation ne change que la façon d'écrire un caractère. Le
-  repli de compatibilité ramène les chiffres pleine largeur et les espaces
-  fines de la typographie française à leur forme ordinaire ; les liants
-  invisibles qu'il laisse derrière lui deviennent une espace. Aller plus loin —
-  retirer la ponctuation, par exemple — détruirait les caractères mêmes dont
-  une adresse électronique est faite.
+  D'abord, les motifs lisent une copie normalisée du message, où chaque
+  caractère est écrit sous sa forme ordinaire : le repli de compatibilité
+  ramène les chiffres pleine largeur à des chiffres ordinaires, et les espaces
+  de la typographie française, les caractères sans chasse et le trait d'union
+  conditionnel deviennent une espace simple. Les étiquettes sont ensuite posées
+  dans le message tel qu'il a été écrit : un message sans rien à masquer
+  ressort inchangé, à la composition de ses accents près (NFC), qui ne change
+  rien à l'écran.
 
-  Ensuite, chaque motif tolère les séparateurs que les gens tapent réellement
-  dans un numéro, au lieu de supposer une seule forme canonique.
+  Ensuite, le motif de téléphone tolère les séparateurs que les gens tapent
+  entre les chiffres — espace, point, tiret ou barre oblique, un ou deux — et un
+  IBAN n'est masqué que si sa clé de contrôle tombe juste.
 
 n1.js: |
   Rattraper les coordonnées obfusquées avec un classifieur léger.
@@ -28,10 +30,10 @@ n1.js: |
   un numéro. Celui-ci en voit la forme : une suite de jetons surtout faits de
   chiffres, plutôt courts, posés à côté de mots comme « call » ou « reach ».
 
-  Écrit en entier plutôt que tiré d'une bibliothèque, parce qu'une régression
-  logistique sur des n-grammes de caractères hachés tient en quarante lignes.
-  C'est tout l'argument de ce niveau : l'outil classique est assez petit pour
-  être lu.
+  Écrit en entier plutôt que tiré d'une bibliothèque : hacher les n-grammes de
+  caractères, entraîner et décider tiennent en trois courtes fonctions. C'est
+  tout l'argument de ce niveau : l'outil classique est assez petit pour être
+  lu.
 
 n1.py: |
   Rattraper les coordonnées obfusquées avec un classifieur léger.
@@ -40,20 +42,21 @@ n1.py: |
   un numéro. Celui-ci en voit la forme : une suite de jetons surtout faits de
   chiffres, plutôt courts, et posés à côté de mots comme « call » ou « reach ».
 
-  Le jeu d'entraînement, c'est quelques centaines de messages étiquetés, pas
-  quelques millions. Les poids sont assez petits pour vivre dans le dépôt, à
-  côté de ce fichier, et il n'y a aucun service à exploiter : le modèle se
-  charge avec le processus.
+  Les poids sont assez petits pour vivre dans le dépôt, à côté de ce fichier,
+  et il n'y a aucun service à exploiter : le modèle se charge avec le
+  processus.
 
 n3: |
   Masquer les coordonnées en interrogeant un modèle généraliste.
 
-  Niveau N3. C'est l'option vers laquelle on se tourne d'abord. Elle est ici
-  pour qu'on voie ce qu'elle coûte, pas parce que cette fiche la recommande.
+  Niveau N3. Il est ici pour qu'on voie ce qu'il coûte, pas parce que cette
+  fiche le recommande.
 
   Voyez ce que le code doit faire et que le niveau N0 n'avait pas à faire :
   réessayer après un échec, plafonner la taille de l'entrée, analyser une
-  réponse qui n'est que probablement du JSON valide, et refuser de laisser
-  passer le message non masqué quand la réponse est inutilisable. Cette
-  plomberie est le vrai coût de ce niveau, et c'est la part que vos tests
-  doivent couvrir, puisque le modèle lui-même n'est pas testable.
+  réponse qui n'est que probablement du JSON valide, en vérifier chaque élément
+  contre le message, et refuser de laisser passer le message non masqué quand
+  la réponse est inutilisable. Une invite n'est qu'une demande : rien en elle
+  n'oblige le modèle à suivre le format demandé. Cette plomberie est le vrai
+  coût de ce niveau, et c'est la part que vos tests doivent couvrir, puisque le
+  modèle lui-même n'est pas testable.

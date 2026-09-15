@@ -43,8 +43,8 @@ export default {
         en: 'call me on zero six, twelve, thirty-four, fifty-six, seventy-eight',
       },
       why: {
-        fr: 'Rien n’est masqué : la règle cherche des chiffres, et il n’y en a aucun. Quelqu’un qui veut contourner le filtre le fait en deux secondes.',
-        en: 'Nothing is masked: the rule looks for digits and there are none. Anyone who wants around the filter gets around it in two seconds.',
+        fr: 'Rien n’est masqué : la règle cherche des chiffres, et il n’y en a aucun.',
+        en: 'Nothing is masked: the rule looks for digits and there are none.',
       },
     },
   ],

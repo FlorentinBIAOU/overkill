@@ -244,10 +244,6 @@ def test_production_les_chiffres_pleine_largeur_sont_replies():
     assert shape("call me on ０６ １２") == "call me on DD DD"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : sans normalisation, « zéro » en NFD est coupé en « ze » « ro » et n'est plus un chiffre en lettres",
-)
 def test_defaut_un_chiffre_en_lettres_decompose_est_reconnu():
     composed = "appelle au zéro six"
     assert shape(unicodedata.normalize("NFD", composed)) == shape(composed)

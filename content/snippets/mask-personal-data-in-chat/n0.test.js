@@ -60,12 +60,10 @@ test('masque un numéro avec espace, point, tiret ou sans séparateur', () => {
   }
 });
 
-test('INFIRMÉ : chaque motif tolère les séparateurs réellement tapés ; « 06/12/34/56/78 » et une double espace passent en clair', async () => {
-  await assert.rejects(async () => {
-    for (const written of ['06/12/34/56/78', '06 12  34 56 78']) {
-      assert.equal(mask(`call me on ${written}`), 'call me on [phone]', written);
-    }
-  }, assert.AssertionError);
+test('chaque motif tolère les séparateurs réellement tapés ; « 06/12/34/56/78 » et une double espace passent en clair', async () => {
+  for (const written of ['06/12/34/56/78', '06 12  34 56 78']) {
+    assert.equal(mask(`call me on ${written}`), 'call me on [phone]', written);
+  }
 });
 
 test('masque un IBAN espacé ou non', () => {
@@ -74,12 +72,10 @@ test('masque un IBAN espacé ou non', () => {
   }
 });
 
-test('INFIRMÉ : un IBAN compte « up to thirty alphanumerics » après la clé ; le motif en accepte 28, un IBAN russe de 33 caractères passe', async () => {
+test('un IBAN compte « up to thirty alphanumerics » après la clé ; le motif en accepte 28, un IBAN russe de 33 caractères passe', async () => {
   const russian = 'RU0304452522540817810538091310419';
   assert.ok(ibanChecksumIsValid(russian));
-  await assert.rejects(async () => {
-    assert.equal(mask(`compte ${russian}`), 'compte [iban]');
-  }, assert.AssertionError);
+  assert.equal(mask(`compte ${russian}`), 'compte [iban]');
 });
 
 test('un IBAN de vingt-huit caractères après la clé est masqué', () => {
@@ -106,11 +102,9 @@ test('le repli de compatibilité ramène les chiffres pleine largeur', () => {
   assert.equal(mask('jean＠example.com'), '[email]');
 });
 
-test('INFIRMÉ : les liants invisibles deviennent une espace ; seul U+2060 l’est, U+200D reste et le numéro passe', async () => {
-  await assert.rejects(async () => {
-    assert.equal(normalise('06‍12'), '06 12');
-    assert.equal(mask('06‍12‍34‍56‍78'), '[phone]');
-  }, assert.AssertionError);
+test('les liants invisibles deviennent une espace ; seul U+2060 l’est, U+200D reste et le numéro passe', async () => {
+  assert.equal(normalise('06‍12'), '06 12');
+  assert.equal(mask('06‍12‍34‍56‍78'), '[phone]');
 });
 
 test("la normalisation garde les caractères d'une adresse", () => {
@@ -181,48 +175,36 @@ test("production : mille messages d'un bloc terminent vite", () => {
   assert.equal(out.split('[email]').length - 1, 1000);
 });
 
-test('DÉFAUT : une suite de 30 000 caractères de mot sans @ prend un temps quadratique', async () => {
-  await assert.rejects(async () => {
-    const start = performance.now();
-    mask('a'.repeat(30_000));
-    assert.ok(performance.now() - start < 200);
-  }, assert.AssertionError);
+test('une suite de 30 000 caractères de mot sans @ prend un temps quadratique', async () => {
+  const start = performance.now();
+  mask('a'.repeat(30_000));
+  assert.ok(performance.now() - start < 200);
 });
 
-test("DÉFAUT : l'espace sans chasse U+200B et le trait d'union conditionnel U+00AD laissent passer un numéro", async () => {
-  await assert.rejects(async () => {
-    for (const invisible of ['​', '­']) {
-      assert.equal(mask(['06', '12', '34', '56', '78'].join(invisible)), '[phone]');
-    }
-  }, assert.AssertionError);
+test("l'espace sans chasse U+200B et le trait d'union conditionnel U+00AD laissent passer un numéro", async () => {
+  for (const invisible of ['​', '­']) {
+    assert.equal(mask(['06', '12', '34', '56', '78'].join(invisible)), '[phone]');
+  }
 });
 
-test('DÉFAUT : un message sans coordonnée ressort réécrit par NFKC (« … », « m² », « ﬁ », espace insécable)', async () => {
-  await assert.rejects(async () => {
-    const text = 'Merci… à bientôt ! La pièce fait 20 m², ﬁn du devis.';
-    assert.equal(mask(text), text);
-  }, assert.AssertionError);
+test('un message sans coordonnée ressort réécrit par NFKC (« … », « m² », « ﬁ », espace insécable)', async () => {
+  const text = 'Merci… à bientôt ! La pièce fait 20 m², ﬁn du devis.';
+  assert.equal(mask(text), text);
 });
 
-test('DÉFAUT : un IBAN tapé en minuscules passe en clair', async () => {
-  await assert.rejects(async () => {
-    assert.equal(mask('compte fr76 3000 6000 0112 3456 7890 189'), 'compte [iban]');
-  }, assert.AssertionError);
+test('un IBAN tapé en minuscules passe en clair', async () => {
+  assert.equal(mask('compte fr76 3000 6000 0112 3456 7890 189'), 'compte [iban]');
 });
 
-test('DÉFAUT : le format international « +33 (0)6 12 34 56 78 » passe en clair', async () => {
-  await assert.rejects(async () => {
-    assert.equal(mask('tel +33 (0)6 12 34 56 78'), 'tel [phone]');
-  }, assert.AssertionError);
+test('le format international « +33 (0)6 12 34 56 78 » passe en clair', async () => {
+  assert.equal(mask('tel +33 (0)6 12 34 56 78'), 'tel [phone]');
 });
 
-test('DÉFAUT : une adresse accentuée passe en clair ou à moitié (\\w sans drapeau u ne couvre que l’ASCII)', async () => {
+test('une adresse accentuée passe en clair ou à moitié (\\w sans drapeau u ne couvre que l’ASCII)', async () => {
   // « josé@exemple.fr » ressort intact ; « marie.hélène@exemple.fr » ressort « marie.hélè[email] ».
-  await assert.rejects(async () => {
-    for (const address of ['josé@exemple.fr', 'marie.hélène@exemple.fr', 'marie.hélène@exemple.fr'.normalize('NFD')]) {
-      assert.equal(mask(`écris à ${address}`), 'écris à [email]', address);
-    }
-  }, assert.AssertionError);
+  for (const address of ['josé@exemple.fr', 'marie.hélène@exemple.fr', 'marie.hélène@exemple.fr'.normalize('NFD')]) {
+    assert.equal(mask(`écris à ${address}`), 'écris à [email]', address);
+  }
 });
 
 test("production : marque d'ordre des octets et casse mixte", () => {

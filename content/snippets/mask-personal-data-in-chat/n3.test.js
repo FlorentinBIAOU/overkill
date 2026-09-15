@@ -43,46 +43,40 @@ test('point de rupture : une réponse en prose lève une erreur plutôt que de l
   assert.equal(await mask('call 06 12 34 56 78', { client: good }), 'call [phone]');
 });
 
-test('INFIRMÉ : la fiche dit que l’extrait lève au lieu de rendre le message non masqué ; une liste JSON de mauvaise forme le rend en clair', async () => {
+test('la fiche dit que l’extrait lève au lieu de rendre le message non masqué ; une liste JSON de mauvaise forme le rend en clair', async () => {
   // Mauvaises clés, liste de chaînes, liste de nombres : les trois rendent « call 06 12 34 56 78 ».
-  await assert.rejects(async () => {
-    for (const answer of ['[{"value": "06 12 34 56 78", "type": "phone"}]', '["06 12 34 56 78"]', '[1, 2]']) {
-      await assert.rejects(() => mask('call 06 12 34 56 78', { client: new FakeLLM({ response: answer }) }), MaskingUnavailable);
-    }
-  }, assert.AssertionError);
+  for (const answer of ['[{"value": "06 12 34 56 78", "type": "phone"}]', '["06 12 34 56 78"]', '[1, 2]']) {
+    await assert.rejects(() => mask('call 06 12 34 56 78', { client: new FakeLLM({ response: answer }) }), MaskingUnavailable);
+  }
 });
 
-test('DÉFAUT : un texte signalé absent du message (espaces retirés, NFC contre NFD) le rend en clair, sans erreur', async () => {
+test('un texte signalé absent du message (espaces retirés, NFC contre NFD) le rend en clair, sans erreur', async () => {
   const cases = [
     ['call 06 12 34 56 78', '[{"text": "0612345678", "kind": "phone"}]', '06 12 34 56 78'],
     ['écris à josé@exemple.fr', '[{"text": "josé@exemple.fr", "kind": "email"}]', '@exemple.fr'],
   ];
-  await assert.rejects(async () => {
-    for (const [message, answer, secret] of cases) {
-      let out;
-      try {
-        out = await mask(message, { client: new FakeLLM({ response: answer }) });
-      } catch (error) {
-        if (error instanceof MaskingUnavailable) continue;
-        throw error;
-      }
-      assert.ok(!out.includes(secret));
-    }
-  }, assert.AssertionError);
-});
-
-test('DÉFAUT : `kind` n’est pas contrôlé ; le modèle peut écrire « [<script>] » dans le message', async () => {
-  const client = new FakeLLM({ response: '[{"text": "06 12 34 56 78", "kind": "<script>"}]' });
-  await assert.rejects(async () => {
+  for (const [message, answer, secret] of cases) {
     let out;
     try {
-      out = await mask('call 06 12 34 56 78', { client });
+      out = await mask(message, { client: new FakeLLM({ response: answer }) });
     } catch (error) {
-      if (error instanceof MaskingUnavailable) return;
+      if (error instanceof MaskingUnavailable) continue;
       throw error;
     }
-    assert.ok(['call [email]', 'call [phone]', 'call [iban]', 'call [address]'].includes(out));
-  }, assert.AssertionError);
+    assert.ok(!out.includes(secret));
+  }
+});
+
+test('`kind` n’est pas contrôlé ; le modèle peut écrire « [<script>] » dans le message', async () => {
+  const client = new FakeLLM({ response: '[{"text": "06 12 34 56 78", "kind": "<script>"}]' });
+  let out;
+  try {
+    out = await mask('call 06 12 34 56 78', { client });
+  } catch (error) {
+    if (error instanceof MaskingUnavailable) return;
+    throw error;
+  }
+  assert.ok(['call [email]', 'call [phone]', 'call [iban]', 'call [address]'].includes(out));
 });
 
 // ---------------------------------------------------------------------------
@@ -190,17 +184,15 @@ test('production : un message au plafond avec deux cents trouvailles termine vit
   assert.ok(!out.includes('34 56 78'));
 });
 
-test('DÉFAUT : le plafond compte des unités UTF-16 ; 4 001 emojis sont refusés en JavaScript, acceptés en Python', async () => {
+test('le plafond compte des unités UTF-16 ; 4 001 emojis sont refusés en JavaScript, acceptés en Python', async () => {
   const client = new FakeLLM({ response: '[]' });
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await mask('😀'.repeat(4001), { client });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal([...out].length, 4001);
-  }, assert.AssertionError);
+  let out;
+  try {
+    out = await mask('😀'.repeat(4001), { client });
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.equal([...out].length, 4001);
 });
 
 test('production : une injection dans le message reste après les consignes', async () => {

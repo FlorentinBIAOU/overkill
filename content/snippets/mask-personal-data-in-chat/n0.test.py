@@ -84,11 +84,6 @@ def test_masque_un_numero_avec_espace_point_tiret_ou_sans_separateur():
         assert mask(f"call me on {written}") == "call me on [phone]", written
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring dit que chaque motif tolère les séparateurs réellement tapés ; "
-    "« 06/12/34/56/78 » et une double espace « 06 12  34 56 78 » passent en clair",
-)
 def test_chaque_motif_tolere_les_separateurs_reellement_tapes():
     for written in ("06/12/34/56/78", "06 12  34 56 78"):
         assert mask(f"call me on {written}") == "call me on [phone]", written
@@ -99,11 +94,6 @@ def test_masque_un_iban_espace_ou_non():
         assert mask(f"account {written} please") == "account [iban] please", written
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le commentaire dit « up to thirty alphanumerics » après la clé ; le motif en accepte 28, "
-    "un IBAN russe valide de 33 caractères passe en clair",
-)
 def test_un_iban_compte_jusqu_a_trente_caracteres_apres_la_cle():
     russian = "RU0304452522540817810538091310419"  # 29 caractères après la clé, somme valide
     assert iban_checksum_is_valid(russian)
@@ -134,11 +124,6 @@ def test_le_repli_de_compatibilite_ramene_les_chiffres_pleine_largeur():
     assert mask("jean＠example.com") == "[email]"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring dit que les liants invisibles laissés par le repli deviennent une espace ; "
-    "seul U+2060 l'est, le liant sans chasse U+200D reste, et le numéro passe",
-)
 def test_les_liants_invisibles_deviennent_une_espace():
     assert normalise("06‍12") == "06 12"
     assert mask("06‍12‍34‍56‍78") == "[phone]"
@@ -232,42 +217,26 @@ def test_production_mille_messages_d_un_bloc_terminent_vite():
     assert out.count("[phone]") == 1000 and out.count("[email]") == 1000
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une suite de 30 000 caractères de mot sans @ prend plus d'une seconde "
-    "(retour arrière quadratique de [\\w.+-]+@ : 0,2 s à 10 000, 3 s à 40 000)",
-)
 def test_defaut_une_longue_suite_de_lettres_se_traite_en_temps_lineaire():
     start = time.perf_counter()
     mask("a" * 30_000)
     assert time.perf_counter() - start < 0.2
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : l'espace sans chasse U+200B et le trait d'union conditionnel U+00AD laissent passer un numéro",
-)
 def test_defaut_un_caractere_de_largeur_nulle_ne_laisse_pas_passer_un_numero():
     for invisible in ("​", "­"):
         assert mask(invisible.join(["06", "12", "34", "56", "78"])) == "[phone]", hex(ord(invisible))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un message sans coordonnée ressort réécrit par NFKC : « … » devient « ... », "
-    "« m² » devient « m2 », « ﬁ » devient « fi », l'espace insécable devient ordinaire",
-)
 def test_defaut_un_message_sans_coordonnee_ressort_intact():
     text = "Merci… à bientôt ! La pièce fait 20 m², ﬁn du devis."
     assert mask(text) == text
 
 
-@pytest.mark.xfail(strict=True, reason="DÉFAUT : un IBAN tapé en minuscules passe en clair")
 def test_defaut_un_iban_en_minuscules_est_masque():
     assert mask("compte fr76 3000 6000 0112 3456 7890 189") == "compte [iban]"
 
 
-@pytest.mark.xfail(strict=True, reason="DÉFAUT : le format international courant « +33 (0)6 12 34 56 78 » passe en clair")
 def test_defaut_le_format_international_avec_zero_entre_parentheses_est_masque():
     assert mask("tel +33 (0)6 12 34 56 78") == "tel [phone]"
 

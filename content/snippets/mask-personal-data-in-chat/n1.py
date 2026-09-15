@@ -5,12 +5,12 @@ Rung N1. The regular expressions of N0 see one spelling of a phone number.
 This sees the shape of one: a run of tokens that is mostly digits, mostly
 short, and sitting next to words like "call" or "reach".
 
-Training data is a few hundred labelled messages, not a few million. The
-weights are small enough to keep in the repository next to this file, and
+The weights are small enough to keep in the repository next to this file, and
 there is no service to run: the model loads with the process.
 """
 
 import re
+import unicodedata
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -39,11 +39,14 @@ def shape(text: str) -> str:
     """
     Turn a message into the features that matter, and drop the rest.
 
-    A classifier trained on raw text memorises the training phone numbers.
-    Trained on shapes, it learns what a hidden number looks like.
+    Every hidden digit becomes the same symbol, whatever its spelling, so the
+    classifier learns what a hidden number looks like rather than which digits
+    it held.
     """
     out = []
-    for token in re.findall(r"[^\W_]+", text):
+    # Compatibility folding first: full-width digits become digits, and a
+    # decomposed "zéro" becomes one word again.
+    for token in re.findall(r"[^\W_]+", unicodedata.normalize("NFKC", text)):
         lowered = token.lower()
         # Case matters for lookalikes, so fold before lowering.
         if re.fullmatch(DIGIT_WORDS, lowered):

@@ -3,7 +3,7 @@ id: mask-personal-data-in-chat
 family: detect-filter
 status: published
 verdict: N0
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Prevent phone numbers and email addresses from appearing in a sent message."
 
 scenario:
-  fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, pour repérer les coordonnées avant publication. Le besoin est pourtant déterministe : le motif d’une adresse électronique n’a pas changé depuis vingt ans, et celui d’un numéro français non plus. La question n’est pas de savoir si un modèle sait le faire, c’est de savoir ce qu’on paie pour un travail qu’une expression régulière fait en une fraction de milliseconde."
-  en: "A common pattern is calling a general-purpose model on every inbound message to spot contact details before publication. The need is deterministic, though: the shape of an email address has not changed in twenty years, and neither has the shape of a French phone number. The question is not whether a model can do it, it is what you are paying for work a regular expression does in a fraction of a millisecond."
+  fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, pour repérer les coordonnées avant publication. Le besoin est pourtant déterministe : la syntaxe d’une adresse électronique n’a pas changé depuis la RFC 2822 de 2001, ni celle d’un numéro français depuis le passage à dix chiffres de 1996. La question n’est pas de savoir si un modèle sait le faire, c’est de savoir ce qu’on paie pour un travail qu’une expression régulière fait en une fraction de milliseconde."
+  en: "A common pattern is calling a general-purpose model on every inbound message to spot contact details before publication. The need is deterministic, though: the syntax of an email address has not changed since RFC 2822 in 2001, nor has that of a French phone number since the move to ten digits in 1996. The question is not whether a model can do it, it is what you are paying for work a regular expression does in a fraction of a millisecond."
 
 rungs:
   - level: N0
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n0.js
       verification: executed
     breaking_point:
-      fr: "L’obfuscation volontaire. « zéro six douze », « O6 I2 34 » avec des lettres à la place des chiffres, ou des emojis intercalés : rien de tout cela ne ressemble à un numéro pour un motif. Dans l’autre sens, le motif d’IBAN n’a pas de somme de contrôle : une référence de commande écrite « DE 12 3456 7890 1234 » est masquée à tort."
-      en: "Deliberate obfuscation. Spelled-out digits, lookalike characters such as O6 I2 34, or interspersed emoji: none of it looks like a number to a pattern. The other way round, the IBAN pattern carries no checksum: an order reference written DE 12 3456 7890 1234 is masked when it should not be."
+      fr: "L’obfuscation volontaire. « zéro six douze », « O6 I2 34 » avec des lettres à la place des chiffres, ou des emojis intercalés : rien de tout cela ne ressemble à un numéro pour un motif. Dans l’autre sens, la clé de contrôle d’un IBAN peut être satisfaite par coïncidence : une référence de commande écrite « DE 86 3456 7890 1234 » la passe, et elle est masquée à tort."
+      en: "Deliberate obfuscation. Spelled-out digits, lookalike characters such as O6 I2 34, or interspersed emoji: none of it looks like a number to a pattern. The other way round, IBAN check digits can be satisfied by coincidence: an order reference written DE 86 3456 7890 1234 passes them, and is masked when it should not be."
     escalate_when:
       fr: "Vos utilisateurs contournent activement le filtre, et vous le voyez dans les messages signalés."
       en: "Your users are actively working around the filter, and you can see it in the reported messages."
@@ -71,8 +71,8 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n1.js
       verification: executed
     breaking_point:
-      fr: "Le modèle ne connaît que les contournements qu’on lui a montrés. Des homoglyphes venus d’un autre alphabet, ou des chiffres romains, ne portent ni chiffre ni mot connu : rien ne survit à la mise en forme, et le message passe."
-      en: "The model only knows the evasions it was shown. Homoglyphs from another script, or Roman numerals, carry neither a digit nor a known word: nothing survives the shaping, and the message goes through."
+      fr: "Le modèle ne connaît que les contournements qu’on lui a montrés. Des homoglyphes venus d’un autre alphabet, ou des chiffres romains, ne portent ni chiffre ni mot connu : aucun chiffre ne survit à la mise en forme, et le message passe."
+      en: "The model only knows the evasions it was shown. Homoglyphs from another script, or Roman numerals, carry neither a digit nor a known word: no digit survives the shaping, and the message goes through."
     escalate_when:
       fr: "Les contournements changent plus vite que vous ne pouvez étiqueter de nouveaux exemples."
       en: "Evasions change faster than you can label new examples."
@@ -80,8 +80,8 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Sans intérêt ici : un modèle de reconnaissance d’entités auto-hébergé coûte un service permanent à exploiter, pour un gain nul sur des motifs aussi structurés qu’un numéro ou une adresse, que N1 traite déjà."
-      en: "Not useful here: a self-hosted entity recogniser costs a permanent service to operate, for no gain on shapes as structured as a phone number or an address, which N1 already handles."
+      fr: "Sans intérêt ici : un modèle de reconnaissance d’entités auto-hébergé ajoute des poids à télécharger et à tenir à jour, pour des motifs aussi structurés qu’un numéro, une adresse électronique ou un IBAN, que N0 masque déjà. Les numéros déguisés, que N0 laisse passer, sont le terrain de N1."
+      en: "Not useful here: a self-hosted entity recogniser adds weights to download and keep up to date, for shapes as structured as a phone number, an email address or an IBAN, which N0 already masks. Disguised numbers, which N0 lets through, are N1’s ground."
 
   - level: N3
     available: true
@@ -110,23 +110,33 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle peut répondre n’importe quoi, y compris de la prose là où du JSON était demandé. Le comportement dangereux serait de hausser les épaules et de renvoyer le message intact, ce qui laisserait fuir exactement ce qu’on voulait retirer. L’extrait lève une erreur, et c’est à l’appelant de décider."
-      en: "The model can answer anything, including prose where JSON was asked for. The dangerous behaviour would be to shrug and return the message unmasked, leaking precisely what you meant to remove. The snippet raises instead, and the caller decides."
+      fr: "Une invite n’est qu’une demande : rien dans la requête n’oblige la réponse à suivre le format voulu. De la prose, une liste aux mauvaises clés, un texte qui ne figure pas dans le message, une étiquette hors de la liste : le comportement dangereux serait de hausser les épaules et de renvoyer le message tel quel, ce qui laisserait fuir exactement ce qu’on voulait retirer. L’extrait vérifie chaque élément, réessaie, puis lève une erreur, et c’est à l’appelant de décider."
+      en: "A prompt is only a request: nothing in the call holds the answer to the format asked for. Prose, a list with the wrong keys, a text the message does not contain, a label outside the list: the dangerous behaviour would be to shrug and return the message unmasked, leaking precisely what you meant to remove. The snippet checks every item, retries, then raises, and the caller decides."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0 suffit dans l’immense majorité des intégrations. Le besoin est déterministe, le coût marginal est nul, rien ne sort de votre infrastructure, et le résultat se teste unitairement, ce qui compte quand un faux négatif publie le numéro de quelqu’un. Montez à N1 le jour où vous constatez des contournements délibérés, pas avant : vous échangeriez un test unitaire contre un jeu d’entraînement à maintenir."
-  en: "N0 is enough for the vast majority of integrations. The need is deterministic, the marginal cost is nil, nothing leaves your infrastructure, and the result is unit testable, which matters when a false negative publishes somebody’s phone number. Move up to N1 the day you actually see deliberate evasion, not before: you would be trading a unit test for a training set to maintain."
+  fr: "N0 : le besoin est déterministe, le coût marginal est nul, rien ne sort de votre infrastructure, et le résultat se teste unitairement, ce qui compte quand un faux négatif publie le numéro de quelqu’un. Montez à N1 le jour où vous constatez des contournements délibérés, pas avant : vous échangeriez un test unitaire contre un jeu d’entraînement à maintenir."
+  en: "N0: the need is deterministic, the marginal cost is nil, nothing leaves your infrastructure, and the result is unit testable, which matters when a false negative publishes somebody’s phone number. Move up to N1 the day you actually see deliberate evasion, not before: you would be trading a unit test for a training set to maintain."
 
 further_reading:
   - label: "Python — module re, expressions régulières"
     url: "https://docs.python.org/3/library/re.html"
-  - label: "Unicode Technical Report 36 — Security Considerations, sur les caractères sosies"
-    url: "https://www.unicode.org/reports/tr36/"
+  - label: "Unicode Technical Standard 39 — Unicode Security Mechanisms, la détection des caractères sosies"
+    url: "https://www.unicode.org/reports/tr39/"
   - label: "MDN — Expressions régulières en JavaScript"
     url: "https://developer.mozilla.org/docs/Web/JavaScript/Guide/Regular_expressions"
 
-sources: []
+sources:
+  - label: "RFC 2822 (2001) et RFC 5322 (2008), section 3.4.1 — la même définition d’addr-spec"
+    url: "https://www.rfc-editor.org/rfc/rfc5322#section-3.4.1"
+  - label: "Wikipédia — Plan de numérotation en France : numérotation à dix chiffres depuis le 18 octobre 1996"
+    url: "https://fr.wikipedia.org/wiki/Plan_de_num%C3%A9rotation_en_France"
+  - label: "Wikipedia — International Bank Account Number : longueur, groupes de quatre, clé modulo 97"
+    url: "https://en.wikipedia.org/wiki/International_Bank_Account_Number"
+  - label: "Unicode Standard Annex 15 — Unicode Normalization Forms : équivalence canonique et de compatibilité"
+    url: "https://www.unicode.org/reports/tr15/"
+  - label: "OpenAI — tarifs de l’API, exprimés par million de jetons"
+    url: "https://developers.openai.com/api/docs/pricing"
 ---

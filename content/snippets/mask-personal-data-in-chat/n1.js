@@ -5,9 +5,9 @@
  * This sees the shape of one: a run of tokens that is mostly digits, mostly
  * short, sitting next to words like "call" or "reach".
  *
- * Written out in full rather than pulled from a library, because logistic
- * regression on hashed character n-grams is forty lines. That is the whole
- * argument of this rung: the classical tool is small enough to read.
+ * Written out in full rather than pulled from a library: hashing the character
+ * n-grams, training and deciding take three short functions. That is the
+ * whole argument of this rung: the classical tool is small enough to read.
  */
 
 // Digits written as words, in English and in French.
@@ -35,7 +35,9 @@ function isDigitsInDisguise(token) {
 /** Turn a message into the features that matter, and drop the rest. */
 export function shape(text) {
   const out = [];
-  for (const token of text.match(/[\p{L}\p{N}]+/gu) ?? []) {
+  // Compatibility folding first: full-width digits become digits, and a
+  // decomposed "zéro" becomes one word again.
+  for (const token of text.normalize('NFKC').match(/[\p{L}\p{N}]+/gu) ?? []) {
     const lowered = token.toLowerCase();
     if (DIGIT_WORDS.has(lowered)) out.push('D');
     else if (isDigitsInDisguise(token)) out.push('D'.repeat(token.length));
@@ -61,6 +63,10 @@ function features(text) {
 
 /** `labels` is 1 when the message hides contact details, 0 when it does not. */
 export function train(messages, labels, { epochs = 400, rate = 0.5 } = {}) {
+  // An untrained model would score every message 0.5 and block them all.
+  if (!labels.includes(0) || !labels.includes(1) || labels.length !== messages.length) {
+    throw new RangeError('training needs messages of both labels, one label per message');
+  }
   const rows = messages.map(features);
   const weights = new Float64Array(BUCKETS);
   let bias = 0;

@@ -188,27 +188,21 @@ test('production : un message de cent Ko termine vite', () => {
   assert.ok(performance.now() - start < 2000);
 });
 
-test('DÉFAUT : les chiffres pleine largeur ne sont pas repliés (\\d sans drapeau u), Python les replie', async () => {
-  await assert.rejects(async () => {
-    assert.equal(shape('call me on ０６ １２'), 'call me on DD DD');
-  }, assert.AssertionError);
+test('les chiffres pleine largeur ne sont pas repliés (\\d sans drapeau u), Python les replie', async () => {
+  assert.equal(shape('call me on ０６ １２'), 'call me on DD DD');
 });
 
-test('DÉFAUT : sans normalisation, « zéro » en NFD est coupé et n’est plus un chiffre en lettres', async () => {
+test('sans normalisation, « zéro » en NFD est coupé et n’est plus un chiffre en lettres', async () => {
   const composed = 'appelle au zéro six';
-  await assert.rejects(async () => {
-    assert.equal(shape(composed.normalize('NFD')), shape(composed));
-  }, assert.AssertionError);
+  assert.equal(shape(composed.normalize('NFD')), shape(composed));
 });
 
-test("DÉFAUT : un jeu d'entraînement vide est accepté, et le modèle obtenu signale tous les messages", async () => {
-  await assert.rejects(async () => {
-    let empty;
-    try {
-      empty = train([], []);
-    } catch {
-      return;
-    }
-    assert.equal(isHidingContactDetails(empty, 'bonjour'), false);
-  }, assert.AssertionError);
+test("un jeu d'entraînement vide est accepté, et le modèle obtenu signale tous les messages", async () => {
+  let empty;
+  try {
+    empty = train([], []);
+  } catch {
+    return;
+  }
+  assert.equal(isHidingContactDetails(empty, 'bonjour'), false);
 });

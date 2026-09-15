@@ -52,22 +52,12 @@ def test_point_de_rupture_une_reponse_en_prose_leve_une_erreur_plutot_que_de_lai
     assert mask("call 06 12 34 56 78", client=good) == "call [phone]"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la fiche dit que l'extrait lève au lieu de rendre le message non masqué ; une liste JSON aux "
-    "mauvaises clés rend le message en clair, une liste de chaînes lève AttributeError au lieu de MaskingUnavailable",
-)
 def test_point_de_rupture_une_liste_json_de_mauvaise_forme_leve_une_erreur_nommee():
     for answer in ('[{"value": "06 12 34 56 78", "type": "phone"}]', '["06 12 34 56 78"]', "[1, 2]"):
         with pytest.raises(MaskingUnavailable):
             mask("call 06 12 34 56 78", client=FakeLLM(response=answer))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un texte signalé qui ne figure pas tel quel dans le message (espaces retirés, NFC contre NFD) "
-    "ne remplace rien, et le message ressort en clair sans erreur",
-)
 def test_defaut_un_texte_signale_absent_du_message_ne_le_rend_pas_en_clair():
     cases = [
         ("call 06 12 34 56 78", '[{"text": "0612345678", "kind": "phone"}]', "06 12 34 56 78"),
@@ -81,10 +71,6 @@ def test_defaut_un_texte_signale_absent_du_message_ne_le_rend_pas_en_clair():
         assert secret not in out
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : `kind` n'est pas contrôlé ; le modèle peut écrire « [<script>] » dans le message",
-)
 def test_defaut_une_etiquette_hors_liste_est_refusee():
     client = FakeLLM(response='[{"text": "06 12 34 56 78", "kind": "<script>"}]')
     try:
