@@ -235,6 +235,27 @@ def test_defaut_le_modele_par_defaut_est_recharge_a_chaque_document(transformers
 @pytest.mark.xfail(
     strict=True,
     reason=(
+        "DÉFAUT : `transformers` 5 a retiré les pipelines `summarization`, `translation` "
+        "et `text2text-generation` (MIGRATION_GUIDE_V5.md : « Text2TextGenerationPipeline, "
+        "including its related SummarizationPipeline and TranslationPipeline, were "
+        "deprecated and will now be removed ») ; sur une installation courante, le "
+        "chargement par défaut lève « Unknown task summarization » avant tout résumé"
+    ),
+)
+def test_defaut_transformers_5_n_a_plus_de_pipeline_summarization(monkeypatch):
+    module = types.ModuleType("transformers")
+
+    def pipeline(task, model):
+        raise KeyError(f"Unknown task {task}, available tasks are ['feature-extraction', 'text-generation', ...]")
+
+    module.pipeline = pipeline
+    monkeypatch.setitem(sys.modules, "transformers", module)
+    assert isinstance(summarise(REPORT), str)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
         "DÉFAUT : la seconde passe n'est pas découpée. Sur un document de 200 000 "
         "caractères, 67 notes de la taille d'une sortie de bart-large-cnn (environ 600 "
         "caractères) partent d'un bloc, 40 000 caractères, bien au-delà de la fenêtre que "

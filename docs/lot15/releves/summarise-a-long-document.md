@@ -1,7 +1,7 @@
 # summarise-a-long-document — relevé du testeur
 
 Passe 1 du lot 15. Tests : `content/snippets/summarise-a-long-document/n{0,1,2,3}.test.{py,js}`.
-Avant : 78 tests. Après : 170 (n0.py 24, n0.js 22, n1.py 18, n1.js 18, n2.py 21,
+Avant : 78 tests. Après : 171 (n0.py 24, n0.js 22, n1.py 18, n1.js 18, n2.py 22,
 n2.js 21, n3.py 20, n3.js 26). Les tests d'origine sont renommés en français,
 assertions gardées. L'essai figé (niveau N3) est testé dans `n3.test.js`, sept
 tests.
@@ -57,7 +57,7 @@ N3 (`openai`) sont exécutés contre un module à la surface du paquet publié
 | 40 | N2 commentaire MAX_CHARACTERS | « a document nobody meant to send is still better refused than churned through in silence » | démontrée (py, js) : 200 000 passe, 200 001 refusé sans appel | test_refuse_un_document_trop_long_… |
 | 41 | N2 commentaires de _generate ; attempts | « An empty answer is a failure, not a summary » ; réessai | démontrée (py, js) : espaces et `null` lèvent ; réessais comptés ; zéro essai lève sans appel ; une réponse d'un autre type est une panne | test_une_reponse_vide_ou_nulle_…, test_une_panne_…, test_production_zero_essai_…, test_production_une_reponse_d_un_autre_type_… |
 | 42 | N2 LocalSummariser | « Loaded once and kept for the life of the process: it is the loading that is slow, not the summarising » | DÉFAUT (py, js) : `summarise` construit un `LocalSummariser` neuf à chaque appel sans modèle injecté ; deux documents, deux chargements | test_defaut_le_modele_par_defaut_est_recharge_a_chaque_document |
-| 43 | N2 défaut réel | `pipeline("summarization", model=…)` puis `(text, truncation=True)[0]["summary_text"]` ; js `pipeline('summarization', nom)` puis `[{ summary_text }]` | démontrée : surface de `transformers` et de transformers.js (documentation), points de contrôle `facebook/bart-large-cnn` et `Xenova/distilbart-cnn-12-6` existants, tâche `summarization`, 1 024 positions. Constat : les deux langages ne chargent pas le même modèle (bart-large-cnn en Python, distilbart en JavaScript), alors que la lecture complémentaire présente bart-large-cnn comme « le modèle utilisé au niveau N2 » | test_le_modele_par_defaut_a_la_surface_de_transformers, test_le_modele_nomme_… |
+| 43 | N2 défaut réel | `pipeline("summarization", model=…)` puis `(text, truncation=True)[0]["summary_text"]` ; js `pipeline('summarization', nom)` puis `[{ summary_text }]` | démontrée pour JavaScript (transformers.js garde la tâche) et pour `transformers` 4.x : contre un module à cette surface, le défaut rend le résumé ; points de contrôle `facebook/bart-large-cnn` et `Xenova/distilbart-cnn-12-6` existants, tâche `summarization`, 1 024 positions. DÉFAUT (py) : `transformers` 5 a retiré `SummarizationPipeline` (MIGRATION_GUIDE_V5.md, vérifié, relevé aussi par un autre testeur) ; sur une installation courante le chargement lève « Unknown task summarization ». Constat : les deux langages ne chargent pas le même modèle (bart-large-cnn en Python, distilbart en JavaScript), alors que la lecture complémentaire présente bart-large-cnn comme « le modèle utilisé au niveau N2 » | test_le_modele_par_defaut_a_la_surface_de_transformers, test_defaut_transformers_5_n_a_plus_de_pipeline_summarization, test_le_modele_nomme_… |
 | 44 | N2 risks, regulatory, escalate_when, cost, latency | `own-infra`, `true`, `hard` ; licence ; « il faudrait réaffiner le modèle » ; `modéré`, « >1 s » | non testable : modèle réel non exécuté, juridique, ordres de grandeur | — |
 | 45 | N2 production | vide, une phrase, NFD / emoji transmis tels quels | démontrée (py, js). Constat : la découpe écrase les sauts de paragraphe en une espace | test_production_… |
 | 46 | N3 breaking_point | « L'instruction « n'utilise que ce que dit le document » est une demande, pas une contrainte » | démontrée (py, js) : la phrase est dans l'invite, et l'invention passe | test_point_de_rupture_la_consigne_… |
@@ -105,6 +105,7 @@ N3 (`openai`) sont exécutés contre un module à la surface du paquet publié
 - **36 (N2)** : seconde passe non découpée, tronquée en silence sur un long
   document.
 - **42 (N2)** : modèle rechargé à chaque document.
+- **43 (N2 py)** : pipeline `summarization` absent de `transformers` 5.
 - **51, 52, 53, 56 (N3)** : clôture de code ; points clés non-chaînes convertis ;
   client par défaut incompatible avec le kit ; nombre de phrases nul payé.
 
