@@ -145,17 +145,14 @@ def test_un_prefixe_suffit():
     assert text_match("chaussures course", CATALOGUE[2]) == 0.0
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : la docstring dit « a shopper who types the plural is looking for "
-    "the singular too » ; la correspondance par préfixe fait l'inverse : "
-    "« sandales » ne trouve pas « Sandale » (0), seul le singulier trouve le pluriel"
-))
-def test_infirme_une_requete_au_pluriel_trouve_le_produit_au_singulier():
-    assert text_match("sandales", {"title": "Sandale de marche"}) == 1.0
+def test_une_requete_au_pluriel_ne_trouve_pas_le_produit_au_singulier():
+    """Docstring de text_match : « Not the other way round: "sandales" does not find "sandale". »"""
+    assert text_match("sandales", {"title": "Sandale de marche"}) == 0.0
+    assert text_match("sandales randonnée", {"title": "Sandale de randonnée"}) == 0.5
 
 
 def test_le_singulier_trouve_le_pluriel():
-    """Ce que la correspondance par préfixe fait réellement, témoin du test précédent."""
+    """Docstring de text_match : « and "sandale" finds "sandales" » ; témoin du test précédent."""
     assert text_match("sandale", {"title": "Sandales de marche"}) == 1.0
 
 
@@ -166,10 +163,37 @@ def test_les_accents_et_la_casse_sont_ignores():
     assert text_match("randonnee", CATALOGUE[4]) == 1.0
     assert text_match("crème", {"title": "Montre creme"}) == 1.0
     assert fold("Crème") == "creme"
+    assert fold("Việt Nam, Évry, Ångström") == "viet nam, evry, angstrom"
+    assert text_match("evry", {"title": unicodedata.normalize("NFD", "Magasin d'Évry")}) == 1.0
 
 
-def test_tout_ce_qui_nest_ni_lettre_ni_chiffre_separe_les_termes():
-    """Docstring de terms : « Split on anything that is not a letter or a digit »."""
+def test_seules_les_diacritiques_de_u0300_a_u036f_sont_retirees():
+    """
+    Docstring de fold : « Only the diacritics Latin scripts use (U+0300 to U+036F) are dropped ».
+    Limites : U+0300 et U+036F retirés ; U+1DC4 (supplément de diacritiques) et le virama gardés.
+    """
+    assert fold("a\u0300b\u036fc") == "abc"
+    assert fold("e\u1dc4") == "e\u1dc4"
+    assert fold("हिंदी") == "हिंदी"
+
+
+def test_les_voyelles_du_devanagari_et_de_l_arabe_restent_des_mots_differents():
+    """
+    Docstring de fold : « in Devanagari or Arabic the vowel signs are marks too, and dropping them
+    would turn one word into another » ; de terms : « Split on anything that is not a letter, a mark or a digit ».
+    """
+    assert terms("हिंदी फ़िल्में") == ["हिंदी", "फ़िल्में"]
+    assert text_match("हिंदी", {"title": "हद"}) == 0.0
+    assert text_match("मलक", {"title": "मालिक"}) == 0.0
+    # « مَلِك » (roi) et « مَلَك » (ange) ne diffèrent que par une voyelle : ils restent deux mots.
+    assert text_match("مَلِك", {"title": "مَلَك"}) == 0.0
+    # Témoin : le mot lui-même est trouvé.
+    assert text_match("हिंदी", {"title": "हिंदी फ़िल्में"}) == 1.0
+    assert text_match("مَلِك", {"title": "كتاب مَلِك"}) == 1.0
+
+
+def test_tout_ce_qui_nest_ni_lettre_ni_marque_ni_chiffre_separe_les_termes():
+    """Docstring de terms : « Split on anything that is not a letter, a mark or a digit »."""
     assert terms("T-shirt  col-V, taille 42/44") == ["t", "shirt", "col", "v", "taille", "42", "44"]
 
 
@@ -189,27 +213,56 @@ def test_un_poids_de_deux_compte_vraiment_deux_fois_plus():
     assert (un, deux) == (pytest.approx(1 / 2), pytest.approx(2 / 3))
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : la docstring et le nom disent que chaque signal est « reduced to "
-    "the same nought-to-one scale before the weights touch it » ; seuls le texte "
-    "et le stock le sont par construction, la marge et la popularité sont "
-    "recopiées telles quelles : une marge saisie en pourcentage (35) passe à 35 "
-    "et écrase les trois autres signaux"
-))
-def test_infirme_chaque_signal_est_ramene_entre_zero_et_un():
-    mesure = signals(dict(CATALOGUE[0], margin=35, popularity=80), "chaussures")
-    assert all(0.0 <= mesure[name] <= 1.0 for name in SIGNALS)
+def test_le_texte_et_la_disponibilite_sont_entre_zero_et_un_par_construction():
+    """Docstring : « text and availability by construction » ; name : « quatre signaux compris entre zéro et un »."""
+    for requete in ("chaussures de course", "", "chauss randonnée zzz", "!!!"):
+        for produit in SPRING + [dict(CATALOGUE[0], in_stock="oui"), dict(CATALOGUE[0], in_stock=0)]:
+            mesure = signals(produit, requete)
+            assert 0.0 <= mesure["text"] <= 1.0 and mesure["availability"] in (0.0, 1.0)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : la docstring dit que le score « stays inside the same scale "
-    "whatever the weights » ; avec un poids négatif (ce que N1 apprend, cf. son "
-    "test « the log can disagree with the shop »), la moyenne pondérée sort de "
-    "[0, 1] : texte 2, marge -1 donne 2,0"
-))
-def test_infirme_le_score_reste_entre_zero_et_un_quels_que_soient_les_poids():
+def test_une_marge_ou_une_popularite_hors_de_l_echelle_est_refusee():
+    """
+    Docstring : « margin and popularity because a value outside is refused rather than left to
+    swamp the others ». Une marge saisie en pourcentage (35) lève ; limites 0 et 1 acceptées.
+    """
+    with pytest.raises(ValueError, match="margin must lie between 0 and 1"):
+        signals(dict(CATALOGUE[0], margin=35), "chaussures")
+    with pytest.raises(ValueError, match="popularity must lie between 0 and 1"):
+        signals(dict(CATALOGUE[0], popularity=80), "chaussures")
+    for hors in (-0.0001, 1.0000001, float("nan"), float("inf")):
+        with pytest.raises(ValueError):
+            signals(dict(CATALOGUE[0], margin=hors), "chaussures")
+        with pytest.raises(ValueError):
+            rank([CATALOGUE[1], dict(CATALOGUE[0], popularity=hors)], "chaussures")
+    for limite in (0.0, 1.0):
+        mesure = signals(dict(CATALOGUE[0], margin=limite, popularity=limite), "chaussures")
+        assert (mesure["margin"], mesure["popularity"]) == (limite, limite)
+
+
+def test_un_poids_negatif_est_refuse():
+    """Docstring : « a mean over weights that cannot be negative » ; texte 2, marge -1 lève."""
     mesure = {"text": 1.0, "availability": 0.0, "margin": 0.0, "popularity": 0.0}
-    assert 0.0 <= score(mesure, {"text": 2.0, "availability": 0.0, "margin": -1.0, "popularity": 0.0}) <= 1.0
+    with pytest.raises(ValueError, match="cannot be negative"):
+        score(mesure, {"text": 2.0, "availability": 0.0, "margin": -1.0, "popularity": 0.0})
+    with pytest.raises(ValueError):
+        rank(CATALOGUE, "chaussures", dict(DEFAULT_WEIGHTS, popularity=-1e-9))
+    # Limite : un poids nul est accepté.
+    assert score(mesure, {"text": 2.0, "availability": 0.0, "margin": 0.0, "popularity": 0.0}) == 1.0
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "DÉFAUT : un poids NaN ou infini passe le refus des poids négatifs (nan < 0 et inf < 0 sont faux), et le "
+    "score sort de l'échelle sans erreur : score(…, text=nan) et score(…, text=inf) valent nan"
+))
+def test_defaut_un_poids_nan_ou_infini_est_refuse_ou_garde_le_score_dans_l_echelle():
+    mesure = {"text": 1.0, "availability": 0.0, "margin": 0.5, "popularity": 0.2}
+    for poids in (float("nan"), float("inf")):
+        try:
+            valeur = score(mesure, dict(DEFAULT_WEIGHTS, text=poids))
+        except ValueError:
+            continue
+        assert 0.0 <= valeur <= 1.0, poids
 
 
 def test_le_score_reste_entre_zero_et_un_pour_des_poids_positifs_et_des_signaux_dans_lechelle():
@@ -277,11 +330,17 @@ def test_un_classement_de_six_produits_prend_moins_dune_milliseconde():
 
 
 def test_lessai_la_nouveaute_arrive_troisieme_derriere_des_chaussures_de_course_et_des_chaussettes():
-    """Essai, why : « Le seul produit qui répond exactement à la requête arrive troisième, derrière une paire de chaussures de course et des chaussettes »."""
+    """
+    Essai, why : « Le seul produit qui répond exactement à la requête arrive troisième, derrière une paire de
+    chaussures de course et des chaussettes » ; « cette nouveauté n'a presque aucune popularité » (0,05, la
+    plus faible du catalogue ; vérifié sur l'essai lui-même en JavaScript).
+    """
     spring_essai = [dict(p, title="Montre GPS Cadence") if p["title"] == "Montre GPS Crème" else p for p in SPRING]
     ranked = rank(spring_essai, "sandales randonnée", TUNED)
     assert titles(ranked)[:3] == ["Chaussures de course Route 5", "Chaussettes de running", "Sandales de randonnée Ultra"]
     assert [r["signals"]["text"] for r in ranked].count(1.0) == 1
+    sandales = SPRING[0]
+    assert sandales["popularity"] == 0.05 == min(p["popularity"] for p in SPRING)
     # « la popularité pèse deux fois le texte ».
     assert TUNED["popularity"] == 2 * TUNED["text"]
 
@@ -328,15 +387,22 @@ def test_production_nfd_insecable_largeur_nulle_emoji_et_casse_mixte():
     assert text_match("rando\u200bnnée", {"title": "randonnée"}) == 0.5
 
 
-def test_un_mot_en_devanagari_ne_trouve_pas_un_autre_mot():
+def test_production_un_mot_en_devanagari_ou_en_arabe_voyelle_ne_trouve_pas_un_autre_mot():
+    """Même sortie en JavaScript (n0.test.js) : les deux langages gardent les mêmes marques."""
     assert text_match("हिंदी", {"title": "हद"}) == 0.0
+    assert text_match("مَلِك", {"title": "مَلَك"}) == 0.0
+    assert terms("مَكْتَبَة") == ["مَكْتَبَة"]
 
 
 def test_production_un_champ_manquant_leve_une_erreur():
-    """Python lève : KeyError sans `in_stock`, TypeError sur une popularité à None."""
+    """Python lève : KeyError sans `in_stock`, TypeError sur une popularité à None ou en chaîne, KeyError sur des poids incomplets."""
     with pytest.raises(KeyError):
         rank([{"title": "Sans stock", "margin": 0.1, "popularity": 0.1}], "x")
     with pytest.raises(TypeError):
         rank([dict(CATALOGUE[0], popularity=None)], "x")
+    with pytest.raises(TypeError):
+        rank([dict(CATALOGUE[0], margin="0.5")], "x")
+    with pytest.raises(KeyError):
+        rank([{"title": "Sans marge", "in_stock": True, "popularity": 0.1}], "x")
     with pytest.raises(KeyError):
         rank(CATALOGUE, "x", {"text": 1.0})

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import * as n0 from './n0.js';
@@ -61,13 +61,13 @@ function synthetique(pages, vrais = [0.5, 0.3, 0.0, 0.2], graine = 1) {
   return log;
 }
 
-function learnWeightsEnPython(journaux) {
+function learnWeightsEnPython(journaux, regularisation = 1) {
   const racine = fileURLToPath(new URL('../../../', import.meta.url));
   const venv = `${racine}.venv-tools/bin/python`;
   const python = existsSync(venv) ? venv : 'python3';
   const script =
     'import sys, json; sys.path.insert(0, sys.argv[1]); from n1 import learn_weights; ' +
-    'json.dump([learn_weights(j) for j in json.load(sys.stdin)], sys.stdout)';
+    `json.dump([learn_weights(j, ${regularisation}) for j in json.load(sys.stdin)], sys.stdout)`;
   const r = spawnSync(python, ['-c', script, fileURLToPath(new URL('.', import.meta.url))], {
     input: JSON.stringify(journaux.map((j) => impressions(j))),
     encoding: 'utf8',
@@ -150,7 +150,7 @@ test('le journal peut contredire la boutique', () => {
 
 test('Python et JavaScript apprennent les mêmes poids à deux décimales', () => {
   // The same log, fitted by scikit-learn in n1.py, gives these weights. Two
-  // decimals of agreement is what says the thirty lines above are the same
+  // decimals of agreement is what says the gradient descent above is the same
   // model and not a lookalike.
   const weights = learnWeights(impressions());
   assert.ok(close(weights.text, 0.44), weights.text);
@@ -165,19 +165,31 @@ test('Python et JavaScript apprennent les mêmes poids à deux décimales', () =
   });
 });
 
-test('l’ajustement tient en une trentaine de lignes', () => {
-  // Docstring : « The fit is thirty lines of gradient descent rather than a dependency ».
-  const lignes = (f) => f.toString().split('\n').filter((l) => l.trim() && !l.trim().startsWith('//')).length;
-  assert.ok(lignes(pairs) + lignes(learnWeights) <= 40, String(lignes(pairs) + lignes(learnWeights)));
+test('l’ajustement est une descente de gradient écrite en entier, sans dépendance', () => {
+  // Docstring : « The fit is […] gradient descent rather than a dependency ». Le nombre de lignes n'est
+  // pas épinglé (décision n° 10 du lot) ; il est mesuré au relevé.
+  const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /^\s*import\s|require\(/m);
+  // Une descente : un seul pas ne rend pas les poids de six cents pas, qui sont ceux de scikit-learn.
+  const unPas = learnWeights(impressions(), { epochs: 1 });
+  const complet = learnWeights(impressions());
+  assert.ok(SIGNALS.some((name) => !close(unPas[name], complet[name])));
+  assert.throws(() => learnWeights(impressions(), { epochs: 0 }), /never differ/);
 });
 
-test('INFIRMÉ : la pénalité est ce qui garde à zéro un signal que le journal n’a pas fait varier', () => {
-  // Commentaire : « The penalty keeps a signal the log never varied at exactly
-  // nought ». Sans pénalité, le poids reste nul aussi : la colonne est à zéro,
-  // son gradient l'est, et le poids part de zéro.
-  assert.throws(() => {
-    assert.notEqual(learnWeights(impressions(FLAT_MARGIN), { regularisation: Infinity }).margin, 0);
-  });
+test('la pénalité divisée par le nombre de lignes fait le même modèle pour plusieurs C', () => {
+  // Commentaire : « The penalty of scikit-learn's `C`, divided by the row count because the gradient above
+  // is a mean: it is what makes both versions fit one model. »
+  const journaux = [LOG, [...LOG, ...LOG, ...LOG]];
+  for (const regularisation of [0.1, 1]) {
+    const python = learnWeightsEnPython(journaux, regularisation);
+    journaux.forEach((journal, i) => {
+      const javascript = learnWeights(impressions(journal), { regularisation });
+      for (const name of SIGNALS) assert.ok(close(python[i][name], javascript[name]), `${regularisation} ${i} ${name}`);
+    });
+  }
+  // Le nombre de lignes compte : le journal triplé n'apprend pas les mêmes poids.
+  assert.ok(Math.abs(learnWeights(impressions(LOG)).text - learnWeights(impressions(journaux[1])).text) > 0.03);
 });
 
 test('les poids appris classent une nouvelle page comme le journal', () => {
@@ -198,30 +210,61 @@ test('les poids sont sur une échelle lisible, et la mise à l’échelle ne cha
   assert.deepEqual(rank(candidates, weights).map((r) => r.candidate), rank(candidates, x7).map((r) => r.candidate));
 });
 
-test('INFIRMÉ : l’échelle du score reste celle de N0', () => {
-  // Un produit rentable sans autre signal reçoit -0,25 avec les poids appris.
-  assert.throws(() => {
-    const s = rank(page([[0.0, 0.0, 1.0, 0.0, false]]), learnWeights(impressions()))[0].score;
-    assert.ok(s >= 0 && s <= 1);
-  });
+test('le score de N1 est une somme entre moins un et un, là où N0 est une moyenne', () => {
+  const weights = learnWeights(impressions());
+  assert.ok(weights.margin < 0);
+  assert.ok(close(Object.values(weights).reduce((s, v) => s + Math.abs(v), 0), 1, 1e-9));
+  const candidat = page([[0, 0, 1, 0, false]]);
+  const [ligne] = rank(candidat, weights);
+  assert.ok(close(ligne.score, weights.margin, 1e-12) && ligne.score < 0);
+  assert.deepEqual(ligne.candidate.signals, candidat[0].signals);
+  const tousPositifs = { text: 0.25, availability: 0.25, margin: 0.25, popularity: 0.25 };
+  const tousNegatifs = Object.fromEntries(SIGNALS.map((n) => [n, -0.25]));
+  const un = page([[1, 1, 1, 1, false]]);
+  assert.equal(rank(un, tousPositifs)[0].score, 1);
+  assert.equal(rank(un, tousNegatifs)[0].score, -1);
+  for (const item of impressions(synthetique(100)).flat()) {
+    const s = rank([item], weights)[0].score;
+    assert.ok(s >= -1 && s <= 1);
+  }
+  assert.throws(() => n0.score(candidat[0].signals, weights), { name: 'RangeError', message: /cannot be negative/ });
 });
 
-test('INFIRMÉ : la fonction de service de N0 classe comme N1 avec les poids appris', () => {
-  // n0.score divise par la somme signée des poids : une somme négative inverse l'ordre.
-  assert.throws(() => {
-    const weights = learnWeights(impressions(AGAINST_THE_SHOP));
-    assert.ok(Object.values(weights).reduce((s, v) => s + v, 0) < 0);
-    const produits = [
-      { title: 'pertinent et rentable', tags: [], inStock: true, margin: 0.9, popularity: 0.5 },
-      { title: 'hors sujet et sans marge', tags: [], inStock: true, margin: 0.1, popularity: 0.5 },
-    ];
-    const ordreN0 = n0.rank(produits, 'pertinent', weights).map((r) => r.product.title);
-    const candidates = produits.map((p) => ({ title: p.title, signals: n0.signals(p, 'pertinent') }));
-    assert.deepEqual(ordreN0, rank(candidates, weights).map((r) => r.candidate.title));
-  });
+test('diviser par le total signé inverserait l’ordre ou l’effacerait', () => {
+  const moyenneSignee = (signaux, poids) => {
+    const total = SIGNALS.reduce((s, n) => s + poids[n], 0);
+    return total ? SIGNALS.reduce((s, n) => s + poids[n] * signaux[n], 0) / total : 0;
+  };
+  const weights = learnWeights(impressions(AGAINST_THE_SHOP));
+  assert.ok(Object.values(weights).reduce((s, v) => s + v, 0) < 0);
+  const candidats = page([[1, 1, 0.9, 0.5, false], [0, 1, 0.1, 0.5, false]]);
+  const ranked = rank(candidats, weights);
+  assert.ok(ranked[0].score > ranked[1].score);
+  const ordreSomme = ranked.map((r) => r.candidate.signals.text);
+  const ordreMoyenne = [...candidats].sort((a, b) => moyenneSignee(b.signals, weights) - moyenneSignee(a.signals, weights))
+    .map((c) => c.signals.text);
+  assert.deepEqual(ordreMoyenne, [...ordreSomme].reverse());
+  const nuls = { text: 0.5, availability: 0, margin: -0.5, popularity: 0 };
+  assert.deepEqual(candidats.map((c) => moyenneSignee(c.signals, nuls)), [0, 0]);
+  assert.equal(new Set(rank(candidats, nuls).map((r) => r.score)).size, 2);
 });
 
-test('même somme pondérée, même tri stable, même explication', () => {
+test('N0 refuse les poids appris négatifs : il faut servir avec la fonction de N1', () => {
+  const weights = learnWeights(impressions(AGAINST_THE_SHOP));
+  assert.ok(Math.min(...Object.values(weights)) < 0);
+  const produits = [
+    { title: 'pertinent et rentable', tags: [], inStock: true, margin: 0.9, popularity: 0.5 },
+    { title: 'hors sujet et sans marge', tags: [], inStock: true, margin: 0.1, popularity: 0.5 },
+  ];
+  assert.throws(() => n0.rank(produits, 'pertinent', weights), { name: 'RangeError', message: /cannot be negative/ });
+  const candidates = produits.map((p) => ({ title: p.title, signals: n0.signals(p, 'pertinent') }));
+  const ranked = rank(candidates, weights);
+  assert.deepEqual(ranked.map((r) => r.candidate.title), ['hors sujet et sans marge', 'pertinent et rentable']);
+  assert.ok(ranked.every((r) => Object.keys(r.candidate.signals).length === 4 && typeof r.score === 'number'));
+});
+
+test('somme pondérée des mêmes signaux, même tri stable, signaux rendus', () => {
+  // Docstring de rank : « A sum weighted over the same signals, the same stable sort, the signals handed back with each candidate ».
   const weights = { text: 0.5, availability: 0.25, margin: 0, popularity: 0.25 };
   const jumeaux = page([[0.5, 1, 0.1, 0.5, false], [0.5, 1, 0.1, 0.5, false], [0.5, 1, 0.1, 0.5, false]])
     .map((c, id) => ({ ...c, id }));
@@ -279,31 +322,34 @@ test('production : valeurs aux limites, tous les signaux à zéro ou à un', () 
   for (const v of Object.values(weights)) assert.ok(close(v, 0.25, 1e-9));
 });
 
-test('un journal sans aucune différence lève l’erreur nommée', () => {
-  // JavaScript rend quatre poids NaN sans erreur ; Python lève ZeroDivisionError.
+test('production : un journal sans aucune différence lève l’erreur nommée', () => {
   assert.throws(
     () => learnWeights(impressions([[[0.5, 1, 0.3, 0.2, true], [0.5, 1, 0.3, 0.2, false]]])),
     /nothing to learn from/,
   );
 });
 
-test('DÉFAUT : un signal manquant rend des poids NaN, sans erreur', () => {
-  // Python lève TypeError sur None ; ici `undefined` contamine tout l'ajustement.
-  assert.throws(() => {
-    const weights = learnWeights([page([[0.5, 1, 0.3, undefined, true], [0.4, 1, 0.3, 0.2, false]])]);
-    assert.ok(Object.values(weights).every(Number.isFinite));
-  });
+test('production : un signal manquant est refusé', () => {
+  // Commentaire de inScale : « undefined fails too ».
+  assert.throws(() => learnWeights([page([[0.5, 1, 0.3, undefined, true], [0.4, 1, 0.3, 0.2, false]])]), RangeError);
+  assert.throws(() => learnWeights([page([[0.5, 1, 0.3, NaN, true], [0.4, 1, 0.3, 0.2, false]])]), RangeError);
 });
 
-test('DÉFAUT : des signaux hors échelle font diverger la descente de gradient des poids de Python', () => {
-  // Rien ne refuse une popularité en pourcentage. scikit-learn converge
-  // (popularité ≈ 0,00) ; le pas fixe de 0,5 fait osciller la descente de
-  // gradient, qui rend une popularité ≈ -0,49 : les deux langages ne sont plus
-  // le même modèle, et rien ne le signale.
-  assert.throws(() => {
-    const enPourcent = LOG.map((rows) => rows.map((r) => [r[0], r[1], r[2], r[3] * 100, r[4]]));
-    const [python] = learnWeightsEnPython([enPourcent]);
-    const javascript = learnWeights(impressions(enPourcent));
-    for (const name of SIGNALS) assert.ok(close(python[name], javascript[name]), name);
-  });
+test('DÉFAUT : un signal null ou écrit en chaîne passe le contrôle d’échelle (Python lève TypeError)', async () => {
+  // `null >= 0 && null <= 1` est vrai : null compte pour zéro dans la différence ; « 0.9 » est converti.
+  await assert.rejects(async () => {
+    for (const valeur of [null, '0.9']) {
+      assert.throws(() => pairs([page([[0.5, 1, 0.3, valeur, true], [0.4, 1, 0.3, 0.2, false]])]), RangeError, String(valeur));
+    }
+  }, assert.AssertionError);
+});
+
+test('production : des signaux hors échelle sont refusés', () => {
+  const enPourcent = LOG.map((rows) => rows.map((r) => [r[0], r[1], r[2], r[3] * 100, r[4]]));
+  assert.throws(() => learnWeights(impressions(enPourcent)), { name: 'RangeError', message: /between 0 and 1/ });
+  for (const hors of [-0.0001, 1.0000001, Infinity]) {
+    assert.throws(() => pairs([page([[0.5, 1, 0.3, hors, true], [0.4, 1, 0.3, 0.2, false]])]), RangeError, String(hors));
+  }
+  assert.throws(() => pairs([page([[0.5, 1, 0.3, 2, false]])]), RangeError);
+  assert.equal(pairs([page([[0, 0, 0, 0, true], [1, 1, 1, 1, false]])]).rows.length, 2);
 });

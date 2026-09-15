@@ -1,5 +1,16 @@
 # rank-products-by-relevance — relevé du testeur
 
+> **Tour 2 — contre-épreuve : quatre marquages restent, à reprendre par le rédacteur.**
+> - **DÉFAUT T2-6 (N0, JavaScript) — non traité au tour 1** : des poids incomplets
+>   (`{ text: 1 }`) rendent un score nul pour tous les produits, sans erreur ;
+>   Python lève `KeyError`. Le rédacteur l'avait laissé « à trancher » : le test
+>   de production qui épinglait ce score nul est retiré, le `DÉFAUT` reste.
+> - **DÉFAUT T2-5 (N0, py/js)** : un poids `NaN` ou infini passe le refus des
+>   poids négatifs ; le score vaut `nan` (Python), `NaN` ou 0 (JavaScript).
+> - **DÉFAUT T2-7 (N0 et N1, JavaScript)** : une marge, une popularité ou un
+>   signal `null` ou écrit en chaîne passe le nouveau contrôle d'échelle
+>   (`null >= 0 && null <= 1` est vrai) ; Python lève `TypeError`.
+
 Passe 1 du lot 15. Niveaux disponibles : N0 (verdict) et N1. Tests dans `content/snippets/rank-products-by-relevance/` :
 
 | Fichier | Tests | Dont d'origine (renommés) | Marqués |
@@ -118,3 +129,67 @@ Tests d'origine : tous conservés. Le point de rupture N1 d'origine ne vérifiai
 
 - Plusieurs affirmations de cette fiche portent sur la **relation entre deux niveaux** (« même somme pondérée », « même échelle », « gardez la même fonction de service »). La charte range ces phrases dans les affirmations transverses mais ne dit pas qu'il faut les tester en croisant les deux extraits (N1 nourri dans la fonction de N0). C'est ce croisement qui a trouvé le rang 58.
 - Un journal synthétique « dont on connaît la réponse » (clics générés depuis des poids connus) est le seul moyen de démontrer « la régression redonne les poids d'origine ». Un générateur à formule simple produit des données dégénérées (premier essai : poids faux de 0,12) ; la charte pourrait recommander un générateur pseudo-aléatoire entier partagé entre les deux langages (MINSTD ici).
+
+## Tour 2 — contre-épreuve
+
+Après `4151507` (corrections du rédacteur, tour 1). Tests : n0.py 30 → 34,
+n0.js 32 → 38, n1.py 26 → 28, n1.js 28 → 30. `node scripts/test-snippets.mjs
+rank-products-by-relevance` : vert, avec un `DÉFAUT` en n0.py, trois en n0.js,
+un en n1.js, signalés en tête.
+
+Retirés, remplacés par le test de ce que la fiche dit désormais : n0
+`…infirme_une_requete_au_pluriel…`, `…infirme_chaque_signal_est_ramene…`,
+`…infirme_le_score_reste_entre_zero_et_un_quels_que_soient_les_poids` (py, js) ;
+n1 `…infirme_lechelle_du_score_reste_celle_de_n0`,
+`…infirme_la_fonction_de_service_de_n0…` (py, js), `INFIRMÉ : la pénalité…` et
+`l'ajustement tient en une trentaine de lignes` (js) ; n1
+`…defaut_des_signaux_hors_echelle_font_diverger…` (py, js) et `DÉFAUT : un
+signal manquant rend des poids NaN` (js). Retirée : l'assertion « des poids
+incomplets rendent zéro partout » du test JS `production : un produit sans champ
+inStock…`, qui épinglait le défaut T2-6. Les anciens marquages JavaScript de
+cette fiche utilisaient `assert.throws` sans type : ils passaient pour n'importe
+quelle exception (le `DÉFAUT` sur la popularité `undefined` passait déjà parce
+que `rank` lève désormais `RangeError`). Les marquages restants suivent la
+charte (`assert.rejects(…, assert.AssertionError)`).
+
+### Lignes « À retester »
+
+| # | Ligne | Désormais | Test |
+|---|---|---|---|
+| 11, 5 | N0 docstring, name : « margin and popularity because a value outside is refused rather than left to swamp the others » ; « quatre signaux compris entre zéro et un » | démontrée (py, js) : marge 35 et popularité 80 lèvent l'erreur nommée ; −0,0001, 1,0000001, NaN, infini refusés, aussi à travers `rank` ; 0 et 1 acceptés ; texte et disponibilité dans [0, 1] par construction. Voir T2-7 pour `null` et les chaînes en JavaScript | test_une_marge_ou_une_popularite_hors_de_l_echelle_est_refusee, test_le_texte_et_la_disponibilite_sont_entre_zero_et_un_par_construction |
+| 12 | N0 docstring : « the score, a mean over weights that cannot be negative, stays inside the same scale » | démontrée (py, js) pour un poids négatif (texte 2, marge −1 lève ; −1e−9 lève ; 0 accepté) et, comme au tour 1, pour des poids positifs ; DÉFAUT pour un poids NaN ou infini (T2-5) | test_un_poids_negatif_est_refuse, test_le_score_reste_entre_zero_et_un_pour_des_poids_positifs_et_des_signaux_dans_lechelle |
+| 18 | N0 docstring de text_match : « "sandale" finds "sandales". Not the other way round » | démontrée (py, js) : « sandales » → 0 sur « Sandale de marche », 0,5 sur « Sandale de randonnée » ; témoin : le singulier trouve le pluriel | test_une_requete_au_pluriel_ne_trouve_pas_le_produit_au_singulier, test_le_singulier_trouve_le_pluriel |
+| 35 | N0 `fold` (U+0300–U+036F) et `terms` (marques gardées) | démontrée (py, js), même sortie : « हिंदी » ne trouve pas « हद » ni « मलक » « मालिक » ; « مَلِك » ne trouve pas « مَلَك » ; chacun se trouve lui-même ; « Việt Nam, Évry, Ångström » replié ; U+0300 et U+036F ôtés, U+1DC4 gardé | test_seules_les_diacritiques_de_u0300_a_u036f_sont_retirees, test_les_voyelles_du_devanagari_et_de_l_arabe_restent_des_mots_differents, test_production_un_mot_en_devanagari_ou_en_arabe_voyelle_ne_trouve_pas_un_autre_mot |
+| 36 | N0 champ ou poids manquant | démontrée (js) : popularité `undefined`, marge absente → `RangeError` (commentaire « Also catches a missing field ») ; Python : `TypeError` (None, chaîne), `KeyError` (champ ou poids absent). **DÉFAUT (js)** pour des poids incomplets : T2-6 | production : un produit sans popularité ou sans marge est refusé (js) ; test_production_un_champ_manquant_leve_une_erreur (py) |
+| 46 | N1 docstring : « The signals shown to the shop stay the same; the score does not. Learned weights can be negative, so the score is a plain sum over weights whose absolute values add up to one, between minus one and one, where N0 takes a mean of weights that cannot be negative » | démontrée (py, js) : avec les poids appris, un produit rentable sans autre signal reçoit le poids de la marge (négatif) ; signaux rendus inchangés ; bornes −1 et 1 atteintes ; 400 produits du journal synthétique dans [−1, 1] ; `n0.score` refuse ces poids | test_le_score_de_n1_est_une_somme_entre_moins_un_et_un_la_ou_n0_est_une_moyenne |
+| 47 | N1 docstring de rank : « A sum weighted over the same signals, the same stable sort, the signals handed back with each candidate. Not N0's mean: dividing by the signed total of learned weights would reverse the order when that total is negative, and wipe it out when it is nought » | démontrée (py, js) : tri stable, signaux dans `candidate`, même ordre que N0 pour des poids positifs ; la moyenne par total signé, recalculée dans le test, rend l'ordre inverse de `rank` quand le total est négatif et zéro partout quand il est nul, alors que `rank` sépare les deux produits | test_somme_ponderee_des_memes_signaux_meme_tri_stable_signaux_rendus, test_diviser_par_le_total_signe_inverserait_l_ordre_ou_l_effacerait |
+| 58 | verdict_rationale : « une somme pondérée des mêmes signaux, rendus à côté du score » ; « servez alors avec sa propre fonction : des poids appris peuvent être négatifs, et la moyenne de N0 les refuse » | démontrée (py, js) : `n0.rank` lève avec les poids appris sur `AGAINST_THE_SHOP` ; `n1.rank` classe, signaux et score rendus | test_n0_refuse_les_poids_appris_negatifs_il_faut_servir_avec_la_fonction_de_n1 |
+| 54 | N1 commentaire JS : « The penalty of scikit-learn's `C`, divided by the row count because the gradient above is a mean: it is what makes both versions fit one model » | démontrée (py, js) pour C = 0,1 et 1, sur le journal et le journal triplé : poids identiques à 0,01 ; le journal triplé apprend d'autres poids (texte 0,44 → 0,40) et JavaScript suit. Constat : à C = 10 sur le journal triplé, l'écart atteint 0,011 sur la disponibilité (600 pas ne suffisent plus à converger, la pénalité n'est pas en cause) ; non marqué, aucune phrase ne promet d'autre C | test_la_penalite_divisee_par_le_nombre_de_lignes_fait_le_meme_modele_pour_plusieurs_c |
+| 53 | N1 docstring JS : « The fit is forty lines of gradient descent rather than a dependency » | démontrée pour « gradient descent rather than a dependency » (aucun import ; un pas ne rend pas les poids de six cents ; zéro pas lève). « forty lines » : non épinglé par test (décision n° 10) ; mesuré : `inScale`, `pairs` et `learnWeights` font 40 lignes non vides hors commentaires | l'ajustement est une descente de gradient écrite en entier, sans dépendance (js seul) |
+| 63 | N1 journal sans différence | démontrée (py, js) ; test renommé `production : …` | test_production_un_journal_sans_aucune_difference_leve_lerreur_nommee |
+| 64 | N1 signaux hors de [0, 1] | démontrée (py, js) : popularité en pourcentage, −0,0001, 1,0000001, infini refusés ; une page fautive sans clic aussi ; 0 et 1 acceptés | test_production_des_signaux_hors_echelle_sont_refuses |
+| 65 | N1 signal manquant | démontrée (py : `TypeError` sur None et chaîne, `ValueError` sur NaN ; js : `RangeError` sur `undefined` et NaN) ; **DÉFAUT (js)** pour `null` et une chaîne : T2-7 | test_production_un_signal_manquant_leve_une_erreur (py) / production : un signal manquant est refusé (js) |
+| 29 | essai, why : « cette nouveauté n'a presque aucune popularité » | démontrée : 5 % dans le tableau de l'essai, la plus faible (js, sur l'essai) ; 0,05, le minimum du catalogue de printemps (py) | l'essai : la nouveauté arrive troisième… |
+
+### Phrases nouvelles ou modifiées, code modifié
+
+| # | Où | Affirmation (citée) | Statut | Test |
+|---|---|---|---|---|
+| T2-1 | N0 docstring de terms | « Split on anything that is not a letter, a mark or a digit » | démontrée (py, js) : `T-shirt col-V, 42/44` ; « हिंदी फ़िल्में » donne deux termes marques comprises | test_tout_ce_qui_nest_ni_lettre_ni_marque_ni_chiffre_separe_les_termes, test_les_voyelles_du_devanagari_et_de_l_arabe_restent_des_mots_differents |
+| T2-2 | N0 docstring de fold | « Only the diacritics Latin scripts use (U+0300 to U+036F) are dropped: in Devanagari or Arabic the vowel signs are marks too, and dropping them would turn one word into another » | démontrée (py, js) : rang 35 | idem |
+| T2-3 | N1 docstring | « The score is built on the same four signals as N0, each between nought and one » | démontrée (py, js) : rang 64 | test_production_des_signaux_hors_echelle_sont_refuses |
+| T2-4 | N1 docstring JS de inScale | « Every signal between 0 and 1, the scale N0 serves them on; undefined fails too » | démontrée (js) pour `undefined` et NaN ; DÉFAUT pour `null` et une chaîne (T2-7) | production : un signal manquant est refusé |
+| T2-5 | N0 `score` (code modifié) | refus des poids négatifs ; « stays inside the same scale » | **DÉFAUT (py, js)** : `nan < 0` et `inf < 0` sont faux. Python : `score(…, text=nan)` et `score(…, text=inf)` valent `nan`. JavaScript : `text: NaN` rend 0 pour tous (total NaN), `text: Infinity` rend NaN. Le tri range alors les produits dans un ordre quelconque, sans erreur | DÉFAUT : test_defaut_un_poids_nan_ou_infini_est_refuse_ou_garde_le_score_dans_l_echelle |
+| T2-6 | N0 JavaScript, poids incomplets (rang 36, seconde moitié) | — | **DÉFAUT (js), non traité** : `rank(CATALOGUE, 'x', { text: 1 })` rend un score nul pour les cinq produits, dans l'ordre du catalogue, sans erreur ; Python lève `KeyError`. Tranché : un classement entièrement nul rendu comme un résultat est indéfendable en production ; l'assertion du test de production qui l'affirmait est retirée | DÉFAUT : des poids incomplets rendent un score nul pour tous les produits, sans erreur (js) |
+| T2-7 | N0 `signals` et N1 `inScale`, JavaScript (code modifié) | « a value outside is refused » ; « undefined fails too » | **DÉFAUT (js)** : `null >= 0 && null <= 1` est vrai. `signals({ …, margin: null })` rend `margin: null`, compté zéro dans le score ; `margin: '0.5'` passe et ressort en chaîne dans les signaux ; `pairs` accepte un signal `null` (compté zéro) ou `'0.9'`. Python lève `TypeError` dans les deux cas : les deux langages divergent sur une valeur courante d'un JSON ou d'une base | DÉFAUT : une marge null ou écrite en chaîne passe le contrôle d'échelle (n0.js) ; DÉFAUT : un signal null ou écrit en chaîne passe le contrôle d'échelle (n1.js) |
+| T2-8 | N1 risks.regulatory, N2 et N3 unavailable_reason, sources | registre des activités de traitement ; « qui ne figurent dans aucun texte qu'un encodeur sémantique pourrait lire » ; « son API n'est pas déterministe par défaut, de l'aveu même du fournisseur » | non testable : portée juridique, niveaux sans code, citation de documentation | — |
+
+### Constats sans marquage
+
+- La requête « filet » ne trouve pas « ﬁlet » (ligature U+FB01) : NFD ne la
+  décompose pas, et aucune phrase ne promet un repli de compatibilité.
+- Une requête arabe sans voyelles (« ملك ») ne trouve pas un titre voyellé
+  (« مَلِك ») : conséquence directe de la phrase de `fold`, qui garde les
+  marques ; l'usage courant écrit l'arabe sans voyelles. À peser par le
+  rédacteur, non marqué.
+- En Python, `True` passe le contrôle d'échelle comme 1 (booléen entier).

@@ -124,9 +124,10 @@ test('un préfixe suffit', () => {
   assert.equal(textMatch('chaussures course', CATALOGUE[2]), 0);
 });
 
-test('INFIRMÉ : une requête au pluriel trouve le produit au singulier', () => {
-  // La docstring dit « a shopper who types the plural is looking for the singular too ».
-  assert.throws(() => assert.equal(textMatch('sandales', { title: 'Sandale de marche' }), 1));
+test('une requête au pluriel ne trouve pas le produit au singulier', () => {
+  // Docstring de textMatch : « Not the other way round: "sandales" does not find "sandale". »
+  assert.equal(textMatch('sandales', { title: 'Sandale de marche' }), 0);
+  assert.equal(textMatch('sandales randonnée', { title: 'Sandale de randonnée' }), 0.5);
 });
 
 test('le singulier trouve le pluriel', () => {
@@ -139,9 +140,27 @@ test('les accents et la casse sont ignorés', () => {
   assert.equal(textMatch('randonnee', CATALOGUE[4]), 1);
   assert.equal(textMatch('crème', { title: 'Montre creme' }), 1);
   assert.equal(fold('Crème'), 'creme');
+  assert.equal(fold('Việt Nam, Évry, Ångström'), 'viet nam, evry, angstrom');
+  assert.equal(textMatch('evry', { title: 'Magasin d’Évry'.normalize('NFD') }), 1);
 });
 
-test('tout ce qui n’est ni lettre ni chiffre sépare les termes', () => {
+test('seules les diacritiques de U+0300 à U+036F sont retirées', () => {
+  assert.equal(fold('a\u0300b\u036fc'), 'abc');
+  assert.equal(fold('e\u1dc4'), 'e\u1dc4');
+  assert.equal(fold('हिंदी'), 'हिंदी');
+});
+
+test('les voyelles du devanagari et de l’arabe restent des mots différents', () => {
+  assert.deepEqual(terms('हिंदी फ़िल्में'), ['हिंदी', 'फ़िल्में']);
+  assert.equal(textMatch('हिंदी', { title: 'हद' }), 0);
+  assert.equal(textMatch('मलक', { title: 'मालिक' }), 0);
+  // « مَلِك » (roi) et « مَلَك » (ange) ne diffèrent que par une voyelle : ils restent deux mots.
+  assert.equal(textMatch('مَلِك', { title: 'مَلَك' }), 0);
+  assert.equal(textMatch('हिंदी', { title: 'हिंदी फ़िल्में' }), 1);
+  assert.equal(textMatch('مَلِك', { title: 'كتاب مَلِك' }), 1);
+});
+
+test('tout ce qui n’est ni lettre, ni marque, ni chiffre sépare les termes', () => {
   assert.deepEqual(terms('T-shirt  col-V, taille 42/44'), ['t', 'shirt', 'col', 'v', 'taille', '42', '44']);
 });
 
@@ -158,20 +177,43 @@ test('un poids de deux compte vraiment deux fois plus', () => {
   assert.ok(Math.abs(score(mesure, { text: 2, availability: 1, margin: 0, popularity: 0 }) - 2 / 3) < 1e-12);
 });
 
-test('INFIRMÉ : chaque signal est ramené entre zéro et un', () => {
-  // La marge et la popularité sont recopiées telles quelles : 35 reste 35.
-  assert.throws(() => {
-    const mesure = signals({ ...CATALOGUE[0], margin: 35, popularity: 80 }, 'chaussures');
-    assert.ok(SIGNALS.every((name) => mesure[name] >= 0 && mesure[name] <= 1));
-  });
+test('le texte et la disponibilité sont entre zéro et un par construction', () => {
+  for (const requete of ['chaussures de course', '', 'chauss randonnée zzz', '!!!']) {
+    for (const produit of [...SPRING, { ...CATALOGUE[0], inStock: 'oui' }, { ...CATALOGUE[0], inStock: 0 }]) {
+      const mesure = signals(produit, requete);
+      assert.ok(mesure.text >= 0 && mesure.text <= 1 && [0, 1].includes(mesure.availability));
+    }
+  }
 });
 
-test('INFIRMÉ : le score reste entre zéro et un quels que soient les poids', () => {
-  // Texte 2, marge -1 : la moyenne pondérée vaut 2.
-  assert.throws(() => {
-    const s = score({ text: 1, availability: 0, margin: 0, popularity: 0 }, { text: 2, availability: 0, margin: -1, popularity: 0 });
-    assert.ok(s >= 0 && s <= 1);
-  });
+test('une marge ou une popularité hors de l’échelle est refusée', () => {
+  assert.throws(() => signals({ ...CATALOGUE[0], margin: 35 }, 'chaussures'), { name: 'RangeError', message: /margin must lie between 0 and 1/ });
+  assert.throws(() => signals({ ...CATALOGUE[0], popularity: 80 }, 'chaussures'), { name: 'RangeError', message: /popularity must lie between 0 and 1/ });
+  for (const hors of [-0.0001, 1.0000001, NaN, Infinity]) {
+    assert.throws(() => signals({ ...CATALOGUE[0], margin: hors }, 'chaussures'), RangeError, String(hors));
+    assert.throws(() => rank([CATALOGUE[1], { ...CATALOGUE[0], popularity: hors }], 'chaussures'), RangeError, String(hors));
+  }
+  for (const limite of [0, 1]) {
+    const mesure = signals({ ...CATALOGUE[0], margin: limite, popularity: limite }, 'chaussures');
+    assert.deepEqual([mesure.margin, mesure.popularity], [limite, limite]);
+  }
+});
+
+test('un poids négatif est refusé', () => {
+  const mesure = { text: 1, availability: 0, margin: 0, popularity: 0 };
+  assert.throws(() => score(mesure, { text: 2, availability: 0, margin: -1, popularity: 0 }), { name: 'RangeError', message: /cannot be negative/ });
+  assert.throws(() => rank(CATALOGUE, 'chaussures', { ...DEFAULT_WEIGHTS, popularity: -1e-9 }), RangeError);
+  assert.equal(score(mesure, { text: 2, availability: 0, margin: 0, popularity: 0 }), 1);
+});
+
+test('DÉFAUT : un poids NaN ou infini passe le refus des poids négatifs, et le score sort de l’échelle ou tombe à zéro sans erreur', async () => {
+  // text NaN : total NaN, `total ? … : 0` rend 0 pour tous ; text Infinity : score NaN.
+  await assert.rejects(async () => {
+    const mesure = { text: 1, availability: 0, margin: 0.5, popularity: 0.2 };
+    for (const poids of [NaN, Infinity]) {
+      assert.throws(() => score(mesure, { ...DEFAULT_WEIGHTS, text: poids }), RangeError, String(poids));
+    }
+  }, assert.AssertionError);
 });
 
 test('le score reste entre zéro et un pour des poids positifs et des signaux dans l’échelle', () => {
@@ -236,10 +278,15 @@ test('un classement de six produits prend moins d’une milliseconde', () => {
 });
 
 test('l’essai : la nouveauté arrive troisième derrière des chaussures de course et des chaussettes', () => {
+  // why : « cette nouveauté n'a presque aucune popularité » : 5 %, la plus faible du tableau.
   const cas = essai.cases.find((c) => c.fails);
   const fr = essai.run(cas.input.fr, 'fr').rows.rows;
   assert.deepEqual(fr.slice(0, 3).map((r) => r[0]), ['Chaussures de course Route 5', 'Chaussettes de running', 'Sandales de randonnée Ultra']);
   assert.equal(fr.filter((r) => r[1] === '100 %').length, 1);
+  const popularite = (rows, titre) => rows.find((r) => r[0] === titre)[4];
+  const valeur = (cellule) => Number.parseInt(typeof cellule === 'object' ? cellule.v : cellule, 10);
+  assert.equal(valeur(popularite(fr, 'Sandales de randonnée Ultra')), 5);
+  assert.equal(Math.min(...fr.map((r) => valeur(r[4]))), 5);
   const en = essai.run(cas.input.en, 'en').rows.rows;
   assert.deepEqual(en.slice(0, 3).map((r) => r[0]), ['Route 5 running shoes', 'Running socks', 'Ultra hiking sandals']);
   assert.equal(en.filter((r) => r[1] === '100 %').length, 1);
@@ -290,26 +337,36 @@ test('production : NFD, insécable, largeur nulle, emoji et casse mixte', () => 
   assert.equal(textMatch('rando\u200bnnée', { title: 'randonnée' }), 0.5);
 });
 
-test('un mot en devanagari ne trouve pas un autre mot', () => {
-  // Le repli retire toute marque : « हिंदी » devient « हद » ici, « ह » et « द » en Python.
+test('production : un mot en devanagari ou en arabe voyellé ne trouve pas un autre mot', () => {
+  // Même sortie en Python (n0.test.py) : les deux langages gardent les mêmes marques.
   assert.equal(textMatch('हिंदी', { title: 'हद' }), 0);
+  assert.equal(textMatch('مَلِك', { title: 'مَلَك' }), 0);
+  assert.deepEqual(terms('مَكْتَبَة'), ['مَكْتَبَة']);
 });
 
-test('DÉFAUT : un produit sans popularité ou des poids incomplets ne lèvent aucune erreur', () => {
-  // Python lève (TypeError, KeyError). Ici, une popularité `undefined` donne un
-  // score NaN que le tri traite comme une égalité ; des poids incomplets donnent
-  // un total NaN, que `total ? … : 0` change en score nul pour tous les produits.
-  assert.throws(() => {
-    const ranked = rank([{ ...CATALOGUE[0], popularity: undefined }, ...CATALOGUE.slice(1)], 'montre');
-    assert.ok(ranked.every((r) => Number.isFinite(r.score)));
-  });
-  assert.throws(() => {
+test('production : un produit sans popularité ou sans marge est refusé', () => {
+  // Commentaire de signals : « Also catches a missing field: undefined is not between 0 and 1. »
+  assert.throws(() => rank([{ ...CATALOGUE[0], popularity: undefined }, ...CATALOGUE.slice(1)], 'montre'), RangeError);
+  assert.throws(() => rank([{ title: 'Sans marge', inStock: true, popularity: 0.1 }], 'x'), RangeError);
+});
+
+test('DÉFAUT : une marge null ou écrite en chaîne passe le contrôle d’échelle (Python lève TypeError)', async () => {
+  // `null >= 0 && null <= 1` est vrai : la marge compte pour zéro et `signals.margin` vaut null ;
+  // « 0.5 » est converti en nombre pour la comparaison et rendu tel quel dans les signaux.
+  await assert.rejects(async () => {
+    for (const margin of [null, '0.5']) {
+      assert.throws(() => signals({ ...CATALOGUE[0], margin }, 'chaussures'), RangeError, String(margin));
+    }
+  }, assert.AssertionError);
+});
+
+test('DÉFAUT : des poids incomplets rendent un score nul pour tous les produits, sans erreur (Python lève KeyError)', async () => {
+  // Poids manquants : total NaN, que `total ? … : 0` change en zéro partout.
+  await assert.rejects(async () => {
     assert.throws(() => rank(CATALOGUE, 'x', { text: 1 }));
-  });
+  }, assert.AssertionError);
 });
 
 test('production : un produit sans champ inStock est compté hors stock', () => {
   assert.equal(rank([{ title: 'Sans stock', margin: 0.1, popularity: 0.1 }], 'x')[0].signals.availability, 0);
-  // Et des poids incomplets rendent zéro partout, dans l'ordre du catalogue.
-  assert.deepEqual(rank(CATALOGUE, 'x', { text: 1 }).map((r) => r.score), Array(5).fill(0));
 });

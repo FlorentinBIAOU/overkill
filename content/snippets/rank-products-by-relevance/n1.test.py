@@ -70,13 +70,13 @@ def synthetique(pages, vrais=(0.5, 0.3, 0.0, 0.2), graine=1):
     return log
 
 
-def learn_weights_en_javascript(journaux):
+def learn_weights_en_javascript(journaux, regularisation=1.0):
     node = shutil.which("node")
     assert node, "node est requis pour comparer les deux implémentations"
     script = (
         f"import {{ learnWeights }} from {json.dumps((ICI / 'n1.js').as_uri())};"
         "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{"
-        "process.stdout.write(JSON.stringify(JSON.parse(d).map((j)=>learnWeights(j))));});"
+        f"process.stdout.write(JSON.stringify(JSON.parse(d).map((j)=>learnWeights(j, {{ regularisation: {regularisation} }}))));}});"
     )
     sortie = subprocess.run(
         [node, "--input-type=module", "-e", script],
@@ -174,11 +174,29 @@ def test_le_journal_peut_contredire_la_boutique():
 
 
 def test_python_et_javascript_apprennent_les_memes_poids_a_deux_decimales():
-    """Test JavaScript : « Two decimals of agreement is what says the thirty lines above are the same model »."""
+    """Test JavaScript : « Two decimals of agreement is what says the […] lines above are the same model »."""
     journaux = [LOG, FLAT_MARGIN, synthetique(300), AGAINST_THE_SHOP]
     for python, javascript in zip([learn_weights(impressions(j)) for j in journaux], learn_weights_en_javascript(journaux)):
         for name in SIGNALS:
             assert abs(python[name] - javascript[name]) < 0.01, (name, python, javascript)
+
+
+def test_la_penalite_divisee_par_le_nombre_de_lignes_fait_le_meme_modele_pour_plusieurs_c():
+    """
+    Commentaire JS : « The penalty of scikit-learn's `C`, divided by the row count because the gradient above
+    is a mean: it is what makes both versions fit one model. » Pour C = 0,1 et 1, sur un journal et sur le
+    même journal triplé (trois fois plus de lignes, donc une pénalité relative trois fois plus faible),
+    les deux langages rendent les mêmes poids à deux décimales.
+    """
+    journaux = [LOG, LOG * 3]
+    for regularisation in (0.1, 1.0):
+        python = [learn_weights(impressions(j), regularisation) for j in journaux]
+        javascript = learn_weights_en_javascript(journaux, regularisation)
+        for py, js in zip(python, javascript):
+            for name in SIGNALS:
+                assert abs(py[name] - js[name]) < 0.01, (regularisation, name, py, js)
+    # Le nombre de lignes compte : le journal triplé n'apprend pas les mêmes poids, et JavaScript a suivi.
+    assert abs(learn_weights(impressions(LOG))["text"] - learn_weights(impressions(LOG * 3))["text"]) > 0.03
 
 
 def test_les_poids_appris_classent_une_nouvelle_page_comme_le_journal():
@@ -202,42 +220,79 @@ def test_les_poids_sont_sur_une_echelle_lisible_et_la_mise_a_lechelle_ne_change_
     assert ordre == ordre_brut
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : la docstring dit « Nothing else changes: […] the scale of the "
-    "score, all stay as they were » ; le score de N0 est une moyenne dans [0, 1], "
-    "celui de N1 une somme de poids signés normalisés par leur valeur absolue, "
-    "dans [-1, 1] : avec les poids appris du journal du test, un produit rentable "
-    "sans autre signal reçoit -0,25"
-))
-def test_infirme_lechelle_du_score_reste_celle_de_n0():
+def test_le_score_de_n1_est_une_somme_entre_moins_un_et_un_la_ou_n0_est_une_moyenne():
+    """
+    Docstring : « The signals shown to the shop stay the same; the score does not. Learned weights can be
+    negative, so the score is a plain sum over weights whose absolute values add up to one, between minus
+    one and one, where N0 takes a mean of weights that cannot be negative. »
+    """
     weights = learn_weights(impressions())
-    candidate = page([(0.0, 0.0, 1.0, 0.0, False)])
-    assert 0.0 <= rank(candidate, weights)[0]["score"] <= 1.0
+    assert weights["margin"] < 0
+    assert sum(abs(v) for v in weights.values()) == pytest.approx(1.0)
+    candidat = page([(0.0, 0.0, 1.0, 0.0, False)])
+    (ligne,) = rank(candidat, weights)
+    assert ligne["score"] == pytest.approx(weights["margin"]) and ligne["score"] < 0
+    assert ligne["candidate"]["signals"] == candidat[0]["signals"]
+    # Somme, pas moyenne : bornes atteintes avec des signaux à 0 ou à 1.
+    tous_positifs = {"text": 0.25, "availability": 0.25, "margin": 0.25, "popularity": 0.25}
+    tous_negatifs = {name: -v for name, v in tous_positifs.items()}
+    un = page([(1.0, 1.0, 1.0, 1.0, False)])
+    assert rank(un, tous_positifs)[0]["score"] == 1.0
+    assert rank(un, tous_negatifs)[0]["score"] == -1.0
+    # Sur toutes les pages du journal synthétique, avec les poids appris : dans [-1, 1].
+    for item in [c for p in impressions(synthetique(100)) for c in p]:
+        assert -1.0 <= rank([item], weights)[0]["score"] <= 1.0
+    # N0, lui, refuse ces poids : sa moyenne n'accepte pas de poids négatif.
+    with pytest.raises(ValueError, match="cannot be negative"):
+        n0.score(candidat[0]["signals"], weights)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : verdict_rationale dit « la même somme pondérée » et « gardez la "
-    "même fonction de service » ; la fonction de N0 divise par la somme signée des "
-    "poids. Des poids appris dont la somme est négative (journal où l'acheteur "
-    "prend le produit le moins pertinent) inversent l'ordre si on les passe à "
-    "n0.rank, et une somme nulle y rend tous les scores à zéro"
-))
-def test_infirme_la_fonction_de_service_de_n0_classe_comme_n1_avec_les_poids_appris():
+def test_diviser_par_le_total_signe_inverserait_l_ordre_ou_l_effacerait():
+    """
+    Docstring de rank : « Not N0's mean: dividing by the signed total of learned weights would reverse the
+    order when that total is negative, and wipe it out when it is nought. »
+    """
+    def moyenne_signee(signaux, poids):
+        total = sum(poids[name] for name in SIGNALS)
+        return sum(poids[name] * signaux[name] for name in SIGNALS) / total if total else 0.0
+
     weights = learn_weights(impressions(AGAINST_THE_SHOP))
     assert sum(weights.values()) < 0
+    candidats = page([(1.0, 1.0, 0.9, 0.5, False), (0.0, 1.0, 0.1, 0.5, False)])
+    somme = [r["score"] for r in rank(candidats, weights)]
+    ordre_somme = [r["candidate"]["signals"]["text"] for r in rank(candidats, weights)]
+    ordre_moyenne = [c["signals"]["text"] for c in sorted(candidats, key=lambda c: -moyenne_signee(c["signals"], weights))]
+    assert somme[0] > somme[1]
+    assert ordre_moyenne == list(reversed(ordre_somme))
+    nuls = {"text": 0.5, "availability": 0.0, "margin": -0.5, "popularity": 0.0}
+    assert [moyenne_signee(c["signals"], nuls) for c in candidats] == [0.0, 0.0]
+    assert len({r["score"] for r in rank(candidats, nuls)}) == 2
+
+
+def test_n0_refuse_les_poids_appris_negatifs_il_faut_servir_avec_la_fonction_de_n1():
+    """
+    verdict_rationale : « servez alors avec sa propre fonction : des poids appris peuvent être négatifs, et la
+    moyenne de N0 les refuse » ; « une somme pondérée des mêmes signaux, rendus à côté du score ».
+    """
+    weights = learn_weights(impressions(AGAINST_THE_SHOP))
+    assert min(weights.values()) < 0
     produits = [
         {"title": "pertinent et rentable", "tags": [], "in_stock": True, "margin": 0.9, "popularity": 0.5},
         {"title": "hors sujet et sans marge", "tags": [], "in_stock": True, "margin": 0.1, "popularity": 0.5},
     ]
-    requete = "pertinent"
-    ordre_n0 = [r["product"]["title"] for r in n0.rank(produits, requete, weights)]
-    candidates = [{"title": p["title"], "signals": n0.signals(p, requete)} for p in produits]
-    ordre_n1 = [r["candidate"]["title"] for r in rank(candidates, weights)]
-    assert ordre_n0 == ordre_n1
+    with pytest.raises(ValueError, match="cannot be negative"):
+        n0.rank(produits, "pertinent", weights)
+    candidates = [{"title": p["title"], "signals": n0.signals(p, "pertinent")} for p in produits]
+    ranked = rank(candidates, weights)
+    assert [r["candidate"]["title"] for r in ranked] == ["hors sujet et sans marge", "pertinent et rentable"]
+    assert all(set(r["candidate"]["signals"]) == set(SIGNALS) and "score" in r for r in ranked)
 
 
-def test_meme_somme_ponderee_meme_tri_stable_meme_explication():
-    """Docstring de rank : « Same weighted sum as N0, same stable sort, same explanation returned »."""
+def test_somme_ponderee_des_memes_signaux_meme_tri_stable_signaux_rendus():
+    """
+    Docstring de rank : « A sum weighted over the same signals, the same stable sort, the signals handed
+    back with each candidate. » Pour des poids positifs dont la somme vaut un, l'ordre est celui de N0.
+    """
     weights = {"text": 0.5, "availability": 0.25, "margin": 0.0, "popularity": 0.25}
     jumeaux = page([(0.5, 1.0, 0.1, 0.5, False)] * 3)
     for i, c in enumerate(jumeaux):
@@ -306,29 +361,35 @@ def test_production_valeurs_aux_limites_tous_les_signaux_a_zero_ou_a_un():
     assert all(v == pytest.approx(0.25) for v in weights.values())
 
 
-def test_un_journal_sans_aucune_difference_leve_lerreur_nommee():
+def test_production_un_journal_sans_aucune_difference_leve_lerreur_nommee():
     identiques = [[(0.5, 1.0, 0.3, 0.2, True), (0.5, 1.0, 0.3, 0.2, False)]]
     with pytest.raises(ValueError, match="nothing to learn from"):
         learn_weights(impressions(identiques))
 
 
 def test_production_un_signal_manquant_leve_une_erreur():
-    """Python lève TypeError sur None (JavaScript rend des poids NaN, voir n1.test.js)."""
+    """Python lève TypeError sur None et sur une chaîne, ValueError sur NaN."""
     with pytest.raises(TypeError):
         learn_weights([page([(0.5, 1.0, 0.3, None, True), (0.4, 1.0, 0.3, 0.2, False)])])
     with pytest.raises(ValueError):
         learn_weights([page([(0.5, 1.0, 0.3, float("nan"), True), (0.4, 1.0, 0.3, 0.2, False)])])
+    with pytest.raises(TypeError):
+        learn_weights([page([(0.5, 1.0, 0.3, "0.9", True), (0.4, 1.0, 0.3, 0.2, False)])])
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : rien ne refuse un signal hors de [0, 1] ; avec une popularité en "
-    "pourcentage, scikit-learn converge (popularité ≈ 0,00) mais la descente de "
-    "gradient à pas fixe de n1.js oscille et rend une popularité ≈ -0,49 : les "
-    "deux langages ne sont plus le même modèle, sans erreur ni avertissement"
-))
-def test_defaut_des_signaux_hors_echelle_font_diverger_les_deux_langages():
+def test_production_des_signaux_hors_echelle_sont_refuses():
+    """
+    Docstring : « The score is built on the same four signals as N0, each between nought and one » ; une
+    popularité en pourcentage lève, dans les deux langages (JavaScript : RangeError). Limites 0 et 1 acceptées.
+    """
     en_pourcent = [[(r[0], r[1], r[2], r[3] * 100, r[4]) for r in rows] for rows in LOG]
-    python = learn_weights(impressions(en_pourcent))
-    (javascript,) = learn_weights_en_javascript([en_pourcent])
-    for name in SIGNALS:
-        assert abs(python[name] - javascript[name]) < 0.01, name
+    with pytest.raises(ValueError, match="between 0 and 1"):
+        learn_weights(impressions(en_pourcent))
+    for hors in (-0.0001, 1.0000001, float("inf")):
+        with pytest.raises(ValueError):
+            pairs([page([(0.5, 1.0, 0.3, hors, True), (0.4, 1.0, 0.3, 0.2, False)])])
+    # Une page fautive, même sans clic, est refusée : le contrôle précède la recherche des paires.
+    with pytest.raises(ValueError):
+        pairs([page([(0.5, 1.0, 0.3, 2.0, False)])])
+    rows, _ = pairs([page([(0.0, 0.0, 0.0, 0.0, True), (1.0, 1.0, 1.0, 1.0, False)])])
+    assert len(rows) == 2
