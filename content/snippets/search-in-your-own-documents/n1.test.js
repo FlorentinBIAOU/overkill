@@ -1,13 +1,14 @@
 /**
- * The same handbook as n0, so the two rungs can be compared on the same corpus.
+ * Le même règlement que n0, pour comparer les deux niveaux sur le même fonds.
  *
- * Every number asserted here is asserted identically in n1.test.py. The two
- * implementations rank the same documents in the same order with the same
- * scores, which is the only way to claim, as the entry does, that this is one
- * algorithm rather than two.
+ * Chaque nombre affirmé ici l'est à l'identique dans n1.test.py : les deux
+ * implémentations classent les mêmes documents dans le même ordre avec les
+ * mêmes scores.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { buildIndex as buildIndexN0, search as searchN0 } from './n0.js';
 import { buildIndex, search, tokenise } from './n1.js';
 
 const HANDBOOK = [
@@ -40,78 +41,207 @@ const HANDBOOK = [
 const INDEX = buildIndex(HANDBOOK);
 const ids = (results) => results.map((result) => result.id);
 
-test('finds and scores the right document', () => {
+/** Lignes de code utiles : ni vides, ni commentaires. */
+function codeLines(name) {
+  const source = readFileSync(new URL(name, import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ''));
+  return source.split('\n').filter((line) => line.trim() && !line.trim().startsWith('//'));
+}
+
+// ---------------------------------------------------------------------------
+// Point de rupture
+// ---------------------------------------------------------------------------
+
+test('point de rupture : le découpage en mots devient votre problème', () => {
+  assert.deepEqual(search(INDEX, 'vacances'), []);
+  assert.deepEqual(search(INDEX, 'congé'), []);
+  assert.deepEqual(ids(search(INDEX, 'congés')), ['conges']);
+});
+
+test('INFIRMÉ : « désormais « congé » ne trouve rien », N0 ne le trouvait pas non plus', async () => {
+  await assert.rejects(async () => {
+    assert.deepEqual(ids(searchN0(buildIndexN0(HANDBOOK), 'congé')), ['conges']);
+  });
+});
+
+test('point de rupture : désuffixation, synonymes et mots vides ne sont pas traités', () => {
+  assert.ok(ids(search(INDEX, 'travail')).includes('materiel'));
+  assert.ok(!ids(search(INDEX, 'travail')).includes('conges')); // la page dit « travaillé »
+  assert.deepEqual(search(INDEX, 'vacances'), []);
+  const stop = search(INDEX, 'le');
+  assert.deepEqual(ids(stop), ['conges', 'materiel', 'frais']);
+  assert.ok(stop.every((result) => result.score > 0));
+});
+
+test('point de rupture : l’élision laisse un mot « l » qui pèse plus que le vrai mot', () => {
+  const corpus = [...HANDBOOK, { id: 'accord', title: 'Accord', body: 'l\'accord du responsable' }];
+  const [result] = search(buildIndex(corpus), 'l\'accord');
+  assert.equal(result.id, 'accord');
+  assert.deepEqual(result.terms, { l: 1.9377, accord: 1.6844 });
+});
+
+test('INFIRMÉ : l’extrait tient en quarante lignes, n1.js en compte 46', async () => {
+  await assert.rejects(async () => {
+    assert.ok(codeLines('./n1.js').length <= 40);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Autres affirmations du niveau
+// ---------------------------------------------------------------------------
+
+test('trouve et note le bon document', () => {
   assert.deepEqual(search(INDEX, 'congés payés'), [
     { id: 'conges', score: 3.6746, terms: { conges: 1.8373, payes: 1.8373 } },
   ]);
 });
 
-test('one term is enough where N0 wanted them all', () => {
-  // The query that returned nothing at N0, because FTS5 demands every term,
-  // returns three documents here, ranked. Same corpus, different rule.
+test('un seul terme suffit là où N0 les voulait tous', () => {
   assert.deepEqual(ids(search(INDEX, 'congés responsable')), ['conges', 'teletravail', 'materiel']);
+  assert.deepEqual(searchN0(buildIndexN0(HANDBOOK), 'congés responsable'), []);
 });
 
-test('a title match outranks two body matches', () => {
+test('INFIRMÉ : aux mêmes poids, N1 rendrait les scores de la base', async () => {
+  await assert.rejects(async () => {
+    const sameWeights = buildIndex(HANDBOOK, { title: 10, body: 1 });
+    assert.equal(search(sameWeights, 'congés')[0].score, searchN0(buildIndexN0(HANDBOOK), 'congés')[0].score);
+  });
+});
+
+test('un titre l’emporte sur deux occurrences dans le corps', () => {
   assert.deepEqual(ids(search(INDEX, 'télétravail')), ['teletravail', 'conges']);
 });
 
-test('the score is the sum of what each term contributed', () => {
+test('les poids de champ disent ce que vaut un titre', () => {
+  assert.deepEqual(ids(search(buildIndex(HANDBOOK, { body: 1 }), 'télétravail')), ['conges']);
+});
+
+test('le score est la somme de ce que chaque terme a apporté', () => {
   const result = search(INDEX, 'paie du mois')[0];
   assert.equal(result.id, 'frais');
-  // Both sides are rounded for display, so they agree to the displayed digit.
   const sum = Object.values(result.terms).reduce((total, share) => total + share, 0);
   assert.ok(Math.abs(sum - result.score) < 0.001);
 });
 
-test('a rare term weighs more than a common one', () => {
-  // "congés" is in one document, "le" in three. Both are matches; only one
-  // tells you anything.
+test('un terme rare pèse plus qu’un terme courant', () => {
   const { terms } = search(INDEX, 'congés le')[0];
   assert.ok(terms.conges > terms.le);
 });
 
-test('length normalisation is a dial, not a law', () => {
-  // b = 0 stops correcting for document length: the long page stops paying for
-  // its size, and its score rises.
+test('k1 sature la répétition', () => {
+  const docs = [1, 2, 4, 8].map((k) => ({ id: `r${k}`, title: 'x', body: Array(k).fill('zèbre').join(' ') }));
+  for (let i = 0; i < 6; i += 1) docs.push({ id: `f${i}`, title: 'x', body: 'y' });
+  const scores = Object.fromEntries(search(buildIndex(docs), 'zèbre', { b: 0, limit: 10 }).map((r) => [r.id, r.score]));
+  assert.deepEqual(scores, { r8: 1.7099, r4: 1.5126, r2: 1.229, r1: 0.8938 });
+  const gains = [scores.r2 - scores.r1, scores.r4 - scores.r2, scores.r8 - scores.r4];
+  assert.deepEqual(gains, [...gains].sort((a, b) => b - a));
+  assert.ok(scores.r8 < Math.log(1 + (10 - 4 + 0.5) / (4 + 0.5)) * 2.2);
+});
+
+test('la normalisation de longueur est une molette, pas une loi', () => {
   assert.equal(search(INDEX, 'paie du mois')[1].score, 1.1024);
   assert.deepEqual(search(INDEX, 'paie du mois', { b: 0 })[1], {
     id: 'conges', score: 1.3863, terms: { paie: 0.6931, mois: 0.6931 },
   });
-  // Far enough to change the order: at b = 0 these two tie, and the tie-break
-  // on the identifier decides. Ranking must be reproducible before it is good.
   assert.deepEqual(ids(search(INDEX, 'jours')), ['teletravail', 'conges']);
   assert.deepEqual(ids(search(INDEX, 'jours', { b: 0 })), ['conges', 'teletravail']);
 });
 
-test('a word typed twice is not twice as important', () => {
+test('un mot tapé deux fois ne compte pas double', () => {
   assert.deepEqual(search(INDEX, 'congés congés'), search(INDEX, 'congés'));
 });
 
-test('accents and case do not matter', () => {
+test('accents et casse ne comptent pas', () => {
   assert.deepEqual(search(INDEX, 'CONGÉS'), search(INDEX, 'conges'));
   assert.deepEqual(tokenise('Notes de frais !'), ['notes', 'de', 'frais']);
 });
 
-test('an empty query returns nothing', () => {
+test('une requête vide ne renvoie rien', () => {
   for (const query of ['', '   ', '!?']) {
     assert.deepEqual(search(INDEX, query), []);
   }
 });
 
-test('the limit is respected', () => {
+test('la limite est respectée', () => {
   assert.equal(search(INDEX, 'le', { limit: 2 }).length, 2);
 });
 
-test('breaking point: the tokenizer is now your problem', () => {
-  // Writing the index yourself does not close the gap N0 showed; it hands you
-  // the gap. A reader asking for "vacances" still finds nothing, and now the
-  // singular of a word the handbook writes in the plural finds nothing either,
-  // because nothing in these forty lines knows French morphology.
-  //
-  // Stemming, elision, synonyms, stop words: each is a rule you write, test
-  // and maintain, for the language of every document you hold.
-  assert.deepEqual(search(INDEX, 'vacances'), []);
-  assert.deepEqual(search(INDEX, 'congé'), []);
-  assert.deepEqual(ids(search(INDEX, 'congés')), ['conges']);
+test('l’index ne suit pas les suppressions jusqu’à la reconstruction', () => {
+  const documents = HANDBOOK.map((d) => ({ ...d }));
+  const built = buildIndex(documents);
+  documents.shift();
+  assert.deepEqual(ids(search(built, 'congés')), ['conges']);
+  assert.deepEqual(search(buildIndex(documents), 'congés'), []);
+});
+
+test('l’extrait n’importe rien', () => {
+  const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /^\s*import\s/m);
+  assert.doesNotMatch(source, /import\(/);
+});
+
+test('deux index rendent les mêmes résultats', () => {
+  for (const query of ['le', 'jours', 'congés responsable']) {
+    assert.deepEqual(search(buildIndex(HANDBOOK), query), search(buildIndex(HANDBOOK), query));
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Cas de production
+// ---------------------------------------------------------------------------
+
+test('production : fonds vide et documents sans texte', () => {
+  assert.deepEqual(search(buildIndex([]), 'congés'), []);
+  assert.deepEqual(search(buildIndex([{ id: 'vide', title: '', body: '' }]), 'congés'), []);
+});
+
+test('production : un champ nul est indexé comme vide (le Python lève)', () => {
+  assert.deepEqual(ids(search(buildIndex([{ id: 'nul', title: null, body: 'congés' }]), 'congés')), ['nul']);
+});
+
+test('production : dix mille pages et une requête de vingt mille mots', () => {
+  const started = Date.now();
+  const docs = Array.from({ length: 10_000 }, (_, i) => ({
+    id: `d${String(i).padStart(5, '0')}`,
+    title: `Page ${i}`,
+    body: 'le salarié acquiert deux jours de congés payés par mois '.repeat(20),
+  }));
+  const index = buildIndex(docs);
+  assert.equal(search(index, 'congés payés mois').length, 5);
+  assert.deepEqual(search(index, Array.from({ length: 20_000 }, (_, i) => `mot${i}`).join(' ')), []);
+  assert.ok(Date.now() - started < 30_000);
+});
+
+test('production : NFD, espace insécable, BOM, emoji, ligature et casse mixte', () => {
+  assert.deepEqual(ids(search(INDEX, 'congés'.normalize('NFD'))), ['conges']);
+  assert.equal(ids(search(INDEX, 'notes de frais'))[0], 'frais');
+  assert.deepEqual(ids(search(INDEX, '﻿congés')), ['conges']);
+  assert.deepEqual(ids(search(INDEX, 'congés 🌴')), ['conges']);
+  assert.deepEqual(ids(search(INDEX, 'CoNgÉs')), ['conges']);
+  assert.deepEqual(ids(search(buildIndex([{ id: 'pdf', title: 'Envoyer un ﬁchier', body: '' }]), 'fichier')), ['pdf']);
+});
+
+test('production : une espace de largeur nulle coupe le mot en deux', () => {
+  assert.deepEqual(tokenise('con​gés'), ['con', 'ges']);
+  assert.deepEqual(search(INDEX, 'con​gés'), []);
+});
+
+test('production : limites zéro et un, k1 nul, b à un', () => {
+  assert.deepEqual(search(INDEX, 'le', { limit: 0 }), []);
+  assert.deepEqual(ids(search(INDEX, 'le', { limit: 1 })), ['conges']);
+  assert.equal(new Set(search(INDEX, 'le', { k1: 0 }).map((r) => r.score)).size, 1);
+  assert.deepEqual(ids(search(INDEX, 'jours', { b: 1 })), ['teletravail', 'conges']);
+});
+
+test('DÉFAUT : une limite négative n’est pas refusée', async () => {
+  await assert.rejects(async () => {
+    let result;
+    try {
+      result = search(INDEX, 'le', { limit: -1 });
+    } catch (error) {
+      if (error instanceof RangeError) return;
+      throw error;
+    }
+    assert.deepEqual(result, []);
+  });
 });
