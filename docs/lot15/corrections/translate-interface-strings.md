@@ -53,6 +53,7 @@ assertion n'a été touchée.
 | n3 py/js (#60) | client par défaut sans `complete` | Adaptateur commun `ProviderClient` / `providerClient` ; `content` non chaîne (refus) → réessai puis erreur nommée, jamais passé à `json.loads`/`JSON.parse` |
 | n3 py/js (#61) | chaîne vide : trois appels puis erreur | Rendue telle quelle, sans appel ni client construit |
 | n3.js (#64) | plafond en unités UTF-16 | Plafond en points de code, comme Python |
+| n3 py/js (arbitrage de l'orchestrateur) | JSON entièrement entouré d'une clôture de code refusé | Une réponse enveloppée tout entière dans une seule clôture est décodée ; tout autre écart lève |
 | n3 py/js (#55) | contexte non plafonné | Plafond de `MAX_CHARACTERS` sur le contexte aussi |
 
 Marquages retirés (assertions inchangées) : n0 — 2 `INFIRMÉ` et 2 `DÉFAUT`
@@ -89,11 +90,13 @@ vérifient.
 - **N0 latence** : `INFIRMÉ ~10 ms` (py, toujours marqué) : la fiche dit `~100 ms` ; convertir en démonstration (sous 316 ms, milieu logarithmique entre `~100 ms` et `~1 s`) ; le test JS de dix millisecondes teste une affirmation retirée.
 - **N0 `INFIRMÉ` variable déplacée** (py/js, toujours marqués) : phrase retirée, test à supprimer.
 - **N3** : contexte au-delà de `MAX_CHARACTERS` refusé sans appel (le test « le contexte n’est pas plafonné » est rouge) ; chaîne blanche «   » rendue sans appel ; 2 001 emojis refusés en JS ; avertissement ICU dans N3 ; les noms des tests démarqués décrivent encore le défaut (« une chaîne vide coûte trois appels puis lève », « le plafond compte des unités UTF-16… », « n’est ni listée ni vérifiée », « ne lève pas l’erreur nommée », « le marqueur ne revient jamais », « rend chaque recherche lente », « ne sont pas vérifiées/reconnues »).
+- **N3 clôture de code** (py/js `point de rupture : une réponse d’une autre forme lève`) : la forme « entre balises » (```json … ```) est désormais décodée, conformément à l'arbitrage ; la retirer de la liste et tester une clôture non fermée ou du texte avant elle → erreur.
 - **Essai** : `INFIRMÉ` sur le why (js, toujours marqué) : phrase retirée, test à supprimer ; vérifier le nouveau why dans les deux langues.
 - **Hors suite** : le comportement du vrai modèle cité dans la fiche (ICU, `{compte}`) a été établi à la main ; un test qui télécharge les poids n'a pas sa place dans la CI.
 
 ## Pour l'orchestrateur
 
+- Réglages de génération (information de l'orchestrateur) : `Helsinki-NLP/opus-mt-en-fr` publie un `generation_config.json` (num_beams 4, max_length 512, bad_words_ids, decoder_start_token_id), que `from_pretrained` charge en 5.17.0 (vérifié : `model.generation_config`), et ne porte pas de `task_specific_params`. `model.generate` sans argument emploie donc bien les réglages publiés ; rien à passer à la main.
 - `requirements-snippets.txt` n'épingle ni `transformers` ni `torch`/`sentencepiece` ; n2.py suppose transformers ≥ 4 avec les classes Auto (vérifié en 5.17.0), et `MarianTokenizer` exige `sentencepiece`.
 - Charte (proposition du testeur, confirmée ici par exécution) : tout marqueur ou séparateur glissé dans l'entrée d'un modèle N2 doit être vérifié contre le vocabulaire du modèle, ou mieux contre le modèle lui-même ; « ⟦N⟧ » était invisible pour lui.
 - `check-french` lit `#` comme un commentaire YAML dans le frontmatter : un exemple ICU (`{# item}`) dans une valeur anglaise fait relire la fin de la ligne en français. Contourné en reformulant.

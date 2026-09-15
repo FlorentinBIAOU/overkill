@@ -114,7 +114,11 @@ def _ask(client, prompt: str, attempts: int) -> str:
             if not isinstance(answer, str):  # a refusal comes back as no content
                 last_error = ValueError("the model answered no text")
                 continue
-            parsed = json.loads(answer)
+            text = answer.strip()
+            # A JSON answer wrapped whole in one code fence is read; nothing else is.
+            if text.startswith("```") and text.endswith("```") and text.count("```") == 2:
+                text = text[3:-3].removeprefix("json")
+            parsed = json.loads(text)
             target = parsed.get("translation") if isinstance(parsed, dict) else None
             if isinstance(target, str) and target.strip():
                 return target.strip()

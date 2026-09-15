@@ -129,7 +129,12 @@ async function ask(client, prompt, attempts) {
         lastError = new Error('the model answered no text');
         continue;
       }
-      const parsed = JSON.parse(answer);
+      let text = answer.trim();
+      // A JSON answer wrapped whole in one code fence is read; nothing else is.
+      if (text.startsWith('```') && text.endsWith('```') && text.split('```').length === 3) {
+        text = text.slice(3, -3).replace(/^json/, '');
+      }
+      const parsed = JSON.parse(text);
       const target = parsed && typeof parsed === 'object' ? parsed.translation : null;
       if (typeof target === 'string' && target.trim()) return target.trim();
       lastError = new Error('the model answered without a translation');
