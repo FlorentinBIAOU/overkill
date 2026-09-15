@@ -18,13 +18,20 @@
  */
 
 // A sentence ends at a full stop, question or exclamation mark followed by
-// whitespace. Abbreviations will fool this; a real corpus needs a better
-// splitter, and that is a separate problem from choosing sentences.
-const SENTENCE_END = /(?<=[.!?])\s+/;
+// whitespace, or at a line break, so a transcript or a list without final
+// punctuation is still cut into lines. Abbreviations will fool this, and so
+// will prose hard-wrapped at a fixed width, which has to be unwrapped first; a
+// real corpus needs a better splitter, a separate problem from choosing.
+const SENTENCE_END = /(?<=[.!?])\s+|\s*\n\s*/;
 
 // Letters and digits only, so accented words survive and punctuation does
 // not. The Python counterpart writes the same class as `[^\W_]`.
 const WORD = /[\p{L}\p{N}]+/gu;
+
+/** Lowercase words, composed first: a decomposed `é` would split the word. */
+function words(sentence) {
+  return sentence.normalize('NFC').toLowerCase().match(WORD) ?? [];
+}
 
 // Words too common to say anything about the subject of a document.
 const STOPWORDS = new Set(
@@ -49,7 +56,7 @@ export function splitSentences(text) {
 function termWeights(sentences) {
   const counts = new Map();
   for (const sentence of sentences) {
-    for (const word of sentence.toLowerCase().match(WORD) ?? []) {
+    for (const word of words(sentence)) {
       if (word.length > 2 && !STOPWORDS.has(word)) {
         counts.set(word, (counts.get(word) ?? 0) + 1);
       }
@@ -64,10 +71,10 @@ function termWeights(sentences) {
 export function scoreSentences(sentences) {
   const weights = termWeights(sentences);
   return sentences.map((sentence, index) => {
-    const words = sentence.toLowerCase().match(WORD) ?? [];
+    const found = words(sentence);
     let total = 0;
-    for (const word of words) total += weights.get(word) ?? 0;
-    const density = words.length ? total / words.length : 0;
+    for (const word of found) total += weights.get(word) ?? 0;
+    const density = found.length ? total / found.length : 0;
     return density + LEAD_BONUS / (index + 1);
   });
 }
@@ -80,6 +87,7 @@ export function scoreSentences(sentences) {
  * of the argument an extractive summary can preserve.
  */
 export function summarise(text, maxSentences = 3) {
+  if (maxSentences < 0) throw new RangeError('maxSentences cannot be negative');
   const sentences = splitSentences(text);
   const scores = scoreSentences(sentences);
   // Sorting is stable, so two identical scores keep their document order.

@@ -185,14 +185,12 @@ test('DÉFAUT : le modèle par défaut est rechargé à chaque document', async 
   });
 });
 
-test('DÉFAUT : la seconde passe dépasse la fenêtre', async () => {
-  await assert.rejects(async () => {
-    const document = Array.from({ length: 3600 }, (_, i) => `Paragraph ${i} describes another part of the warehouse.`).join(' ').slice(0, MAX_CHARACTERS);
-    const model = new NoteTaker({});
-    await summarise(document, { model });
-    assert.ok(model.calls.length > 2);
-    assert.ok(model.calls.every((call) => call.length <= CHUNK_CHARACTERS));
-  });
+test('la seconde passe dépasse la fenêtre', async () => {
+  const document = Array.from({ length: 3600 }, (_, i) => `Paragraph ${i} describes another part of the warehouse.`).join(' ').slice(0, MAX_CHARACTERS);
+  const model = new NoteTaker({});
+  await summarise(document, { model });
+  assert.ok(model.calls.length > 2);
+  assert.ok(model.calls.every((call) => call.length <= CHUNK_CHARACTERS));
 });
 
 // ---------------------------------------------------------------------------

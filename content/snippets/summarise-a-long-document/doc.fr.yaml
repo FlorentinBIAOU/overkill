@@ -28,10 +28,12 @@ n1.py: |
 
   N0 fixe à la main, une fois pour tous les documents du monde, l'arbitrage
   entre la position et la densité des termes. Cette constante est une
-  supposition. Ici, ce sont quelques dizaines de documents dont quelqu'un a
-  coché les phrases de résumé qui en décident : si, dans votre corpus, la
-  phrase de conclusion compte plus que l'ouverture, le modèle le découvrira, et
-  N0 ne le découvrira jamais.
+  supposition. Ici, des documents dont quelqu'un a coché les phrases de résumé
+  fixent plutôt les poids de cinq traits, et le modèle n'apprend rien que ces
+  cinq ne sachent exprimer. La position est codée 1 / (rang + 1) : le modèle
+  peut apprendre que les premières phrases comptent plus ou moins, jamais que
+  la dernière compte. Une phrase de conclusion ne gagne que par ce qu'elle
+  porte, un chiffre ou un mot-signal comme « overall ».
 
   Les traits sont délibérément de surface. Ils décrivent où une phrase se
   trouve et à quoi elle ressemble, pas ce qu'elle veut dire. C'est le plafond
@@ -45,18 +47,20 @@ n1.js: |
 
   N0 fixe à la main, une fois pour tous les documents du monde, l'arbitrage
   entre la position et la densité des termes. Cette constante est une
-  supposition. Ici, ce sont quelques dizaines de documents dont quelqu'un a
-  coché les phrases de résumé qui en décident : si, dans votre corpus, la
-  phrase de conclusion compte plus que l'ouverture, le modèle le découvrira, et
-  N0 ne le découvrira jamais.
+  supposition. Ici, des documents dont quelqu'un a coché les phrases de résumé
+  fixent plutôt les poids de cinq traits, et le modèle n'apprend rien que ces
+  cinq ne sachent exprimer. La position est codée 1 / (rang + 1) : le modèle
+  peut apprendre que les premières phrases comptent plus ou moins, jamais que
+  la dernière compte. Une phrase de conclusion ne gagne que par ce qu'elle
+  porte, un chiffre ou un mot-signal comme « overall ».
 
   Les traits sont délibérément de surface. Ils décrivent où une phrase se
   trouve et à quoi elle ressemble, pas ce qu'elle veut dire. C'est le plafond
   de ce niveau, et la raison pour laquelle la fiche ne s'arrête pas là.
 
   La régression logistique est écrite en entier plutôt que tirée d'une
-  bibliothèque, parce que sur cinq traits c'est une douzaine de lignes. La
-  version Python de cet extrait appelle scikit-learn ; l'objectif minimisé
+  bibliothèque, si bien que l'extrait n'a besoin que de Node. La version
+  Python de cet extrait appelle scikit-learn ; l'objectif minimisé
   ci-dessous est le même, si bien que les deux classent les phrases d'un
   document de la même façon.
 
@@ -65,13 +69,13 @@ n2: |
 
   Niveau N2. Le premier niveau qui écrive. N0 et N1 choisissent des phrases et
   ne peuvent jamais rendre que ce que l'auteur a déjà écrit ; celui-ci produit
-  une phrase qui n'était pas dans le document, ce qui est la seule façon
-  d'énoncer une conclusion tirée de deux passages éloignés de dix pages.
+  des phrases qui n'étaient pas dans le document.
 
   Ce gain a un prix, et le prix est dans ce fichier plutôt que dans le modèle.
   Un modèle de séquence à séquence lit une fenêtre de taille fixe. Un document
   long n'y entre pas : il faut donc le découper aux frontières de phrase, le
-  résumer morceau par morceau, puis résumer les morceaux. Chacun de ces appels
+  résumer morceau par morceau, puis résumer les notes, en autant de passes
+  qu'il en faut pour tenir dans une seule fenêtre. Chacun de ces appels
   peut échouer ou revenir vide, et un résumé qui ne porte silencieusement que
   sur la moitié d'un document est pire que pas de résumé du tout.
 
@@ -82,13 +86,13 @@ n2: |
 n3: |
   Résumer un document long en interrogeant un modèle généraliste.
 
-  Niveau N3. C'est l'option vers laquelle on se tourne d'abord. Elle est ici
-  pour qu'on voie ce qu'elle coûte, pas parce que cette fiche la recommande.
+  Niveau N3. Il est ici pour qu'on voie ce qu'il coûte, pas parce que cette
+  fiche le recommande.
 
-  Ce qu'elle apporte sur N2 est réel : aucun poids à héberger, aucune machine à
-  garder chaude, et une réponse qui suit une instruction — trois phrases, ou
-  une liste de points, ou les deux — sans que personne ne réaffine quoi que ce
-  soit.
+  Ce qu'il apporte sur N2 est réel : aucun poids à héberger, aucune machine à
+  garder chaude, et une forme de sortie fixée dans l'invite — trois phrases,
+  une liste de points, ou les deux — plutôt qu'apprise dans les poids. Que la
+  réponse respecte cette forme est vérifié plus bas, pas supposé.
 
   Ce qu'elle coûte est dans ce fichier. Plafonner l'entrée, parce que le
   fournisseur facture au jeton et qu'un document que personne ne voulait
@@ -98,6 +102,5 @@ n3: |
   l'appelant. Cette plomberie est ce que vos tests peuvent couvrir.
 
   Ce qu'aucun test d'ici ne peut couvrir : si le résumé est vrai du document.
-  Le modèle écrira une phrase fluide et plausible que le document n'a jamais
-  soutenue, et rien de ce qui suit ne saura la distinguer d'une bonne. Voyez le
-  test.
+  Rien de ce qui suit ne sait distinguer d'une bonne phrase une phrase fluide
+  que le document n'a jamais soutenue. Voyez le test.

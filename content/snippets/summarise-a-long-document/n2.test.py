@@ -253,16 +253,6 @@ def test_defaut_transformers_5_n_a_plus_de_pipeline_summarization(monkeypatch):
     assert isinstance(summarise(REPORT), str)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : la seconde passe n'est pas découpée. Sur un document de 200 000 "
-        "caractères, 67 notes de la taille d'une sortie de bart-large-cnn (environ 600 "
-        "caractères) partent d'un bloc, 40 000 caractères, bien au-delà de la fenêtre que "
-        "CHUNK_CHARACTERS devait respecter ; le commentaire dit que le modèle tronque alors "
-        "« without saying so », et la seconde passe ne lit que les premières notes"
-    ),
-)
 def test_defaut_la_seconde_passe_depasse_la_fenetre():
     document = " ".join(f"Paragraph {i} describes another part of the warehouse." for i in range(3600))[:MAX_CHARACTERS]
     model = NoteTaker({})

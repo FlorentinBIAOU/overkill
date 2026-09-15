@@ -1,12 +1,13 @@
 /**
  * Summarise a long document by asking a general-purpose model.
  *
- * Rung N3. This is the option people reach for first. It is here so you can
- * see what it costs, not because this entry recommends it.
+ * Rung N3. It is here so you can see what it costs, not because this entry
+ * recommends it.
  *
  * What it buys over N2 is real: no weights to host, no machine to keep warm,
- * and an answer that follows an instruction — three sentences, or a list of
- * points, or both — without anyone fine-tuning anything.
+ * and an output shape set in the prompt — three sentences, a list of points,
+ * or both — instead of trained into the weights. Whether the answer respects
+ * that shape is checked below, not assumed.
  *
  * What it costs is in this file. Cap the input, because the provider charges
  * by the token and a document nobody meant to send is money gone. Retry,
@@ -16,9 +17,8 @@
  * cover.
  *
  * What no test here can cover: whether the summary is true of the document.
- * The model will write a fluent, plausible sentence the document never
- * supported, and nothing below can tell that sentence from a good one. See the
- * test.
+ * Nothing below can tell a fluent sentence the document never supported from
+ * a good one. See the test.
  */
 
 const PROMPT = [
@@ -31,6 +31,28 @@ const PROMPT = [
 ].join('\n');
 
 export const MAX_CHARACTERS = 40000;
+
+// The provider named here is an example, not a recommendation: the reasoning
+// holds for any general-purpose model API, and the client is swappable. Pass
+// any object with a `complete({ prompt, temperature })` method.
+export const MODEL = 'gpt-4.1-mini'; // an example id: check the parameters your model accepts
+
+export async function providerClient(sdk, model = MODEL) {
+  if (!sdk) {
+    const { OpenAI } = await import('openai');
+    sdk = new OpenAI();
+  }
+  return {
+    async complete({ prompt, temperature }) {
+      const response = await sdk.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+      });
+      return response.choices[0].message.content;
+    },
+  };
+}
 
 export class SummaryUnavailable extends Error {}
 
@@ -45,36 +67,39 @@ export class SummaryUnavailable extends Error {}
  * @param {number} [options.attempts]
  */
 export async function summarise(document, { client, maxSentences = 3, attempts = 3 } = {}) {
-  if (!client) {
-    // Needs a key and a network, so it is never reached in the tests.
-    const { OpenAI } = await import('openai');
-    client = new OpenAI();
-  }
-
   // Refusing an oversized document is not an optimisation, it is a cost
   // control: the provider bills the input whether the answer is useful or not.
-  if (document.length > MAX_CHARACTERS) {
+  // Counted in code points, as Python counts characters.
+  if ([...document].length > MAX_CHARACTERS) {
     throw new RangeError(`document longer than ${MAX_CHARACTERS} characters`);
   }
+  if (!(maxSentences >= 1)) throw new RangeError('maxSentences must be at least 1');
 
   // An empty document has no summary, and asking for one costs the same as
   // asking for a real one.
   if (!document.trim()) return { summary: '', keyPoints: [] };
 
   const prompt = `${PROMPT.replace('{sentences}', String(maxSentences))}\n${document}`;
-  return ask(client, prompt, attempts);
+  return ask(client ?? (await providerClient()), prompt, attempts);
 }
 
 async function ask(client, prompt, attempts) {
   let lastError;
   for (let i = 0; i < attempts; i += 1) {
+    let answer;
     try {
-      // Temperature zero: two identical documents that summarise differently
-      // cannot be reviewed, and cannot be cached either.
-      const answer = await client.complete({ prompt, temperature: 0 });
-      return decode(JSON.parse(answer));
+      // Temperature zero, the low end of the range, which the provider
+      // documents as more focused and deterministic. It does not promise
+      // that two identical calls agree.
+      answer = await client.complete({ prompt, temperature: 0 });
     } catch (error) {
-      lastError = error;
+      lastError = error; // any provider failure is retried
+      continue;
+    }
+    try {
+      return decode(answer);
+    } catch (error) {
+      lastError = error; // an unusable answer is asked for again
     }
   }
   throw new SummaryUnavailable(String(lastError));
@@ -86,7 +111,10 @@ async function ask(client, prompt, attempts) {
  * Returning a half-built answer would hand the caller a summary that is
  * silently empty, which reads exactly like a document with nothing in it.
  */
-function decode(parsed) {
+function decode(answer) {
+  if (typeof answer !== 'string') throw new Error('the model returned no text');
+  // A Markdown code fence around the JSON is unwrapped, not counted as a failure.
+  const parsed = JSON.parse(answer.trim().replace(/^```(?:json)?/, '').replace(/```$/, ''));
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('the model answered something that is not an object');
   }
@@ -94,8 +122,8 @@ function decode(parsed) {
   if (typeof summary !== 'string' || !summary.trim()) {
     throw new Error('the model answered without a summary');
   }
-  if (!Array.isArray(points)) {
-    throw new Error('the model answered with key points that are not a list');
+  if (!Array.isArray(points) || !points.every((point) => typeof point === 'string')) {
+    throw new Error('the model answered with key points that are not a list of strings');
   }
-  return { summary: summary.trim(), keyPoints: points.map(String) };
+  return { summary: summary.trim(), keyPoints: points };
 }

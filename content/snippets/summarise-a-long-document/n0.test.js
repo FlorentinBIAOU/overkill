@@ -175,29 +175,23 @@ test('production : espace insécable, emoji et casse', () => {
   assert.equal(summarise(text, 2), 'The PLATFORM migration 🚀 is done. The platform works.');
 });
 
-test('DÉFAUT : un document NFD coupe ses mots accentués', async () => {
-  await assert.rejects(async () => {
-    const text = 'La réunion a été reportée. La réunion aura lieu lundi. Le café est offert.';
-    assert.deepEqual(scoreSentences(splitSentences(text.normalize('NFD'))), scoreSentences(splitSentences(text)));
-  });
+test('un document NFD coupe ses mots accentués', async () => {
+  const text = 'La réunion a été reportée. La réunion aura lieu lundi. Le café est offert.';
+  assert.deepEqual(scoreSentences(splitSentences(text.normalize('NFD'))), scoreSentences(splitSentences(text)));
 });
 
-test('DÉFAUT : un document sans ponctuation finale est rendu entier', async () => {
-  await assert.rejects(async () => {
-    const transcript = 'the meeting started late\nwe discussed the budget\n'.repeat(500);
-    assert.ok(summarise(transcript, 3).length < transcript.length / 2);
-  });
+test('un document sans ponctuation finale est rendu entier', async () => {
+  const transcript = 'the meeting started late\nwe discussed the budget\n'.repeat(500);
+  assert.ok(summarise(transcript, 3).length < transcript.length / 2);
 });
 
-test('DÉFAUT : un nombre de phrases négatif n’est pas refusé', async () => {
-  await assert.rejects(async () => {
-    let result;
-    try {
-      result = summarise(REPORT, -1);
-    } catch (error) {
-      if (error instanceof RangeError) return;
-      throw error;
-    }
-    assert.equal(result, '');
-  });
+test('un nombre de phrases négatif n’est pas refusé', async () => {
+  let result;
+  try {
+    result = summarise(REPORT, -1);
+  } catch (error) {
+    if (error instanceof RangeError) return;
+    throw error;
+  }
+  assert.equal(result, '');
 });

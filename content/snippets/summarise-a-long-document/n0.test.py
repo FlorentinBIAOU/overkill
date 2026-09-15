@@ -245,35 +245,16 @@ def test_production_espace_insecable_emoji_et_casse():
     assert summarise(text, max_sentences=2) == "The PLATFORM migration 🚀 is done. The platform works."
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un document en NFD (copié depuis un Mac) voit ses mots accentués coupés "
-        "en deux : « réunion » devient « re » et « union », « été » devient « e » et "
-        "« te » ; les fréquences, donc le choix des phrases, ne sont plus celles du texte"
-    ),
-)
 def test_defaut_un_document_nfd_coupe_ses_mots_accentues():
     text = "La réunion a été reportée. La réunion aura lieu lundi. Le café est offert."
     assert score_sentences(split_sentences(unicodedata.normalize("NFD", text))) == score_sentences(split_sentences(text))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un document sans ponctuation finale (transcription, liste à puces) est "
-        "une seule phrase, rendue en entière : 24 500 caractères « résumés » en 24 499"
-    ),
-)
 def test_defaut_un_document_sans_ponctuation_finale_est_rendu_entier():
     transcript = "the meeting started late\nwe discussed the budget\n" * 500
     assert len(summarise(transcript, max_sentences=3)) < len(transcript) / 2
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un nombre de phrases négatif n'est pas refusé ; -1 rend toutes les phrases sauf la moins bien notée",
-)
 def test_defaut_un_nombre_de_phrases_negatif_n_est_pas_refuse():
     try:
         assert summarise(REPORT, max_sentences=-1) == ""

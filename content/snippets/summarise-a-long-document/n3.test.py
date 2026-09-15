@@ -179,41 +179,15 @@ def test_le_resume_est_debarrasse_de_ses_espaces():
     assert summarise(REPORT, client=llm({"summary": "  One line.\n"}))["summary"] == "One line."
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : des points clés qui ne sont pas des chaînes sont convertis au lieu d'être "
-        "refusés : un objet devient « {'a': 2} » en Python, « [object Object] » en "
-        "JavaScript ; la docstring promet de refuser une réponse de la mauvaise forme"
-    ),
-)
 def test_defaut_des_points_cles_qui_ne_sont_pas_des_chaines_sont_refuses():
     with pytest.raises(SummaryUnavailable):
         summarise(REPORT, client=llm({"summary": "fine", "key_points": [{"a": 2}, 3]}), attempts=1)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : la docstring promet d'analyser « an answer that is only probably the JSON "
-        "you asked for » ; une clôture ```json n'est pas décodée, trois appels payés puis "
-        "SummaryUnavailable"
-    ),
-)
 def test_defaut_une_reponse_en_cloture_de_code_n_est_pas_decodee():
     assert summarise(REPORT, client=llm(f"```json\n{ANSWER}\n```"))["summary"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle "
-        "`client.complete(prompt=..., temperature=0)`, absent du kit `openai` publié "
-        "(surface réelle : chat.completions.create(model=..., messages=[...]), réponse "
-        "dans choices[0].message.content). L'AttributeError est avalée par la boucle de "
-        "réessai et ressort en SummaryUnavailable"
-    ),
-)
 def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
     assert summarise(REPORT)["summary"] == "The ticketing system moved to a new platform in March."
 
@@ -236,10 +210,6 @@ def test_l_extrait_n_importe_que_json():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un nombre de phrases nul ou négatif n'est pas refusé ; l'invite « at most 0 sentences » part et se paie",
-)
 def test_defaut_un_nombre_de_phrases_nul_ou_negatif_est_refuse_avant_l_appel():
     client = llm(ANSWER)
     for count in (0, -1):

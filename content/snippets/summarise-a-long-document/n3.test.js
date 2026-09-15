@@ -144,22 +144,16 @@ test('le résumé est débarrassé de ses espaces', async () => {
   assert.equal((await summarise(REPORT, { client: llm({ summary: '  One line.\n' }) })).summary, 'One line.');
 });
 
-test('DÉFAUT : des points clés qui ne sont pas des chaînes sont refusés', async () => {
-  await assert.rejects(async () => {
-    await assert.rejects(() => summarise(REPORT, { client: llm({ summary: 'fine', key_points: [{ a: 2 }, 3] }), attempts: 1 }), SummaryUnavailable);
-  });
+test('des points clés qui ne sont pas des chaînes sont refusés', async () => {
+  await assert.rejects(() => summarise(REPORT, { client: llm({ summary: 'fine', key_points: [{ a: 2 }, 3] }), attempts: 1 }), SummaryUnavailable);
 });
 
-test('DÉFAUT : une réponse en clôture de code n’est pas décodée', async () => {
-  await assert.rejects(async () => {
-    assert.ok((await summarise(REPORT, { client: llm(`\`\`\`json\n${ANSWER}\n\`\`\``) })).summary);
-  });
+test('une réponse en clôture de code n’est pas décodée', async () => {
+  assert.ok((await summarise(REPORT, { client: llm(`\`\`\`json\n${ANSWER}\n\`\`\``) })).summary);
 });
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit', async () => {
-  await assert.rejects(async () => {
-    assert.equal((await summarise(REPORT)).summary, 'The ticketing system moved to a new platform in March.');
-  });
+test('le client par défaut a la forme du vrai kit', async () => {
+  assert.equal((await summarise(REPORT)).summary, 'The ticketing system moved to a new platform in March.');
 });
 
 test('le client par défaut échoue en service indisponible sans appel', async () => {
@@ -172,12 +166,10 @@ test('le client par défaut échoue en service indisponible sans appel', async (
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : un nombre de phrases nul ou négatif est refusé avant l’appel', async () => {
-  await assert.rejects(async () => {
-    const client = llm(ANSWER);
-    for (const maxSentences of [0, -1]) await summarise(REPORT, { client, maxSentences }).catch(() => {});
-    assert.equal(client.callCount, 0);
-  });
+test('un nombre de phrases nul ou négatif est refusé avant l’appel', async () => {
+  const client = llm(ANSWER);
+  for (const maxSentences of [0, -1]) await summarise(REPORT, { client, maxSentences }).catch(() => {});
+  assert.equal(client.callCount, 0);
 });
 
 test('production : une injection dans le document part telle quelle', async () => {

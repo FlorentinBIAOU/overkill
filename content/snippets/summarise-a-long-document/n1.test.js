@@ -205,22 +205,18 @@ test('production : cinq mille phrases', () => {
   assert.ok(Date.now() - started < 10_000);
 });
 
-test('DÉFAUT : un document sans ponctuation finale est rendu entier', async () => {
-  await assert.rejects(async () => {
-    const transcript = 'the meeting started late\nwe discussed the budget\n'.repeat(500);
-    assert.ok(summarise(model, transcript, 3).length < transcript.length / 2);
-  });
+test('un document sans ponctuation finale est rendu entier', async () => {
+  const transcript = 'the meeting started late\nwe discussed the budget\n'.repeat(500);
+  assert.ok(summarise(model, transcript, 3).length < transcript.length / 2);
 });
 
-test('DÉFAUT : un nombre de phrases négatif n’est pas refusé', async () => {
-  await assert.rejects(async () => {
-    let result;
-    try {
-      result = summarise(model, AUDIT, -1);
-    } catch (error) {
-      if (error instanceof RangeError) return;
-      throw error;
-    }
-    assert.equal(result, '');
-  });
+test('un nombre de phrases négatif n’est pas refusé', async () => {
+  let result;
+  try {
+    result = summarise(model, AUDIT, -1);
+  } catch (error) {
+    if (error instanceof RangeError) return;
+    throw error;
+  }
+  assert.equal(result, '');
 });

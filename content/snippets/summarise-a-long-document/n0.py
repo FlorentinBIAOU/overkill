@@ -17,15 +17,23 @@ the opening paragraph outright.
 """
 
 import re
+import unicodedata
 
 # A sentence ends at a full stop, question or exclamation mark followed by
-# whitespace. Abbreviations will fool this; a real corpus needs a better
-# splitter, and that is a separate problem from choosing sentences.
-SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+# whitespace, or at a line break, so a transcript or a list without final
+# punctuation is still cut into lines. Abbreviations will fool this, and so
+# will prose hard-wrapped at a fixed width, which has to be unwrapped first; a
+# real corpus needs a better splitter, a separate problem from choosing.
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+|\s*\n\s*")
 
 # Letters and digits only: `[^\W_]` is `\w` without the underscore, so
 # accented words survive and punctuation does not.
 WORD = re.compile(r"[^\W_]+")
+
+
+def words(sentence: str) -> list[str]:
+    """Lowercase words, composed first: a decomposed `é` would split the word."""
+    return WORD.findall(unicodedata.normalize("NFC", sentence).lower())
 
 # Words too common to say anything about the subject of a document.
 STOPWORDS = frozenset(
@@ -48,7 +56,7 @@ def _term_weights(sentences: list[str]) -> dict[str, float]:
     """Count content words, then scale so the most frequent one weighs one."""
     counts: dict[str, int] = {}
     for sentence in sentences:
-        for word in WORD.findall(sentence.lower()):
+        for word in words(sentence):
             if len(word) > 2 and word not in STOPWORDS:
                 counts[word] = counts.get(word, 0) + 1
     if not counts:
@@ -62,15 +70,15 @@ def score_sentences(sentences: list[str]) -> list[float]:
     weights = _term_weights(sentences)
     scores = []
     for index, sentence in enumerate(sentences):
-        words = WORD.findall(sentence.lower())
+        found = words(sentence)
         # Accumulated in a plain loop rather than with `sum`, which since
         # Python 3.12 compensates rounding error on floats. That is the better
         # answer, but it is not the answer JavaScript gives, and the two
         # versions of this snippet have to rank sentences identically.
         total = 0.0
-        for word in words:
+        for word in found:
             total += weights.get(word, 0.0)
-        density = total / len(words) if words else 0.0
+        density = total / len(found) if found else 0.0
         scores.append(density + LEAD_BONUS / (index + 1))
     return scores
 
@@ -83,6 +91,8 @@ def summarise(text: str, max_sentences: int = 3) -> str:
     document order keeps the sequence the author chose, which is the only part
     of the argument an extractive summary can preserve.
     """
+    if max_sentences < 0:
+        raise ValueError("max_sentences cannot be negative")
     sentences = split_sentences(text)
     scores = score_sentences(sentences)
     # Sorting is stable, so two identical scores keep their document order.

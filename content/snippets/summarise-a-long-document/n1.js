@@ -5,23 +5,32 @@
  * document's own sentences — but the weights are learnt instead of guessed.
  *
  * N0 fixes the trade between position and term density by hand, once, for
- * every document in the world. That constant is a guess. Here, a few dozen
- * documents whose summary sentences someone has ticked off decide it instead:
- * if, in your corpus, the wrap-up at the end matters more than the opening,
- * the model will find that out and N0 never will.
+ * every document in the world. That constant is a guess. Here, documents whose
+ * summary sentences someone has ticked off set the weights of five features
+ * instead, and the model learns nothing those five cannot express. Position is
+ * coded as 1 / (rank + 1): the model can learn that early sentences count for
+ * more or for less, never that the last one counts. A closing sentence gains
+ * only through what it carries, a figure or a cue word such as `overall`.
  *
  * The features are deliberately surface-level. They describe where a sentence
  * sits and what it looks like, not what it means. That is the ceiling of this
  * rung, and the reason the entry does not stop here.
  *
- * Logistic regression is written out rather than pulled from a package,
- * because on five features it is a dozen lines. The Python version of this
+ * Logistic regression is written out rather than pulled from a package, so
+ * the snippet needs nothing but Node. The Python version of this
  * snippet calls scikit-learn; the objective minimised below is the same one,
  * so both rank a document's sentences alike.
  */
 
-const SENTENCE_END = /(?<=[.!?])\s+/;
+// A full stop, question or exclamation mark followed by whitespace, or a line
+// break: the same splitter as N0, with the same limits.
+const SENTENCE_END = /(?<=[.!?])\s+|\s*\n\s*/;
 const WORD = /[\p{L}\p{N}]+/gu;
+
+/** Lowercase words, composed first: a decomposed `é` would split the word. */
+function words(sentence) {
+  return sentence.normalize('NFC').toLowerCase().match(WORD) ?? [];
+}
 
 const STOPWORDS = new Set(
   ('a an and are as at be been but by for from had has have in into is it its ' +
@@ -54,15 +63,15 @@ export function splitSentences(text) {
  */
 export function sentenceFeatures(sentences, index) {
   const sentence = sentences[index];
-  const words = sentence.toLowerCase().match(WORD) ?? [];
-  const opening = new Set(sentences[0].toLowerCase().match(WORD) ?? []);
-  const content = words.filter((w) => w.length > 2 && !STOPWORDS.has(w));
+  const found = words(sentence);
+  const opening = new Set(words(sentences[0]));
+  const content = found.filter((w) => w.length > 2 && !STOPWORDS.has(w));
   const shared = content.filter((word) => opening.has(word)).length;
   return [
     1 / (index + 1),
-    Math.min(words.length / LONG_SENTENCE, 1),
+    Math.min(found.length / LONG_SENTENCE, 1),
     /[0-9]/.test(sentence) ? 1 : 0,
-    words.some((word) => CUES.has(word)) ? 1 : 0,
+    found.some((word) => CUES.has(word)) ? 1 : 0,
     content.length ? shared / content.length : 0,
   ];
 }
@@ -115,6 +124,7 @@ function score(model, features) {
 
 /** Return the best-scored sentences, in the order the document puts them. */
 export function summarise(model, text, maxSentences = 3) {
+  if (maxSentences < 0) throw new RangeError('maxSentences cannot be negative');
   const sentences = splitSentences(text);
   if (sentences.length === 0) return '';
   const scores = sentences.map((_, i) => score(model, sentenceFeatures(sentences, i)));

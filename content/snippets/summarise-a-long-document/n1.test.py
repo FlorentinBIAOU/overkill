@@ -251,19 +251,11 @@ def test_production_cinq_mille_phrases():
     assert time.monotonic() - started < 10
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un document sans ponctuation finale est une seule phrase, rendue en entier",
-)
 def test_defaut_un_document_sans_ponctuation_finale_est_rendu_entier():
     transcript = "the meeting started late\nwe discussed the budget\n" * 500
     assert len(summarise(MODEL, transcript, max_sentences=3)) < len(transcript) / 2
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : un nombre de phrases négatif n'est pas refusé ; -1 rend toutes les phrases sauf la moins bien notée",
-)
 def test_defaut_un_nombre_de_phrases_negatif_n_est_pas_refuse():
     try:
         assert summarise(MODEL, AUDIT, max_sentences=-1) == ""
