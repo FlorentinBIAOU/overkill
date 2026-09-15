@@ -9,7 +9,7 @@ n0.py: |
   Niveau N0. SQLite embarque FTS5 : une table virtuelle qui porte un index
   inversé, et une fonction de classement bm25(). Postgres a tsvector et
   ts_rank, MySQL a FULLTEXT ... IN NATURAL LANGUAGE MODE. Ce qui tourne sous
-  votre application sait déjà le faire, et le fait bien.
+  votre application a déjà un index et un classement.
 
   Deux choses sont à savoir avant de s'en servir.
 
@@ -30,14 +30,14 @@ n0.js: |
   adressées à FTS5, dans SQLite : une table virtuelle qui porte un index
   inversé, et une fonction de classement bm25(). Postgres a tsvector et
   ts_rank, MySQL a FULLTEXT ... IN NATURAL LANGUAGE MODE. Ce qui tourne sous
-  votre application sait déjà le faire, et le fait bien : à ce niveau, vous
+  votre application a déjà un index et un classement : à ce niveau, vous
   écrivez du SQL, pas un algorithme.
 
-  Node 22 livre bien `node:sqlite`, mais il lui faut --experimental-sqlite et
-  la version embarquée n'a pas le module FTS5 : il n'y a donc rien à appeler
-  depuis un processus `node` ordinaire. Ce fichier écrit par conséquent ce que
-  fait la table FTS5 : le même découpage en jetons (minuscules, accents
-  repliés), le même ET implicite entre les termes, le même BM25 avec les mêmes
+  Node 22 livre `node:sqlite` (derrière --experimental-sqlite avant la 22.13.0),
+  mais le SQLite qu'il embarque n'a pas le module FTS5 : il n'y a donc rien à
+  appeler depuis un processus `node` ordinaire. Ce fichier écrit par conséquent
+  ce que fait la table FTS5 : le même découpage en jetons (minuscules, accents
+  retirés des lettres latines), le même ET implicite entre les termes, le même BM25 avec les mêmes
   constantes et les mêmes poids de colonne. Lisez-le comme la documentation du
   SQL, pas comme quelque chose à déployer.
 
@@ -46,9 +46,11 @@ n1: |
   vous avez écrits.
 
   Niveau N1. Non parce que l'index de N0 serait mauvais — N0 reste la
-  recommandation — mais parce que les quarante lignes ci-dessous sont ce que
-  fait la base de données, et que les lire une fois vous dit pourquoi un
-  document s'est classé là où il s'est classé.
+  recommandation — mais parce que le code ci-dessous est un BM25 qu'on peut
+  lire, et que le lire une fois vous dit pourquoi un document s'est classé là
+  où il s'est classé. Il ne reproduit pas FTS5 à la décimale près : la règle
+  d'appariement, l'IDF, la longueur et le poids du titre diffèrent, et chacun
+  est une ligne que vous pouvez changer.
 
   Trois décisions vous appartiennent ici, qui appartenaient au moteur avant.
 
@@ -64,31 +66,30 @@ n2: |
 
   Niveau N2. N0 et N1 apparient des mots. Un lecteur qui demande « vacances »
   là où le manuel dit « congés payés » n'obtient rien, et c'est ce trou que ce
-  niveau existe pour combler : un encodeur auto-hébergé projette le texte dans
-  des vecteurs où deux façons de dire la même chose tombent près l'une de
-  l'autre.
+  niveau existe pour combler : un encodeur de phrases auto-hébergé, conçu pour
+  la recherche sémantique, projette chaque texte sur un vecteur dense, et les
+  textes se comparent sur ces vecteurs plutôt que sur les mots qu'ils
+  partagent.
 
-  Il le comble en plus, non à la place. La recherche par mots-clés est exacte
-  quand les mots correspondent et muette quand ils ne correspondent pas ; la
-  recherche vectorielle répond toujours, et reste vague. Fusionner les deux
-  classements garde la précision du premier et emprunte la portée du second :
-  c'est pourquoi la fiche parle ici d'un complément.
+  Il le comble en plus, non à la place. La recherche par mots-clés trouve ce
+  qui partage les mots et se tait sinon ; la recherche vectorielle classe tous
+  les documents, toujours. Fusionner les deux classements garde le premier
+  résultat du plein texte devant toute page que les mots n'ont pas trouvée, et
+  emprunte la portée des vecteurs ; plus bas dans la liste, chaque jambe pèse
+  autant que l'autre.
 
   Ce que ce niveau coûte vraiment n'est pas l'arithmétique ci-dessous. C'est le
-  déploiement : quelques centaines de mégaoctets de poids, un processus tenu
-  chaud, des vecteurs recalculés à chaque modification d'un document, et un
-  index vectoriel dès qu'ils ne tiennent plus dans une simple liste en
-  mémoire — à côté d'un index plein texte que la base entretient déjà pour
-  rien.
+  déploiement : des poids à télécharger et à charger, un processus à tenir
+  chaud, et les vecteurs d'un document à recalculer quand il change — à côté
+  d'un index plein texte que la base entretient déjà pour rien.
 
 n3: |
   Répondre à une question à partir de vos propres documents : génération
   augmentée par récupération.
 
-  Niveau N3. Le modèle n'a jamais lu votre manuel. Interrogé sans lui, il
-  répond de mémoire, avec assurance, au sujet de votre entreprise. La
-  récupération passe donc d'abord — N0, N1 ou N2 trouve les passages — et le
-  modèle n'écrit que la phrase.
+  Niveau N3. Le modèle ne connaît de votre manuel que ce que la consigne lui
+  apporte. La récupération passe donc d'abord — N0, N1 ou N2 trouve les
+  passages — et le modèle écrit la phrase à partir d'eux.
 
   Tout ce qui suit est de la plomberie, et la plomberie est là où sont les
   bogues : combien de passages envoyer et quelle longueur chacun peut faire,
@@ -98,5 +99,5 @@ n3: |
 
   Ce dernier contrôle mérite ses lignes, et il vaut de savoir exactement ce
   qu'il achète : il attrape une source inventée. Il ne peut pas attraper une
-  phrase inventée accrochée à une source réelle, et aucune consigne au monde
-  n'en fait un contrôle qui le puisse.
+  phrase inventée accrochée à une source réelle : il compare des
+  identifiants, et ne lit jamais la phrase.

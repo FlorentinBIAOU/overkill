@@ -5,15 +5,15 @@
  * Rung N0. The Python version of this snippet is four SQL statements against
  * SQLite's FTS5: a virtual table holding an inverted index, and a bm25()
  * ranking function. Postgres has tsvector and ts_rank, MySQL has FULLTEXT ...
- * IN NATURAL LANGUAGE MODE. Whatever is under your application already does
- * this, and does it well: on this rung you write SQL, not an algorithm.
+ * IN NATURAL LANGUAGE MODE. Whatever is under your application already has an
+ * index and a ranking: on this rung you write SQL, not an algorithm.
  *
- * Node 22 does ship `node:sqlite`, but it needs --experimental-sqlite and the
- * bundled build has no FTS5 module, so there is nothing to call from a plain
- * `node` process. This file therefore writes out what the FTS5 table does:
- * the same tokenizer (lower case, accents folded), the same implicit AND
- * between terms, the same BM25 with the same constants and column weights.
- * Read it as the documentation of the SQL, not as something to deploy.
+ * Node 22 ships `node:sqlite` (behind --experimental-sqlite before 22.13.0),
+ * but its bundled SQLite has no FTS5 module, so there is nothing to call from
+ * a plain `node` process. This file therefore writes out what the FTS5 table
+ * does: the same tokenizer (lower case, accents off Latin letters), the same
+ * implicit AND between terms, the same BM25 with the same constants and column
+ * weights. Read it as the documentation of the SQL, not as something to deploy.
  */
 
 // SQLite's fts5 defaults. Its bm25() is negated so that ORDER BY works
@@ -24,12 +24,26 @@ const B = 0.75;
 // A title match counts for more than a body match.
 const COLUMN_WEIGHTS = { title: 10, body: 1 };
 
-/** Lower case, strip accents, keep letters and digits. */
+/**
+ * Lower case, strip accents from Latin letters, keep letters and digits. A
+ * ligature such as "ﬁ" or a full-width letter is kept as it is, as FTS5 does.
+ */
 export function tokenise(text) {
-  return String(text).toLowerCase().normalize('NFKD')
-    .replace(/\p{Diacritic}/gu, '')
+  return String(text).toLowerCase().normalize('NFD')
+    .replace(/(\p{Script=Latin})\p{M}+/gu, (_, letter) => letter)
+    .normalize('NFC')
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
+}
+
+/** The tokens a query is searched with. */
+export function queryTerms(query) {
+  const terms = tokenise(query);
+  // A one-letter token is what an elision ("l'accord") or a possessive
+  // ("manager's") leaves behind. The implicit AND would require it, and empty
+  // the results: it is dropped, unless the query holds nothing else.
+  const words = terms.filter((term) => [...term].length > 1); // code points, as in Python
+  return words.length > 0 ? words : terms;
 }
 
 /** Documents are objects with keys id, title and body. */
@@ -55,7 +69,9 @@ export function buildIndex(documents) {
 
 /** Return the best matches, best first, as objects with keys id and score. */
 export function search(index, query, limit = 5) {
-  const terms = tokenise(query);
+  // A negative slice would silently drop the last results: refuse it.
+  if (limit < 0) throw new RangeError('limit must be zero or more');
+  const terms = queryTerms(query);
   if (terms.length === 0) return [];
 
   const results = [];

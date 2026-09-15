@@ -2,8 +2,10 @@
  * Search your own documents with an inverted index and a BM25 you wrote.
  *
  * Rung N1. Not because the index of N0 is bad — N0 is still the
- * recommendation — but because the forty lines below are what the database
- * does, and reading them once tells you why a document ranked where it did.
+ * recommendation — but because the code below is a BM25 you can read, and
+ * reading it once tells you why a document ranked where it did. It does not
+ * reproduce FTS5 to the decimal: the matching rule, the idf, the length and
+ * the title weight all differ, and each is a line you can change.
  *
  * Three decisions are yours here, and they were the engine's before.
  *
@@ -53,6 +55,8 @@ export function buildIndex(documents, weights = FIELD_WEIGHTS) {
  * is a ranking nobody can fix.
  */
 export function search(index, query, { limit = 5, k1 = 1.2, b = 0.75 } = {}) {
+  // A negative slice would silently drop the last results: refuse it.
+  if (limit < 0) throw new RangeError('limit must be zero or more');
   const scores = new Map();
   const contributions = new Map();
   // A Set keeps the order and drops repeats: a word typed twice is not twice

@@ -263,15 +263,6 @@ def test_un_modele_qui_ne_peut_pas_tourner_leve():
         hybrid_search("frais", HANDBOOK, [], encoder=BrokenEncoder())
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : EncodingFailed se dit levée quand l'encodeur « returned something "
-        "unusable » ; seul le nombre de vecteurs est vérifié. Des vecteurs NaN, ou "
-        "de dimensions incohérentes (zip tronque en silence), rendent un classement "
-        "complet sans erreur"
-    ),
-)
 def test_infirme_des_vecteurs_inutilisables_levent():
     nan = TableEncoder({}, [float("nan")] * 3)
     ragged = TableEncoder({"quoi": [1.0, 0.0, 5.0]}, [1.0, 0.0])
@@ -350,14 +341,6 @@ def test_defaut_le_modele_par_defaut_est_recharge_a_chaque_recherche(sentence_tr
     assert len(sentence_transformers.loads) == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le fonds entier est ré-encodé à chaque requête ; la docstring "
-        "annonce des « vectors recomputed whenever a document changes », le code les "
-        "recalcule à chaque recherche, sans qu'aucun document ait changé"
-    ),
-)
 def test_defaut_le_fonds_est_reencode_a_chaque_requete():
     fake = encoder()
     hybrid_search("notes de frais", HANDBOOK, [], encoder=fake)

@@ -179,17 +179,13 @@ test('une réponse qui ne cite rien est refusée', async () => {
   await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm({ answer: 'Trente jours ouvrés.', sources: [] }) }), AnswerNotGrounded);
 });
 
-test('DÉFAUT : une réponse en clôture de code n’est pas décodée', async () => {
-  await assert.rejects(async () => {
-    const reply = '```json\n{"answer": "Deux jours et demi par mois.", "sources": ["conges"]}\n```';
-    assert.deepEqual((await answer(QUESTION, PASSAGES, { client: llm(reply) })).sources, ['conges']);
-  });
+test('une réponse en clôture de code n’est pas décodée', async () => {
+  const reply = '```json\n{"answer": "Deux jours et demi par mois.", "sources": ["conges"]}\n```';
+  assert.deepEqual((await answer(QUESTION, PASSAGES, { client: llm(reply) })).sources, ['conges']);
 });
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(await answer(QUESTION, PASSAGES), { answer: 'Deux jours et demi par mois.', sources: ['conges'] });
-  });
+test('le client par défaut a la forme du vrai kit', async () => {
+  assert.deepEqual(await answer(QUESTION, PASSAGES), { answer: 'Deux jours et demi par mois.', sources: ['conges'] });
 });
 
 test('le client par défaut échoue en service indisponible sans appel', async () => {
@@ -202,50 +198,40 @@ test('le client par défaut échoue en service indisponible sans appel', async (
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : « Je ne sais pas. » avec majuscule et point est refusé comme non ancré', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual((await answer(QUESTION, PASSAGES, { client: llm({ answer: 'Je ne sais pas.', sources: [] }) })).sources, []);
-  });
+test('« Je ne sais pas. » avec majuscule et point est refusé comme non ancré', async () => {
+  assert.deepEqual((await answer(QUESTION, PASSAGES, { client: llm({ answer: 'Je ne sais pas.', sources: [] }) })).sources, []);
 });
 
-test('DÉFAUT : un identifiant entier fait refuser une citation juste', async () => {
-  await assert.rejects(async () => {
-    const passages = [{ id: 1, text: PASSAGES[0].text }];
-    assert.ok((await answer(QUESTION, passages, { client: llm({ answer: 'Deux jours et demi.', sources: [1] }) })).answer);
-  });
+test('un identifiant entier fait refuser une citation juste', async () => {
+  const passages = [{ id: 1, text: PASSAGES[0].text }];
+  assert.ok((await answer(QUESTION, passages, { client: llm({ answer: 'Deux jours et demi.', sources: [1] }) })).answer);
 });
 
-test('DÉFAUT : une réponse d’un autre type lève une erreur nommée', async () => {
+test('une réponse d’un autre type lève une erreur nommée', async () => {
   // « sources » en chaîne ou en nombre : TypeError ; à null : lu comme [] et
   // refusé en AnswerNotGrounded.
-  await assert.rejects(async () => {
-    for (const reply of [
-      { answer: 'x', sources: 'conges' },
-      { answer: 'x', sources: null },
-      { answer: 'x', sources: 42 },
-      { answer: null, sources: [] },
-    ]) {
-      await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm(reply) }), AnswerUnavailable);
-    }
-  });
+  for (const reply of [
+    { answer: 'x', sources: 'conges' },
+    { answer: 'x', sources: null },
+    { answer: 'x', sources: 42 },
+    { answer: null, sources: [] },
+  ]) {
+    await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm(reply) }), AnswerUnavailable);
+  }
 });
 
-test('DÉFAUT : une question vide ne coûte aucun appel', async () => {
-  await assert.rejects(async () => {
-    const client = dontKnow();
-    for (const question of ['', '   ']) {
-      await answer(question, PASSAGES, { client }).catch(() => {});
-    }
-    assert.equal(client.callCount, 0);
-  });
+test('une question vide ne coûte aucun appel', async () => {
+  const client = dontKnow();
+  for (const question of ['', '   ']) {
+    await answer(question, PASSAGES, { client }).catch(() => {});
+  }
+  assert.equal(client.callCount, 0);
 });
 
-test('DÉFAUT : une question énorme est refusée avant l’appel', async () => {
-  await assert.rejects(async () => {
-    const client = dontKnow();
-    await answer('x'.repeat(1_000_000), PASSAGES, { client }).catch(() => {});
-    assert.equal(client.callCount, 0);
-  });
+test('une question énorme est refusée avant l’appel', async () => {
+  const client = dontKnow();
+  await answer('x'.repeat(1_000_000), PASSAGES, { client }).catch(() => {});
+  assert.equal(client.callCount, 0);
 });
 
 test('production : mille passages d’un mégaoctet', async () => {
@@ -264,14 +250,12 @@ test('production : NFD et espace insécable partent tels quels', async () => {
   assert.ok(client.lastRequest.prompt.includes(nfd));
 });
 
-test('DÉFAUT : un emoji à la frontière de coupe est coupé en deux', async () => {
+test('un emoji à la frontière de coupe est coupé en deux', async () => {
   // La coupe compte en unités UTF-16 : il reste une demi-paire de substitution,
   // \ud83d, dans la consigne. Le Python coupe en points de code et garde l'emoji.
-  await assert.rejects(async () => {
-    const client = dontKnow();
-    await answer(QUESTION, [{ id: 'b', text: `${'x'.repeat(MAX_CHARACTERS - 1)}😀` }], { client });
-    assert.ok(client.lastRequest.prompt.includes(`${'x'.repeat(MAX_CHARACTERS - 1)}😀`));
-  });
+  const client = dontKnow();
+  await answer(QUESTION, [{ id: 'b', text: `${'x'.repeat(MAX_CHARACTERS - 1)}😀` }], { client });
+  assert.ok(client.lastRequest.prompt.includes(`${'x'.repeat(MAX_CHARACTERS - 1)}😀`));
 });
 
 test('production : une injection dans un passage part telle quelle et une fausse source est refusée', async () => {

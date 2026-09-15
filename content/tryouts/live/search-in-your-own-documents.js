@@ -8,7 +8,7 @@
  * virtuelle de la base de données qu'il décrit. Ce qui se rejoue à chaque
  * frappe, c'est la requête.
  */
-import { buildIndex, search, tokenise } from '../../snippets/search-in-your-own-documents/n0.js';
+import { buildIndex, queryTerms, search } from '../../snippets/search-in-your-own-documents/n0.js';
 
 /**
  * Le règlement intérieur d'une entreprise, celui que tout le monde a. Un
@@ -129,8 +129,8 @@ export default {
   level: 'N0',
 
   note: {
-    fr: 'Six pages indexées. Le score dit à quel point les mots cherchés sont rares dans le règlement, et un mot du titre compte dix fois un mot du corps.',
-    en: 'Six pages indexed. The score says how rare the words searched for are in the handbook, and a word in a title counts ten times a word in the body.',
+    fr: 'Six pages indexées. Le score monte quand les mots cherchés sont rares dans le règlement ; un mot présent dans la moitié des pages ou plus n’y ajoute rien, et un mot du titre compte dix fois un mot du corps.',
+    en: 'Six pages indexed. The score rises when the words searched for are rare in the handbook; a word found in half the pages or more adds nothing to it, and a word in a title counts ten times a word in the body.',
   },
 
   run(requete, lang) {
@@ -154,7 +154,7 @@ export default {
     /* Un silence s'explique : ou bien un mot de la requête n'est nulle part
        dans l'index, ou bien ils y sont tous mais jamais sur la même page. Les
        deux se lisent dans l'index, et c'est la moitié du diagnostic. */
-    const mots = tokenise(requete);
+    const mots = queryTerms(requete);
     const absents = mots.filter((mot) => !index.documentFrequency.has(mot));
     return {
       verdict: {
@@ -181,7 +181,7 @@ export default {
       label: { fr: 'La question dans les mots du lecteur', en: 'The question in the reader’s words' },
       input: {
         fr: 'combien de vacances puis-je poser',
-        en: 'how much holiday can I book',
+        en: 'how many days of holiday can I take',
       },
       fails: true,
       why: {

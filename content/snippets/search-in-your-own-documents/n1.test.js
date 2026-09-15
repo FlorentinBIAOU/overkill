@@ -233,15 +233,13 @@ test('production : limites zéro et un, k1 nul, b à un', () => {
   assert.deepEqual(ids(search(INDEX, 'jours', { b: 1 })), ['teletravail', 'conges']);
 });
 
-test('DÉFAUT : une limite négative n’est pas refusée', async () => {
-  await assert.rejects(async () => {
-    let result;
-    try {
-      result = search(INDEX, 'le', { limit: -1 });
-    } catch (error) {
-      if (error instanceof RangeError) return;
-      throw error;
-    }
-    assert.deepEqual(result, []);
-  });
+test('une limite négative n’est pas refusée', async () => {
+  let result;
+  try {
+    result = search(INDEX, 'le', { limit: -1 });
+  } catch (error) {
+    if (error instanceof RangeError) return;
+    throw error;
+  }
+  assert.deepEqual(result, []);
 });

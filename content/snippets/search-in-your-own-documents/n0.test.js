@@ -180,13 +180,11 @@ test('accents et casse ne comptent pas', () => {
   assert.deepEqual(search(index(), 'conges'), search(index(), 'CONGÉS'));
 });
 
-test('INFIRMÉ : le docstring dit « the same tokenizer » que FTS5, la ligature « ﬁ » est repliée ici et pas dans la table', async () => {
+test('le docstring dit « the same tokenizer » que FTS5, la ligature « ﬁ » est repliée ici et pas dans la table', async () => {
   // FTS5 (unicode61) indexe « ﬁchier » tel quel et ne le trouve ni par
   // « fichier » ni par « ﬁchier » depuis search() ; ce fichier le trouve.
-  await assert.rejects(async () => {
-    const connection = buildIndex([{ id: 'pdf', title: 'Envoyer un ﬁchier', body: '' }]);
-    assert.deepEqual(search(connection, 'fichier'), []);
-  });
+  const connection = buildIndex([{ id: 'pdf', title: 'Envoyer un ﬁchier', body: '' }]);
+  assert.deepEqual(search(connection, 'fichier'), []);
 });
 
 test('un mot présent dans la moitié des documents ou plus n’ajoute rien au score', () => {
@@ -256,11 +254,9 @@ test('production : une espace de largeur nulle coupe le mot en deux', () => {
   assert.deepEqual(search(index(), 'con​gés'), []);
 });
 
-test('DÉFAUT : une élision dans la requête vide les résultats', async () => {
-  await assert.rejects(async () => {
-    assert.deepEqual(ids(search(index(), 'accord')), ['teletravail']);
-    assert.deepEqual(ids(search(index(), 'l\'accord')), ['teletravail']);
-  });
+test('une élision dans la requête vide les résultats', async () => {
+  assert.deepEqual(ids(search(index(), 'accord')), ['teletravail']);
+  assert.deepEqual(ids(search(index(), 'l\'accord')), ['teletravail']);
 });
 
 test('production : limites zéro et un', () => {
@@ -268,18 +264,16 @@ test('production : limites zéro et un', () => {
   assert.deepEqual(ids(search(index(), 'le', 1)), ['conges']);
 });
 
-test('DÉFAUT : une limite négative n’est pas refusée', async () => {
+test('une limite négative n’est pas refusée', async () => {
   // Deux pages pour « le » ici, trois en Python (LIMIT -1 de SQLite).
-  await assert.rejects(async () => {
-    let result;
-    try {
-      result = search(index(), 'le', -1);
-    } catch (error) {
-      if (error instanceof RangeError) return;
-      throw error;
-    }
-    assert.deepEqual(result, []);
-  });
+  let result;
+  try {
+    result = search(index(), 'le', -1);
+  } catch (error) {
+    if (error instanceof RangeError) return;
+    throw error;
+  }
+  assert.deepEqual(result, []);
 });
 
 // ---------------------------------------------------------------------------

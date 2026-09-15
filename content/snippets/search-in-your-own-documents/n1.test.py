@@ -271,14 +271,6 @@ def test_production_fonds_vide_et_documents_sans_texte():
     assert search(build_index([{"id": "vide", "title": "", "body": ""}]), "congés") == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : un titre ou un corps à None (un NULL lu en base) fait lever "
-        "AttributeError à l'indexation ; le JavaScript le traite comme vide, et N0 "
-        "Python l'accepte"
-    ),
-)
 def test_defaut_un_champ_nul_fait_lever_l_indexation():
     assert ids(search(build_index([{"id": "nul", "title": None, "body": "congés"}]), "congés")) == ["nul"]
 
@@ -319,10 +311,6 @@ def test_production_limites_zero_et_un_k1_nul_b_un():
     assert ids(search(INDEX, "jours", b=1)) == ["teletravail", "conges"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une limite négative n'est pas refusée ; -1 retire silencieusement le dernier résultat",
-)
 def test_defaut_une_limite_negative_n_est_pas_refusee():
     try:
         assert search(INDEX, "le", limit=-1) == []

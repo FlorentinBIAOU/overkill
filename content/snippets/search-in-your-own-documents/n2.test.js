@@ -214,15 +214,13 @@ test('un modèle qui ne peut pas tourner lève', async () => {
   await assert.rejects(() => hybridSearch('frais', HANDBOOK, [], { encoder: brokenEncoder }), EncodingFailed);
 });
 
-test('INFIRMÉ : des vecteurs inutilisables lèvent EncodingFailed', async () => {
+test('des vecteurs inutilisables lèvent EncodingFailed', async () => {
   // NaN, ou dimensions incohérentes : un classement complet revient sans erreur.
-  await assert.rejects(async () => {
-    const nan = tableEncoder({}, [NaN, NaN, NaN]);
-    const ragged = tableEncoder({ quoi: [1, 0, 5] }, [1, 0]);
-    for (const bad of [nan, ragged]) {
-      await assert.rejects(() => hybridSearch('quoi', HANDBOOK, [], { encoder: bad }), EncodingFailed);
-    }
-  });
+  const nan = tableEncoder({}, [NaN, NaN, NaN]);
+  const ragged = tableEncoder({ quoi: [1, 0, 5] }, [1, 0]);
+  for (const bad of [nan, ragged]) {
+    await assert.rejects(() => hybridSearch('quoi', HANDBOOK, [], { encoder: bad }), EncodingFailed);
+  }
 });
 
 test('la jambe vectorielle trouve ce que les mots ne trouvaient pas', async () => {
@@ -275,14 +273,12 @@ test('DÉFAUT : le modèle par défaut est rechargé à chaque recherche', async
   });
 });
 
-test('DÉFAUT : le fonds est ré-encodé à chaque requête', async () => {
-  await assert.rejects(async () => {
-    const fake = encoder();
-    await hybridSearch('notes de frais', HANDBOOK, [], { encoder: fake });
-    await hybridSearch('télétravail', HANDBOOK, [], { encoder: fake });
-    const first = `${HANDBOOK[0].title} ${HANDBOOK[0].body}`;
-    assert.equal(fake.calls.flat().filter((text) => text === first).length, 1);
-  });
+test('le fonds est ré-encodé à chaque requête', async () => {
+  const fake = encoder();
+  await hybridSearch('notes de frais', HANDBOOK, [], { encoder: fake });
+  await hybridSearch('télétravail', HANDBOOK, [], { encoder: fake });
+  const first = `${HANDBOOK[0].title} ${HANDBOOK[0].body}`;
+  assert.equal(fake.calls.flat().filter((text) => text === first).length, 1);
 });
 
 test('deux exécutions rendent le même classement', async () => {

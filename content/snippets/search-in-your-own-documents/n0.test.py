@@ -256,16 +256,6 @@ def test_accents_et_casse_ne_comptent_pas():
     assert ids(search(index(), "CONGÉS")) == ids(search(index(), "conges")) == ["conges"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring de tokenise dit « The same folding as the tokenizer "
-        "declared above ». tokenise passe par NFKD, unicode61 non : un document qui "
-        "porte la ligature « ﬁchier » (fréquente dans un texte tiré d'un PDF) est "
-        "indexé « ﬁchier », la requête devient « fichier », et aucune requête ne "
-        "peut plus le trouver"
-    ),
-)
 def test_infirme_le_repli_de_la_requete_est_celui_de_l_index():
     connection = build_index([{"id": "pdf", "title": "Envoyer un ﬁchier", "body": ""}])
     assert ids(search(connection, "ﬁchier")) == ["pdf"]
@@ -376,14 +366,6 @@ def test_production_une_espace_de_largeur_nulle_coupe_le_mot_en_deux():
     assert search(index(), "con​gés") == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : une élision dans la requête vide les résultats. « l'accord » donne "
-        "les jetons « l » et « accord », le ET implicite exige « l », qu'aucune page "
-        "ne porte seul : rien, alors que « accord » trouve la page Télétravail"
-    ),
-)
 def test_defaut_une_elision_dans_la_requete_vide_les_resultats():
     assert ids(search(index(), "accord")) == ["teletravail"]
     assert ids(search(index(), "l'accord")) == ["teletravail"]
@@ -394,14 +376,6 @@ def test_production_limites_zero_et_un():
     assert ids(search(index(), "le", limit=1)) == ["conges"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : une limite négative n'est pas refusée, et les deux langages "
-        "divergent : SQLite lit LIMIT -1 comme « sans limite » (trois pages pour "
-        "« le »), le JavaScript retire la dernière (deux pages)"
-    ),
-)
 def test_defaut_une_limite_negative_n_est_pas_refusee():
     try:
         assert search(index(), "le", limit=-1) == []

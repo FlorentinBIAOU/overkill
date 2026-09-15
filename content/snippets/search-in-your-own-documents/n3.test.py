@@ -215,29 +215,11 @@ def test_une_reponse_qui_ne_cite_rien_est_refusee():
         answer(QUESTION, PASSAGES, client=llm({"answer": "Trente jours ouvrés.", "sources": []}))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : la docstring promet de savoir « decode a reply that is only probably "
-        "JSON » ; une réponse enveloppée dans une clôture ```json, forme courante, "
-        "n'est pas décodée : AnswerUnavailable après deux appels payés"
-    ),
-)
 def test_defaut_une_reponse_en_cloture_de_code_n_est_pas_decodee():
     reply = '```json\n{"answer": "Deux jours et demi par mois.", "sources": ["conges"]}\n```'
     assert answer(QUESTION, PASSAGES, client=llm(reply))["sources"] == ["conges"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle "
-        "`client.complete(prompt=..., temperature=0)`, absent du kit `openai` publié "
-        "(surface réelle : chat.completions.create(model=..., messages=[...]), réponse "
-        "dans choices[0].message.content). L'AttributeError est avalée par la boucle "
-        "de réessai et ressort en AnswerUnavailable"
-    ),
-)
 def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
     assert answer(QUESTION, PASSAGES) == {"answer": "Deux jours et demi par mois.", "sources": ["conges"]}
 
@@ -254,40 +236,15 @@ def test_le_client_par_defaut_echoue_en_service_indisponible_sans_appel(openai_k
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : le modèle qui répond « Je ne sais pas. » (majuscule, point) au lieu "
-        "de « je ne sais pas » voit sa réponse refusée en AnswerNotGrounded, comme une "
-        "réponse inventée, au lieu d'être lue comme une absence de réponse"
-    ),
-)
 def test_defaut_je_ne_sais_pas_avec_majuscule_et_point_est_refuse_comme_non_ancre():
     assert answer(QUESTION, PASSAGES, client=llm({"answer": "Je ne sais pas.", "sources": []}))["sources"] == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : des passages à identifiant entier (une clé primaire) rendent toute "
-        "citation fausse : les sources sont converties en chaînes, les identifiants "
-        "envoyés ne le sont pas, et « 1 » n'est pas 1 : AnswerNotGrounded"
-    ),
-)
 def test_defaut_un_identifiant_entier_fait_refuser_une_citation_juste():
     passages = [{"id": 1, "text": PASSAGES[0]["text"]}]
     assert answer(QUESTION, passages, client=llm({"answer": "Deux jours et demi.", "sources": [1]}))["answer"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : une réponse d'un autre type ne lève pas l'erreur nommée "
-        "AnswerUnavailable : « sources » en chaîne est découpé lettre à lettre "
-        "(AnswerNotGrounded citant ['c', 'o', …]), « sources » à null ou nombre lève "
-        "TypeError, « answer » à null devient le texte « None »"
-    ),
-)
 def test_defaut_une_reponse_d_un_autre_type_leve_une_erreur_nommee():
     for reply in (
         {"answer": "x", "sources": "conges"},
@@ -299,10 +256,6 @@ def test_defaut_une_reponse_d_un_autre_type_leve_une_erreur_nommee():
             answer(QUESTION, PASSAGES, client=llm(reply))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une question vide ou blanche coûte un appel au fournisseur",
-)
 def test_defaut_une_question_vide_ne_coute_aucun_appel():
     client = dont_know()
     for question in ("", "   "):
@@ -313,13 +266,6 @@ def test_defaut_une_question_vide_ne_coute_aucun_appel():
     assert client.call_count == 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : la question n'est pas bornée ; seuls les passages le sont. Une "
-        "question d'un million de caractères part telle quelle"
-    ),
-)
 def test_defaut_une_question_enorme_est_refusee_avant_l_appel():
     client = dont_know()
     try:

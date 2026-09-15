@@ -2,8 +2,10 @@
 Search your own documents with an inverted index and a BM25 you wrote.
 
 Rung N1. Not because the index of N0 is bad — N0 is still the recommendation —
-but because the forty lines below are what the database does, and reading them
-once tells you why a document ranked where it did.
+but because the code below is a BM25 you can read, and reading it once tells
+you why a document ranked where it did. It does not reproduce FTS5 to the
+decimal: the matching rule, the idf, the length and the title weight all
+differ, and each is a line you can change.
 
 Three decisions are yours here, and they were the engine's before.
 
@@ -38,7 +40,7 @@ def build_index(documents: list[dict], weights: dict | None = None) -> dict:
     for document in documents:
         counts: Counter[str] = Counter()
         for field, weight in weights.items():
-            for term in tokenise(document.get(field, "")):
+            for term in tokenise(document.get(field) or ""):  # a NULL column is empty
                 counts[term] += weight
         for term, frequency in counts.items():
             postings.setdefault(term, {})[document["id"]] = frequency
@@ -53,6 +55,8 @@ def search(index: dict, query: str, limit: int = 5, k1: float = 1.2, b: float = 
     `terms` says what each query word contributed. A ranking nobody can explain
     is a ranking nobody can fix.
     """
+    if limit < 0:
+        raise ValueError("limit must be zero or more")
     total = len(index["lengths"])
     scores: dict[str, float] = {}
     contributions: dict[str, dict[str, float]] = {}

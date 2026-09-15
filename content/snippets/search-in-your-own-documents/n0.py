@@ -5,7 +5,7 @@ already run.
 Rung N0. SQLite ships FTS5: a virtual table holding an inverted index, and a
 bm25() ranking function. Postgres has tsvector and ts_rank, MySQL has
 FULLTEXT ... IN NATURAL LANGUAGE MODE. Whatever is under your application
-already does this, and does it well.
+already has an index and a ranking.
 
 Two things are worth knowing before you use it.
 
@@ -31,21 +31,36 @@ CREATE = (
 
 
 def tokenise(text: str) -> list[str]:
-    """Lower case, strip accents, keep letters and digits.
+    """Lower case, strip accents from Latin letters, keep letters and digits.
 
-    The same folding as the tokenizer declared above, so what we look up is
-    spelled the way the index stored it.
+    The folding of the tokenizer declared above, so what we look up is spelled
+    the way the index stored it: accents come off Latin letters only, and a
+    ligature such as "ﬁ" or a full-width letter is kept as it is.
     """
-    decomposed = unicodedata.normalize("NFKD", text.lower())
-    letters = "".join(c for c in decomposed if not unicodedata.combining(c))
+    kept: list[str] = []
+    for char in unicodedata.normalize("NFD", text.lower()):
+        if unicodedata.combining(char) and kept and "LATIN" in unicodedata.name(kept[-1], ""):
+            continue
+        kept.append(char)
+    letters = unicodedata.normalize("NFC", "".join(kept))
     return "".join(c if c.isalnum() else " " for c in letters).split()
+
+
+def query_terms(query: str) -> list[str]:
+    """The tokens a query is searched with."""
+    terms = tokenise(query)
+    # A one-letter token is what an elision ("l'accord") or a possessive
+    # ("manager's") leaves behind. The implicit AND would require it, and empty
+    # the results: it is dropped, unless the query holds nothing else.
+    return [term for term in terms if len(term) > 1] or terms
 
 
 def build_index(documents: list[dict]) -> sqlite3.Connection:
     """Documents are dicts with keys id, title and body.
 
-    In memory here so the snippet runs alone; in production it is a table in
-    the database you already back up, filled by a trigger or a nightly job.
+    In memory here so the snippet runs alone. In production the FTS5 table is
+    the documents table itself, or an external-content table kept in step by
+    triggers: either way it changes in the transaction that changes the document.
     """
     connection = sqlite3.connect(":memory:")
     connection.execute(CREATE)
@@ -58,7 +73,10 @@ def build_index(documents: list[dict]) -> sqlite3.Connection:
 
 def search(connection: sqlite3.Connection, query: str, limit: int = 5) -> list[dict]:
     """Return the best matches, best first, as dicts with keys id and score."""
-    terms = tokenise(query)
+    if limit < 0:
+        # SQLite reads LIMIT -1 as "no limit": refuse it rather than return everything.
+        raise ValueError("limit must be zero or more")
+    terms = query_terms(query)
     if not terms:
         # An empty MATCH is a syntax error, not an empty result set.
         return []
