@@ -1,22 +1,22 @@
 """
 Translate with a self-hosted neural model, one pair of languages at a time.
 
-Rung N2. This is the rung that actually translates: unlike the memory of N0,
-it has an answer for a string nobody has ever written before. The price is a
-model file per language pair to ship, keep in sync and hold in a warm process,
-and an output nobody can explain.
+Rung N2. This is the rung that translates: unlike the memory of N0, it returns
+an answer for a string that is in no memory. The price is one model per
+language pair: this one reads English and writes French.
 
 Most of the code below is not about translating. It is about the interpolation
-variables, and that is the honest picture of this rung. A translation model
-sees `{count} items selected` as text, so it happily translates the word
-inside the braces, drops it, or repeats it. The interface then prints a brace
-where a number should be, and the bug reaches production because the string
-looked fine to everyone who does not read that language.
+variables. A translation model reads `{count}` as text: run against
+opus-mt-en-fr, `{count} items selected` comes back as
+`{compte} éléments sélectionnés`, and the interface prints a brace where a
+number should be.
 
-So the variables are hidden behind neutral markers before the model sees the
+So each variable is swapped for a numbered marker before the model sees the
 string, put back afterwards, and counted. Moving a marker is allowed — word
 order is the model's job. Losing or inventing one is reported, and the caller
-gets a flagged draft instead of a broken interface.
+gets a flagged draft instead of a broken interface. An ICU plural or select
+message always goes to review: its branches hold text to translate next to
+keywords to keep, and one marker cannot separate the two.
 """
 
 from __future__ import annotations
@@ -26,12 +26,18 @@ from types import SimpleNamespace
 
 MODEL_NAME = "Helsinki-NLP/opus-mt-en-fr"
 
-# The variable forms an interface uses: {count}, {}, %s, %d, %(count)s,
-# and the numbered variant of %s that Android and iOS string files carry.
-PLACEHOLDER = re.compile(r"\{[A-Za-z0-9_]*\}|%(?:\([A-Za-z0-9_]+\)|\d+\$)?[sd]")
+# The variable forms an interface uses: {{count}} (i18next), {count}, {}, the
+# head of an ICU argument such as {count, plural, ...}, %s, %d, %(count)s, the
+# numbered %1$s of Android, and the %@, %1$@ and %ld of iOS.
+PLACEHOLDER = re.compile(
+    r"\{\{\s*[A-Za-z0-9_.]+\s*\}\}|\{[A-Za-z0-9_]*\}|\{\s*[A-Za-z0-9_]+\s*,\s*[A-Za-z]+"
+    r"|%(?:\([A-Za-z0-9_]+\)|\d+\$)?l{0,2}[sd@]"
+)
 
-# The stand-in the model sees instead of a variable. Deliberately not a word.
-MARK = "⟦{}⟧"
+# The stand-in the model sees instead of a variable. Its pieces are in the
+# model's vocabulary, so the model can write it back; a marker made of
+# characters the vocabulary lacks is dropped. Check again if you change model.
+MARK = "[{}]"
 
 
 class TranslationUnavailable(Exception):
@@ -40,10 +46,17 @@ class TranslationUnavailable(Exception):
 
 def load_translator(name: str = MODEL_NAME):
     """The real model: weights on disk, loaded once, run locally."""
-    from transformers import pipeline  # pragma: no cover - needs the weights
+    # transformers 5 removed the "translation" pipeline: call the model itself.
+    from transformers import AutoModelForSeq2SeqLM, AutoTokenizer  # pragma: no cover
 
-    pipe = pipeline("translation", model=name)
-    return SimpleNamespace(generate=lambda text: pipe(text)[0]["translation_text"])
+    tokenizer = AutoTokenizer.from_pretrained(name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(name)
+
+    def generate(text: str) -> str:
+        output = model.generate(**tokenizer([text], return_tensors="pt"))
+        return tokenizer.decode(output[0], skip_special_tokens=True)
+
+    return SimpleNamespace(generate=generate)
 
 
 def placeholders(text: str) -> list[str]:
@@ -58,9 +71,9 @@ def translate(source: str, model=None, *, attempts: int = 2) -> dict:
     `model` is injected so this can be tested without loading the weights.
     Left alone, it is the real one above.
     """
-    model = load_translator() if model is None else model
     if not source.strip():
         return {"target": source, "review": False, "warnings": []}
+    model = load_translator() if model is None else model
 
     variables = placeholders(source)
     masked = source
@@ -78,6 +91,8 @@ def translate(source: str, model=None, *, attempts: int = 2) -> dict:
             "variables differ from the source: expected "
             + (" ".join(variables) or "none") + ", got " + (" ".join(found) or "none")
         )
+    if any("," in variable for variable in variables):
+        warnings.append("ICU message: check its branches by hand")
     return {"target": target, "review": bool(warnings), "warnings": warnings}
 
 
@@ -90,7 +105,7 @@ def _generate(model, text: str, attempts: int) -> str:
         except Exception as error:  # noqa: BLE001 - any model failure is retried
             last_error = error
             continue
-        if output and output.strip():
+        if isinstance(output, str) and output.strip():
             return output
-        last_error = ValueError("the model returned an empty translation")
+        last_error = ValueError("the model returned no translation text")
     raise TranslationUnavailable(str(last_error))

@@ -92,11 +92,9 @@ test('n0 est déterministe', () => {
   for (let i = 0; i < 10; i += 1) assert.deepEqual(lookup('Save all changes', MEMORY), first);
 });
 
-test('INFIRMÉ : « Fold case, accents […] which are not what makes a string new » ; « polish » rend « Polonais » sans relecture', () => {
-  assert.throws(() => {
-    assert.equal(lookup('polish', { Polish: 'Polonais' }).review, true);
-    assert.equal(lookup('Resume', { Résumé: 'CV' }).review, true);
-  }, assert.AssertionError);
+test('« Fold case, accents […] which are not what makes a string new » ; « polish » rend « Polonais » sans relecture', () => {
+  assert.equal(lookup('polish', { Polish: 'Polonais' }).review, true);
+  assert.equal(lookup('Resume', { Résumé: 'CV' }).review, true);
 });
 
 test('une correspondance approchée n’est jamais rendue comme finie', () => {
@@ -130,10 +128,8 @@ test('les formes de variables annoncées sont reconnues', () => {
   );
 });
 
-test('INFIRMÉ : « Android and iOS string files » ; %@, %1$@ et %ld ne sont pas reconnues', () => {
-  assert.throws(() => {
-    assert.deepEqual(placeholders('%@ items, %1$@ of %2$@, %ld left'), ['%@', '%1$@', '%2$@', '%ld'].sort());
-  }, assert.AssertionError);
+test('« Android and iOS string files » ; %@, %1$@ et %ld ne sont pas reconnues', () => {
+  assert.deepEqual(placeholders('%@ items, %1$@ of %2$@, %ld left'), ['%@', '%1$@', '%2$@', '%ld'].sort());
 });
 
 test('le score est celui de difflib sans heuristique de rebut', () => {
@@ -198,20 +194,16 @@ test('production : une mémoire de mille chaînes termine', () => {
   assert.ok(performance.now() - start < 5000);
 });
 
-test('DÉFAUT : une mémoire de textes longs rend chaque recherche lente', () => {
+test('une mémoire de textes longs rend chaque recherche lente', () => {
   const paragraph = (k) => Array.from({ length: 250 }, (_, i) => WORDS[(i * k + 3) % WORDS.length]).join(' ');
   const memory = Object.fromEntries(Array.from({ length: 20 }, (_, k) => [paragraph(k + 1), 'aide']));
-  assert.throws(() => {
-    const start = performance.now();
-    lookup(`${paragraph(7)} now`, memory);
-    assert.ok(performance.now() - start < 500);
-  }, assert.AssertionError);
+  const start = performance.now();
+  lookup(`${paragraph(7)} now`, memory);
+  assert.ok(performance.now() - start < 500);
 });
 
-test('DÉFAUT : les variables ICU et i18next ne sont pas vérifiées', () => {
+test('les variables ICU et i18next ne sont pas vérifiées', () => {
   const icu = '{count, plural, one {# item} other {# items}}';
-  assert.throws(() => {
-    assert.equal(lookup(icu, { [icu]: 'éléments' }).review, true);
-    assert.equal(lookup('{{count}} items', { '{{count}} items': '{count} éléments' }).review, true);
-  }, assert.AssertionError);
+  assert.equal(lookup(icu, { [icu]: 'éléments' }).review, true);
+  assert.equal(lookup('{{count}} items', { '{{count}} items': '{count} éléments' }).review, true);
 });

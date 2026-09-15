@@ -90,12 +90,6 @@ def test_point_de_rupture_une_accolade_inventee_est_attrapee_aussi():
     assert result["warnings"] == ["variables differ from the source: expected {count}, got {compte}"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : « rien ne garantit que le marqueur revienne » est en deçà du réel ; ⟦ et ⟧ sont absents du "
-    "vocabulaire de opus-mt-en-fr, le modèle reçoit « <unk>0<unk> » et ne peut pas les rendre : chaque chaîne à "
-    "variable revient sans marqueur et part en relecture, même parfaitement traduite",
-)
 def test_defaut_sur_le_vocabulaire_du_vrai_modele_le_marqueur_revient():
     perfect = [("items selected", "éléments sélectionnés")]
     # Témoin : un modèle qui sait lire le marqueur le rend, et rien n'est signalé.
@@ -254,11 +248,6 @@ def test_production_les_espaces_de_bord_sont_retires_de_la_traduction():
     assert translate("Name: ", model=model)["target"] == "Nom :"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une réponse d'un autre type qu'une chaîne (la liste brute du pipeline) lève AttributeError, "
-    "pas l'erreur nommée TranslationUnavailable",
-)
 def test_defaut_une_reponse_d_un_autre_type_leve_l_erreur_nommee():
     model = FakeSeq2Seq({}, default=[{"translation_text": "Enregistrer"}])
     with pytest.raises(TranslationUnavailable):

@@ -192,11 +192,6 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une chaîne vide part chez le fournisseur ; la réponse légitime {\"translation\": \"\"} est "
-    "refusée comme vide, retentée, et la chaîne coûte trois appels puis lève (N2 la rend telle quelle sans appel)",
-)
 def test_defaut_une_chaine_vide_ne_coute_pas_trois_appels_et_ne_leve_pas():
     client = FakeLLM(response={"translation": ""})
     try:
@@ -259,11 +254,6 @@ def test_production_le_contexte_n_est_pas_plafonne():
     assert len(client.last_request["prompt"]) > 100_000
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le motif ne reconnaît pas les pluriels ICU ; l'invite annonce « variables: none » et une "
-    "réponse qui traduit « {count, plural, …} » n'est pas signalée",
-)
 def test_defaut_une_variable_icu_est_listee_et_verifiee():
     icu = "{count, plural, one {# item} other {# items}}"
     client = FakeLLM(response={"translation": "{compte, pluriel, un {# élément} autre {# éléments}}"})

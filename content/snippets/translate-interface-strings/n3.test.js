@@ -181,18 +181,16 @@ test('DÉFAUT : le client par défaut a la forme du vrai kit ; `client.complete`
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('DÉFAUT : une chaîne vide coûte trois appels puis lève', async () => {
+test('une chaîne vide coûte trois appels puis lève', async () => {
   const client = new FakeLLM({ response: { translation: '' } });
-  await assert.rejects(async () => {
-    let result = null;
-    try {
-      result = await translate('', 'French', { client });
-    } catch (error) {
-      if (!(error instanceof TranslationUnavailable)) throw error;
-    }
-    assert.ok(client.callCount <= 1);
-    assert.deepEqual(result, { target: '', review: false, warnings: [] });
-  }, assert.AssertionError);
+  let result = null;
+  try {
+    result = await translate('', 'French', { client });
+  } catch (error) {
+    if (!(error instanceof TranslationUnavailable)) throw error;
+  }
+  assert.ok(client.callCount <= 1);
+  assert.deepEqual(result, { target: '', review: false, warnings: [] });
 });
 
 test('production : une injection dans la chaîne reste après les consignes', async () => {
@@ -221,19 +219,17 @@ test('production : encodage NFD, emoji, insécable', async () => {
   assert.equal((await translate(source, 'French', { client })).target, source);
 });
 
-test('DÉFAUT : le plafond compte des unités UTF-16 ; 2 000 emojis sont refusés', async () => {
+test('le plafond compte des unités UTF-16 ; 2 000 emojis sont refusés', async () => {
   // Python les accepte (2 000 caractères).
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await translate('🙂'.repeat(MAX_CHARACTERS), 'French', {
-        client: new FakeLLM({ response: { translation: '🙂' } }),
-      });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(out.target, '🙂');
-  }, assert.AssertionError);
+  let out;
+  try {
+    out = await translate('🙂'.repeat(MAX_CHARACTERS), 'French', {
+      client: new FakeLLM({ response: { translation: '🙂' } }),
+    });
+  } catch (error) {
+    assert.fail(`${error.name}: ${error.message}`);
+  }
+  assert.equal(out.target, '🙂');
 });
 
 test('production : une réponse de cent Ko termine vite', async () => {
@@ -255,12 +251,10 @@ test('production : le contexte n’est pas plafonné', async () => {
   assert.ok(client.lastRequest.prompt.length > 100_000);
 });
 
-test('DÉFAUT : une variable ICU n’est ni listée ni vérifiée', async () => {
+test('une variable ICU n’est ni listée ni vérifiée', async () => {
   const icu = '{count, plural, one {# item} other {# items}}';
   const client = new FakeLLM({ response: { translation: '{compte, pluriel, un {# élément} autre {# éléments}}' } });
   const result = await translate(icu, 'French', { client });
-  assert.throws(() => {
-    assert.ok(!client.lastRequest.prompt.includes('exactly as written: none'));
-    assert.equal(result.review, true);
-  }, assert.AssertionError);
+  assert.ok(!client.lastRequest.prompt.includes('exactly as written: none'));
+  assert.equal(result.review, true);
 });

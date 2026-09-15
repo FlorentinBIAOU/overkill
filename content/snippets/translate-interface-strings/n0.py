@@ -1,21 +1,27 @@
 """
 Reuse the translations you already paid for: a translation memory.
 
-Rung N0. No model, no service, no key. An interface string rarely changes
-deeply: a word is added, a capital is fixed, a variable moves. When that
-happens, last year's translation is still nearly right, and the cheapest
-translation is the one you do not order twice.
+Rung N0. No model, no service, no key. A string already in the memory gets its
+translation back, and the cheapest translation is the one you do not order
+twice.
 
 Three answers, and the difference between them matters more than the code.
-An exact match ships. An approximate match is a draft: it comes back with its
-score and a review flag, never as a finished translation. Anything else is new
-text, which this rung has nothing to say about — see the breaking point in the
-test. Handing back an approximation as a certainty is the one behaviour that
-would make this whole approach dishonest.
+An exact match ships: the same string, give or take its spacing, invisible
+format characters and Unicode composition. A close enough string is an
+approximate match — a word added, a capital or an accent changed — and it is
+a draft: it comes back with its score and a review flag, never as a finished
+translation, because "Polish" and "polish" are not the same word. Anything
+else is new text, which this rung has nothing to say about — see the breaking
+point in the test.
 
 Interpolation variables are checked apart from the score. A translation whose
 variables do not match the source is a broken interface, however high it
-scores, so it is flagged even on an exact hit.
+scores, so it is flagged even on an exact hit. An ICU plural or select message
+is checked on its argument name and type, not on the branches inside it.
+
+A string longer than MAX_FUZZY_CHARACTERS gets exact matches only: scoring two
+long texts costs of the order of the product of their lengths, for every entry
+of the memory.
 """
 
 from __future__ import annotations
@@ -24,9 +30,15 @@ import re
 import unicodedata
 from difflib import SequenceMatcher
 
-# The variable forms an interface uses: {count}, {}, %s, %d, %(count)s,
-# and the numbered variant of %s that Android and iOS string files carry.
-PLACEHOLDER = re.compile(r"\{[A-Za-z0-9_]*\}|%(?:\([A-Za-z0-9_]+\)|\d+\$)?[sd]")
+# The variable forms an interface uses: {{count}} (i18next), {count}, {}, the
+# head of an ICU argument such as {count, plural, ...}, %s, %d, %(count)s, the
+# numbered %1$s of Android, and the %@, %1$@ and %ld of iOS.
+PLACEHOLDER = re.compile(
+    r"\{\{\s*[A-Za-z0-9_.]+\s*\}\}|\{[A-Za-z0-9_]*\}|\{\s*[A-Za-z0-9_]+\s*,\s*[A-Za-z]+"
+    r"|%(?:\([A-Za-z0-9_]+\)|\d+\$)?l{0,2}[sd@]"
+)
+
+MAX_FUZZY_CHARACTERS = 500
 
 
 def placeholders(text: str) -> list[str]:
@@ -34,10 +46,17 @@ def placeholders(text: str) -> list[str]:
     return sorted(PLACEHOLDER.findall(text))
 
 
+def exact_key(text: str) -> str:
+    """Fold only what cannot change the words: composition, format characters, spacing."""
+    composed = unicodedata.normalize("NFC", text)
+    visible = "".join(c for c in composed if unicodedata.category(c) != "Cf")
+    return " ".join(visible.split())
+
+
 def normalise(text: str) -> str:
-    """Fold case, accents and spacing, which are not what makes a string new."""
-    stripped = unicodedata.normalize("NFKD", text)
-    without_accents = "".join(c for c in stripped if not unicodedata.combining(c))
+    """Fold case, accents and spacing for the score. A match on this alone is reviewed."""
+    stripped = unicodedata.normalize("NFKD", exact_key(text))
+    without_accents = "".join(c for c in stripped if not unicodedata.category(c).startswith("M"))
     return " ".join(without_accents.lower().split())
 
 
@@ -48,17 +67,17 @@ def lookup(source: str, memory: dict[str, str], threshold: float = 0.75) -> dict
     Returns the status (`exact`, `fuzzy` or `none`), the target when there is
     one, the score, and whether a human has to look at it.
     """
-    key = normalise(source)
+    key, folded = exact_key(source), normalise(source)
     best_source, best_target, best_score = None, None, 0.0
     for known, target in memory.items():
-        candidate = normalise(known)
-        if candidate == key:
-            # Exact after normalisation: a fixed capital or a stray double
-            # space is not a new string to send to a translator.
+        if exact_key(known) == key:
             return _decide("exact", source, known, target, 1.0)
+        candidate = normalise(known)
+        if max(len(folded), len(candidate)) > MAX_FUZZY_CHARACTERS:
+            continue
         # autojunk=False so a long string scores exactly like the JavaScript
         # version of this snippet, which has no such heuristic.
-        score = SequenceMatcher(None, key, candidate, autojunk=False).ratio()
+        score = SequenceMatcher(None, folded, candidate, autojunk=False).ratio()
         if score > best_score:
             best_source, best_target, best_score = known, target, score
     if best_score >= threshold:

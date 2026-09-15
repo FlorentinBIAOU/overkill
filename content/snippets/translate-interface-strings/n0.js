@@ -1,35 +1,54 @@
 /**
  * Reuse the translations you already paid for: a translation memory.
  *
- * Rung N0. No model, no service, no key. An interface string rarely changes
- * deeply: a word is added, a capital is fixed, a variable moves. When that
- * happens, last year's translation is still nearly right, and the cheapest
- * translation is the one you do not order twice.
+ * Rung N0. No model, no service, no key. A string already in the memory gets
+ * its translation back, and the cheapest translation is the one you do not
+ * order twice.
  *
  * Three answers, and the difference between them matters more than the code.
- * An exact match ships. An approximate match is a draft: it comes back with
- * its score and a review flag, never as a finished translation. Anything else
- * is new text, which this rung has nothing to say about — see the breaking
- * point in the test. Handing back an approximation as a certainty is the one
- * behaviour that would make this whole approach dishonest.
+ * An exact match ships: the same string, give or take its spacing, invisible
+ * format characters and Unicode composition. A close enough string is an
+ * approximate match — a word added, a capital or an accent changed — and it is
+ * a draft: it comes back with its score and a review flag, never as a finished
+ * translation, because "Polish" and "polish" are not the same word. Anything
+ * else is new text, which this rung has nothing to say about — see the
+ * breaking point in the test.
  *
  * Interpolation variables are checked apart from the score. A translation
  * whose variables do not match the source is a broken interface, however high
- * it scores, so it is flagged even on an exact hit.
+ * it scores, so it is flagged even on an exact hit. An ICU plural or select
+ * message is checked on its argument name and type, not on the branches inside
+ * it.
+ *
+ * A string longer than MAX_FUZZY_CHARACTERS gets exact matches only: scoring
+ * two long texts costs of the order of the product of their lengths, for every
+ * entry of the memory.
  */
 
-// The variable forms an interface uses: {count}, {}, %s, %d, %(count)s,
-// and the numbered variant of %s that Android and iOS string files carry.
-const PLACEHOLDER = /\{[A-Za-z0-9_]*\}|%(?:\([A-Za-z0-9_]+\)|\d+\$)?[sd]/g;
+// The variable forms an interface uses: {{count}} (i18next), {count}, {}, the
+// head of an ICU argument such as {count, plural, ...}, %s, %d, %(count)s, the
+// numbered %1$s of Android, and the %@, %1$@ and %ld of iOS.
+const PLACEHOLDER =
+  /\{\{\s*[A-Za-z0-9_.]+\s*\}\}|\{[A-Za-z0-9_]*\}|\{\s*[A-Za-z0-9_]+\s*,\s*[A-Za-z]+|%(?:\([A-Za-z0-9_]+\)|\d+\$)?l{0,2}[sd@]/g;
+
+// Python's str.split() also splits on these; JavaScript's \s does not.
+const SPACES = /[\s\x1c-\x1f\x85]+/;
+
+export const MAX_FUZZY_CHARACTERS = 500;
 
 /** The interpolation variables of a string, sorted so order does not count. */
 export function placeholders(text) {
   return [...text.matchAll(PLACEHOLDER)].map((m) => m[0]).sort();
 }
 
-/** Fold case, accents and spacing, which are not what makes a string new. */
+/** Fold only what cannot change the words: composition, format characters, spacing. */
+export function exactKey(text) {
+  return text.normalize('NFC').replace(/\p{Cf}/gu, '').split(SPACES).filter(Boolean).join(' ');
+}
+
+/** Fold case, accents and spacing for the score. A match on this alone is reviewed. */
 export function normalise(text) {
-  return text.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().split(/\s+/).filter(Boolean).join(' ');
+  return exactKey(text).normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().split(SPACES).filter(Boolean).join(' ');
 }
 
 /**
@@ -39,16 +58,15 @@ export function normalise(text) {
  * one, the score, and whether a human has to look at it.
  */
 export function lookup(source, memory, threshold = 0.75) {
-  const key = normalise(source);
+  const key = exactKey(source);
+  const folded = normalise(source);
   let best = { source: null, target: null, score: 0 };
   for (const [known, target] of Object.entries(memory)) {
+    if (exactKey(known) === key) return decide('exact', source, known, target, 1);
     const candidate = normalise(known);
-    if (candidate === key) {
-      // Exact after normalisation: a fixed capital or a stray double space is
-      // not a new string to send to a translator.
-      return decide('exact', source, known, target, 1);
-    }
-    const score = ratio(key, candidate);
+    // Lengths in code points, as in Python.
+    if (Math.max([...folded].length, [...candidate].length) > MAX_FUZZY_CHARACTERS) continue;
+    const score = ratio(folded, candidate);
     if (score > best.score) best = { source: known, target, score };
   }
   if (best.score >= threshold) return decide('fuzzy', source, best.source, best.target, best.score);

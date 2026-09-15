@@ -80,14 +80,12 @@ test('point de rupture : une accolade inventée est attrapée aussi', async () =
   assert.deepEqual(result.warnings, ['variables differ from the source: expected {count}, got {compte}']);
 });
 
-test('DÉFAUT : sur le vocabulaire du vrai modèle, le marqueur ne revient jamais', async () => {
+test('sur le vocabulaire du vrai modèle, le marqueur ne revient jamais', async () => {
   const perfect = [['items selected', 'éléments sélectionnés']];
   // Témoin : un modèle qui sait lire le marqueur le rend, et rien n'est signalé.
   assert.equal((await translate('{count} items selected', { model: echoTranslator(perfect) })).review, false);
   const realVocabulary = echoTranslator(perfect, ABSENT_FROM_VOCABULARY);
-  await assert.rejects(async () => {
-    assert.equal((await translate('{count} items selected', { model: realVocabulary })).review, false);
-  }, assert.AssertionError);
+  assert.equal((await translate('{count} items selected', { model: realVocabulary })).review, false);
 });
 
 test('point de rupture : l’essai montre la variable perdue en relecture', async () => {
@@ -257,12 +255,10 @@ test('production : les espaces de bord sont retirés de la traduction', async ()
   assert.equal((await translate('Name: ', { model })).target, 'Nom :');
 });
 
-test('DÉFAUT : une réponse d’un autre type ne lève pas l’erreur nommée', async () => {
+test('une réponse d’un autre type ne lève pas l’erreur nommée', async () => {
   // Une liste brute du pipeline : TypeError (`output.trim is not a function`).
   const model = new FakeSeq2Seq({}, [{ translation_text: 'Enregistrer' }]);
-  await assert.rejects(async () => {
-    await assert.rejects(() => translate('Save', { model }), TranslationUnavailable);
-  }, assert.AssertionError);
+  await assert.rejects(() => translate('Save', { model }), TranslationUnavailable);
 });
 
 test('DÉFAUT : les variables ICU et i18next ne sont pas protégées', async () => {

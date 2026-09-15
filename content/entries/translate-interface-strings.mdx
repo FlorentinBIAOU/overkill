@@ -3,7 +3,7 @@ id: translate-interface-strings
 family: transform
 status: published
 verdict: N2
-updated: 2026-09-14
+updated: 2026-09-15
 contributors: [florentin-biaou]
 
 title:
@@ -25,7 +25,7 @@ rungs:
       fr: "Mémoire de traduction : correspondance exacte, puis approchée signalée"
       en: "Translation memory: exact match, then a flagged approximate one"
     cost: nul
-    latency: "~10 ms"
+    latency: "~100 ms"
     risks:
       data_egress: none
       deterministic: true
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/translate-interface-strings/n0.js
       verification: executed
     breaking_point:
-      fr: "Une mémoire réemploie, elle ne traduit pas. Le test lui soumet « Two-factor authentication is required for administrators » : rien dans la mémoire ne s’en approche, et la fonction renvoie une absence de correspondance au lieu de la phrase française qu’elle a sous la main. Toute fonctionnalité nouvelle est une chaîne que personne n’a encore traduite."
-      en: "A memory reuses, it does not translate. The test hands it “Two-factor authentication is required for administrators”: nothing in the memory comes close, and the function returns no match rather than the French sentence it happens to be holding. Every new feature is a string nobody has translated yet."
+      fr: "Une mémoire réemploie, elle ne traduit pas. Le test lui soumet « Two-factor authentication is required for administrators » : rien dans la mémoire ne s’en approche, et la fonction renvoie une absence de correspondance au lieu de la phrase française qu’elle a sous la main."
+      en: "A memory reuses, it does not translate. The test hands it “Two-factor authentication is required for administrators”: nothing in the memory comes close, and the function returns no match rather than the French sentence it happens to be holding."
     escalate_when:
       fr: "La file des chaînes sans correspondance grossit plus vite que vos traducteurs ne la vident."
       en: "The queue of unmatched strings grows faster than your translators empty it."
@@ -49,8 +49,8 @@ rungs:
   - level: N1
     available: false
     unavailable_reason:
-      fr: "La traduction statistique par segments exige un corpus aligné dans votre paire de langues, hors de portée d’une petite équipe, pour un résultat en deçà de ce qu’un modèle neuronal déjà entraîné donne au niveau suivant."
-      en: "Phrase-based statistical translation needs an aligned corpus in your own language pair, out of reach for a small team, for a result below what an already-trained neural model gives on the level above."
+      fr: "Un système de traduction statistique s’entraîne sur un corpus de votre paire de langues aligné phrase à phrase, qu’il faut réunir avant la première traduction. Le modèle du niveau suivant arrive déjà entraîné, sur les corpus alignés du projet OPUS."
+      en: "A statistical translation system is trained on a corpus in your language pair, aligned sentence by sentence, which has to be gathered before the first translation. The model on the level above comes already trained, on the aligned corpora of the OPUS project."
 
   - level: N2
     available: true
@@ -68,17 +68,17 @@ rungs:
       regulatory:
         fr:
           - "Traitement sur votre infrastructure : les chaînes ne sont transmises à personne"
-          - "Le modèle arrive avec la licence de son auteur et celle de ses données d’entraînement, qui vous suivent en production"
+          - "Licence du modèle à respecter : Apache 2.0 pour opus-mt-en-fr"
         en:
           - "Processing on your own infrastructure: the strings are handed to nobody"
-          - "The model comes with its author’s licence and that of its training data, and both follow you into production"
+          - "Model licence to comply with: Apache 2.0 for opus-mt-en-fr"
     code:
       python: snippets/translate-interface-strings/n2.py
       javascript: snippets/translate-interface-strings/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle lit la variable comme du texte. L’extrait la cache derrière un marqueur neutre — le modèle reçoit « ⟦0⟧ items selected », jamais « {count} » — mais rien ne garantit que le marqueur revienne. Les deux tests écrivent donc la réponse eux-mêmes dans un double local, faute de pouvoir commander une mauvaise traduction : « Des éléments sélectionnés », marqueur disparu, donc une phrase française sans le nombre dedans ; puis « {compte} éléments sélectionnés », accolade inventée là où la source n’en avait pas, donc une accolade affichée à l’écran. Ce que les tests prouvent est le contrôle de sortie, pas le comportement du modèle : l’extrait ne peut pas l’empêcher, seulement refuser d’appeler cela une traduction finie."
-      en: "The model reads the variable as text. The snippet hides it behind a neutral marker — the model is handed “⟦0⟧ items selected”, never “{count}” — but nothing guarantees the marker comes back. Both tests therefore write the answer themselves, into a local double, since no test can order a bad translation: “Des éléments sélectionnés”, the marker gone, a French sentence with no number in it; then “{compte} éléments sélectionnés”, a brace invented where the source had none, a brace printed on screen. What the tests prove is the check on the output, not the model’s behaviour: the snippet cannot prevent either, only refuse to call the result a finished translation."
+      fr: "Le modèle ne sait pas ce qu’est une variable. L’extrait la remplace par un marqueur numéroté — le modèle reçoit « [0] items selected », jamais « {count} » — puis vérifie qu’il revient. Si la réponse est « Des éléments sélectionnés », marqueur perdu, ou « {compte} éléments sélectionnés », accolade inventée, l’extrait la renvoie en relecture ; ces deux réponses sont écrites par un double local, et ce que les tests prouvent est ce contrôle, pas le comportement du modèle. Un message ICU casse pour de bon : ses branches mêlent du texte à traduire et des mots-clés à garder. Lancé hors des tests sur le pluriel ICU de « {count} items », le vrai modèle traduit en « un » et « autres » les deux mots-clés de ses branches, qui doivent rester en anglais, et l’extrait, qui ne sait pas protéger ces mots-clés, renvoie tout message ICU en relecture."
+      en: "The model does not know what a variable is. The snippet swaps it for a numbered marker — the model is handed “[0] items selected”, never “{count}” — then checks that it comes back. If the answer is “Des éléments sélectionnés”, the marker lost, or “{compte} éléments sélectionnés”, a brace invented, the snippet sends it back for review; both answers are written by a local double, and what the tests prove is that check, not the model’s behaviour. An ICU message breaks for good: its branches mix text to translate with keywords to keep. Run outside the tests on the ICU plural of “{count} items”, the real model turns the two keywords of its branches, which must stay in English, into “un” and “autres”, and the snippet, which cannot protect those keywords, sends every ICU message back for review."
     escalate_when:
       fr: "Vos corrections ne portent plus sur la langue mais sur l’emploi : « Save » traduit comme le verbe alors que c’est le libellé d’un bouton, un registre d’administrateur là où l’interface s’adresse à un client, une phrase là où il y a la place d’un mot."
       en: "Your corrections stop being about the language and start being about the use: Save translated as the verb when it is a button label, an administrator’s register where the interface speaks to a customer, a sentence where there is room for one word."
@@ -117,12 +117,14 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2 est recommandé parce que c’est le premier niveau qui traduit. N0 garde sa place devant lui, et l’essentiel d’un fichier d’interface s’y arrête, mais il n’a rien à dire d’une chaîne nouvelle : son test le montre en renvoyant une absence de correspondance plutôt qu’une approximation présentable. Ce que N3 ajoute est le contexte d’interface, et il le fait payer le texte de votre application chez un tiers, une réponse non déterministe et une dépendance de fournisseur ; sur les variables, les deux niveaux réclament le même contrôle en sortie, et N2 le double d’un masquage, puisque son modèle ne voit jamais la variable, là où celui de N3 la lit dans l’invite. Le modèle auto-hébergé garde les chaînes chez vous et tient dans un fichier que vous versionnez, ce qu’un point de terminaison qui évolue au calendrier de son fournisseur n’offre pas."
-  en: "N2 is the recommendation because it is the first level that translates at all. N0 keeps its place in front of it, and most of an interface file stops there, but it has nothing to say about a new string: its test shows exactly that, returning no match rather than a presentable approximation. What N3 adds is the interface context, and it charges your application’s text to a third party, a non-deterministic answer and a provider dependency for it; on the variables the two levels call for precisely the same check on the output, and N2 backs that check with masking, since its model never sees the variable where N3's reads it in the prompt. The self-hosted model keeps the strings on your side and fits in a file you version, which an endpoint that moves on its provider’s schedule does not."
+  fr: "N2 est recommandé parce que c’est le premier niveau qui traduit. N0 garde sa place devant lui, et l’essentiel d’un fichier d’interface s’y arrête, mais il n’a rien à dire d’une chaîne nouvelle : son test le montre en renvoyant une absence de correspondance plutôt qu’une approximation présentable. Ce que N3 ajoute est le contexte d’interface, et il le fait payer le texte de votre application chez un tiers, une réponse non déterministe et une dépendance de fournisseur ; sur les variables, les deux niveaux réclament le même contrôle en sortie, et N2 le double d’un masquage, puisque son modèle ne voit jamais la variable, là où celui de N3 la lit dans l’invite. Le modèle auto-hébergé garde les chaînes chez vous, et ne change que lorsque vous changez ses poids."
+  en: "N2 is the recommendation because it is the first level that translates at all. N0 keeps its place in front of it, and most of an interface file stops there, but it has nothing to say about a new string: its test shows exactly that, returning no match rather than a presentable approximation. What N3 adds is the interface context, and it charges your application’s text to a third party, a non-deterministic answer and a provider dependency for it; on the variables the two levels call for precisely the same check on the output, and N2 backs that check with masking, since its model never sees the variable where N3's reads it in the prompt. The self-hosted model keeps the strings on your side, and changes only when you change its weights."
 
 further_reading:
   - label: "Helsinki-NLP/opus-mt-en-fr — la fiche du modèle employé au niveau N2"
     url: "https://huggingface.co/Helsinki-NLP/opus-mt-en-fr"
+  - label: "Moses — le système de référence de la traduction statistique, et le corpus aligné qu’il demande"
+    url: "https://www2.statmt.org/moses/?n=Moses.Baseline"
   - label: "Python — difflib.SequenceMatcher, l’appariement approché du niveau N0"
     url: "https://docs.python.org/3/library/difflib.html"
   - label: "XLIFF 2.1 — le format d’échange qui porte une mémoire de traduction et son état de relecture"

@@ -5,8 +5,7 @@ Rung N3. What this rung buys over a translation model is the context: a
 translator model gets a string and nothing else, while a general-purpose model
 can be told that `Save` is the label of a button and not the verb in a
 sentence, that the interface is addressed to a customer rather than an
-administrator, and that there is no room for a full sentence. That is exactly
-the information a translation team asks for and rarely gets.
+administrator, and that there is no room for a full sentence.
 
 What it costs is everything around the call: a key, a provider that answers
 prose when JSON was asked for, retries, a cap on the input, and the same
@@ -29,12 +28,40 @@ PROMPT = (
 )
 
 # An interface string that no longer fits on one screen is not an interface
-# string. Refusing it here is a cost control, not an optimisation.
+# string. Refusing it here, and a context as long, is a cost control.
 MAX_CHARACTERS = 2000
 
-# The variable forms an interface uses: {count}, {}, %s, %d, %(count)s,
-# and the numbered variant of %s that Android and iOS string files carry.
-PLACEHOLDER = re.compile(r"\{[A-Za-z0-9_]*\}|%(?:\([A-Za-z0-9_]+\)|\d+\$)?[sd]")
+# The variable forms an interface uses: {{count}} (i18next), {count}, {}, the
+# head of an ICU argument such as {count, plural, ...}, %s, %d, %(count)s, the
+# numbered %1$s of Android, and the %@, %1$@ and %ld of iOS.
+PLACEHOLDER = re.compile(
+    r"\{\{\s*[A-Za-z0-9_.]+\s*\}\}|\{[A-Za-z0-9_]*\}|\{\s*[A-Za-z0-9_]+\s*,\s*[A-Za-z]+"
+    r"|%(?:\([A-Za-z0-9_]+\)|\d+\$)?l{0,2}[sd@]"
+)
+
+# The provider named here is an example, not a recommendation: the reasoning
+# holds for any general-purpose model API, and the client is swappable. Pass
+# any object with a `complete(prompt=..., temperature=...)` method.
+MODEL = "gpt-4.1-mini"  # an example id: check the parameters your model accepts
+
+
+class ProviderClient:
+    """The one call this snippet makes, on top of the provider's SDK."""
+
+    def __init__(self, sdk=None, model: str = MODEL):
+        if sdk is None:  # pragma: no cover - needs a key and a network
+            from openai import OpenAI
+
+            sdk = OpenAI()
+        self.sdk, self.model = sdk, model
+
+    def complete(self, *, prompt: str, temperature: float) -> str:
+        response = self.sdk.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+        )
+        return response.choices[0].message.content
 
 
 class TranslationUnavailable(Exception):
@@ -54,12 +81,11 @@ def translate(source: str, language: str, *, context: str = "",
     `client` is injected so this function can be tested without a network
     call. In production it defaults to a real provider client.
     """
-    if client is None:  # pragma: no cover - needs a key and a network
-        from openai import OpenAI
-
-        client = OpenAI()
-    if len(source) > MAX_CHARACTERS:
-        raise ValueError(f"string longer than {MAX_CHARACTERS} characters")
+    if len(source) > MAX_CHARACTERS or len(context) > MAX_CHARACTERS:
+        raise ValueError(f"string or context longer than {MAX_CHARACTERS} characters")
+    if not source.strip():  # nothing to translate is not worth a call
+        return {"target": source, "review": False, "warnings": []}
+    client = client or ProviderClient()
 
     variables = placeholders(source)
     prompt = PROMPT.format(
@@ -73,6 +99,8 @@ def translate(source: str, language: str, *, context: str = "",
     warnings = []
     if placeholders(target) != variables:
         warnings.append("the model did not keep the interpolation variables")
+    if any("," in variable for variable in variables):
+        warnings.append("ICU message: check its branches by hand")
     return {"target": target, "review": bool(warnings), "warnings": warnings}
 
 
@@ -80,9 +108,12 @@ def _ask(client, prompt: str, attempts: int) -> str:
     last_error: Exception | None = None
     for _ in range(attempts):
         try:
-            # Temperature zero: two identical strings must not come back
-            # translated two different ways in the same interface.
+            # The lowest temperature: the SDK documents lower values as more
+            # focused and deterministic.
             answer = client.complete(prompt=prompt, temperature=0)
+            if not isinstance(answer, str):  # a refusal comes back as no content
+                last_error = ValueError("the model answered no text")
+                continue
             parsed = json.loads(answer)
             target = parsed.get("translation") if isinstance(parsed, dict) else None
             if isinstance(target, str) and target.strip():

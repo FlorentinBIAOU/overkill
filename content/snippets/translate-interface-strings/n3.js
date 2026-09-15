@@ -5,8 +5,7 @@
  * translator model gets a string and nothing else, while a general-purpose
  * model can be told that `Save` is the label of a button and not the verb in
  * a sentence, that the interface is addressed to a customer rather than an
- * administrator, and that there is no room for a full sentence. That is
- * exactly the information a translation team asks for and rarely gets.
+ * administrator, and that there is no room for a full sentence.
  *
  * What it costs is everything around the call: a key, a provider that answers
  * prose when JSON was asked for, retries, a cap on the input, and the same
@@ -26,12 +25,36 @@ const PROMPT = [
 ].join('\n');
 
 // An interface string that no longer fits on one screen is not an interface
-// string. Refusing it here is a cost control, not an optimisation.
+// string. Refusing it here, and a context as long, is a cost control.
 export const MAX_CHARACTERS = 2000;
 
-// The variable forms an interface uses: {count}, {}, %s, %d, %(count)s,
-// and the numbered variant of %s that Android and iOS string files carry.
-const PLACEHOLDER = /\{[A-Za-z0-9_]*\}|%(?:\([A-Za-z0-9_]+\)|\d+\$)?[sd]/g;
+// The variable forms an interface uses: {{count}} (i18next), {count}, {}, the
+// head of an ICU argument such as {count, plural, ...}, %s, %d, %(count)s, the
+// numbered %1$s of Android, and the %@, %1$@ and %ld of iOS.
+const PLACEHOLDER =
+  /\{\{\s*[A-Za-z0-9_.]+\s*\}\}|\{[A-Za-z0-9_]*\}|\{\s*[A-Za-z0-9_]+\s*,\s*[A-Za-z]+|%(?:\([A-Za-z0-9_]+\)|\d+\$)?l{0,2}[sd@]/g;
+
+// The provider named here is an example, not a recommendation: the reasoning
+// holds for any general-purpose model API, and the client is swappable. Pass
+// any object with a `complete({ prompt, temperature })` method.
+export const MODEL = 'gpt-4.1-mini'; // an example id: check the parameters your model accepts
+
+export async function providerClient(sdk, model = MODEL) {
+  if (!sdk) {
+    const { OpenAI } = await import('openai');
+    sdk = new OpenAI();
+  }
+  return {
+    async complete({ prompt, temperature }) {
+      const response = await sdk.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+      });
+      return response.choices[0].message.content;
+    },
+  };
+}
 
 export class TranslationUnavailable extends Error {}
 
@@ -52,15 +75,13 @@ export function placeholders(text) {
  * @param {number} [options.attempts]
  */
 export async function translate(source, language, { context = '', client, attempts = 3 } = {}) {
-  let provider = client;
-  if (!provider) {
-    // Needs a key and a network, so it is never reached in the tests.
-    const { OpenAI } = await import('openai');
-    provider = new OpenAI();
+  // Characters are counted as code points, as in Python: an emoji is one.
+  if ([...source].length > MAX_CHARACTERS || [...context].length > MAX_CHARACTERS) {
+    throw new RangeError(`string or context longer than ${MAX_CHARACTERS} characters`);
   }
-  if (source.length > MAX_CHARACTERS) {
-    throw new RangeError(`string longer than ${MAX_CHARACTERS} characters`);
-  }
+  // Nothing to translate is not worth a call.
+  if (source.trim() === '') return { target: source, review: false, warnings: [] };
+  client ??= await providerClient();
 
   const variables = placeholders(source);
   const prompt = fill(PROMPT, {
@@ -69,11 +90,14 @@ export async function translate(source, language, { context = '', client, attemp
     variables: variables.join(' ') || 'none',
     source,
   });
-  const target = await ask(provider, prompt, attempts);
+  const target = await ask(client, prompt, attempts);
 
   const warnings = [];
   if (String(placeholders(target)) !== String(variables)) {
     warnings.push('the model did not keep the interpolation variables');
+  }
+  if (variables.some((variable) => variable.includes(','))) {
+    warnings.push('ICU message: check its branches by hand');
   }
   return { target, review: warnings.length > 0, warnings };
 }
@@ -96,10 +120,15 @@ async function ask(client, prompt, attempts) {
     try {
       const answer = await client.complete({
         prompt,
-        // Temperature zero: two identical strings must not come back
-        // translated two different ways in the same interface.
+        // The lowest temperature: the SDK documents lower values as more
+        // focused and deterministic.
         temperature: 0,
       });
+      if (typeof answer !== 'string') {
+        // A refusal comes back as no content.
+        lastError = new Error('the model answered no text');
+        continue;
+      }
       const parsed = JSON.parse(answer);
       const target = parsed && typeof parsed === 'object' ? parsed.translation : null;
       if (typeof target === 'string' && target.trim()) return target.trim();

@@ -106,12 +106,6 @@ def test_n0_est_deterministe():
     assert all(lookup("Save all changes", MEMORY) == first for _ in range(10))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : `normalise` « Fold case, accents and spacing, which are not what makes a string new » ; la "
-    "casse et les accents font des chaînes nouvelles : « polish » rend « Polonais », « Resume » rend « CV », en "
-    "correspondance exacte, sans relecture — l'approximation rendue comme une certitude que la docstring exclut",
-)
 def test_la_casse_et_les_accents_ne_font_pas_une_chaine_nouvelle():
     assert lookup("polish", {"Polish": "Polonais"})["review"] is True
     assert lookup("Resume", {"Résumé": "CV"})["review"] is True
@@ -150,11 +144,6 @@ def test_les_formes_de_variables_annoncees_sont_reconnues():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : « the numbered variant of %s that Android and iOS string files carry » ; les fichiers iOS "
-    "portent %@ et %1$@ (et %ld), qu'aucune forme du motif ne reconnaît",
-)
 def test_les_variables_des_fichiers_ios_sont_reconnues():
     assert placeholders("%@ items, %1$@ of %2$@, %ld left") == sorted(["%@", "%1$@", "%2$@", "%ld"])
 
@@ -239,11 +228,6 @@ def test_production_une_memoire_de_mille_chaines_termine():
     assert time.perf_counter() - start < 5
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : aucune borne sur la longueur ; le score coûte de l'ordre de n × m par couple, et une mémoire de "
-    "vingt textes d'aide de 1 400 caractères prend 2,4 s par recherche en Python (1,6 s en JavaScript)",
-)
 def test_defaut_une_memoire_de_textes_longs_reste_rapide():
     words = (
         "the a your to of settings account save delete item items selected changes password email is has been "
@@ -256,12 +240,6 @@ def test_defaut_une_memoire_de_textes_longs_reste_rapide():
     assert time.perf_counter() - start < 0.5
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le motif ne reconnaît ni les pluriels ICU « {count, plural, …} » (le format cité en lecture "
-    "complémentaire), ni « {{count}} » d'i18next, qu'il prend pour « {count} » : une variable perdue ou abîmée "
-    "passe en correspondance exacte, sans relecture",
-)
 def test_defaut_les_variables_icu_et_i18next_sont_verifiees():
     icu = "{count, plural, one {# item} other {# items}}"
     assert lookup(icu, {icu: "éléments"})["review"] is True

@@ -1,39 +1,42 @@
 /**
  * Translate with a self-hosted neural model, one pair of languages at a time.
  *
- * Rung N2. This is the rung that actually translates: unlike the memory of
- * N0, it has an answer for a string nobody has ever written before. The price
- * is a model file per language pair to ship, keep in sync and hold in a warm
- * process, and an output nobody can explain.
+ * Rung N2. This is the rung that translates: unlike the memory of N0, it
+ * returns an answer for a string that is in no memory. The price is one model
+ * per language pair: this one reads English and writes French.
  *
  * Most of the code below is not about translating. It is about the
- * interpolation variables, and that is the honest picture of this rung. A
- * translation model sees `{count} items selected` as text, so it happily
- * translates the word inside the braces, drops it, or repeats it. The
- * interface then prints a brace where a number should be, and the bug reaches
- * production because the string looked fine to everyone who does not read
- * that language.
+ * interpolation variables. A translation model reads `{count}` as text: run
+ * against opus-mt-en-fr, `{count} items selected` comes back as
+ * `{compte} éléments sélectionnés`, and the interface prints a brace where a
+ * number should be.
  *
- * So the variables are hidden behind neutral markers before the model sees
- * the string, put back afterwards, and counted. Moving a marker is allowed —
- * word order is the model's job. Losing or inventing one is reported, and the
- * caller gets a flagged draft instead of a broken interface.
+ * So each variable is swapped for a numbered marker before the model sees the
+ * string, put back afterwards, and counted. Moving a marker is allowed — word
+ * order is the model's job. Losing or inventing one is reported, and the
+ * caller gets a flagged draft instead of a broken interface. An ICU plural or
+ * select message always goes to review: its branches hold text to translate
+ * next to keywords to keep, and one marker cannot separate the two.
  */
 
 export const MODEL_NAME = 'Xenova/opus-mt-en-fr';
 
-// The variable forms an interface uses: {count}, {}, %s, %d, %(count)s,
-// and the numbered variant of %s that Android and iOS string files carry.
-const PLACEHOLDER = /\{[A-Za-z0-9_]*\}|%(?:\([A-Za-z0-9_]+\)|\d+\$)?[sd]/g;
+// The variable forms an interface uses: {{count}} (i18next), {count}, {}, the
+// head of an ICU argument such as {count, plural, ...}, %s, %d, %(count)s, the
+// numbered %1$s of Android, and the %@, %1$@ and %ld of iOS.
+const PLACEHOLDER =
+  /\{\{\s*[A-Za-z0-9_.]+\s*\}\}|\{[A-Za-z0-9_]*\}|\{\s*[A-Za-z0-9_]+\s*,\s*[A-Za-z]+|%(?:\([A-Za-z0-9_]+\)|\d+\$)?l{0,2}[sd@]/g;
 
-// The stand-in the model sees instead of a variable. Deliberately not a word.
-const mark = (index) => `⟦${index}⟧`;
+// The stand-in the model sees instead of a variable. Its pieces are in the
+// model's vocabulary, so the model can write it back; a marker made of
+// characters the vocabulary lacks is dropped. Check again if you change model.
+const mark = (index) => `[${index}]`;
 
 export class TranslationUnavailable extends Error {}
 
 /** The real model: weights on disk, loaded once, run locally. */
 export async function loadTranslator(name = MODEL_NAME) {
-  const { pipeline } = await import('@xenova/transformers');
+  const { pipeline } = await import('@huggingface/transformers');
   const pipe = await pipeline('translation', name);
   return { generate: async (text) => (await pipe(text))[0].translation_text };
 }
@@ -53,8 +56,8 @@ export function placeholders(text) {
  * @param {number} [options.attempts]
  */
 export async function translate(source, { model, attempts = 2 } = {}) {
-  const translator = model ?? (await loadTranslator());
   if (source.trim() === '') return { target: source, review: false, warnings: [] };
+  const translator = model ?? (await loadTranslator());
 
   const variables = placeholders(source);
   let masked = source;
@@ -75,6 +78,9 @@ export async function translate(source, { model, attempts = 2 } = {}) {
         `, got ${found.join(' ') || 'none'}`,
     );
   }
+  if (variables.some((variable) => variable.includes(','))) {
+    warnings.push('ICU message: check its branches by hand');
+  }
   return { target, review: warnings.length > 0, warnings };
 }
 
@@ -89,8 +95,8 @@ async function generate(model, text, attempts) {
       lastError = error;
       continue;
     }
-    if (output && output.trim()) return output;
-    lastError = new Error('the model returned an empty translation');
+    if (typeof output === 'string' && output.trim()) return output;
+    lastError = new Error('the model returned no translation text');
   }
   throw new TranslationUnavailable(String(lastError));
 }

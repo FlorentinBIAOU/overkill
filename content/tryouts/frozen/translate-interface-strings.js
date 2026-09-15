@@ -105,13 +105,13 @@ export default {
       simulate: { reponse: 'Enregistrer les modifications' },
     },
     {
-      /* « ⟦0⟧ » est le marqueur que l'extrait glisse à la place de la variable.
+      /* « [0] » est le marqueur que l'extrait glisse à la place de la variable.
          Il figure ici parce que le double rejoue ce qu'un modèle rendrait, et
          un modèle rend ce qu'on lui a donné : le `note` de chaque cas affiche
          la chaîne réellement reçue, qui le démontre. */
       label: { fr: 'Une chaîne avec un nombre dedans', en: 'A string with a number in it' },
       input: '{count} items selected',
-      simulate: { reponse: '⟦0⟧ éléments sélectionnés' },
+      simulate: { reponse: '[0] éléments sélectionnés' },
     },
     {
       label: {
@@ -119,7 +119,7 @@ export default {
         en: 'Two variables, and French puts them the other way round',
       },
       input: 'Delete {count} of {total}',
-      simulate: { reponse: 'Sur ⟦1⟧, supprimer ⟦0⟧' },
+      simulate: { reponse: 'Sur [1], supprimer [0]' },
     },
     {
       label: { fr: 'Le processus du modèle meurt au premier appel', en: 'The model worker dies on the first call' },
@@ -149,8 +149,8 @@ export default {
       },
       fails: true,
       why: {
-        fr: 'Le modèle lit la variable comme du texte, et le marqueur ne revient pas : la phrase française est correcte, et il n’y a plus de nombre dedans. Personne qui lit l’anglais ne le verrait. L’extrait ne peut pas empêcher le modèle de le faire — il peut seulement refuser d’appeler cela une traduction finie, et c’est ce qu’il fait ici. L’autre moitié du même défaut est la variable traduite, « {compte} », qui affiche une accolade à l’écran.',
-        en: 'The model reads the variable as text, and the marker does not come back: the French sentence is correct, and there is no longer a number in it. Nobody reading English would ever notice. The snippet cannot stop the model doing this — it can only refuse to call the result a finished translation, which is what it does here. The other half of the same fault is the translated variable, “{compte}”, which prints a brace on screen.',
+        fr: 'Le marqueur « [0] » n’est pas revenu : la phrase française est correcte, et il n’y a plus de nombre dedans. L’extrait ne peut pas empêcher le modèle de le perdre — il peut seulement refuser d’appeler cela une traduction finie, et c’est ce qu’il fait ici. Cette réponse est écrite par le double local, pas obtenue du vrai modèle.',
+        en: 'The marker “[0]” did not come back: the French sentence is correct, and there is no longer a number in it. The snippet cannot stop the model losing it — it can only refuse to call the result a finished translation, which is what it does here. This answer is written by the local double, not obtained from the real model.',
       },
     },
   ],
