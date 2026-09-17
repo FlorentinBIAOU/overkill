@@ -173,7 +173,7 @@ test('l’encodeur est injecté, et par défaut c’est le vrai', async () => {
   assert.equal(MODEL_NAME, 'Xenova/paraphrase-multilingual-MiniLM-L12-v2');
   await assert.rejects(() => buildLabeller(TOPICS), (error) => {
     assert.equal(error.code, 'ERR_MODULE_NOT_FOUND');
-    assert.match(error.message, /@xenova\/transformers/);
+    assert.match(error.message, /@huggingface\/transformers/);
     return true;
   });
 });

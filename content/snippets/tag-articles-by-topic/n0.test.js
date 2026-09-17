@@ -215,9 +215,11 @@ test('`minTerms` à zéro n’est pas refusé et étiquette tous les thèmes san
 
 test('production : valeurs aux limites de minTerms', () => {
   const article = "L'entretien d'embauche du candidat pour le recrutement.";
-  assert.deepEqual(tag(article, VOCABULARY, 4), ['recrutement']);
-  assert.deepEqual(tag(article, VOCABULARY, 5), []);
+  // « entretien d'embauche » absorbe « embauche », il reste « recrutement »,
+  // « candidat » et « entretien d'embauche » = 3 termes.
   assert.deepEqual(tag(article, VOCABULARY, 1), ['recrutement']);
+  assert.deepEqual(tag(article, VOCABULARY, 3), ['recrutement']);
+  assert.deepEqual(tag(article, VOCABULARY, 4), []);
 });
 
 test('production : un gros volume termine vite', () => {

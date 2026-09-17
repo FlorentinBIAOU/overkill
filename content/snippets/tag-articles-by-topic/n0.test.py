@@ -265,10 +265,11 @@ def test_defaut_min_terms_a_zero_est_refuse_ou_n_etiquette_rien_sans_terme():
 
 def test_production_valeurs_aux_limites_de_min_terms():
     article = "L'entretien d'embauche du candidat pour le recrutement."
-    # recrutement : « recrutement », « embauche », « candidat », « entretien d'embauche » = 4 termes
-    assert tag(article, VOCABULARY, min_terms=4) == ["recrutement"]
-    assert tag(article, VOCABULARY, min_terms=5) == []
+    # recrutement : « entretien d'embauche » absorbe « embauche », il reste
+    # « recrutement », « candidat » et « entretien d'embauche » = 3 termes.
     assert tag(article, VOCABULARY, min_terms=1) == ["recrutement"]
+    assert tag(article, VOCABULARY, min_terms=3) == ["recrutement"]
+    assert tag(article, VOCABULARY, min_terms=4) == []
 
 
 def test_production_un_gros_volume_termine_vite():

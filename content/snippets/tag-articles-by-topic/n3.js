@@ -107,8 +107,11 @@ async function ask(client, article, topics, attempts) {
  */
 function decode(answer, topics) {
   if (typeof answer !== 'string') throw new Error('the model returned no text');
-  // A Markdown code fence around the JSON is unwrapped, not counted as a failure.
-  const parsed = JSON.parse(answer.trim().replace(/^```(?:json)?/, '').replace(/```$/, ''));
+  // A JSON answer wrapped whole in one code fence is read; nothing else is: a
+  // fence opened and never closed, or prose around it, is a failed answer.
+  const text = answer.trim();
+  const fenced = text.startsWith('```') && text.endsWith('```') && text.split('```').length === 3;
+  const parsed = JSON.parse(fenced ? text.slice(3, -3).replace(/^json/, '') : text);
   // A list of anything but names, or of names none of which is on the list,
   // must not pass for the legitimate empty answer.
   if (!Array.isArray(parsed) || !parsed.every((name) => typeof name === 'string')) {

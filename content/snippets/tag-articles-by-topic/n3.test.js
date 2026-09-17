@@ -55,7 +55,15 @@ test('point de rupture : la liste vide est une réponse légitime', async () => 
 });
 
 test('point de rupture : une réponse JSON qui n’est pas une liste lève', async () => {
-  for (const answer of ['null', '{"topics": ["fiscalité"]}', '""', '["fiscalité"', '```json\n["fiscalité"]\n```']) {
+  const answers = [
+    'null',
+    '{"topics": ["fiscalité"]}',
+    '""',
+    '["fiscalité"',
+    '```json\n["fiscalité"]',
+    'Voici la réponse :\n```json\n["fiscalité"]\n```',
+  ];
+  for (const answer of answers) {
     const client = new FakeLLM({ response: answer });
     await assert.rejects(() => tag(ARTICLE, TOPICS, { client }), TaggingUnavailable);
     assert.equal(client.callCount, 3, answer);
@@ -159,10 +167,11 @@ test('DÉFAUT : le client par défaut a la forme du vrai kit ; `client.complete`
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('production : un article vide part quand même chez le fournisseur', async () => {
+test('production : un article vide ne part pas chez le fournisseur', async () => {
+  // Un article vide ne peut rien donner : il ne coûte pas un appel pour l'apprendre.
   const client = new FakeLLM({ response: '[]' });
   assert.deepEqual(await tag('', TOPICS, { client }), []);
-  assert.equal(client.callCount, 1);
+  assert.equal(client.callCount, 0);
 });
 
 test('production : une taxonomie vide et zéro essai', async () => {

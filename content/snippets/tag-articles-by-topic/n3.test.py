@@ -69,8 +69,15 @@ def test_point_de_rupture_la_liste_vide_est_une_reponse_legitime():
 
 
 def test_point_de_rupture_une_reponse_json_qui_n_est_pas_une_liste_leve():
-    """« avaler l'erreur rendrait la panne indiscernable du résultat correct » : `null`, objet, chaîne, JSON tronqué ou entouré de balises."""
-    for answer in ("null", '{"topics": ["fiscalité"]}', '""', '["fiscalité"', '```json\n["fiscalité"]\n```'):
+    """« avaler l'erreur rendrait la panne indiscernable du résultat correct » : `null`, objet, chaîne, JSON tronqué, clôture non refermée ou entourée de prose."""
+    for answer in (
+        "null",
+        '{"topics": ["fiscalité"]}',
+        '""',
+        '["fiscalité"',
+        '```json\n["fiscalité"]',
+        'Voici la réponse :\n```json\n["fiscalité"]\n```',
+    ):
         client = FakeLLM(response=answer)
         with pytest.raises(TaggingUnavailable):
             tag(ARTICLE, TOPICS, client=client)
@@ -170,10 +177,11 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-def test_production_un_article_vide_part_quand_meme_chez_le_fournisseur():
+def test_production_un_article_vide_ne_part_pas_chez_le_fournisseur():
+    """Un article vide ne peut rien donner : il ne coûte pas un appel pour l'apprendre."""
     client = FakeLLM(response="[]")
     assert tag("", TOPICS, client=client) == []
-    assert client.call_count == 1
+    assert client.call_count == 0
 
 
 def test_production_une_taxonomie_vide_et_zero_essai():
