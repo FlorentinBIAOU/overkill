@@ -13,3 +13,7 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
 - **generate-test-data** — finalisation `fmix32` du haché en N0 et N1, jeux
   figés et proportions du point de rupture de N1 recalculés, tests
   d'indépendance et de période ajoutés. Reste : rien.
+- **mask-personal-data-in-chat** — motif international E.164 ajouté, IBAN lu en
+  majuscules seules, clôture de code décodée en N3, titre anglais et `need`
+  ramenés aux coordonnées, N1 dit qu'il bloque au lieu de masquer, deux
+  marquages retirés. Reste : rien.

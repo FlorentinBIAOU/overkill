@@ -332,11 +332,21 @@ def test_production_un_message_sans_coordonnee_ressort_intact():
     assert mask(text) == text
 
 
-def test_production_un_iban_en_minuscules_est_masque():
-    """Commentaire : « in either case »."""
-    assert mask("compte fr76 3000 6000 0112 3456 7890 189") == "compte [iban]"
-    assert mask("compte gb82 west 1234 5698 7654 32") == "compte [iban]"
-    assert mask("compte Gb82 West 1234 5698 7654 32") == "compte [iban]"
+def test_un_iban_est_lu_en_majuscules_seulement():
+    """Commentaire : « Upper case only, the way ISO 13616 prints one »."""
+    assert mask("compte FR76 3000 6000 0112 3456 7890 189") == "compte [iban]"
+    assert mask("compte GB82 WEST 1234 5698 7654 32") == "compte [iban]"
+    # En minuscules, il passe : c'est le prix du faux positif évité juste après.
+    assert mask("compte fr76 3000 6000 0112 3456 7890 189") == "compte fr76 3000 6000 0112 3456 7890 189"
+    assert mask("compte Gb82 West 1234 5698 7654 32") == "compte Gb82 West 1234 5698 7654 32"
+
+
+def test_une_phrase_ordinaire_n_est_pas_masquee_comme_un_iban():
+    """Commentaire : « any sentence whose words happened to fall in fours […] "le 10 mars 2023 pour" does »."""
+    text = "rendez-vous le 10 mars 2023 pour la signature"
+    assert mask(text) == text
+    # Témoin : la même phrase en majuscules, elle, est encore prise.
+    assert mask(text.upper()) == "RENDEZ-VOUS [iban] LA SIGNATURE"
 
 
 def test_production_un_iban_suivi_d_un_mot_est_masque_et_le_mot_reste():
@@ -352,15 +362,6 @@ def test_production_une_phrase_ordinaire_en_minuscules_n_est_pas_masquee():
         assert mask(text) == text
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une date en minuscules dont la clé tombe juste par coïncidence est masquée comme un IBAN : "
-    "« rendez-vous le 10 mars 2023 pour la signature » rend « rendez-vous [iban] la signature » "
-    "(195 phrases « le J mars|juin AAAA mot la salle » sur 13 454, 1,4 %)",
-)
-def test_defaut_une_date_en_minuscules_n_est_pas_masquee_comme_un_iban():
-    text = "rendez-vous le 10 mars 2023 pour la signature"
-    assert mask(text) == text
 
 
 def test_production_le_format_international_avec_zero_entre_parentheses_est_masque():
@@ -395,4 +396,27 @@ def test_production_un_numero_a_exactement_dix_chiffres():
     assert mask("n 0612345678") == "n [phone]"
     assert mask("n 061234567") == "n 061234567"  # neuf chiffres
     assert mask("n 06123456789") == "n 06123456789"  # onze chiffres
-    assert mask("n 00 12 34 56 78") == "n 00 12 34 56 78"  # 0 suivi de 0
+    # « 00 » ouvre un indicatif : huit chiffres derrière, c'est un numéro.
+    assert mask("n 00 12 34 56 78") == "n [phone]"
+
+
+def test_un_numero_etranger_ordinaire_est_masque():
+    """
+    Commentaire : « Without this pattern a Belgian, Swiss or British number goes
+    through unmasked, which on a marketplace is not an evasion, it is a user ».
+    """
+    assert mask("appelle moi au +32 470 12 34 56") == "appelle moi au [phone]"
+    assert mask("+44 7700 900123") == "[phone]"
+    assert mask("0033 6 12 34 56 78") == "[phone]"
+    assert mask("+41 79 123 45 67") == "[phone]"
+    # Témoin : un montant et une date ne sont pas des numéros.
+    inchange = "le prix est 1 234,56 euros le 01/02/2024"
+    assert mask(inchange) == inchange
+
+
+def test_la_longueur_maximale_de_e_164_borne_le_motif():
+    """Commentaire : « Fifteen is the maximum length of a number in recommendation ITU-T E.164 »."""
+    assert mask("+" + "1" * 15) == "[phone]"
+    assert mask("+" + "1" * 16) == "+" + "1" * 16
+    assert mask("+" + "1" * 8) == "[phone]"
+    assert mask("+" + "1" * 7) == "+" + "1" * 7

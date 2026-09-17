@@ -300,13 +300,8 @@ def test_production_une_reponse_mal_formee_puis_bien_formee_masque_au_troisieme_
     assert client.call_count == 3
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une réponse entièrement enveloppée dans une seule clôture ```json est passée telle quelle à "
-    "json.loads, échoue, est retentée et sort en MaskingUnavailable après trois appels payés "
-    "(charte des tests et DECISIONS n° 12 : elle doit être décodée)",
-)
-def test_defaut_une_reponse_enveloppee_dans_une_seule_cloture_json_est_decodee():
+def test_une_reponse_enveloppee_dans_une_seule_cloture_est_decodee():
+    """`_unfenced` : « Models often hand back ```json … ```, and refusing that form would pay for a second call for nothing »."""
     for answer in (f"```json\n{PHONE_ANSWER}\n```", f"```\n{PHONE_ANSWER}\n```"):
         client = FakeLLM(response=answer)
         assert mask("call 06 12 34 56 78", client=client) == "call [phone]"

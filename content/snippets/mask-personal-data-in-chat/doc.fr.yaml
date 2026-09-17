@@ -6,7 +6,10 @@ n0: |
   Masquer les coordonnées dans un message : normalisation, puis expressions
   régulières.
 
-  Niveau N0. Déterministe, bibliothèque standard seule.
+  Niveau N0. Déterministe, bibliothèque standard seule. Les coordonnées, et
+  elles seules : un numéro de téléphone, une adresse électronique, un IBAN. Un
+  nom, une adresse postale ou une date de naissance sont aussi des données
+  personnelles, et rien ici n'y touche.
 
   Deux choses font que ça marche.
 
@@ -19,7 +22,7 @@ n0: |
   ressort inchangé, à la composition de ses accents près (NFC), qui ne change
   rien à l'écran.
 
-  Ensuite, le motif de téléphone tolère les séparateurs que les gens tapent
+  Ensuite, les motifs de téléphone tolèrent les séparateurs que les gens tapent
   entre les chiffres — espace, point, tiret ou barre oblique, un ou deux — et un
   IBAN n'est masqué que si sa clé de contrôle tombe juste.
 

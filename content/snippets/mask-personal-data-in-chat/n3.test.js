@@ -271,20 +271,14 @@ test('production : une réponse mal formée puis bien formée masque au troisiè
   assert.equal(client.callCount, 3);
 });
 
-test('DÉFAUT : une réponse enveloppée dans une seule clôture ```json est passée telle quelle à JSON.parse, retentée, puis levée', async () => {
-  await assert.rejects(async () => {
-    for (const response of [`\`\`\`json\n${PHONE_ANSWER}\n\`\`\``, `\`\`\`\n${PHONE_ANSWER}\n\`\`\``]) {
-      const client = new FakeLLM({ response });
-      let out;
-      try {
-        out = await mask('call 06 12 34 56 78', { client });
-      } catch (error) {
-        assert.fail(`${error.name}: ${error.message}`);
-      }
-      assert.equal(out, 'call [phone]');
-      assert.equal(client.callCount, 1);
-    }
-  }, assert.AssertionError);
+test('une réponse enveloppée dans une seule clôture est décodée', async () => {
+  // `unfenced` : « Models often hand back ```json … ```, and refusing that form
+  // would pay for a second call for nothing ».
+  for (const response of [`\`\`\`json\n${PHONE_ANSWER}\n\`\`\``, `\`\`\`\n${PHONE_ANSWER}\n\`\`\``]) {
+    const client = new FakeLLM({ response });
+    assert.equal(await mask('call 06 12 34 56 78', { client }), 'call [phone]');
+    assert.equal(client.callCount, 1);
+  }
 });
 
 test('production : une clôture entourée de texte, double ou non refermée lève', async () => {

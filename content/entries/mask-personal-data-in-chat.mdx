@@ -3,16 +3,16 @@ id: mask-personal-data-in-chat
 family: detect-filter
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
   fr: "Masquer les coordonnées dans un message"
-  en: "Mask personal data in a chat thread"
+  en: "Mask contact details in a chat message"
 
 need:
-  fr: "Empêcher qu’un numéro de téléphone ou une adresse électronique soit visible dans un message envoyé."
-  en: "Prevent phone numbers and email addresses from appearing in a sent message."
+  fr: "Empêcher qu’un numéro de téléphone, une adresse électronique ou un IBAN soit visible dans un message envoyé. Ni un nom ni une adresse postale : ce sont aussi des données personnelles, et aucun niveau de cette fiche ne les touche."
+  en: "Prevent a phone number, an email address or an IBAN from appearing in a sent message. Not a name and not a postal address: those are personal data too, and no level on this page touches them."
 
 scenario:
   fr: "On voit régulièrement un appel de modèle généraliste sur chaque message entrant, pour repérer les coordonnées avant publication. Le besoin est pourtant déterministe : la syntaxe d’une adresse électronique n’a pas changé depuis la RFC 2822 de 2001, ni celle d’un numéro français depuis le passage à dix chiffres de 1996. La question n’est pas de savoir si un modèle sait le faire, c’est de savoir ce qu’on paie pour un travail qu’une expression régulière fait en une fraction de milliseconde."
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n0.js
       verification: executed
     breaking_point:
-      fr: "L’obfuscation volontaire. « zéro six douze », « O6 I2 34 » avec des lettres à la place des chiffres, ou des emojis intercalés : rien de tout cela ne ressemble à un numéro pour un motif. Dans l’autre sens, la clé de contrôle d’un IBAN peut être satisfaite par coïncidence : une référence de commande écrite « DE 86 3456 7890 1234 » la passe, et elle est masquée à tort."
-      en: "Deliberate obfuscation. Spelled-out digits, lookalike characters such as O6 I2 34, or interspersed emoji: none of it looks like a number to a pattern. The other way round, IBAN check digits can be satisfied by coincidence: an order reference written DE 86 3456 7890 1234 passes them, and is masked when it should not be."
+      fr: "L’obfuscation volontaire : « jean [at] example [dot] com », « O6 I2 34 » avec des lettres à la place des chiffres, « zéro six douze ». Rien de tout cela ne ressemble à une coordonnée pour un motif. Dans l’autre sens, une référence de commande à dix chiffres est masquée en « [phone] », et un IBAN de coïncidence — « DE 86 3456 7890 1234 » passe la clé modulo 97 — en « [iban] »."
+      en: "Deliberate obfuscation: “jean [at] example [dot] com”, lookalike characters such as O6 I2 34, spelled-out digits. None of it looks like a contact detail to a pattern. The other way round, a ten-digit order reference is masked as “[phone]”, and a coincidental IBAN — DE 86 3456 7890 1234 passes the modulo 97 check — as “[iban]”."
     escalate_when:
       fr: "Vos utilisateurs contournent activement le filtre, et vous le voyez dans les messages signalés."
       en: "Your users are actively working around the filter, and you can see it in the reported messages."
@@ -49,8 +49,8 @@ rungs:
   - level: N1
     available: true
     name:
-      fr: "Régression logistique sur la forme des jetons"
-      en: "Logistic regression on token shape"
+      fr: "Détection d’un message à coordonnées déguisées, par régression logistique sur la forme des jetons"
+      en: "Spotting a message with disguised contact details, by logistic regression on token shape"
     cost: négligeable
     latency: "<1 ms"
     risks:
@@ -71,8 +71,8 @@ rungs:
       javascript: snippets/mask-personal-data-in-chat/n1.js
       verification: executed
     breaking_point:
-      fr: "Le modèle ne connaît que les contournements qu’on lui a montrés. Des homoglyphes venus d’un autre alphabet, ou des chiffres romains, ne portent ni chiffre ni mot connu : aucun chiffre ne survit à la mise en forme, et le message passe."
-      en: "The model only knows the evasions it was shown. Homoglyphs from another script, or Roman numerals, carry neither a digit nor a known word: no digit survives the shaping, and the message goes through."
+      fr: "Ce niveau ne masque rien : il rend un verdict sur le message entier, à bloquer ou à envoyer en modération. Et le modèle ne connaît que les contournements qu’on lui a montrés : des homoglyphes venus d’un autre alphabet, ou des chiffres romains, ne portent ni chiffre ni mot connu, et le message passe."
+      en: "This level masks nothing: it returns a verdict on the whole message, to block or to send for review. And the model only knows the evasions it was shown: homoglyphs from another script, or Roman numerals, carry neither a digit nor a known word, and the message goes through."
     escalate_when:
       fr: "Les contournements changent plus vite que vous ne pouvez étiqueter de nouveaux exemples."
       en: "Evasions change faster than you can label new examples."
@@ -80,8 +80,8 @@ rungs:
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Sans intérêt ici : un modèle de reconnaissance d’entités auto-hébergé ajoute des poids à télécharger et à tenir à jour, pour des motifs aussi structurés qu’un numéro, une adresse électronique ou un IBAN, que N0 masque déjà. Les numéros déguisés, que N0 laisse passer, sont le terrain de N1."
-      en: "Not useful here: a self-hosted entity recogniser adds weights to download and keep up to date, for shapes as structured as a phone number, an email address or an IBAN, which N0 already masks. Disguised numbers, which N0 lets through, are N1’s ground."
+      fr: "Sans intérêt pour ce besoin : un modèle de reconnaissance d’entités auto-hébergé ajoute des poids à télécharger et à tenir à jour, pour des motifs aussi structurés qu’un numéro, une adresse électronique ou un IBAN, que N0 masque déjà. Les numéros déguisés, que N0 laisse passer, sont le terrain de N1. C’est sur les noms de personne et les adresses postales qu’un tel modèle deviendrait le bon outil — et ils sont hors du périmètre de cette fiche, qui ne traite que les coordonnées."
+      en: "Not useful for this need: a self-hosted entity recogniser adds weights to download and keep up to date, for shapes as structured as a phone number, an email address or an IBAN, which N0 already masks. Disguised numbers, which N0 lets through, are N1’s ground. Where such a model would become the right tool is on people’s names and postal addresses — and those are outside the scope of this page, which handles contact details only."
 
   - level: N3
     available: true
@@ -117,8 +117,8 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0 : le besoin est déterministe, le coût marginal est nul, rien ne sort de votre infrastructure, et le résultat se teste unitairement, ce qui compte quand un faux négatif publie le numéro de quelqu’un. Montez à N1 le jour où vous constatez des contournements délibérés, pas avant : vous échangeriez un test unitaire contre un jeu d’entraînement à maintenir."
-  en: "N0: the need is deterministic, the marginal cost is nil, nothing leaves your infrastructure, and the result is unit testable, which matters when a false negative publishes somebody’s phone number. Move up to N1 the day you actually see deliberate evasion, not before: you would be trading a unit test for a training set to maintain."
+  fr: "N0 : le besoin est déterministe, le coût marginal est nul, rien ne sort de votre infrastructure, et le résultat se teste unitairement, ce qui compte quand un faux négatif publie le numéro de quelqu’un. N1 ne remplace pas N0, il s’y ajoute : il ne masque pas, il signale un message entier à bloquer ou à envoyer en modération. Ajoutez-le le jour où vous constatez des contournements délibérés, pas avant : vous prendriez un jeu d’entraînement à maintenir, et vos utilisateurs verraient leur message refusé au lieu d’être publié amputé d’un numéro. Quant à N3, il envoie au fournisseur le message entier pour en retirer des données personnelles : c’est la première raison de ne pas le prendre."
+  en: "N0: the need is deterministic, the marginal cost is nil, nothing leaves your infrastructure, and the result is unit testable, which matters when a false negative publishes somebody’s phone number. N1 does not replace N0, it sits beside it: it masks nothing, it flags a whole message to block or to send for review. Add it the day you actually see deliberate evasion, not before: you would take on a training set to maintain, and your users would see their message refused instead of published with a number cut out of it. As for N3, it hands the whole message to a provider in order to take personal data out of it: that is the first reason not to pick it."
 
 further_reading:
   - label: "Python — module re, expressions régulières"

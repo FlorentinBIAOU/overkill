@@ -85,6 +85,23 @@ function isUsable(parsed, message) {
   ));
 }
 
+/**
+ * Strip a code fence that wraps the whole answer, and nothing else.
+ *
+ * Models often hand back ```json … ```, and refusing that form would pay for a
+ * second call for nothing. Any other departure — text before or after, two
+ * blocks, a fence never closed — is left alone, and fails to parse, which is
+ * the point.
+ */
+function unfenced(answer) {
+  const text = answer.trim();
+  const fences = text.match(/```/g)?.length ?? 0;
+  if (text.startsWith('```') && text.endsWith('```') && fences === 2) {
+    return text.slice(3, -3).replace(/^json/, '');
+  }
+  return text;
+}
+
 async function ask(client, message, attempts) {
   let lastError;
   for (let i = 0; i < attempts; i += 1) {
@@ -100,7 +117,7 @@ async function ask(client, message, attempts) {
         lastError = new Error('the model returned no content');
         continue;
       }
-      const parsed = JSON.parse(answer);
+      const parsed = JSON.parse(unfenced(answer));
       // An item the message does not contain would mask nothing, and the message would leave in clear.
       if (isUsable(parsed, message)) return parsed;
       lastError = new Error('the model answered something other than items found in the message');

@@ -1,7 +1,10 @@
 /**
- * Mask personal data in a chat message: normalisation, then regular expressions.
+ * Mask contact details in a chat message: normalisation, then regular
+ * expressions.
  *
- * Rung N0. Deterministic, no dependency.
+ * Rung N0. Deterministic, no dependency. Contact details, and those only: a
+ * phone number, an email address, an IBAN. A name, a postal address or a date
+ * of birth are personal data too, and nothing here touches them.
  *
  * Two things make this work.
  *
@@ -13,7 +16,7 @@
  * message with nothing to mask comes back unchanged, apart from the
  * composition of its accents (NFC), which changes nothing on screen.
  *
- * Second, the phone pattern tolerates the separators people type between
+ * Second, the phone patterns tolerate the separators people type between
  * digits — a space, a dot, a dash or a slash, one or two of them — and an IBAN
  * is only masked when its check digits add up.
  */
@@ -33,13 +36,24 @@ const EMAIL = /(?<![\p{L}\p{N}_.+-])[\p{L}\p{N}_.+-]+@[\p{L}\p{N}_-]+(?:\.[\p{L}
 const SEP = '[ ./-]{0,2}';
 const PHONE = new RegExp(`(?<![\\d+])(?:\\+${SEP}33${SEP}(?:\\(0\\)${SEP})?|0)[1-9](?:${SEP}\\d){8}(?!\\d)`, 'g');
 
+// Any other country: a code introduced by + or 00, then eight to fifteen
+// digits in all. Fifteen is the maximum length of a number in recommendation
+// ITU-T E.164, so a longer run of digits is something else and stays untouched.
+// Without this pattern a Belgian, Swiss or British number goes through
+// unmasked, which on a marketplace is not an evasion, it is a user.
+const INTERNATIONAL = new RegExp(`(?<![\\d+])(?:\\+|00)${SEP}\\d(?:${SEP}\\d){7,14}(?!\\d)`, 'g');
+
 // IBAN: two letters, two check digits, then the account number in groups of
-// four, spaced or not, in either case. The check digits decide, not the pattern.
-const IBAN = /(?<![A-Z0-9])[A-Z]{2} ?\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?(?![A-Z0-9])/gi;
+// four, spaced or not. Upper case only, the way ISO 13616 prints one: read in
+// either case, any sentence whose words happened to fall in fours and whose
+// digits happened to pass the check would be masked — "le 10 mars 2023 pour"
+// does. The check digits decide the rest, not the pattern.
+const IBAN = /(?<![A-Z0-9])[A-Z]{2} ?\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?(?![A-Z0-9])/g;
 
 // Order matters: an email may contain digits that would otherwise be read as
-// the start of a phone number.
-const PATTERNS = [[EMAIL, '[email]'], [IBAN, '[iban]'], [PHONE, '[phone]']];
+// the start of a phone number, and the French pattern is tried before the
+// international one so that "+33 (0)6 …" is read as one number.
+const PATTERNS = [[EMAIL, '[email]'], [IBAN, '[iban]'], [PHONE, '[phone]'], [INTERNATIONAL, '[phone]']];
 
 const plain = (char) => (INVISIBLE_OR_SPACE.test(char) ? ' ' : char.normalize('NFKC'));
 

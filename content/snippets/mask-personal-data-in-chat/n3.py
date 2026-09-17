@@ -90,6 +90,21 @@ def _is_usable(parsed, message: str) -> bool:
     )
 
 
+def _unfenced(answer: str) -> str:
+    """
+    Strip a code fence that wraps the whole answer, and nothing else.
+
+    Models often hand back `\u0060\u0060\u0060json …\u0060\u0060\u0060`, and refusing that form would
+    pay for a second call for nothing. Any other departure — text before or
+    after, two blocks, a fence never closed — is left alone, and fails to
+    parse, which is the point.
+    """
+    text = answer.strip()
+    if text.startswith("```") and text.endswith("```") and text.count("```") == 2:
+        return text[3:-3].removeprefix("json")
+    return text
+
+
 def _ask(client, message: str, attempts: int) -> list[dict]:
     last_error: Exception | None = None
     for _ in range(attempts):
@@ -98,7 +113,7 @@ def _ask(client, message: str, attempts: int) -> list[dict]:
             if answer is None:  # a refusal carries no content: unusable, not empty
                 last_error = ValueError("the model returned no content")
                 continue
-            parsed = json.loads(answer)
+            parsed = json.loads(_unfenced(answer))
             if _is_usable(parsed, message):
                 return parsed
             # An item the message does not contain would mask nothing, and the message would leave in clear.

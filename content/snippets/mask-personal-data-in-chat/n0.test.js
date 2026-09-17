@@ -273,10 +273,22 @@ test('production : un message sans coordonnée ressort intact', () => {
   assert.equal(mask(text), text);
 });
 
-test('production : un IBAN en minuscules est masqué', () => {
-  assert.equal(mask('compte fr76 3000 6000 0112 3456 7890 189'), 'compte [iban]');
-  assert.equal(mask('compte gb82 west 1234 5698 7654 32'), 'compte [iban]');
-  assert.equal(mask('compte Gb82 West 1234 5698 7654 32'), 'compte [iban]');
+test('un IBAN est lu en majuscules seulement', () => {
+  // « Upper case only, the way ISO 13616 prints one ».
+  assert.equal(mask('compte FR76 3000 6000 0112 3456 7890 189'), 'compte [iban]');
+  assert.equal(mask('compte GB82 WEST 1234 5698 7654 32'), 'compte [iban]');
+  // En minuscules, il passe : c'est le prix du faux positif évité juste après.
+  assert.equal(mask('compte fr76 3000 6000 0112 3456 7890 189'), 'compte fr76 3000 6000 0112 3456 7890 189');
+  assert.equal(mask('compte Gb82 West 1234 5698 7654 32'), 'compte Gb82 West 1234 5698 7654 32');
+});
+
+test('une phrase ordinaire n’est pas masquée comme un IBAN', () => {
+  // « any sentence whose words happened to fall in fours […] "le 10 mars 2023
+  // pour" does ».
+  const text = 'rendez-vous le 10 mars 2023 pour la signature';
+  assert.equal(mask(text), text);
+  // Témoin : la même phrase en majuscules, elle, est encore prise.
+  assert.equal(mask(text.toUpperCase()), 'RENDEZ-VOUS [iban] LA SIGNATURE');
 });
 
 test('production : un IBAN suivi d’un mot est masqué, et le mot reste', () => {
@@ -289,13 +301,6 @@ test('production : une phrase ordinaire en minuscules n’est pas masquée', () 
   for (const text of ['le 12 mars 2024 dans la salle', 'on se voit le 15 juin 2025 pour la fête']) {
     assert.equal(mask(text), text);
   }
-});
-
-test('DÉFAUT : une date en minuscules dont la clé tombe juste est masquée comme un IBAN (« rendez-vous [iban] la signature »)', async () => {
-  await assert.rejects(async () => {
-    const text = 'rendez-vous le 10 mars 2023 pour la signature';
-    assert.equal(mask(text), text);
-  }, assert.AssertionError);
 });
 
 test('production : le format international avec zéro entre parenthèses est masqué', () => {
@@ -328,5 +333,26 @@ test('production : un numéro à exactement dix chiffres', () => {
   assert.equal(mask('n 0612345678'), 'n [phone]');
   assert.equal(mask('n 061234567'), 'n 061234567');
   assert.equal(mask('n 06123456789'), 'n 06123456789');
-  assert.equal(mask('n 00 12 34 56 78'), 'n 00 12 34 56 78');
+  // « 00 » ouvre un indicatif : huit chiffres derrière, c'est un numéro.
+  assert.equal(mask('n 00 12 34 56 78'), 'n [phone]');
+});
+
+test('un numéro étranger ordinaire est masqué', () => {
+  // « Without this pattern a Belgian, Swiss or British number goes through
+  // unmasked, which on a marketplace is not an evasion, it is a user ».
+  assert.equal(mask('appelle moi au +32 470 12 34 56'), 'appelle moi au [phone]');
+  assert.equal(mask('+44 7700 900123'), '[phone]');
+  assert.equal(mask('0033 6 12 34 56 78'), '[phone]');
+  assert.equal(mask('+41 79 123 45 67'), '[phone]');
+  // Témoin : un montant et une date ne sont pas des numéros.
+  const inchange = 'le prix est 1 234,56 euros le 01/02/2024';
+  assert.equal(mask(inchange), inchange);
+});
+
+test('la longueur maximale de E.164 borne le motif', () => {
+  // « Fifteen is the maximum length of a number in recommendation ITU-T E.164 ».
+  assert.equal(mask(`+${'1'.repeat(15)}`), '[phone]');
+  assert.equal(mask(`+${'1'.repeat(16)}`), `+${'1'.repeat(16)}`);
+  assert.equal(mask(`+${'1'.repeat(8)}`), '[phone]');
+  assert.equal(mask(`+${'1'.repeat(7)}`), `+${'1'.repeat(7)}`);
 });
