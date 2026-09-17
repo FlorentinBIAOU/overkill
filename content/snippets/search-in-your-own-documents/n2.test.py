@@ -370,8 +370,9 @@ def test_le_modele_par_defaut_a_la_surface_de_sentence_transformers(sentence_tra
 def test_production_un_vecteur_refuse_n_empoisonne_pas_le_cache_d_un_encodeur_deja_servi():
     """
     Un encodeur a déjà servi une recherche ; à la suivante, le vecteur d'une
-    page nouvelle est refusé (NaN). La recherche d'après ré-encode cette page
-    et répond. Jumeau JavaScript marqué DÉFAUT.
+    page nouvelle est refusé (NaN). Le vecteur refusé n'entre pas dans le cache
+    gardé pour l'encodeur, si bien que la recherche d'après ré-encode cette page
+    et répond. Même comportement en JavaScript, depuis ce lot.
     """
     class FlakyOnSecondCall(FakeEncoder):
         count = 0

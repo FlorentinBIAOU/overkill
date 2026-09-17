@@ -117,10 +117,15 @@ def _ask(client, prompt: str, attempts: int) -> dict:
 
 
 def _decode(reply) -> object:
-    """JSON, possibly wrapped in a ```json fence. No text at all (a refusal) is unusable."""
+    """
+    JSON, or JSON wrapped whole in one code fence. No text at all (a refusal)
+    is unusable, and so is anything else around the object: prose before or
+    after it, a second block, or a fence opened and never closed. Salvaging
+    those would be guessing which part of a badly shaped answer to believe.
+    """
     if not isinstance(reply, str):
         raise ValueError("the model returned no text")
     text = reply.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[-1].rsplit("```", 1)[0]
+    if text.startswith("```") and text.endswith("```") and text.count("```") == 2:
+        text = text[3:-3].removeprefix("json")
     return json.loads(text)

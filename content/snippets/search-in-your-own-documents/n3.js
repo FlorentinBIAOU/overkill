@@ -121,14 +121,19 @@ async function ask(client, prompt, attempts) {
   throw new AnswerUnavailable(String(lastError));
 }
 
-/** JSON, possibly wrapped in a ```json fence. No text at all (a refusal) is unusable. */
+/**
+ * JSON, or JSON wrapped whole in one code fence. No text at all (a refusal) is
+ * unusable, and so is anything else around the object: prose before or after
+ * it, a second block, or a fence opened and never closed. Salvaging those would
+ * be guessing which part of a badly shaped answer to believe.
+ */
 function decode(reply) {
   if (typeof reply !== 'string') throw new Error('the model returned no text');
-  let text = reply.trim();
-  if (text.startsWith('```')) {
-    const afterFirstLine = text.includes('\n') ? text.slice(text.indexOf('\n') + 1) : text;
-    const end = afterFirstLine.lastIndexOf('```');
-    text = end >= 0 ? afterFirstLine.slice(0, end) : afterFirstLine;
+  const trimmed = reply.trim();
+  const fences = trimmed.match(/```/g)?.length ?? 0;
+  if (trimmed.startsWith('```') && trimmed.endsWith('```') && fences === 2) {
+    const inner = trimmed.slice(3, -3);
+    return JSON.parse(inner.startsWith('json') ? inner.slice(4) : inner);
   }
-  return JSON.parse(text);
+  return JSON.parse(trimmed);
 }

@@ -131,3 +131,16 @@ niveaux ont été fermés faute de point de contrôle publiable :
 `extract-fields-from-invoice` N2 et — au groupe 1 — `fuzzy-match-company-names`
 N2. Un verdict a changé, `extract-fields-from-invoice` passe de N2 à N0, et la
 fiche sort du brouillon : le catalogue compte désormais 25 fiches publiées.
+
+## Groupe 3 — marquages vivants, et deux contrôles pour qu'ils ne reviennent pas
+
+- **Deux contrôles écrits d'abord** : `check-marquages` (aucun `xfail`,
+  `INFIRMÉ` ni `DÉFAUT` dans les tests d'une fiche publiée) et
+  `check-adaptateur` (un extrait N3 dont l'adaptateur n'est construit par aucun
+  test échoue), branchés dans `npm run check:fast`, donc dans `npm run check`.
+- **search-in-your-own-documents** — deux défauts vivants réparés : la clôture de
+  code de N3 décodait une réponse suivie de prose et une clôture non refermée,
+  et un vecteur refusé empoisonnait le cache de N2 en JavaScript, là où Python
+  était sain. Morphologie des bases citée à la source dans l'escalade de N1, ET
+  implicite dit comme un choix, recherche par préfixe documentée, point de
+  rupture de N2 ramené à deux phrases. Reste : rien.

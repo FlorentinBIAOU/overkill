@@ -191,25 +191,36 @@ test('production : une réponse enveloppée d’une seule clôture json est déc
   }
 });
 
-test('production : un autre écart autour de la clôture lève', async () => {
+test('production : une seule clôture qui enveloppe toute la réponse est lue', async () => {
+  // « JSON, or JSON wrapped whole in one code fence ».
   for (const reply of [
-    `Voici :\n\`\`\`json\n${GOOD_REPLY}\n\`\`\``,
-    `\`\`\`json\n${GOOD_REPLY}\n\`\`\`\n\`\`\`json\n${GOOD_REPLY}\n\`\`\``,
+    `\`\`\`json\n${GOOD_REPLY}\n\`\`\``,
+    `\`\`\`\n${GOOD_REPLY}\n\`\`\``,
     `\`\`\`json ${GOOD_REPLY}\`\`\``,
   ]) {
-    await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm(reply) }), AnswerUnavailable);
+    const client = llm(reply);
+    // eslint-disable-next-line no-await-in-loop
+    const lu = await answer(QUESTION, PASSAGES, { client });
+    assert.deepEqual(lu.sources, ['conges']);
+    assert.equal(client.callCount, 1, reply);
   }
 });
 
-test('DÉFAUT : du texte après la clôture, ou une clôture non refermée, est décodé', async () => {
-  // Charte (décision 12) : « tout autre écart — texte avant ou après, deux
-  // blocs, clôture non refermée — lève ». decode coupe au dernier ``` et
-  // décode la réponse suivie de texte ; sans ``` final, il décode aussi.
-  await assert.rejects(async () => {
-    for (const reply of [`\`\`\`json\n${GOOD_REPLY}\n\`\`\`\nVoilà, bonne journée.`, `\`\`\`json\n${GOOD_REPLY}`]) {
-      await assert.rejects(() => answer(QUESTION, PASSAGES, { client: llm(reply) }), AnswerUnavailable);
-    }
-  });
+test('production : tout autre écart autour de la clôture lève', async () => {
+  // « anything else around the object: prose before or after it, a second
+  // block, or a fence opened and never closed » — « Salvaging those would be
+  // guessing which part of a badly shaped answer to believe ».
+  for (const reply of [
+    `Voici :\n\`\`\`json\n${GOOD_REPLY}\n\`\`\``,
+    `\`\`\`json\n${GOOD_REPLY}\n\`\`\`\nVoilà, bonne journée.`,
+    `\`\`\`json\n${GOOD_REPLY}\n\`\`\`\n\`\`\`json\n${GOOD_REPLY}\n\`\`\``,
+    `\`\`\`json\n${GOOD_REPLY}`,
+  ]) {
+    const client = llm(reply);
+    // eslint-disable-next-line no-await-in-loop
+    await assert.rejects(() => answer(QUESTION, PASSAGES, { client }), AnswerUnavailable);
+    assert.equal(client.callCount, 2, reply);
+  }
 });
 
 test('l’adaptateur appelle chat.completions.create avec le modèle et la consigne', async () => {

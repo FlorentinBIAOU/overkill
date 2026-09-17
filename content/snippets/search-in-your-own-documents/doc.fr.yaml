@@ -22,6 +22,13 @@ n0.py: |
   tel quel : entourer chaque jeton de guillemets ramène la requête à des mots
   ordinaires, et une erreur de syntaxe à une recherche.
 
+  Ces guillemets sont aussi ce à quoi ce fichier renonce : un jeton entre
+  guillemets est cherché en entier. Pour une barre de recherche qui répond à la
+  frappe, FTS5 sait chercher un préfixe — une « * » après une chaîne entre
+  guillemets, « "cong"* » — et cet extrait ne s'en sert pas, parce qu'un préfixe
+  sur chaque terme élargit toutes les recherches, pas seulement celle qu'on est
+  en train de taper.
+
 n0.js: |
   Chercher dans vos propres documents avec l'index plein texte de la base de
   données que vous exploitez déjà.
@@ -40,6 +47,12 @@ n0.js: |
   retirés des lettres latines), le même ET implicite entre les termes, le même BM25 avec les mêmes
   constantes et les mêmes poids de colonne. Lisez-le comme la documentation du
   SQL, pas comme quelque chose à déployer.
+
+  Une chose que le SQL a et que celui-ci n'a pas : la recherche par préfixe.
+  Pour une barre qui répond à la frappe, FTS5 cherche un préfixe quand une « * »
+  suit une chaîne entre guillemets, « "cong"* ». Aucune des deux versions ne
+  s'en sert, parce qu'un préfixe sur chaque terme élargit toutes les
+  recherches, pas seulement celle qu'on est en train de taper.
 
 n1: |
   Chercher dans vos propres documents avec un index inversé et un BM25 que

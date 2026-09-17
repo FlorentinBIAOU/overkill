@@ -67,8 +67,13 @@ export async function vectorRanking(query, documents, encoder) {
     throw new EncodingFailed(`${vectors.length} vectors returned for ${missing.length + 1} texts`);
   }
   const queryVector = vectors.pop();
-  missing.forEach((text, i) => known.set(text, vectors[i]));
-  const kept = new Map(texts.map((text) => [text, known.get(text)]));
+  // A copy, not the served map: a vector that turns out to be unusable must not
+  // stay behind in the cache, where it would make this page unfindable, and
+  // every later search that touches it fail, until the process restarts.
+  // Python writes into a new dictionary for the same reason.
+  const fresh = new Map(known);
+  missing.forEach((text, i) => fresh.set(text, vectors[i]));
+  const kept = new Map(texts.map((text) => [text, fresh.get(text)]));
   const usable = (v) => v.length === queryVector.length && v.every(Number.isFinite);
   if (![...kept.values(), queryVector].every(usable)) {
     throw new EncodingFailed('vectors of different sizes, or values that are not finite numbers');

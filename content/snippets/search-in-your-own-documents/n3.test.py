@@ -234,30 +234,30 @@ def test_production_une_reponse_enveloppee_d_une_seule_cloture_json_est_decodee(
         assert client.call_count == 1
 
 
-def test_production_un_autre_ecart_autour_de_la_cloture_leve():
-    """Texte avant la clôture, deux blocs, clôture sur une seule ligne : AnswerUnavailable."""
+def test_production_une_seule_cloture_qui_enveloppe_toute_la_reponse_est_lue():
+    """docstring de `_decode` : « JSON, or JSON wrapped whole in one code fence »."""
+    for reply in (f"```json\n{GOOD_REPLY}\n```", f"```\n{GOOD_REPLY}\n```", f"```json {GOOD_REPLY}```"):
+        client = llm(reply)
+        assert answer(QUESTION, PASSAGES, client=client)["sources"] == ["conges"]
+        assert client.call_count == 1, reply
+
+
+def test_production_tout_autre_ecart_autour_de_la_cloture_leve():
+    """
+    docstring de `_decode` : « anything else around the object: prose before or
+    after it, a second block, or a fence opened and never closed » — « Salvaging
+    those would be guessing which part of a badly shaped answer to believe ».
+    """
     for reply in (
         f"Voici :\n```json\n{GOOD_REPLY}\n```",
+        f"```json\n{GOOD_REPLY}\n```\nVoilà, bonne journée.",
         f"```json\n{GOOD_REPLY}\n```\n```json\n{GOOD_REPLY}\n```",
-        f"```json {GOOD_REPLY}```",
+        f"```json\n{GOOD_REPLY}",
     ):
+        client = llm(reply)
         with pytest.raises(AnswerUnavailable):
-            answer(QUESTION, PASSAGES, client=llm(reply))
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : charte (décision 12) « tout autre écart — texte avant ou après, deux "
-        "blocs, clôture non refermée — lève ». _decode coupe au dernier ``` et décode "
-        "une réponse suivie de texte après la clôture ; une clôture jamais refermée est "
-        "décodée aussi"
-    ),
-)
-def test_defaut_du_texte_apres_la_cloture_ou_une_cloture_non_refermee_est_decode():
-    for reply in (f"```json\n{GOOD_REPLY}\n```\nVoilà, bonne journée.", f"```json\n{GOOD_REPLY}"):
-        with pytest.raises(AnswerUnavailable):
-            answer(QUESTION, PASSAGES, client=llm(reply))
+            answer(QUESTION, PASSAGES, client=client)
+        assert client.call_count == 2, reply
 
 
 def test_l_adaptateur_appelle_chat_completions_create_avec_le_modele_et_la_consigne():

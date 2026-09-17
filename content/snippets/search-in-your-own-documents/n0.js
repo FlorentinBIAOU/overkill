@@ -14,6 +14,11 @@
  * does: the same tokenizer (lower case, accents off Latin letters), the same
  * implicit AND between terms, the same BM25 with the same constants and column
  * weights. Read it as the documentation of the SQL, not as something to deploy.
+ *
+ * One thing the SQL has and this does not: prefix tokens. For a search box that
+ * answers as the reader types, FTS5 matches a prefix when a `*` follows a
+ * quoted string, as in `"cong"*`. Neither version uses them, because a prefix
+ * on every term widens every search, not only the one being typed.
  */
 
 // SQLite's fts5 defaults. Its bm25() is negated so that ORDER BY works

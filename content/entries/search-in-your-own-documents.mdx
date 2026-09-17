@@ -3,7 +3,7 @@ id: search-in-your-own-documents
 family: search
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/search-in-your-own-documents/n0.js
       verification: executed
     breaking_point:
-      fr: "La recherche par le sens : le lecteur demande la chose, le document la nomme autrement, et l’index n’a rien à faire correspondre. Dans le test, « combien de vacances puis-je poser » ne renvoie rien alors que la page s’intitule « Congés payés », et le ET implicite de FTS5 aggrave le silence — « congés responsable » ne renvoie rien non plus, parce qu’aucune page ne porte les deux mots."
-      en: "Search by meaning: the reader asks for the thing, the document names it otherwise, and the index has nothing to match. In the test, “combien de vacances puis-je poser” returns nothing although the page is titled “Congés payés”, and the implicit AND of FTS5 deepens the silence — “congés responsable” returns nothing either, because no single page carries both words."
+      fr: "La recherche par le sens : le lecteur demande la chose, le document la nomme autrement, et l’index n’a rien à faire correspondre. Dans le test, « combien de vacances puis-je poser » ne renvoie rien alors que la page s’intitule « Congés payés », et le ET implicite de FTS5 aggrave le silence — « congés responsable » ne renvoie rien non plus, parce qu’aucune page ne porte les deux mots. Ce ET est un choix, pas une fatalité : l’usage courant est de tenter d’abord tous les termes, puis de retomber sur n’importe lequel quand la première requête ne rend rien."
+      en: "Search by meaning: the reader asks for the thing, the document names it otherwise, and the index has nothing to match. In the test, “combien de vacances puis-je poser” returns nothing although the page is titled “Congés payés”, and the implicit AND of FTS5 deepens the silence — “congés responsable” returns nothing either, because no single page carries both words. That AND is a choice, not a fate: the usual practice is to try every term first, then fall back on any of them when the first query comes back empty."
     escalate_when:
       fr: "Vos journaux de recherche montrent des requêtes sans aucun résultat alors que le document existe : vos lecteurs ne l’appellent pas comme il s’appelle."
       en: "Your search logs show queries returning nothing at all for documents you know exist: your readers do not call them what they are called."
@@ -78,8 +78,8 @@ rungs:
       fr: "Écrire l’index soi-même ne comble pas le trou que N0 a montré, il vous le remet. « vacances » ne trouve toujours rien, et « congé » au singulier ne trouve rien non plus, là où le manuel écrit « congés » — pas plus qu’à N0 : rien dans ce code ne connaît la morphologie du français. Désuffixation, élision, synonymes, mots vides — chacun devient une règle que vous écrivez, testez et maintenez, pour la langue de chaque document que vous détenez."
       en: "Writing the index yourself does not close the gap N0 showed; it hands it to you. “vacances” still finds nothing, and the singular “congé” finds nothing either where the handbook writes the plural — no more than at N0 — because nothing in this code knows French morphology. Stemming, elision, synonyms, stop words — each becomes a rule you write, test and maintain, for the language of every document you hold."
     escalate_when:
-      fr: "Vous vous mettez à écrire des règles de désuffixation et des listes de synonymes, langue par langue, pour rattraper des requêtes qui ne trouvent rien."
-      en: "You find yourself writing stemming rules and synonym lists, language by language, to catch queries that come back empty."
+      fr: "Vous vous mettez à écrire des règles de désuffixation et des listes de synonymes, langue par langue, pour rattraper des requêtes qui ne trouvent rien — et votre base ne vous les offre pas : avec PostgreSQL, `to_tsvector('french', …)` désuffixe et retire les mots vides tout seul, quand FTS5 n’a qu’un tokenizer `porter` que sa documentation réserve à l’anglais."
+      en: "You find yourself writing stemming rules and synonym lists, language by language, to catch queries that come back empty — and your database does not hand them to you: with PostgreSQL, `to_tsvector('french', …)` stems and drops stop words on its own, where FTS5 only offers a `porter` tokenizer its documentation reserves for English."
 
   - level: N2
     available: true
@@ -108,8 +108,8 @@ rungs:
       javascript: snippets/search-in-your-own-documents/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le cosinus est défini pour toute paire de textes : la jambe vectorielle a toujours une réponse, et « aucun résultat » n’existe plus. Dans le test, le manuel ne dit rien de la couleur des murs du bureau ; le plein texte répond honnêtement rien, la jambe vectorielle classe quand même les quatre pages, et la fusion en présente une en tête — celle des notes de frais, mais c’est le double local qui la désigne, pas un encodeur réel. Et le score fusionné ne permet pas de poser un seuil : la page de tête a le même score pour cette question que pour une question à laquelle le manuel répond. Un seuil devrait porter sur le cosinus, que l’extrait ne rend pas."
-      en: "Cosine similarity is defined for every pair of texts, so the vector leg always has an answer and “no match” stops existing. In the test the handbook says nothing about the colour of the office walls: the full-text leg honestly returns nothing, the vector leg ranks all four pages anyway, and the fusion puts one of them first — the expenses page, though it is the local double that picks it, not a real encoder. And the fused score cannot carry a floor: the top page scores the same for this question as for one the handbook does answer. A floor would have to sit on the cosine, which the snippet does not return."
+      fr: "Le cosinus est défini pour toute paire de textes : la jambe vectorielle a toujours une réponse, et « aucun résultat » n’existe plus — dans le test, le manuel ne dit rien de la couleur des murs du bureau, et la fusion présente quand même une page en tête. Et le score fusionné ne permet pas de poser un seuil : la page de tête a le même score pour cette question que pour une question à laquelle le manuel répond, puisqu’un seuil devrait porter sur le cosinus, que l’extrait ne rend pas."
+      en: "Cosine similarity is defined for every pair of texts, so the vector leg always has an answer and “no match” stops existing — in the test the handbook says nothing about the colour of the office walls, and the fusion still puts a page first. And the fused score cannot carry a floor: the top page scores the same for this question as for one the handbook does answer, because a floor would have to sit on the cosine, which the snippet does not return."
     escalate_when:
       fr: "Vos lecteurs veulent une phrase de réponse, pas une liste de documents à ouvrir."
       en: "Your readers want a sentence for an answer, not a list of documents to open."

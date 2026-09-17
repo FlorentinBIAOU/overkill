@@ -333,12 +333,13 @@ test('production : le fonds n’est pas ré-encodé à chaque requête', async (
   assert.deepEqual(fake.calls[1], ['télétravail']);
 });
 
-test('DÉFAUT : un vecteur refusé empoisonne le cache d’un encodeur déjà servi', async () => {
-  // Un encodeur a déjà servi une recherche ; à la suivante, le vecteur d’une
-  // page nouvelle est refusé (NaN). vectorRanking a déjà écrit ce vecteur dans
-  // la Map gardée pour l’encodeur (known.set avant la vérification) : la page
-  // n’est plus jamais ré-encodée, et chaque recherche qui la contient lève
-  // EncodingFailed. Le Python construit un nouveau dictionnaire et répond.
+test('production : un vecteur refusé n’empoisonne pas le cache d’un encodeur déjà servi', async () => {
+  // Un encodeur a déjà servi une recherche ; à la suivante, le vecteur d'une
+  // page nouvelle est refusé (NaN). Le vecteur refusé n'entre pas dans le cache
+  // gardé pour l'encodeur — c'est le sens de la copie dans `vectorRanking` —,
+  // si bien que la recherche d'après ré-encode cette page et répond. Sans la
+  // copie, la page n'était plus jamais ré-encodée et chaque recherche qui la
+  // contenait levait, jusqu'au redémarrage du processus.
   class FlakyOnSecondCall extends FakeEncoder {
     count = 0;
 
@@ -352,10 +353,8 @@ test('DÉFAUT : un vecteur refusé empoisonne le cache d’un encodeur déjà se
   const flaky = new FlakyOnSecondCall(1024);
   await hybridSearch('frais', HANDBOOK.slice(0, 1), [], { encoder: flaky });
   await assert.rejects(() => hybridSearch('frais', HANDBOOK.slice(0, 2), [], { encoder: flaky }), EncodingFailed);
-  await assert.rejects(async () => {
-    assert.equal((await hybridSearch('frais', HANDBOOK.slice(0, 2), [], { encoder: flaky })).length, 2);
-    assert.deepEqual(flaky.calls[2], [`${HANDBOOK[1].title} ${HANDBOOK[1].body}`, 'frais']);
-  });
+  assert.equal((await hybridSearch('frais', HANDBOOK.slice(0, 2), [], { encoder: flaky })).length, 2);
+  assert.deepEqual(flaky.calls[2], [`${HANDBOOK[1].title} ${HANDBOOK[1].body}`, 'frais']);
 });
 
 test('production : un document modifié est ré-encodé, et lui seul', async () => {

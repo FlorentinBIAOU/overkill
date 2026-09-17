@@ -15,6 +15,12 @@ negative. Negate it, as below, and a bigger score means a better match again.
 Second, MATCH takes a query language, not a string. A user typing a double
 quote, AND or NEAR must never be handed to it raw: quoting each token turns
 the query back into plain words, and turns a syntax error into a search.
+
+That quoting is also what this file gives up: a quoted token is matched whole.
+For a search box that answers as the reader types, FTS5 has prefix tokens — a
+`*` placed after a quoted string, as in `"cong"*` — and this snippet does not
+use them, because a prefix on every term widens every search, not only the one
+being typed.
 """
 
 import sqlite3
