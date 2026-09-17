@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { anomalies, scan } from './n0.js';
+import { anomalies, episodes, scan } from './n0.js';
 import essai from '../../tryouts/live/detect-anomalies-in-metrics.js';
 
 const RESTING = 1200;
@@ -49,6 +49,38 @@ function meanStdScan(series, window, { threshold = 3.5, includePoint = false } =
 }
 
 const indices = (verdicts) => verdicts.map((v) => v.index);
+
+// Une série où chaque métrique reste dans sa propre fenêtre glissante, et où
+// une seule minute a une combinaison que l'exploitation n'a jamais vue. Le
+// trafic monte et redescend en boucle, les erreurs et la latence le suivent ;
+// à la minute MINUTE_COMBINEE, le trafic est au sommet et les erreurs au
+// plancher. La même série est construite à l'identique dans n1.test.js.
+const MINUTE_COMBINEE = 140;
+
+const wobble = (minute, metric) => {
+  const step = minute * (0.6180339887498949 + 0.1 * metric);
+  return step - Math.floor(step) - 0.5;
+};
+
+const trafic = (minute, periode = 40) => {
+  const demi = periode / 2;
+  const phase = minute % periode;
+  const niveau = phase < demi ? phase / demi : (periode - phase) / demi;
+  return 300 + 700 * niveau;
+};
+
+function combinaisonInhabituelle() {
+  const rows = Array.from({ length: 200 }, (_, minute) => {
+    const t = trafic(minute);
+    return [
+      t + 20 * wobble(minute, 0),
+      t / 100 + 0.2 * wobble(minute, 1),
+      60 + t / 16 + 2 * wobble(minute, 2),
+    ];
+  });
+  rows[MINUTE_COMBINEE][1] = 3.0 + 0.2 * wobble(MINUTE_COMBINEE, 1);
+  return rows;
+}
 
 // ---------------------------------------------------------------------------
 // Point de rupture
@@ -138,19 +170,42 @@ test('le facteur 1,4826 met l’écart absolu médian à l’échelle d’un éc
   assert.ok(Math.abs(scan(alternating)[0].limit - 3.5 * 1.4826) < 1e-9);
 });
 
-test('INFIRMÉ : le seuil de 3,5 garde son sens sur une fenêtre de 24', async () => {
-  // Nominal : 0,047 % ; mesuré : 0,75 %, seize fois plus.
-  await assert.rejects(async () => {
-    const noise = gaussianNoise(20000);
-    assert.ok(anomalies(noise).length / (noise.length - 24) < 2 * 0.000465);
-  });
-});
-
-test('constat : taux de fausses alertes sur bruit gaussien', () => {
+test('le seuil de 3,5 signale bien plus que sur une loi normale', () => {
+  // « Estimated on a short window it is noisy: pure Gaussian noise crosses 3.5
+  // of these far more often than it crosses 3.5 true standard deviations, and
+  // the tests measure how often. » Nominal : 0,047 % ; mesuré : entre 0,5 % et
+  // 1 % à la fenêtre de 24, plus de 2 % à 12 (la fenêtre de l'essai).
   const noise = gaussianNoise(20000);
   const rate = anomalies(noise).length / (noise.length - 24);
   assert.ok(rate > 0.005 && rate < 0.01);
+  assert.ok(rate > 10 * 0.000465);
   assert.ok(anomalies(noise, { window: 12 }).length / (noise.length - 12) > 0.02);
+});
+
+test('une semaine de bruit ne produit presque aucun épisode aux réglages recommandés', () => {
+  // « a run has to hold for `consecutive` points before it counts, which is
+  // what keeps the noise of a healthy metric off the phone ».
+  const noise = gaussianNoise(1440 * 7);
+  // Le tableau de bord voit une dizaine de points par jour…
+  assert.ok(anomalies(noise).length > 7 * 5 && anomalies(noise).length < 7 * 25);
+  // …le téléphone, un épisode pour la semaine entière.
+  assert.ok(episodes(noise).length <= 1);
+  // Témoin : à un point consécutif, tous les points signalés sont couverts.
+  const couverts = episodes(noise, { consecutive: 1 }).reduce((sum, e) => sum + e.length, 0);
+  assert.equal(couverts, anomalies(noise).length);
+});
+
+test('une marche franche ne fait qu’un épisode', () => {
+  // « a run is reported once, not once per minute, which is what keeps one step
+  // change from paging a dozen times ».
+  const step = [...new Array(200).fill(100), ...new Array(200).fill(300)];
+  assert.ok(anomalies(step).length > 10);
+  const found = episodes(step);
+  assert.equal(found.length, 1);
+  assert.equal(found[0].start, 200);
+  assert.equal(found[0].length, anomalies(step).length);
+  assert.equal(found[0].openedBy.value, 300);
+  assert.ok(found[0].worst.deviation > found[0].worst.limit);
 });
 
 test('une série plus courte que la fenêtre ne reçoit aucun verdict', () => {
@@ -191,18 +246,12 @@ test('deux exécutions rendent les mêmes verdicts', () => {
   assert.deepEqual(scan(DRIFTING), scan([...DRIFTING]));
 });
 
-test('INFIRMÉ : N0 ne sonne pas pour les minutes que N1 signale', async () => {
-  const wobble = (minute, metric) => {
-    const step = minute * (0.6180339887498949 + 0.1 * metric);
-    return step - Math.floor(step) - 0.5;
-  };
-  const day = Array.from({ length: 45 }, (_, m) => [1000 + 80 * wobble(m, 0), 10 + wobble(m, 1), 130 + 10 * wobble(m, 2)]);
-  const night = Array.from({ length: 45 }, (_, m) => [300 + 80 * wobble(m, 3), 3 + wobble(m, 4), 60 + 10 * wobble(m, 5)]);
-  const rows = [...day, ...night, [320, 9.6, 62], [980, 9.8, 63]];
-  await assert.rejects(async () => {
-    const flagged = new Set([0, 1, 2].flatMap((metric) => indices(anomalies(rows.map((row) => row[metric])))));
-    assert.ok(!flagged.has(90) && !flagged.has(91));
-  });
+test('une minute hors norme par sa seule combinaison ne sonne dans aucune série', () => {
+  // verdict : « la minute dont chaque valeur est connue et dont seule la
+  // combinaison ne l'est pas ». Le pendant de ce test est dans n1.test.js.
+  const rows = combinaisonInhabituelle();
+  const flagged = [0, 1, 2].flatMap((metric) => indices(anomalies(rows.map((row) => row[metric]))));
+  assert.deepEqual(flagged, []);
 });
 
 // ---------------------------------------------------------------------------
@@ -244,11 +293,15 @@ test('production : un point manquant NaN n’est jamais signalé', () => {
   assert.deepEqual(indices(anomalies(series)), [40]);
 });
 
-test('DÉFAUT : une métrique de comptage presque toujours nulle sonne à chaque unité', async () => {
-  await assert.rejects(async () => {
-    const errors = [...new Array(30).fill(0), 1, ...new Array(5).fill(0), 1, ...new Array(5).fill(0)];
-    assert.deepEqual(anomalies(errors), []);
-  });
+test('une métrique de comptage presque toujours nulle demande minSpread', () => {
+  // « A count that is zero most minutes, such as errors, has a median absolute
+  // deviation of zero, and every single error would ring: pass 1 for it. »
+  const errors = [...new Array(30).fill(0), 1, ...new Array(5).fill(0), 1, ...new Array(5).fill(0)];
+  assert.deepEqual(indices(anomalies(errors)), [30, 36]);
+  assert.deepEqual(anomalies(errors, { minSpread: 1 }), []);
+  // Témoin : une vraie rafale d'erreurs sonne encore.
+  const burst = [...new Array(30).fill(0), ...new Array(5).fill(40)];
+  assert.deepEqual(indices(anomalies(burst, { minSpread: 1 })), [30, 31, 32, 33, 34]);
 });
 
 test('une fenêtre nulle rend des verdicts à NaN au lieu d’être refusée', async () => {
@@ -290,24 +343,23 @@ test('essai : la hausse étalée finit à 2 720 en partant de 1 080 sans une min
   assert.deepEqual(series.slice(12).map((v, i) => v - quietMetric(i + 12)), Array.from({ length: 36 }, (_, i) => 40 * (i + 1)));
 });
 
-test('INFIRMÉ : le cas 4 dit « la même hausse » que la marche, 1 440 contre 1 400', async () => {
+test('essai : la hausse étalée finit plus haut que la marche, 1 440 contre 1 400', () => {
+  // Le `why` du cas parle d'« une marche de 1 400 » : la hausse étalée, elle,
+  // totalise 1 440, et les deux nombres sont écrits tels quels.
   assert.equal(points(3).at(-1) - quietMetric(47), 1440);
-  await assert.rejects(async () => {
-    assert.equal(points(3).at(-1) - quietMetric(47), points(2)[12] - quietMetric(12));
-  });
+  assert.equal(points(2)[12] - quietMetric(12), 1400);
 });
 
-test('INFIRMÉ : le why dit qu’« aucun écart d’une minute à la suivante n’approche l’écart toléré »', async () => {
-  // De minute en minute, la série jugée varie jusqu'à 200 (retour de
-  // l'oscillation), 64 % de l'écart toléré de 311 ; l'écart mesuré atteint 73 %.
+test('essai : la hausse étalée approche l’écart toléré sans jamais le franchir', () => {
+  // `why` : « l'habituel monte avec la série, et l'écart ne franchit jamais la
+  // limite ». De minute en minute, la série varie jusqu'à 200, et l'écart
+  // mesuré atteint 73 % de l'écart toléré, sans le passer.
   const series = points(3);
   const judged = scan(series, { window: 12 });
   const steps = series.slice(12).map((v, i) => Math.abs(v - series[i + 11]));
   assert.equal(Math.max(...steps), 200);
   assert.equal(Math.round(Math.max(...judged.map((v) => v.deviation / v.limit)) * 100), 73);
-  await assert.rejects(async () => {
-    assert.ok(Math.max(...steps) < 0.25 * Math.min(...judged.map((v) => v.limit)));
-  });
+  assert.ok(judged.every((v) => v.deviation <= v.limit));
 });
 
 test('essai : saisie vide et historique trop court', () => {

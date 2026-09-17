@@ -22,6 +22,16 @@ n0: |
   « mesuré 4800, habituel 1200, toléré jusqu'à 1511 » est déjà la moitié du
   diagnostic, et ce sont les trois mêmes nombres que le seuil a employés.
 
+  Un point hors limite n'est pas une alerte. Sur du bruit pur, un point sur
+  cent à deux sur cent franchit la limite aux réglages par défaut : sur une
+  métrique échantillonnée à la minute, cela fait dix à vingt réveils par jour,
+  par métrique, pour rien. Et une vraie marche franche franchit la limite
+  autant de minutes que la fenêtre met à l'avaler, soit une douzaine de réveils
+  pour un seul incident. C'est `episodes` qu'un téléphone doit lire : une série
+  de points doit tenir `consecutive` minutes pour compter, et un épisode déjà
+  ouvert ne sonne pas une seconde fois. `anomalies` reste, point par point,
+  pour un tableau de bord.
+
 n1.py: |
   Repérer des anomalies sur plusieurs métriques à la fois avec une forêt
   d'isolement.

@@ -42,3 +42,7 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
   ramenée et signalée au lieu de faire tomber la page, pondérations et signaux
   contrôlés à l'identique dans les deux langages, quatre marquages retirés.
   Reste : rien.
+- **detect-anomalies-in-metrics** — `episodes` ajouté (persistance et
+  regroupement), taux de fausses alertes dit dans le verdict et borné par un
+  test, série construite où N0 se tait et N1 parle, six marquages retirés.
+  Reste : rien.

@@ -15,6 +15,15 @@ Every verdict carries the numbers it was made of. "Anomaly at 03:12" leaves
 whoever was woken up to reconstruct the reasoning before they can act;
 "measured 4800, usual 1200, allowed up to 1511" is already half the
 diagnosis, and it is the same three numbers the threshold itself used.
+
+One point over the limit is not an alert. On pure noise, one point in a
+hundred to two in a hundred crosses the limit at the default settings: on a
+metric sampled every minute that is ten to twenty pages a day, per metric, for
+nothing. And a real step change crosses it for as many minutes as the window
+takes to swallow it, which is a dozen pages for one incident. `episodes` is
+what a pager should read: a run has to hold for `consecutive` points before it
+counts, and an episode already open is not paged again. `anomalies` stays,
+point by point, for a dashboard.
 """
 
 from dataclasses import dataclass
@@ -67,5 +76,49 @@ def scan(series: list[float], window: int = 24, threshold: float = 3.5,
 
 def anomalies(series: list[float], window: int = 24, threshold: float = 3.5,
               min_spread: float = 0.0) -> list[Verdict]:
-    """The subset a pager should see, each one still carrying its numbers."""
+    """
+    Every point over the limit, each one still carrying its numbers.
+
+    This is the dashboard view, not the pager view: at the default settings a
+    healthy metric puts one point in a hundred here. `episodes` is the pager
+    view.
+    """
     return [verdict for verdict in scan(series, window, threshold, min_spread) if verdict.is_anomaly]
+
+
+@dataclass
+class Episode:
+    """A run of points over the limit, reported once."""
+
+    start: int  # index of the first point of the run
+    length: int  # how many points in a row stayed over the limit
+    opened_by: Verdict  # the first point, with the numbers that judged it
+    worst: Verdict  # the point that sat furthest outside its limit
+
+
+def episodes(series: list[float], window: int = 24, threshold: float = 3.5,
+             min_spread: float = 0.0, consecutive: int = 3) -> list[Episode]:
+    """
+    What a pager should see: one entry per run of points over the limit.
+
+    Two rules, and they are the ones every on-call rota ends up adding. A run
+    has to hold for `consecutive` points before it counts, which is what keeps
+    the noise of a healthy metric off the phone. And a run is reported once,
+    not once per minute, which is what keeps one step change from paging a
+    dozen times.
+
+    `consecutive = 1` covers every point of `anomalies`, runs of them grouped
+    into one episode each.
+    """
+    if consecutive < 1:
+        raise ValueError("consecutive must be at least one point")
+    found, run = [], []
+    for verdict in scan(series, window, threshold, min_spread) + [None]:
+        if verdict is not None and verdict.is_anomaly:
+            run.append(verdict)
+            continue
+        if len(run) >= consecutive:
+            worst = max(run, key=lambda item: item.deviation - item.limit)
+            found.append(Episode(run[0].index, len(run), run[0], worst))
+        run = []
+    return found

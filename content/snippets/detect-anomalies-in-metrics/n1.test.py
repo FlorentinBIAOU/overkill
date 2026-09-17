@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from n0 import anomalies as n0_anomalies
 from n1 import SEED, anomalies, score, train
 
 THRESHOLD = 0.65
@@ -43,6 +44,33 @@ BROKEN_ERRORS = [320.0, 9.6, 62.0]  # trafic de nuit, erreurs de jour
 BROKEN_LATENCY = [980.0, 9.8, 63.0]  # trafic de jour, latence de nuit
 ROWS = ORDINARY + [BROKEN_ERRORS, BROKEN_LATENCY]
 HABITUATED = ORDINARY + [nighttime_with_daytime_errors(minute) for minute in range(15)]
+
+
+# La même série que dans n0.test.py, construite à l'identique : chaque métrique
+# reste dans sa propre fenêtre glissante, et une seule minute a une combinaison
+# que l'exploitation n'a jamais vue.
+MINUTE_COMBINEE = 140
+
+
+def _trafic(minute: int, periode: int = 40) -> float:
+    demi = periode // 2
+    phase = minute % periode
+    niveau = phase / demi if phase < demi else (periode - phase) / demi
+    return 300 + 700 * niveau
+
+
+def combinaison_inhabituelle() -> list[list[float]]:
+    """Trafic, erreurs, latence sur deux cents minutes ; une seule minute déphasée."""
+    rows = []
+    for minute in range(200):
+        trafic = _trafic(minute)
+        rows.append([
+            trafic + 20 * wobble(minute, 0),
+            trafic / 100 + 0.2 * wobble(minute, 1),
+            60 + trafic / 16 + 2 * wobble(minute, 2),
+        ])
+    rows[MINUTE_COMBINEE][1] = 3.0 + 0.2 * wobble(MINUTE_COMBINEE, 1)
+    return rows
 
 
 def average_depth(n):
@@ -92,7 +120,7 @@ def test_point_de_rupture_rien_dans_la_sortie_ne_dit_que_quelque_chose_a_change(
     assert isinstance(score(train(HABITUATED), BROKEN_ERRORS), float)
 
 
-def test_constat_cinq_minutes_suffisent_deja():
+def test_cinq_minutes_suffisent_deja():
     """Précision sur « quinze minutes suffisent » : cinq suffisent en Python, une seule en JavaScript."""
     five = ORDINARY + [nighttime_with_daytime_errors(minute) for minute in range(5)]
     assert score(train(five), BROKEN_ERRORS) < THRESHOLD
@@ -129,9 +157,10 @@ def test_un_point_a_l_ecart_demande_trois_ou_quatre_coupes():
     assert cuts(score(model, ORDINARY[0]), 92) > 5.5
 
 
-def test_defaut_une_minute_hors_de_toute_plage_n_est_pas_signalee():
+def test_une_minute_hors_de_toute_plage_connue_score_un():
+    """docstring de scores : « A value past the range its metric was trained on scores one »."""
     model = train(ROWS)
-    assert score(model, [1e6, 1e6, 1e6]) > THRESHOLD
+    assert score(model, [1e6, 1e6, 1e6]) == 1.0
 
 
 def test_au_dessus_d_un_demi_le_point_a_demande_moins_de_coupes_que_la_foule():
@@ -154,24 +183,25 @@ def test_le_score_est_un_rang_entre_zero_et_un():
     assert all(0 < score(model, row) < 1 for row in ROWS)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : « the only real knob is the size of the forest ». Sur ces données, de "
-        "10 à 500 arbres, les minutes signalées ne changent pas ; le seuil, lui, les "
-        "fait passer de 43 à 2 entre 0,5 et 0,65. La molette réelle est le seuil, que "
-        "la docstring d'anomalies laisse d'ailleurs à l'appelant"
-    ),
-)
-def test_infirme_la_taille_de_la_foret_est_la_seule_vraie_molette():
-    by_size = {trees: anomalies(train(ROWS, trees=trees), ROWS, THRESHOLD) for trees in (10, 50, 500)}
-    assert len({tuple(flagged) for flagged in by_size.values()}) > 1
-
-
-def test_constat_le_seuil_change_tout_la_taille_de_la_foret_rien():
+def test_la_molette_est_le_seuil_pas_la_taille_de_la_foret():
+    """docstring : « the knob that changes what rings is the threshold, not the size of the forest »."""
     model = train(ROWS)
     assert [len(anomalies(model, ROWS, t)) for t in (0.5, 0.55, 0.6, 0.65)] == [43, 7, 4, 2]
     assert all(anomalies(train(ROWS, trees=t), ROWS, THRESHOLD) == [90, 91] for t in (10, 50, 500))
+
+
+def test_n1_signale_la_minute_que_n0_ne_voit_dans_aucune_serie():
+    """
+    docstring : « night-time traffic with daytime errors is a minute whose
+    values each sit inside the range the service has known, and whose
+    combination does not ». Le pendant de ce test est dans `n0.test.py` :
+    `test_une_minute_hors_norme_par_sa_seule_combinaison_ne_sonne_dans_aucune_serie`.
+    """
+    rows = combinaison_inhabituelle()
+    # Aucune des trois séries ne sort de sa propre fenêtre glissante.
+    assert [v.index for metric in range(3) for v in n0_anomalies([row[metric] for row in rows])] == []
+    # La forêt, elle, voit la combinaison.
+    assert MINUTE_COMBINEE in anomalies(train(rows), rows, THRESHOLD)
 
 
 def test_le_seuil_est_a_vous():
@@ -227,7 +257,7 @@ def test_production_aucune_ligne_leve_une_ligne_vaut_un_demi():
 
 
 def test_production_une_valeur_manquante_est_acceptee_et_le_reste_tient():
-    """scikit-learn 1.7 accepte les NaN : la minute [NaN, 1, 1] ressort, les minutes cassées aussi. (JavaScript : DÉFAUT.)"""
+    """scikit-learn 1.7 accepte les NaN : la minute [NaN, 1, 1] ressort, les minutes cassées aussi ; en JavaScript, un NaN sort la minute de toute plage connue et la fait scorer un."""
     rows = ROWS[:-1] + [[float("nan"), 1.0, 1.0]]
     assert anomalies(train(rows), rows, THRESHOLD) == [90, 91]
 
@@ -239,7 +269,7 @@ def test_production_score_egal_au_seuil_n_est_pas_signale():
     assert 90 in anomalies(model, ROWS, exact - 1e-12)
 
 
-def test_defaut_quatre_mille_six_cents_minutes_se_jugent_en_moins_de_deux_secondes():
+def test_production_quatre_mille_six_cents_minutes_se_jugent_dans_une_borne_large():
     rng = random.Random(0)
     rows = [[rng.gauss(1000, 50), rng.gauss(10, 1), rng.gauss(130, 10)] for _ in range(4600)]
     model = train(rows)

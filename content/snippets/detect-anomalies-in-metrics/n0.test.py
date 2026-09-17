@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 import n0
-from n0 import anomalies, scan
+from n0 import anomalies, episodes, scan
 
 RESTING = 1200
 
@@ -52,6 +52,43 @@ def mean_std_scan(series, window, threshold=3.5, include_point=False):
         if abs(series[index] - mean) > threshold * spread:
             flagged.append(index)
     return flagged
+
+
+# Une série où chaque métrique reste dans sa propre fenêtre glissante, et où
+# une seule minute a une combinaison que l'exploitation n'a jamais vue. Le
+# trafic monte et redescend en boucle, les erreurs et la latence le suivent ;
+# à la minute MINUTE_COMBINEE, le trafic est au sommet et les erreurs au
+# plancher. La même série est construite à l'identique dans n1.test.py.
+MINUTE_COMBINEE = 140
+
+
+def wobble(minute: int, metric: int) -> float:
+    """Un petit écart déterministe, entre moins un demi et un demi ; le même qu'en n1.test.py."""
+    step = minute * (0.6180339887498949 + 0.1 * metric)
+    return step - math.floor(step) - 0.5
+
+
+def _trafic(minute: int, periode: int = 40) -> float:
+    demi = periode // 2
+    phase = minute % periode
+    niveau = phase / demi if phase < demi else (periode - phase) / demi
+    return 300 + 700 * niveau
+
+
+def combinaison_inhabituelle() -> list[list[float]]:
+    """Trafic, erreurs, latence sur deux cents minutes ; une seule minute déphasée."""
+    rows = []
+    for minute in range(200):
+        trafic = _trafic(minute)
+        rows.append([
+            trafic + 20 * wobble(minute, 0),
+            trafic / 100 + 0.2 * wobble(minute, 1),
+            60 + trafic / 16 + 2 * wobble(minute, 2),
+        ])
+    # Le sommet du trafic avec les erreurs du creux : chaque valeur est connue,
+    # la combinaison ne l'est pas.
+    rows[MINUTE_COMBINEE][1] = 3.0 + 0.2 * wobble(MINUTE_COMBINEE, 1)
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -185,28 +222,46 @@ def test_le_facteur_1_4826_met_l_ecart_absolu_median_a_l_echelle_d_un_ecart_type
     assert scan(alternating)[0].limit == pytest.approx(3.5 * 1.4826)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : « so that a threshold of 3.5 keeps the meaning it has everywhere "
-        "else ». Sur du bruit gaussien pur, 3,5 écarts types devraient signaler 0,047 % "
-        "des points ; avec la fenêtre de 24 par défaut, l'écart absolu médian estimé sur "
-        "24 points est si bruité que 0,75 % des points sont signalés, seize fois plus, "
-        "soit une dizaine d'alertes par jour sur une métrique saine à la minute"
-    ),
-)
-def test_infirme_le_seuil_de_3_5_garde_son_sens_sur_une_fenetre_de_24():
+def test_le_seuil_de_3_5_signale_bien_plus_que_sur_une_loi_normale():
+    """
+    Commentaire de NORMAL_SCALE : « Estimated on a short window it is noisy:
+    pure Gaussian noise crosses 3.5 of these far more often than it crosses 3.5
+    true standard deviations, and the tests measure how often. » Entre 0,5 % et
+    1 % à la fenêtre de 24, plus de 2 % à 12 (la fenêtre de l'essai), contre
+    0,047 % pour 3,5 écarts types d'une loi normale.
+    """
     noise = gaussian_noise(20000)
     nominal = 2 * (1 - statistics.NormalDist().cdf(3.5))
     rate = len(anomalies(noise)) / (len(noise) - 24)
-    assert rate < 2 * nominal
-
-
-def test_constat_taux_de_fausses_alertes_sur_bruit_gaussien():
-    """Mesure de l'infirmation précédente : entre 0,5 % et 1 % à 24, plus de 2 % à 12 (la fenêtre de l'essai)."""
-    noise = gaussian_noise(20000)
-    assert 0.005 < len(anomalies(noise)) / (len(noise) - 24) < 0.01
+    assert 0.005 < rate < 0.01
+    assert rate > 10 * nominal
     assert len(anomalies(noise, window=12)) / (len(noise) - 12) > 0.02
+
+
+def test_une_journee_de_bruit_ne_produit_aucun_episode_aux_reglages_recommandes():
+    """
+    Docstring : « a run has to hold for `consecutive` points before it counts,
+    which is what keeps the noise of a healthy metric off the phone ».
+    Sept jours de bruit à la minute, réglages par défaut.
+    """
+    noise = gaussian_noise(1440 * 7)
+    # Le tableau de bord voit une dizaine de points par jour…
+    assert 7 * 5 < len(anomalies(noise)) < 7 * 25
+    # …le téléphone, un épisode pour la semaine entière.
+    assert len(episodes(noise)) <= 1
+    # Témoin : à un point consécutif, tous les points signalés sont couverts.
+    assert sum(e.length for e in episodes(noise, consecutive=1)) == len(anomalies(noise))
+
+
+def test_une_marche_franche_ne_fait_qu_un_episode():
+    """Docstring : « a run is reported once, not once per minute, which is what keeps one step change from paging a dozen times »."""
+    step = [100.0] * 200 + [300.0] * 200
+    assert len(anomalies(step)) > 10  # une douzaine de points
+    found = episodes(step)
+    assert len(found) == 1
+    assert found[0].start == 200 and found[0].length == len(anomalies(step))
+    assert found[0].opened_by.value == 300.0
+    assert found[0].worst.deviation > found[0].worst.limit
 
 
 def test_une_serie_plus_courte_que_la_fenetre_ne_recoit_aucun_verdict():
@@ -251,26 +306,15 @@ def test_deux_executions_rendent_les_memes_verdicts():
     assert scan(DRIFTING) == scan(list(DRIFTING))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring N1 et le verdict disent qu'aucun seuil sur une série "
-        "unique, « N0's included », ne sonnera pour la minute de trafic de nuit à "
-        "erreurs de jour. Dans la série des tests N1, où cette minute suit la nuit, N0 "
-        "signale les erreurs aux minutes 90 et 91, et le trafic à la minute 91 : la "
-        "fenêtre glissante juge contre les minutes précédentes, pas contre la plage de "
-        "toute l'exploitation"
-    ),
-)
-def test_infirme_n0_ne_sonne_pas_pour_les_minutes_que_n1_signale():
-    def wobble(minute, metric):
-        step = minute * (0.6180339887498949 + 0.1 * metric)
-        return step - math.floor(step) - 0.5
-    day = [[1000 + 80 * wobble(m, 0), 10 + wobble(m, 1), 130 + 10 * wobble(m, 2)] for m in range(45)]
-    night = [[300 + 80 * wobble(m, 3), 3 + wobble(m, 4), 60 + 10 * wobble(m, 5)] for m in range(45)]
-    rows = day + night + [[320.0, 9.6, 62.0], [980.0, 9.8, 63.0]]
+def test_une_minute_hors_norme_par_sa_seule_combinaison_ne_sonne_dans_aucune_serie():
+    """
+    verdict : « la minute dont chaque valeur est connue et dont seule la
+    combinaison ne l'est pas ». Le pendant de ce test est dans `n1.test.py` :
+    `test_n1_signale_la_minute_que_n0_ne_voit_dans_aucune_serie`.
+    """
+    rows = combinaison_inhabituelle()
     flagged = {v.index for metric in range(3) for v in anomalies([row[metric] for row in rows])}
-    assert not flagged & {90, 91}
+    assert MINUTE_COMBINEE not in flagged
 
 
 # ---------------------------------------------------------------------------
@@ -315,20 +359,22 @@ def test_production_un_point_manquant_nan_n_est_jamais_signale():
     assert [v.index for v in anomalies(series)] == [40]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : une métrique de comptage nulle plus d'une minute sur deux (des "
-        "erreurs, typiquement) a un écart absolu médian nul : chaque erreur isolée "
-        "sonne. Le besoin est d'être réveillé « pas le reste du temps »"
-    ),
-)
-def test_defaut_une_metrique_de_comptage_presque_toujours_nulle_sonne_a_chaque_unite():
+def test_une_metrique_de_comptage_presque_toujours_nulle_demande_min_spread():
+    """
+    Docstring de `scan` : « A count that is zero most minutes, such as errors,
+    has a median absolute deviation of zero, and every single error would ring:
+    pass 1 for it. »
+    """
     errors = [0.0] * 30 + [1.0] + [0.0] * 5 + [1.0] + [0.0] * 5
-    assert anomalies(errors) == []
+    assert [v.index for v in anomalies(errors)] == [30, 36]
+    # Avec l'écart minimal que la docstring annonce, l'erreur isolée ne sonne plus.
+    assert anomalies(errors, min_spread=1.0) == []
+    # Témoin : une vraie rafale d'erreurs sonne encore.
+    burst = [0.0] * 30 + [40.0] * 5
+    assert [v.index for v in anomalies(burst, min_spread=1.0)] == [30, 31, 32, 33, 34]
 
 
 def test_production_une_fenetre_nulle_leve_une_erreur_de_valeur():
-    """Python lève StatisticsError (sous-classe de ValueError) ; le JavaScript, lui, rend des NaN (DÉFAUT côté js)."""
+    """Une fenêtre de zéro point est refusée dans les deux langages : `ValueError` en Python, `RangeError` en JavaScript."""
     with pytest.raises(ValueError):
         scan([1.0, 2.0, 3.0], window=0)

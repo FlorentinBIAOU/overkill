@@ -15,6 +15,15 @@
  * whoever was woken up to reconstruct the reasoning before they can act;
  * "measured 4800, usual 1200, allowed up to 1511" is already half the
  * diagnosis, and it is the same three numbers the threshold itself used.
+ *
+ * One point over the limit is not an alert. On pure noise, one point in a
+ * hundred to two in a hundred crosses the limit at the default settings: on a
+ * metric sampled every minute that is ten to twenty pages a day, per metric,
+ * for nothing. And a real step change crosses it for as many minutes as the
+ * window takes to swallow it, which is a dozen pages for one incident.
+ * `episodes` is what a pager should read: a run has to hold for `consecutive`
+ * points before it counts, and an episode already open is not paged again.
+ * `anomalies` stays, point by point, for a dashboard.
  */
 
 // Scaling that puts the median absolute deviation on the same footing as a
@@ -65,7 +74,47 @@ export function scan(series, { window = 24, threshold = 3.5, minSpread = 0 } = {
   return verdicts;
 }
 
-/** The subset a pager should see, each one still carrying its numbers. */
+/**
+ * Every point over the limit, each one still carrying its numbers.
+ *
+ * This is the dashboard view, not the pager view: at the default settings a
+ * healthy metric puts one point in a hundred here. `episodes` is the pager
+ * view.
+ */
 export function anomalies(series, options = {}) {
   return scan(series, options).filter((verdict) => verdict.isAnomaly);
+}
+
+/**
+ * What a pager should see: one entry per run of points over the limit.
+ *
+ * Two rules, and they are the ones every on-call rota ends up adding. A run has
+ * to hold for `consecutive` points before it counts, which is what keeps the
+ * noise of a healthy metric off the phone. And a run is reported once, not once
+ * per minute, which is what keeps one step change from paging a dozen times.
+ *
+ * `consecutive: 1` covers every point of `anomalies`, runs of them grouped into
+ * one episode each.
+ *
+ * Each episode carries `start`, `length`, the verdict that `openedBy` it and
+ * the `worst` point of the run, with the numbers that judged them.
+ */
+export function episodes(series, options = {}) {
+  const { consecutive = 3, ...rest } = options;
+  if (consecutive < 1) throw new RangeError('consecutive must be at least one point');
+  const found = [];
+  let run = [];
+  const close = () => {
+    if (run.length >= consecutive) {
+      const worst = run.reduce((a, b) => (b.deviation - b.limit > a.deviation - a.limit ? b : a));
+      found.push({ start: run[0].index, length: run.length, openedBy: run[0], worst });
+    }
+    run = [];
+  };
+  for (const verdict of scan(series, rest)) {
+    if (verdict.isAnomaly) run.push(verdict);
+    else close();
+  }
+  close();
+  return found;
 }

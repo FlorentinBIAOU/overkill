@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { anomalies as n0Anomalies } from './n0.js';
 import { anomalies, score, train } from './n1.js';
 
 const THRESHOLD = 0.65;
@@ -33,6 +34,31 @@ function averageDepth(n) {
 }
 const cuts = (s, n) => -Math.log2(s) * averageDepth(n);
 
+// La même série que dans n0.test.js, construite à l'identique : chaque métrique
+// reste dans sa propre fenêtre glissante, et une seule minute a une combinaison
+// que l'exploitation n'a jamais vue.
+const MINUTE_COMBINEE = 140;
+
+const trafic = (minute, periode = 40) => {
+  const demi = periode / 2;
+  const phase = minute % periode;
+  const niveau = phase < demi ? phase / demi : (periode - phase) / demi;
+  return 300 + 700 * niveau;
+};
+
+function combinaisonInhabituelle() {
+  const rows = Array.from({ length: 200 }, (_, minute) => {
+    const t = trafic(minute);
+    return [
+      t + 20 * wobble(minute, 0),
+      t / 100 + 0.2 * wobble(minute, 1),
+      60 + t / 16 + 2 * wobble(minute, 2),
+    ];
+  });
+  rows[MINUTE_COMBINEE][1] = 3.0 + 0.2 * wobble(MINUTE_COMBINEE, 1);
+  return rows;
+}
+
 // ---------------------------------------------------------------------------
 // Point de rupture
 // ---------------------------------------------------------------------------
@@ -53,7 +79,7 @@ test('point de rupture : rien dans la sortie ne dit que quelque chose a changé'
   assert.equal(typeof score(train(HABITUATED), BROKEN_ERRORS), 'number');
 });
 
-test('constat : une seule minute suffit déjà', () => {
+test('une seule minute suffit déjà', () => {
   assert.ok(score(train([...ORDINARY, nighttimeWithDaytimeErrors(0)]), BROKEN_ERRORS) < THRESHOLD);
 });
 
@@ -105,19 +131,22 @@ test('le score est un rang entre zéro et un', () => {
   assert.ok(ROWS.every((row) => score(model, row) > 0 && score(model, row) < 1));
 });
 
-test('INFIRMÉ : la taille de la forêt est la seule vraie molette', async () => {
-  await assert.rejects(async () => {
-    const bySize = [50, 100, 500].map((trees) => anomalies(train(ROWS, { trees }), ROWS, THRESHOLD).join(','));
-    assert.ok(new Set(bySize).size > 1);
-  });
-});
-
-test('constat : le seuil change tout, la taille de la forêt presque rien', () => {
+test('la molette est le seuil, pas la taille de la forêt', () => {
   const model = train(ROWS);
   assert.deepEqual([0.5, 0.55, 0.6, 0.65].map((t) => anomalies(model, ROWS, t).length), [52, 10, 4, 2]);
   for (const trees of [50, 100, 500]) assert.deepEqual(anomalies(train(ROWS, { trees }), ROWS, THRESHOLD), [90, 91]);
   // À dix arbres, une minute ordinaire de plus passe le seuil.
   assert.deepEqual(anomalies(train(ROWS, { trees: 10 }), ROWS, THRESHOLD), [70, 90, 91]);
+});
+
+test('n1 signale la minute que n0 ne voit dans aucune série', () => {
+  // « night-time traffic with daytime errors is a minute whose values each sit
+  // inside the range the service has known, and whose combination does not ».
+  // Le pendant de ce test est dans n0.test.js.
+  const rows = combinaisonInhabituelle();
+  const parSerie = [0, 1, 2].flatMap((metric) => n0Anomalies(rows.map((row) => row[metric])));
+  assert.deepEqual(parSerie, []);
+  assert.ok(anomalies(train(rows), rows, THRESHOLD).includes(MINUTE_COMBINEE));
 });
 
 test('le seuil est à vous', () => {

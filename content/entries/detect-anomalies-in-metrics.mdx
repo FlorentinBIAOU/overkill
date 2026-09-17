@@ -3,7 +3,7 @@ id: detect-anomalies-in-metrics
 family: predict
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
@@ -22,8 +22,8 @@ rungs:
   - level: N0
     available: true
     name:
-      fr: "Seuil robuste sur médiane et écart absolu médian, en fenêtre glissante"
-      en: "Robust threshold on median and median absolute deviation, over a sliding window"
+      fr: "Seuil robuste sur médiane et écart absolu médian, en fenêtre glissante, avec règle de persistance"
+      en: "Robust threshold on median and median absolute deviation over a sliding window, with a persistence rule"
     cost: nul
     latency: "<1 ms"
     risks:
@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/detect-anomalies-in-metrics/n0.js
       verification: executed
     breaking_point:
-      fr: "Une dérive lente entre dans la fenêtre et devient la nouvelle normale. Le test fait grimper la métrique de quarante points par minute pendant plus d’une heure : chaque pas reste loin en deçà de l’écart toléré et la fenêtre avale les précédents, si bien que l’écart à l’habituel approche la limite sans jamais la franchir. Pas un seul point n’est signalé, et la série finit à plus du triple de son niveau de repos. La même hausse totale livrée d’un coup est signalée dès sa première minute, et pour une douzaine de minutes seulement : elle aussi devient la nouvelle normale."
-      en: "A slow drift walks into the window and becomes the new normal. The test lifts the metric by forty a minute for over an hour: every step sits well inside the tolerated gap and the window swallows the ones before it, so the gap to the usual value comes close to the limit without ever crossing it. Not one point is ever flagged, and the series ends at more than three times its resting level. The same total rise delivered in a single step is caught on its first minute, and for a dozen minutes only: it too becomes the new normal."
+      fr: "Une dérive lente entre dans la fenêtre et devient la nouvelle normale. Le test fait grimper la métrique de quarante points par minute pendant plus d’une heure : chaque pas reste loin en deçà de l’écart toléré et la fenêtre avale les précédents, si bien que l’écart à l’habituel approche la limite sans jamais la franchir. Pas un seul point n’est signalé, et la série finit à plus du triple de son niveau de repos. La même hausse totale livrée d’un coup est signalée dès sa première minute, et pour une douzaine de minutes seulement : elle aussi devient la nouvelle normale. Une montée quotidienne rapide, un lundi matin après une nuit de dimanche, sonne pour la même raison : il n’y a pas de saisonnalité ici, seulement une fenêtre."
+      en: "A slow drift walks into the window and becomes the new normal. The test lifts the metric by forty a minute for over an hour: every step sits well inside the tolerated gap and the window swallows the ones before it, so the gap to the usual value comes close to the limit without ever crossing it. Not one point is ever flagged, and the series ends at more than three times its resting level. The same total rise delivered in a single step is caught on its first minute, and for a dozen minutes only: it too becomes the new normal. A fast daily climb, a Monday morning after a Sunday night, rings for the same reason: there is no seasonality here, only a window."
     escalate_when:
       fr: "Vos post-mortem se terminent sur le même constat : aucune métrique ne sortait de sa propre fenêtre, seule leur combinaison était inhabituelle."
       en: "Your post-mortems keep ending the same way: no metric left its own window, and only the combination was unusual."
@@ -94,8 +94,8 @@ rungs:
       en: "Two calls on the same window can return two different verdicts, and an alert nobody can replay is an alert the on-call rota learns to ignore. On top of that it is one call a minute per metric, for a decision the comparison of two numbers already settles."
 
 verdict_rationale:
-  fr: "N0 est le seul niveau dont la sortie est le raisonnement : la valeur mesurée, ce que la fenêtre appelait habituel, l’écart, et l’écart qui était toléré. C’est la moitié du diagnostic livrée avec l’alerte, sans coût marginal, et le test la vérifie nombre par nombre. N1 juge les métriques ensemble, contre tout son entraînement, là où N0 juge chaque série contre sa propre fenêtre : il voit la minute dont chaque valeur est connue et dont seule la combinaison ne l’est pas, et le paie en rendant un rang entre zéro et un : on apprend que la minute était inhabituelle, pas en quoi."
-  en: "N0 is the only level whose output is the reasoning: the measured value, what the window called usual, the gap, and the gap that was allowed. That is half the diagnosis delivered with the alert, at no marginal cost, and the test checks it number by number. N1 judges the metrics together, against everything it was trained on, where N0 judges each series against its own window: it sees the minute whose every value is familiar and whose combination is not, and pays for it by returning a rank between zero and one: you learn that the minute was unusual, not how."
+  fr: "N0 est le seul niveau dont la sortie est le raisonnement : la valeur mesurée, ce que la fenêtre appelait habituel, l’écart, et l’écart qui était toléré. C’est la moitié du diagnostic livrée avec l’alerte, sans coût marginal, et le test la vérifie nombre par nombre. Mais ne branchez pas `anomalies` sur un téléphone : aux réglages par défaut, une métrique saine échantillonnée à la minute y met une dizaine de points par jour, le test le mesure, et une marche franche en met une douzaine pour un seul incident. C’est `episodes` qu’un téléphone lit : il faut trois minutes consécutives hors limite pour qu’un épisode compte, et un épisode déjà ouvert ne sonne pas une seconde fois — sur une semaine de bruit, le test compte au plus un épisode. Ce détecteur sert de toute façon mieux un tableau de bord qu’un réveil : le livre SRE de Google, cité plus bas, conseille d’alerter sur les symptômes que voit l’utilisateur plutôt que sur l’inhabituel. N1 juge les métriques ensemble, contre tout son entraînement, là où N0 juge chaque série contre sa propre fenêtre : il voit la minute dont chaque valeur est connue et dont seule la combinaison ne l’est pas — le test la construit et montre que les trois séries, prises une à une, ne sonnent pas — et le paie en rendant un rang entre zéro et un : on apprend que la minute était inhabituelle, pas en quoi."
+  en: "N0 is the only level whose output is the reasoning: the measured value, what the window called usual, the gap, and the gap that was allowed. That is half the diagnosis delivered with the alert, at no marginal cost, and the test checks it number by number. But do not wire `anomalies` to a phone: at the default settings a healthy metric sampled every minute puts a dozen points a day in there, as the test measures, and a plain step change puts a dozen in for one incident. `episodes` is what a phone reads: a run has to hold for three minutes before it counts, and an open episode is not paged twice — over a week of noise the test counts at most one episode. This detector serves a dashboard better than an alarm clock anyway: Google's SRE book, linked below, advises alerting on the symptoms a user sees rather than on the unusual. N1 judges the metrics together, against everything it was trained on, where N0 judges each series against its own window: it sees the minute whose every value is familiar and whose combination is not — the test builds that minute and shows the three series, taken one at a time, staying silent — and pays for it by returning a rank between zero and one: you learn that the minute was unusual, not how."
 
 further_reading:
   - label: "Wikipedia — Median absolute deviation, et le facteur qui la met à l’échelle d’un écart type"
