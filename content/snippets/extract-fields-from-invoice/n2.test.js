@@ -22,7 +22,6 @@ import {
   boxesFor,
   extractFields,
 } from './n2.js';
-import essai from '../../tryouts/frozen/extract-fields-from-invoice.js';
 
 const LINES = [
   'NORD FOURNITURES SAS',
@@ -247,55 +246,6 @@ test('production : des lignes nulles dans la réponse ne font pas lever', async 
   assert.equal((await extractFields(INVOICE, model)).total.value, 92.4);
 });
 
-// ---------------------------------------------------------------------------
-// L'essai de la fiche (forme figée)
-// ---------------------------------------------------------------------------
-
-const input = (cas, lang) => (typeof cas.input === 'string' ? cas.input : cas.input[lang]);
-const run = (index, lang) => essai.run(input(essai.cases[index], lang), lang, essai.cases[index]);
-
-test('essai : la facture de fournitures, trois champs lus et aucun en relecture', async () => {
-  for (const lang of ['fr', 'en']) {
-    const sortie = await run(0, lang);
-    assert.deepEqual(sortie.rows.rows.map((r) => r[3]), [lang === 'fr' ? 'non' : 'no', lang === 'fr' ? 'non' : 'no', lang === 'fr' ? 'non' : 'no']);
-  }
-  assert.equal((await run(0, 'fr')).rows.rows[2][1], '92,40');
-  assert.equal((await run(0, 'en')).rows.rows[2][1], '92.40');
-});
-
-test('essai : le seuil relevé à 0,99 envoie les trois champs en relecture', async () => {
-  const sortie = await run(1, 'fr');
-  assert.ok(sortie.rows.rows.every((r) => r[3].caught === true));
-});
-
-test('essai : l’en-tête désigné comme montant ne rend rien et part en relecture', async () => {
-  const [, , total] = (await run(2, 'fr')).rows.rows;
-  assert.equal(total[1], '— rien lu');
-  assert.equal(total[3].caught, true);
-});
-
-test('essai : une passe tombe, la seconde répond', async () => {
-  assert.match((await run(3, 'fr')).note, /^2 passes/);
-});
-
-test('essai : le document de 121 lignes est refusé avant la première passe', async () => {
-  const sortie = await run(4, 'fr');
-  assert.equal(sortie.verdict.label, 'Refusé avant la première passe');
-  assert.equal(essai.level, 'N2');
-});
-
-test('essai : la facture à acompte rend 120,00 sans drapeau, et le cas est marqué en échec', async () => {
-  const cas = essai.cases[5];
-  assert.equal(cas.fails, true);
-  const [, , total] = (await run(5, 'fr')).rows.rows;
-  assert.deepEqual(total, ['Montant dû', '120,00', '0,96', 'non']);
-});
-
-test('INFIRMÉ : l’essai dit « Le montant dû est de 360,00 », la facture de l’essai porte « Solde à régler 240,00 »', async () => {
-  const cas = essai.cases[5];
-  assert.match(cas.why.fr, /Le montant dû est de 360,00/);
-  await assert.rejects(async () => {
-    const solde = input(cas, 'fr').split('\n').find((l) => l.startsWith('Solde à régler'));
-    assert.match(solde, /360,00/);
-  });
-});
+// L'essai de cette fiche a été retiré quand elle est passée en brouillon :
+// content/tryouts/frozen/extract-fields-from-invoice.js n'existe plus, et les
+// sept tests qui l'exerçaient sont partis avec lui.
