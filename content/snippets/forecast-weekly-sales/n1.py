@@ -16,6 +16,13 @@ the columns of the design matrix on comparable scales, and it makes the
 coefficient readable on its own: it is the growth per cycle, per year with
 the default 52-week season. Less than one full cycle of history cannot tell
 the trend from the season, so it is refused.
+
+`season_length` need not be a whole number: this is trigonometry, nothing is
+indexed by week. A year is 365.25 / 7 = 52.18 weeks, and the ISO calendar has
+a fifty-third week every five or six years, so over three years a Christmas
+peak drifts by about a week. Pass 365.25 / 7 to hold it in place — which is
+what Forecasting: Principles and Practice recommends for weekly data, and
+which N0, indexing by `week % season_length`, cannot do.
 """
 
 import math

@@ -55,3 +55,11 @@ Deux dépendances sont entrées dans le dépôt pour l'échelle de
 (JavaScript, en `devDependencies`). Le niveau N2 de `fuzzy-match-company-names`
 est passé en indisponible et ses extraits supprimés ; le manifeste est
 régénéré.
+
+## Groupe 2 — verdict contredit, modèle inadapté, réforme
+
+- **forecast-weekly-sales** — verdict réécrit sur les trois mesures (croissance,
+  changement de niveau, pic de Noël), test comparatif N0/N1 ajouté dans les deux
+  langages, série témoin hors de la forme du modèle, saison fractionnaire,
+  lissage exponentiel nommé et mesuré en sources. Reste : le lissage exponentiel
+  n'est pas devenu un niveau — raison écrite dans la vérification.

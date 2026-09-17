@@ -514,3 +514,4 @@ echarpz
 zzz
 suggesteur
 elasticsearch
+statsmodels

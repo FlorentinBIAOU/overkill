@@ -41,6 +41,14 @@ n1.py: |
   Moins d'un cycle complet d'historique ne sépare pas la tendance de la
   saison : il est refusé.
 
+  La saison n'a pas à être un nombre entier de semaines : c'est de la
+  trigonométrie, rien n'est indexé par semaine. Une année fait 365,25 / 7 =
+  52,18 semaines, et le calendrier ISO en compte cinquante-trois tous les cinq
+  ou six ans, si bien qu'un pic de Noël glisse d'environ une semaine sur trois
+  ans. Passez 365,25 / 7 pour le tenir en place — ce que recommande
+  Forecasting: Principles and Practice pour des données hebdomadaires, et ce
+  que N0, qui indexe par « semaine modulo saison », ne peut pas faire.
+
 n1.js: |
   Prévoir les ventes hebdomadaires avec un modèle linéaire sur des variables
   calendaires.
@@ -62,3 +70,11 @@ n1.js: |
   croissance par cycle, donc par an avec la saison de 52 semaines par défaut.
   Moins d'un cycle complet d'historique ne sépare pas la tendance de la
   saison : il est refusé.
+
+  La saison n'a pas à être un nombre entier de semaines : c'est de la
+  trigonométrie, rien n'est indexé par semaine. Une année fait 365,25 / 7 =
+  52,18 semaines, et le calendrier ISO en compte cinquante-trois tous les cinq
+  ou six ans, si bien qu'un pic de Noël glisse d'environ une semaine sur trois
+  ans. Passez 365,25 / 7 pour le tenir en place — ce que recommande
+  Forecasting: Principles and Practice pour des données hebdomadaires, et ce
+  que N0, qui indexe par « semaine modulo saison », ne peut pas faire.

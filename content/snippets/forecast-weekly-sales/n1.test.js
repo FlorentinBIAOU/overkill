@@ -49,6 +49,24 @@ const REGIME_CHANGE = HISTORY.map((value, week) => (week >= 136 ? value * 0.7 : 
 // Quatre ans, rupture au début de la quatrième année : un cycle complet d'après rupture.
 const REGIME_CHANGE_ONE_CYCLE_AFTER = Array.from({ length: 4 * SEASON }, (_, week) => growingShop(week) * (week >= 156 ? 0.7 : 1));
 
+/**
+ * Une boulangerie, et rien de la forme du modèle : un pic de Noël étroit sur
+ * deux semaines, une semaine fermée en août, et un bruit multiplicatif.
+ *
+ * C'est le témoin de `growingShop`, qui est, lui, exactement une constante, une
+ * droite et deux harmoniques — la forme que les moindres carrés décrivent par
+ * construction.
+ */
+function bakery(week) {
+  const inYear = week % SEASON;
+  if (inYear === 31) return 0; // la semaine de fermeture
+  const peak = inYear === 51 ? 900 : inYear === 50 ? 400 : 0;
+  return (800 + 4 * week + peak) * (1 + (0.05 * ((week % 5) - 2)) / 2);
+}
+
+const BAKERY_UNTIL_CHRISTMAS = Array.from({ length: 155 }, (_, week) => bakery(week));
+const CHRISTMAS_IN_TRUTH = bakery(155);
+
 // ---------------------------------------------------------------------------
 // Point de rupture
 // ---------------------------------------------------------------------------
@@ -104,9 +122,44 @@ test("point de rupture : l'essai du concurrent prévoit plus de mille et lit enc
 // Autres affirmations du niveau
 // ---------------------------------------------------------------------------
 
-test('prévoit la semaine suivante à deux pour cent près', () => {
+test('prévoit la semaine suivante à deux pour cent près, sur une série de sa propre forme', () => {
+  // `growingShop` est une constante, une droite et deux harmoniques : la forme
+  // exacte du modèle. Ce test montre que les moindres carrés retrouvent leurs
+  // propres coefficients — pas qu'ils prévoient des ventes.
   const predicted = forecast(fit(HISTORY))[0];
   assert.ok(Math.abs(predicted - NEXT_WEEK_IN_TRUTH) / NEXT_WEEK_IN_TRUTH < 0.02);
+});
+
+test('verdict : sur un changement de niveau, N0 bat N1', () => {
+  // « sur un changement de niveau — un concurrent qui ouvre — N0 se recale en
+  // quatre semaines et N1 se trompe de près d'un tiers, en lisant encore une
+  // croissance ».
+  const truth = growingShop(3 * SEASON) * 0.7;
+  const n0 = forecastN0(REGIME_CHANGE)[0];
+  const n1 = forecast(fit(REGIME_CHANGE))[0];
+  assert.equal(Math.round(truth), 1025);
+  assert.equal(Math.round(n0), 995);
+  assert.equal(Math.round(n1), 1310);
+  assert.ok(Math.abs(n0 - truth) / truth < 0.04);
+  assert.ok((n1 - truth) / truth > 0.27);
+  // Et le coefficient de croissance lu sur un commerce qui a perdu 30 % :
+  assert.ok(fit(REGIME_CHANGE).coefficients[1] > 80);
+  // Témoin : sur la croissance régulière, N1 gagne, et largement.
+  assert.ok(Math.abs(forecast(fit(HISTORY))[0] - NEXT_WEEK_IN_TRUTH)
+    < Math.abs(forecastN0(HISTORY)[0] - NEXT_WEEK_IN_TRUTH));
+});
+
+test('verdict : sur une série hors de la forme du modèle, N0 bat N1', () => {
+  // « sur un pic de Noël de deux semaines, que deux paires d'harmoniques ne
+  // savent pas dessiner, N1 sous-prévoit d'un tiers la semaine où la rupture de
+  // stock coûte le plus ».
+  const n0 = forecastN0(BAKERY_UNTIL_CHRISTMAS)[0];
+  const n1 = forecast(fit(BAKERY_UNTIL_CHRISTMAS))[0];
+  assert.equal(Math.round(CHRISTMAS_IN_TRUTH), 2204);
+  assert.equal(Math.round(n0), 2356);
+  assert.equal(Math.round(n1), 1527);
+  assert.ok(Math.abs(n0 - CHRISTMAS_IN_TRUTH) / CHRISTMAS_IN_TRUTH < 0.08);
+  assert.ok((CHRISTMAS_IN_TRUTH - n1) / CHRISTMAS_IN_TRUTH > 0.3);
 });
 
 test('les deux langages donnent le même nombre à la sixième décimale', () => {
@@ -124,6 +177,15 @@ test('le coefficient est la croissance par cycle, donc par an avec la saison de 
   const series = Array.from({ length: 104 }, (_, w) => w + 10 * Math.sin((2 * Math.PI * w) / 13));
   assert.ok(close(fit(series, { seasonLength: 13 }).coefficients[1], 13, 1e-6));
   assert.ok(close(fit(Array.from({ length: 104 }, (_, w) => w)).coefficients[1], 52, 1e-6));
+});
+
+test('la saison peut ne pas être un nombre entier de semaines', () => {
+  // « `seasonLength` need not be a whole number […] Pass 365.25 / 7 to hold it
+  // in place — which […] N0, indexing by `week % seasonLength`, cannot do ».
+  const annee = 365.25 / 7;
+  const serie = Array.from({ length: 3 * SEASON }, (_, w) => 800 + 4 * w + 150 * Math.sin((2 * Math.PI * w) / annee));
+  const model = fit(serie, { seasonLength: annee });
+  assert.ok(Math.abs(model.coefficients[1] - 4 * annee) < 1);
 });
 
 test('estime la pente que N0 ignore', () => {

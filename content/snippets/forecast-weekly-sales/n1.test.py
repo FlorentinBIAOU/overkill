@@ -53,6 +53,26 @@ REGIME_CHANGE = [growing_shop(week) * (0.7 if week >= 136 else 1.0) for week in 
 REGIME_CHANGE_ONE_CYCLE_AFTER = [growing_shop(week) * (0.7 if week >= 156 else 1.0) for week in range(4 * SEASON)]
 
 
+
+def bakery(week: int) -> float:
+    """
+    Une boulangerie, et rien de la forme du modèle : un pic de Noël étroit sur
+    deux semaines, une semaine fermée en août, et un bruit multiplicatif.
+
+    C'est le témoin de `growing_shop`, qui est, lui, exactement une constante,
+    une droite et deux harmoniques — la forme que les moindres carrés
+    décrivent par construction.
+    """
+    in_year = week % SEASON
+    if in_year == 31:
+        return 0.0  # la semaine de fermeture
+    peak = 900 if in_year == 51 else (400 if in_year == 50 else 0)
+    return (800 + 4 * week + peak) * (1 + 0.05 * ((week % 5) - 2) / 2)
+
+
+BAKERY_UNTIL_CHRISTMAS = [bakery(week) for week in range(155)]
+CHRISTMAS_IN_TRUTH = bakery(155)
+
 # ---------------------------------------------------------------------------
 # Point de rupture
 # ---------------------------------------------------------------------------
@@ -116,9 +136,47 @@ def test_point_de_rupture_l_essai_du_concurrent_prevoit_plus_de_mille_et_lit_enc
 # ---------------------------------------------------------------------------
 
 
-def test_prevoit_la_semaine_suivante_a_deux_pour_cent_pres():
+def test_prevoit_la_semaine_suivante_a_deux_pour_cent_pres_sur_une_serie_de_sa_propre_forme():
+    """
+    `growing_shop` est une constante, une droite et deux harmoniques : la forme
+    exacte du modèle. Ce test montre que les moindres carrés retrouvent leurs
+    propres coefficients — pas qu'ils prévoient des ventes. Le témoin est
+    `test_verdict_sur_une_serie_hors_de_la_forme_du_modele_n0_bat_n1`.
+    """
     predicted = forecast(fit(HISTORY))[0]
     assert abs(predicted - NEXT_WEEK_IN_TRUTH) / NEXT_WEEK_IN_TRUTH < 0.02
+
+
+def test_verdict_sur_un_changement_de_niveau_n0_bat_n1():
+    """
+    verdict_rationale : « sur un changement de niveau — un concurrent qui ouvre —
+    N0 se recale en quatre semaines et N1 se trompe de près d'un tiers, en lisant
+    encore une croissance ». Le niveau recommandé et celui du dessous, sur le
+    point de rupture du niveau recommandé.
+    """
+    truth = growing_shop(3 * SEASON) * 0.7
+    n0 = forecast_n0(REGIME_CHANGE)[0]
+    n1 = forecast(fit(REGIME_CHANGE))[0]
+    assert round(truth) == 1025 and round(n0) == 995 and round(n1) == 1310
+    assert abs(n0 - truth) / truth < 0.04
+    assert (n1 - truth) / truth > 0.27
+    # Et le coefficient de croissance lu sur un commerce qui a perdu 30 % :
+    assert fit(REGIME_CHANGE)["coefficients"][1] > 80
+    # Témoin : sur la croissance régulière, N1 gagne, et largement.
+    assert abs(forecast(fit(HISTORY))[0] - NEXT_WEEK_IN_TRUTH) < abs(forecast_n0(HISTORY)[0] - NEXT_WEEK_IN_TRUTH)
+
+
+def test_verdict_sur_une_serie_hors_de_la_forme_du_modele_n0_bat_n1():
+    """
+    verdict_rationale : « sur un pic de Noël de deux semaines, que deux paires
+    d'harmoniques ne savent pas dessiner, N1 sous-prévoit d'un tiers la semaine
+    où la rupture de stock coûte le plus ».
+    """
+    n0 = forecast_n0(BAKERY_UNTIL_CHRISTMAS)[0]
+    n1 = forecast(fit(BAKERY_UNTIL_CHRISTMAS))[0]
+    assert round(CHRISTMAS_IN_TRUTH) == 2204 and round(n0) == 2356 and round(n1) == 1527
+    assert abs(n0 - CHRISTMAS_IN_TRUTH) / CHRISTMAS_IN_TRUTH < 0.08
+    assert (CHRISTMAS_IN_TRUTH - n1) / CHRISTMAS_IN_TRUTH > 0.3
 
 
 def test_les_deux_langages_donnent_le_meme_nombre_a_la_sixieme_decimale():
@@ -144,6 +202,20 @@ def test_le_coefficient_est_la_croissance_par_cycle_donc_par_an_avec_la_saison_d
     series = [float(w) + 10 * math.sin(2 * math.pi * w / 13) for w in range(104)]
     assert fit(series, season_length=13)["coefficients"][1] == pytest.approx(13, abs=1e-9)
     assert fit([float(w) for w in range(104)])["coefficients"][1] == pytest.approx(52, abs=1e-6)
+
+
+def test_la_saison_peut_ne_pas_etre_un_nombre_entier_de_semaines():
+    """
+    docstring : « `season_length` need not be a whole number […] Pass
+    365.25 / 7 to hold it in place — which […] N0, indexing by
+    `week % season_length`, cannot do ».
+    """
+    annee = 365.25 / 7
+    serie = [800 + 4 * w + 150 * math.sin(2 * math.pi * w / annee) for w in range(3 * SEASON)]
+    model = fit(serie, season_length=annee)
+    assert model["coefficients"][1] == pytest.approx(4 * annee, abs=1)
+    # N0, lui, indexe par semaine entière : une saison fractionnaire n'a pas de sens.
+    assert all(isinstance(week, int) for week in range(SEASON))
 
 
 def test_estime_la_pente_que_n0_ignore():
