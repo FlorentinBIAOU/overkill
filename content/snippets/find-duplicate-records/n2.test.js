@@ -144,11 +144,14 @@ test('l’encodeur par défaut est multilingue et n’est chargé que sans doubl
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('production : mille fiches dans une borne large', async () => {
+test('production : mille fiches dans la dimension du modèle nommé', async () => {
+  // Cent fois le cas nominal, en dimension 384 — celle du modèle nommé — et
+  // non 32 : la borne doit porter sur ce que la fiche décrit.
   const records = Array.from({ length: 1000 }, (_, i) => ({ name: `Client ${i} ${LETTERS[i % 26]}${LETTERS[(i * 7) % 26]}`, city: 'Paris' }));
   const debut = performance.now();
-  await findDuplicates(records, { encoder: new FakeEncoder(32) });
-  assert.ok(performance.now() - debut < 60_000);
+  await findDuplicates(records, { encoder: new FakeEncoder(384) });
+  // Marge de dix : la borne attrape un effondrement, elle ne mesure pas.
+  assert.ok(performance.now() - debut < 10_000);
 });
 
 test('production : accents décomposés, espaces insécables et casse partent normalisés', async () => {

@@ -7,8 +7,14 @@ encoder maps each record to a dense vector, the mean of the vectors of its
 tokens, and records are compared on those vectors rather than on shared
 letters.
 
-What this rung really costs is not the comparison, it is the deployment:
-weights to download and load, and a process to keep warm.
+Two prices, and the second is the one that grows. The fixed one is the
+deployment: weights to download and load, and a process to keep warm. The
+other is the comparison, and it is quadratic — every pair of the file is
+scored, a thousand records make half a million dot products of three hundred
+and eighty-four numbers, ten thousand make fifty million. Past a few tens of
+thousands of records, block first with the key of rung N0, or reach for an
+approximate index; this snippet does neither, on purpose, because it shows the
+distance and not the search.
 
 The encoder is a parameter with a real default, so the reader sees the loading
 code while the test injects a local double.
@@ -18,6 +24,8 @@ from __future__ import annotations
 
 import math
 import unicodedata
+
+import numpy as np
 
 # A multilingual model, because a customer file is rarely in one language.
 MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -36,8 +44,14 @@ def normalise(text: str | None) -> str:
 
 
 def record_text(record: dict) -> str:
-    """One comparable string per record; an empty cell adds nothing."""
-    return normalise(" ".join(str(value) for value in record.values() if value is not None))
+    """
+    One comparable string per record, columns in a stable order.
+
+    Sorted by column name, so that two exports of the same data give the same
+    text whatever order their columns come in: n-grams taken across a column
+    boundary would otherwise differ. An empty cell adds nothing.
+    """
+    return normalise(" ".join(str(record[key]) for key in sorted(record) if record[key] is not None))
 
 
 def unit(vector) -> list[float]:
@@ -68,11 +82,15 @@ def find_duplicates(records: list[dict], encoder=None, threshold: float = 0.75) 
     if len({len(v) for v in vectors}) != 1 or not all(math.isfinite(x) for v in vectors for x in v):
         raise EncodingFailed("vectors of different sizes, or holding something other than numbers")
 
-    pairs = []
-    for i in range(len(vectors)):
-        for j in range(i + 1, len(vectors)):
-            score = sum(x * y for x, y in zip(vectors[i], vectors[j]))
-            # A hair of tolerance: in floating point, two identical records can score just under 1.0.
-            if score >= threshold - 1e-9:
-                pairs.append((i, j, round(score, 3)))
+    # Every pair at once, as one matrix product. Quadratic all the same — the
+    # matrix has one cell per pair — but not at the speed of a Python loop.
+    matrix = np.array(vectors, dtype=float)
+    scores = matrix @ matrix.T
+    above = np.triu_indices(len(vectors), k=1)
+    # A hair of tolerance: in floating point, two identical records can score just under 1.0.
+    kept = scores[above] >= threshold - 1e-9
+    pairs = [
+        (int(i), int(j), round(float(scores[i, j]), 3))
+        for i, j in zip(above[0][kept], above[1][kept])
+    ]
     return sorted(pairs, key=lambda pair: (-pair[2], pair[0], pair[1]))

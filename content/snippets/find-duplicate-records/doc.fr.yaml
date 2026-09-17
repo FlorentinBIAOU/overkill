@@ -3,14 +3,14 @@
 # fichier — « n1.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
 
 n0: |
-  Repérer les doublons d'un fichier : normaliser, grouper, puis ne comparer
-  qu'à l'intérieur d'un groupe.
+  Repérer les doublons d'un fichier : normaliser, grouper sur plusieurs clés,
+  puis comparer champ par champ.
 
   Niveau N0. Déterministe, bibliothèque standard seule. Il ne compare que les
-  fiches qui partagent une clé de blocage : toutes les paires d'un groupe,
-  aucune d'un groupe à l'autre.
+  fiches qui partagent au moins une clé de blocage : toutes les paires d'un
+  groupe, aucune d'un groupe à l'autre.
 
-  Deux choses font que ça marche.
+  Trois choses font que ça marche.
 
   D'abord, la normalisation retire ce qu'un humain ignore en lisant un nom : la
   casse, les accents, la ponctuation, les espaces doubles. Deux graphies qui ne
@@ -20,8 +20,16 @@ n0: |
   cinquante millions de comparaisons. Les grouper d'abord par une clé qui coûte
   peu, et ne comparer qu'à l'intérieur d'un groupe, laisse les paires de chaque
   groupe : peu nombreuses quand les groupes sont petits, toutes quand chaque
-  fiche tombe dans le même groupe. Tout le prix du niveau est dans la clé que
-  vous choisissez, et son angle mort aussi.
+  fiche tombe dans le même groupe. À une clé qui manque un doublon, on répond
+  par une seconde clé, et non par la suppression de la clé : les paires de
+  plusieurs clés sont réunies, et le coût reste la somme de petits groupes.
+
+  Enfin, la comparaison champ par champ, chaque champ pesé. Deux sources
+  remplissent rarement les mêmes colonnes : l'une porte un numéro de téléphone,
+  l'autre non. Un champ que l'une des deux seulement porte n'est pas une
+  différence, et une fiche comparée comme une longue chaîne compterait ce
+  silence comme telle — en donnant à une ville partagée par deux millions de
+  personnes le même poids qu'à une adresse électronique.
 
 n1.py: |
   Repérer les doublons d'un fichier en comparant l'orthographe, pas les
@@ -39,7 +47,10 @@ n1.py: |
   il n'y a aucun modèle à entraîner. C'est une pondération et une distance.
 
   Le prix, c'est la recherche elle-même : sans clé, toutes les paires du
-  fichier reçoivent un score.
+  fichier reçoivent un score, et le coût croît donc avec le carré du fichier.
+  La classe de latence affichée pour ce niveau est mesurée sur le fichier
+  nominal de ses tests ; vingt mille fiches sont une affaire de secondes, pas
+  de millisecondes.
 
 n1.js: |
   Repérer les doublons d'un fichier en comparant l'orthographe, pas les
@@ -58,7 +69,10 @@ n1.js: |
   écrites ici sans dépendance.
 
   Le prix, c'est la recherche elle-même : sans clé, toutes les paires du
-  fichier reçoivent un score.
+  fichier reçoivent un score, et le coût croît donc avec le carré du fichier.
+  La classe de latence affichée pour ce niveau est mesurée sur le fichier
+  nominal de ses tests ; vingt mille fiches sont une affaire de secondes, pas
+  de millisecondes.
 
 n2: |
   Repérer les doublons d'un fichier avec un encodeur de phrases auto-hébergé.
@@ -69,9 +83,15 @@ n2: |
   la moyenne des vecteurs de ses jetons, et les fiches sont comparées sur ces
   vecteurs plutôt que sur les lettres qu'elles partagent.
 
-  Ce que ce niveau coûte vraiment n'est pas la comparaison, c'est le
-  déploiement : des poids à télécharger et à charger, et un processus à garder
-  chaud.
+  Deux prix, et c'est le second qui grossit. Le prix fixe est le déploiement :
+  des poids à télécharger et à charger, et un processus à garder chaud.
+  L'autre est la comparaison, et il est quadratique — toutes les paires du
+  fichier reçoivent un score, mille fiches font un demi-million de produits
+  scalaires de trois cent quatre-vingt-quatre nombres, dix mille en font
+  cinquante millions. Au-delà de quelques dizaines de milliers de fiches, il
+  faut bloquer d'abord avec la clé du niveau N0, ou passer à un index
+  approché ; cet extrait ne fait ni l'un ni l'autre, à dessein, parce qu'il
+  montre la distance et non la recherche.
 
   L'encodeur est un paramètre doté d'une vraie valeur par défaut : le lecteur
   voit le code de chargement, et le test injecte un double local.

@@ -13,7 +13,9 @@
  * a distance, written here with no dependency.
  *
  * The price is the search itself: no key means every pair of the file is
- * scored.
+ * scored, so the cost grows with the square of the file. The latency class
+ * shown for this rung is measured on the nominal file of its tests; twenty
+ * thousand records are a matter of seconds, not of milliseconds.
  */
 
 const NGRAM_SIZES = [2, 3, 4];
@@ -25,9 +27,17 @@ export function normalise(text) {
     .replace(/\p{Diacritic}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
-/** One comparable string per record; an empty cell adds nothing. */
+/**
+ * One comparable string per record, columns in a stable order.
+ *
+ * Sorted by column name, so that two exports of the same data give the same
+ * text whatever order their columns come in: n-grams taken across a column
+ * boundary would otherwise differ. An empty cell adds nothing.
+ */
 export function recordText(record) {
-  return normalise(Object.values(record).join(' '));
+  const keys = Object.keys(record).sort();
+  return normalise(keys.filter((key) => record[key] !== null && record[key] !== undefined)
+    .map((key) => String(record[key])).join(' '));
 }
 
 /**

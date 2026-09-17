@@ -12,7 +12,9 @@ three-letter slices with the correct one. Nothing here is learnt from a corpus
 and there is no model to train. It is a weighting scheme and a distance.
 
 The price is the search itself: no key means every pair of the file is
-scored.
+scored, so the cost grows with the square of the file. The latency class shown
+for this rung is measured on the nominal file of its tests; twenty thousand
+records are a matter of seconds, not of milliseconds.
 """
 
 import unicodedata
@@ -30,8 +32,14 @@ def normalise(text: str | None) -> str:
 
 
 def record_text(record: dict) -> str:
-    """One comparable string per record; an empty cell adds nothing."""
-    return normalise(" ".join(str(value) for value in record.values() if value is not None))
+    """
+    One comparable string per record, columns in a stable order.
+
+    Sorted by column name, so that two exports of the same data give the same
+    text whatever order their columns come in: n-grams taken across a column
+    boundary would otherwise differ. An empty cell adds nothing.
+    """
+    return normalise(" ".join(str(record[key]) for key in sorted(record) if record[key] is not None))
 
 
 def find_duplicates(records: list[dict], threshold: float = 0.6) -> list[tuple]:

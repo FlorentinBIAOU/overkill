@@ -5,7 +5,17 @@ from pathlib import Path
 
 import pytest
 
-from n0 import blocking_key, edit_distance, find_duplicates, normalise, record_text, similarity
+from n0 import (
+    DEFAULT_KEYS,
+    blocking_key,
+    compare_records,
+    edit_distance,
+    field_key,
+    find_duplicates,
+    normalise,
+    record_text,
+    similarity,
+)
 
 # A customer file as it really looks: the same person entered twice, by two
 # people, on two days.
@@ -37,30 +47,41 @@ def synthetic_file(size):
 # ---------------------------------------------------------------------------
 
 
-def test_point_de_rupture_un_chiffre_faux_dans_le_code_postal_les_textes_a_0_96_et_la_paire_absente():
+MOVED = [
+    {"name": "Jean Dupont", "postcode": "75011", "city": "Paris"},
+    {"name": "Jean Dupont", "postcode": "75012", "city": "Paris"},
+]
+
+
+def test_point_de_rupture_aucune_cle_ne_rapproche_la_paire_et_elle_n_est_jamais_comparee():
     """
-    breaking_point : « Un chiffre faux dans le code postal suffit : le test montre
-    les deux textes à 0,96, très au-dessus du seuil, et la paire absente du
-    résultat ». Témoin : avec le bon code postal, la paire sort.
+    breaking_point : « Ni le nom et le code postal, ni le courriel, ni le
+    téléphone : « Jean Dupont » à 75011 et le même à 75012, sans courriel ni
+    téléphone, ne partagent aucune clé […] 0,96 de ressemblance sur le texte
+    entier, et rien dans le résultat ». Témoin : le même couple avec le même
+    courriel des deux côtés est comparé, et sort.
     """
-    moved = [
-        {"name": "Jean Dupont", "postcode": "75011", "city": "Paris"},
-        {"name": "Jean Dupont", "postcode": "75012", "city": "Paris"},
-    ]
-    assert blocking_key(moved[0]) != blocking_key(moved[1])
-    assert round(similarity(record_text(moved[0]), record_text(moved[1])), 2) == 0.96
-    assert find_duplicates(moved) == []
-    assert find_duplicates([moved[0], dict(moved[1], postcode="75011")]) == [(0, 1, 1.0)]
+    assert all(key(MOVED[0]) != key(MOVED[1]) or key(MOVED[0]) == "" for key in DEFAULT_KEYS)
+    assert round(similarity(record_text(MOVED[0]), record_text(MOVED[1])), 2) == 0.96
+    assert find_duplicates(MOVED) == []
+    with_email = [dict(record, email="j.dupont@example.fr") for record in MOVED]
+    assert find_duplicates(with_email) == [(0, 1, 0.863)]
+
+
+def test_une_seconde_cle_rattrape_ce_que_la_premiere_a_manque():
+    """docstring : « A key that misses a duplicate is answered with a second key, not with the removal of the key »."""
+    # Sans la clé du courriel, la paire n'est même pas comparée.
+    with_email = [dict(record, email="j.dupont@example.fr") for record in MOVED]
+    assert find_duplicates(with_email, keys=(blocking_key,)) == []
+    assert find_duplicates(with_email, keys=(field_key("email"),)) == [(0, 1, 0.863)]
+    # L'union, et non l'intersection : ajouter une règle ne peut que trouver plus.
+    assert find_duplicates(with_email) == [(0, 1, 0.863)]
 
 
 def test_point_de_rupture_jamais_comparees_quel_que_soit_le_seuil():
     """breaking_point : « ne sont jamais comparées, quel que soit le seuil »."""
-    moved = [
-        {"name": "Jean Dupont", "postcode": "75011", "city": "Paris"},
-        {"name": "Jean Dupont", "postcode": "75012", "city": "Paris"},
-    ]
     for threshold in (0.0, 0.5, 0.85):
-        assert find_duplicates(moved, threshold=threshold) == []
+        assert find_duplicates(MOVED, threshold=threshold) == []
 
 
 def test_point_de_rupture_dupont_jean_est_manque_deux_fois_la_cle_et_la_distance():
@@ -81,6 +102,54 @@ def test_point_de_rupture_dupont_jean_est_manque_deux_fois_la_cle_et_la_distance
 # ---------------------------------------------------------------------------
 # Autres affirmations du niveau
 # ---------------------------------------------------------------------------
+
+
+def test_un_champ_absent_d_un_cote_n_est_pas_une_difference():
+    """docstring : « A field only one of the two carries is not a difference »."""
+    complete = {"name": "Jean Dupont", "postcode": "75011", "email": "jean.dupont@example.fr", "phone": "0612345678"}
+    partial = {"name": "Jean Dupont", "postcode": "75011", "email": None, "phone": None}
+    assert find_duplicates([complete, partial]) == [(0, 1, 1.0)]
+    # Témoin : deux personnes différentes au même code postal ne sortent pas.
+    other = {"name": "Marie Durand", "postcode": "75011", "email": "m.durand@example.fr", "phone": "0611111111"}
+    assert find_duplicates([complete, other]) == []
+
+
+def test_l_ordre_des_colonnes_ne_change_rien():
+    """docstring de record_text : « Sorted by column name, so that two exports of the same data give the same text »."""
+    complete = {"name": "Jean Dupont", "postcode": "75011", "email": "jean.dupont@example.fr", "phone": "0612345678"}
+    reordered = {"postcode": "75011", "name": "Jean Dupont", "phone": "0612345678", "email": "jean.dupont@example.fr"}
+    assert record_text(complete) == record_text(reordered)
+    assert find_duplicates([complete, reordered]) == [(0, 1, 1.0)]
+
+
+def test_un_champ_partage_par_tous_ne_porte_pas_une_paire_a_lui_seul():
+    """WEIGHTS : « Agreeing on a town says almost nothing […] while agreeing on an email address says nearly everything »."""
+    # Deux personnes d'un même foyer : entrée tout à fait ordinaire d'un
+    # carnet d'adresses.
+    household = [
+        {"name": "Jean Dupont", "postcode": "75011", "city": "Paris", "country": "France"},
+        {"name": "Sophie Dupont", "postcode": "75011", "city": "Paris", "country": "France"},
+    ]
+    # Sans pondération — chaque champ à un —, la ville, le pays et le code
+    # postal portent la paire au-dessus du seuil : ce n'est pas ce que fait
+    # l'extrait.
+    assert compare_records(household[0], household[1], {}) >= 0.85
+    assert compare_records(household[0], household[1]) < 0.85
+    assert find_duplicates(household) == []
+    # Témoin : la même personne saisie deux fois sort malgré ces champs.
+    twice = [household[0], dict(household[0], name="Jean Dupônt")]
+    assert find_duplicates(twice) == [(0, 1, 1.0)]
+
+
+def test_un_courriel_different_pese_autant_qu_un_nom_identique():
+    """IDENTIFYING : « Two different addresses at the same domain share most of their characters »."""
+    pair = [
+        {"name": "Jean Dupont", "postcode": "75011", "email": "jean.dupont@example.fr"},
+        {"name": "Jean Dupont", "postcode": "75011", "email": "jeanne.dupont@example.fr"},
+    ]
+    # La distance d'édition les dirait proches ; l'égalité dit non.
+    assert similarity(normalise(pair[0]["email"]), normalise(pair[1]["email"])) > 0.9
+    assert find_duplicates(pair) == []
 
 
 def test_trouve_les_deux_paires_en_doublon_et_rien_d_autre():
@@ -134,18 +203,13 @@ def test_dix_mille_fiches_font_cinquante_millions_de_paires():
     assert math.comb(10_000, 2) == 49_995_000
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring dit que ce niveau « ne compare jamais toutes les "
-        "paires » ; quand toutes les fiches partagent la clé (même code postal, même "
-        "début de nom), il les compare toutes : 300 fiches, 44 850 paires rendues au "
-        "seuil zéro"
-    ),
-)
-def test_infirme_le_niveau_ne_compare_jamais_toutes_les_paires():
+def test_toutes_les_paires_sont_comparees_quand_tout_tombe_dans_un_seul_groupe():
+    """docstring : « all of them when every record lands in the same group »."""
     same_block = [{"name": f"Jean Dupont{i}", "postcode": "75011", "city": "Paris"} for i in range(300)]
-    assert len(find_duplicates(same_block, threshold=0.0)) < math.comb(300, 2)
+    assert len(find_duplicates(same_block, threshold=0.0)) == math.comb(300, 2)
+    # Témoin : vingt codes postaux différents, et les groupes redeviennent petits.
+    spread = [dict(record, postcode=str(75001 + i % 20)) for i, record in enumerate(same_block)]
+    assert len(find_duplicates(spread, threshold=0.0)) < math.comb(300, 2) / 10
 
 
 def test_l_extrait_est_deterministe_et_n_importe_que_unicodedata():
@@ -175,15 +239,15 @@ def test_production_fichier_vide_et_fiche_unique():
     assert find_duplicates([CUSTOMERS[0]]) == []
 
 
-def test_production_un_nom_vide_ne_fait_pas_lever():
-    """Test d'origine gardé ; constat : deux fiches sans nom au même code postal sortent comme doublons certains."""
+def test_production_un_nom_vide_ou_nul_ne_produit_aucune_cle():
+    """docstring de blocking_key : « A record missing either half produces no key »."""
     blank = {"name": "", "postcode": "75011", "city": "Paris"}
-    assert find_duplicates([blank, dict(blank)]) == [(0, 1, 1.0)]
-
-
-def test_defaut_un_nom_nul_ne_fait_pas_lever():
-    records = [{"name": None, "postcode": "75011", "city": "Paris"}, {"name": "Jean Dupont", "postcode": "75011", "city": "Paris"}]
-    assert find_duplicates(records) == []
+    assert blocking_key(blank) == ""
+    assert find_duplicates([blank, dict(blank)]) == []
+    nul = {"name": None, "postcode": "75011", "city": "Paris"}
+    assert find_duplicates([nul, {"name": "Jean Dupont", "postcode": "75011", "city": "Paris"}]) == []
+    # Témoin : avec un courriel des deux côtés, la seconde clé les rapproche.
+    assert find_duplicates([dict(blank, email="a@b.fr"), dict(blank, email="a@b.fr")]) == [(0, 1, 1.0)]
 
 
 def test_production_dix_mille_fiches_variees_dans_une_borne_large():
@@ -199,7 +263,7 @@ def test_production_accents_decomposes_espaces_insecables_et_casse_mixte():
     assert blocking_key({"name": "JEAN\u00a0Dupo\u0302nt", "postcode": " 75011 "}) == "dup:75011"
 
 
-def test_defaut_un_caractere_de_largeur_nulle_dans_le_nom_change_la_cle():
+def test_production_un_caractere_de_largeur_nulle_dans_le_nom_ne_change_pas_la_cle():
     records = [
         {"name": "Jean Dupont", "postcode": "75011", "city": "Paris"},
         {"name": "Jean Du\u200bpont", "postcode": "75011", "city": "Paris"},
@@ -212,7 +276,7 @@ def test_production_seuil_exactement_atteint_et_valeurs_aux_limites():
         {"name": "Marie Martin", "postcode": "69003", "city": "Lyon"},
         {"name": "Marie Martln", "postcode": "69003", "city": "Lyon"},
     ]
-    score = similarity(record_text(pair[0]), record_text(pair[1]))
+    score = compare_records(pair[0], pair[1])
     assert find_duplicates(pair, threshold=score)[0][:2] == (0, 1)
     assert find_duplicates(pair, threshold=score + 1e-9) == []
     same = [pair[0], dict(pair[0])]

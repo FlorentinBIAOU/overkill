@@ -139,7 +139,7 @@ def test_production_fichier_vide_et_fiche_unique():
     assert find_duplicates([CUSTOMERS[0]]) == []
 
 
-def test_defaut_des_fiches_sans_aucune_lettre_ne_font_pas_lever():
+def test_production_des_fiches_sans_aucune_lettre_ne_font_pas_lever():
     assert find_duplicates([{"name": "", "city": ""}, {"name": "—", "city": "..."}]) == []
 
 

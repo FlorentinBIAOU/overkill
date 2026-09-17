@@ -117,7 +117,7 @@ test('production : fichier vide et fiche unique', () => {
 });
 
 test('production : des fiches sans aucune lettre ne font pas lever', () => {
-  // Python lève ici (voir son test DÉFAUT).
+  // Les deux versions rendent la même liste vide.
   assert.deepEqual(findDuplicates([{ name: '', city: '' }, { name: '—', city: '...' }]), []);
 });
 

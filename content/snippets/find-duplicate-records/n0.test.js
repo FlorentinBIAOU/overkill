@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { blockingKey, editDistance, findDuplicates, normalise, recordText, similarity } from './n0.js';
+import { DEFAULT_KEYS, blockingKey, compareRecords, editDistance, fieldKey, findDuplicates, normalise, recordText, similarity } from './n0.js';
 import essai from '../../tryouts/live/find-duplicate-records.js';
 
 // A customer file as it really looks: the same person entered twice, by two
@@ -30,23 +30,32 @@ const pairsOfSize = (n) => (n * (n - 1)) / 2;
 // Point de rupture
 // ---------------------------------------------------------------------------
 
-test('point de rupture : un chiffre faux dans le code postal, les textes à 0,96 et la paire absente', () => {
-  const moved = [
-    { name: 'Jean Dupont', postcode: '75011', city: 'Paris' },
-    { name: 'Jean Dupont', postcode: '75012', city: 'Paris' },
-  ];
-  assert.notEqual(blockingKey(moved[0]), blockingKey(moved[1]));
-  assert.equal(Math.round(similarity(recordText(moved[0]), recordText(moved[1])) * 100) / 100, 0.96);
-  assert.deepEqual(findDuplicates(moved), []);
-  // Witness: with the right postcode, the pair comes out.
-  assert.deepEqual(findDuplicates([moved[0], { ...moved[1], postcode: '75011' }]), [[0, 1, 1]]);
+const MOVED = [
+  { name: 'Jean Dupont', postcode: '75011', city: 'Paris' },
+  { name: 'Jean Dupont', postcode: '75012', city: 'Paris' },
+];
+const withEmail = () => MOVED.map((record) => ({ ...record, email: 'j.dupont@example.fr' }));
+
+test('point de rupture : aucune clé ne rapproche la paire, et elle n’est jamais comparée', () => {
+  // « Ni le nom et le code postal, ni le courriel, ni le téléphone […] 0,96 de
+  // ressemblance sur le texte entier, et rien dans le résultat ».
+  assert.ok(DEFAULT_KEYS.every((key) => key(MOVED[0]) !== key(MOVED[1]) || key(MOVED[0]) === ''));
+  assert.equal(Math.round(similarity(recordText(MOVED[0]), recordText(MOVED[1])) * 100) / 100, 0.96);
+  assert.deepEqual(findDuplicates(MOVED), []);
+  // Témoin : le même couple avec le même courriel des deux côtés est comparé.
+  assert.deepEqual(findDuplicates(withEmail()), [[0, 1, 0.863]]);
+});
+
+test('une seconde clé rattrape ce que la première a manqué', () => {
+  // « A key that misses a duplicate is answered with a second key, not with
+  // the removal of the key ».
+  assert.deepEqual(findDuplicates(withEmail(), 0.85, [blockingKey]), []);
+  assert.deepEqual(findDuplicates(withEmail(), 0.85, [fieldKey('email')]), [[0, 1, 0.863]]);
+  assert.deepEqual(findDuplicates(withEmail()), [[0, 1, 0.863]]);
 });
 
 test('point de rupture : jamais comparées, quel que soit le seuil', () => {
-  const moved = [
-    { name: 'Jean Dupont', postcode: '75011', city: 'Paris' },
-    { name: 'Jean Dupont', postcode: '75012', city: 'Paris' },
-  ];
+  const moved = MOVED;
   for (const threshold of [0, 0.5, 0.85]) assert.deepEqual(findDuplicates(moved, threshold), []);
 });
 
@@ -107,11 +116,58 @@ test('dix mille fiches font cinquante millions de paires', () => {
   assert.equal(pairsOfSize(10_000), 49_995_000);
 });
 
-test('INFIRMÉ : la docstring dit que ce niveau ne compare jamais toutes les paires, sur un seul bloc il les compare toutes', async () => {
-  await assert.rejects(async () => {
-    const sameBlock = Array.from({ length: 300 }, (_, i) => ({ name: `Jean Dupont${i}`, postcode: '75011', city: 'Paris' }));
-    assert.ok(findDuplicates(sameBlock, 0).length < pairsOfSize(300));
-  });
+test('toutes les paires sont comparées quand tout tombe dans un seul groupe', () => {
+  // « all of them when every record lands in the same group ».
+  const sameBlock = Array.from({ length: 300 }, (_, i) => ({ name: `Jean Dupont${i}`, postcode: '75011', city: 'Paris' }));
+  assert.equal(findDuplicates(sameBlock, 0).length, pairsOfSize(300));
+  // Témoin : vingt codes postaux différents, et les groupes redeviennent petits.
+  const spread = sameBlock.map((record, i) => ({ ...record, postcode: String(75001 + (i % 20)) }));
+  assert.ok(findDuplicates(spread, 0).length < pairsOfSize(300) / 10);
+});
+
+test('un champ absent d’un côté n’est pas une différence', () => {
+  // « A field only one of the two carries is not a difference ».
+  const complete = { name: 'Jean Dupont', postcode: '75011', email: 'jean.dupont@example.fr', phone: '0612345678' };
+  const partial = { name: 'Jean Dupont', postcode: '75011', email: null, phone: null };
+  assert.deepEqual(findDuplicates([complete, partial]), [[0, 1, 1]]);
+  // Témoin : deux personnes différentes au même code postal ne sortent pas.
+  const other = { name: 'Marie Durand', postcode: '75011', email: 'm.durand@example.fr', phone: '0611111111' };
+  assert.deepEqual(findDuplicates([complete, other]), []);
+});
+
+test('l’ordre des colonnes ne change rien', () => {
+  // « Sorted by column name, so that two exports of the same data give the
+  // same text ».
+  const complete = { name: 'Jean Dupont', postcode: '75011', email: 'jean.dupont@example.fr', phone: '0612345678' };
+  const reordered = { postcode: '75011', name: 'Jean Dupont', phone: '0612345678', email: 'jean.dupont@example.fr' };
+  assert.equal(recordText(complete), recordText(reordered));
+  assert.deepEqual(findDuplicates([complete, reordered]), [[0, 1, 1]]);
+});
+
+test('un champ partagé par tous ne porte pas une paire à lui seul', () => {
+  // WEIGHTS : « Agreeing on a town says almost nothing […] while agreeing on
+  // an email address says nearly everything ». Deux personnes d'un même
+  // foyer : entrée tout à fait ordinaire d'un carnet d'adresses.
+  const household = [
+    { name: 'Jean Dupont', postcode: '75011', city: 'Paris', country: 'France' },
+    { name: 'Sophie Dupont', postcode: '75011', city: 'Paris', country: 'France' },
+  ];
+  assert.ok(compareRecords(household[0], household[1], {}) >= 0.85);
+  assert.ok(compareRecords(household[0], household[1]) < 0.85);
+  assert.deepEqual(findDuplicates(household), []);
+  // Témoin : la même personne saisie deux fois sort malgré ces champs.
+  assert.deepEqual(findDuplicates([household[0], { ...household[0], name: 'Jean Dupônt' }]), [[0, 1, 1]]);
+});
+
+test('un courriel différent pèse autant qu’un nom identique', () => {
+  // IDENTIFYING : « Two different addresses at the same domain share most of
+  // their characters ».
+  const pair = [
+    { name: 'Jean Dupont', postcode: '75011', email: 'jean.dupont@example.fr' },
+    { name: 'Jean Dupont', postcode: '75011', email: 'jeanne.dupont@example.fr' },
+  ];
+  assert.ok(similarity(normalise(pair[0].email), normalise(pair[1].email)) > 0.9);
+  assert.deepEqual(findDuplicates(pair), []);
 });
 
 test('l’extrait est déterministe et n’importe rien', () => {
@@ -136,16 +192,15 @@ test('production : fichier vide et fiche unique', () => {
   assert.deepEqual(findDuplicates([CUSTOMERS[0]]), []);
 });
 
-test('production : un nom vide ne fait pas lever', () => {
-  // Constat : deux fiches sans nom au même code postal sortent comme doublons certains.
+test('production : un nom vide ou nul ne produit aucune clé', () => {
+  // « A record missing either half produces no key ».
   const blank = { name: '', postcode: '75011', city: 'Paris' };
-  assert.deepEqual(findDuplicates([blank, { ...blank }]), [[0, 1, 1]]);
-});
-
-test('production : un nom nul ne fait pas lever', () => {
-  // Python lève ici (voir son test DÉFAUT). JavaScript lit null comme le mot « null ».
-  const records = [{ name: null, postcode: '75011', city: 'Paris' }, { name: 'Jean Dupont', postcode: '75011', city: 'Paris' }];
-  assert.deepEqual(findDuplicates(records), []);
+  assert.equal(blockingKey(blank), '');
+  assert.deepEqual(findDuplicates([blank, { ...blank }]), []);
+  const nul = { name: null, postcode: '75011', city: 'Paris' };
+  assert.deepEqual(findDuplicates([nul, { name: 'Jean Dupont', postcode: '75011', city: 'Paris' }]), []);
+  // Témoin : avec un courriel des deux côtés, la seconde clé les rapproche.
+  assert.deepEqual(findDuplicates([{ ...blank, email: 'a@b.fr' }, { ...blank, email: 'a@b.fr' }]), [[0, 1, 1]]);
 });
 
 test('production : dix mille fiches variées dans une borne large', () => {
@@ -161,7 +216,7 @@ test('production : accents décomposés, espaces insécables et casse mixte', ()
   assert.equal(blockingKey({ name: 'JEAN\u00a0Dupo\u0302nt', postcode: ' 75011 ' }), 'dup:75011');
 });
 
-test('un caractère de largeur nulle dans le nom change la clé', async () => {
+test('production : un caractère de largeur nulle dans le nom ne change pas la clé', () => {
   const records = [
     { name: 'Jean Dupont', postcode: '75011', city: 'Paris' },
     { name: 'Jean Du\u200bpont', postcode: '75011', city: 'Paris' },
@@ -174,7 +229,7 @@ test('production : seuil exactement atteint et valeurs aux limites', () => {
     { name: 'Marie Martin', postcode: '69003', city: 'Lyon' },
     { name: 'Marie Martln', postcode: '69003', city: 'Lyon' },
   ];
-  const score = similarity(recordText(pair[0]), recordText(pair[1]));
+  const score = compareRecords(pair[0], pair[1]);
   assert.deepEqual(indexesOf(findDuplicates(pair, score)), [[0, 1]]);
   assert.deepEqual(findDuplicates(pair, score + 1e-9), []);
   assert.deepEqual(findDuplicates([pair[0], { ...pair[0] }], 1), [[0, 1, 1]]);
@@ -193,11 +248,14 @@ test('essai : cinq fiches clients, deux saisies deux fois, deux paires', () => {
 });
 
 test('essai : trois Dupont à la même adresse sont tous comparés', () => {
-  // Constat : « Jean » et « Jeanne » Dupont sortent en doublon à 0,92, sans que
-  // le cas le signale.
-  const sortie = essai.run(essai.cases[1].input, 'fr');
+  // `why` du cas : « Jean et Jeanne Dupont sortent en doublon à 0,89 ».
+  const cas = essai.cases[1];
+  assert.equal(cas.fails, true);
+  assert.match(cas.why.fr, /en doublon à 0,89/);
+  assert.match(cas.why.en, /as duplicates at 0\.89/);
+  const sortie = essai.run(cas.input, 'fr');
   assert.match(sortie.note, /^3 comparaisons effectuées sur 3 paires possibles/);
-  assert.deepEqual(sortie.rows.rows.map((r) => [r[0], r[1]]), [['Jean Dupont, 75011', 'Jeanne Dupont, 75011']]);
+  assert.deepEqual(sortie.rows.rows.map((r) => [r[0], r[1], r[2].v]), [['Jean Dupont, 75011', 'Jeanne Dupont, 75011', '0,89']]);
 });
 
 test('essai : un chiffre de travers et un nom à l’envers, rien ne sort, et deux fiches à 0,96 jamais comparées', () => {

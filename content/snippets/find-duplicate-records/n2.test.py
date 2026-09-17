@@ -153,7 +153,7 @@ def test_un_modele_qui_ne_tourne_pas_leve():
         find_duplicates(CUSTOMERS, encoder=BrokenEncoder())
 
 
-def test_defaut_des_vecteurs_de_mauvaise_forme_levent():
+def test_production_des_vecteurs_de_mauvaise_forme_levent():
     for vectors in ([[1.0, 0.0, 0.0], [1.0, 0.0]], [[float("nan"), 0.0], [1.0, 0.0]]):
         with pytest.raises(EncodingFailed):
             find_duplicates([{"a": "x"}, {"a": "y"}], encoder=GivenVectors(vectors), threshold=0.0)
@@ -171,11 +171,13 @@ def test_l_encodeur_par_defaut_est_multilingue_et_n_est_charge_que_sans_double()
 # ---------------------------------------------------------------------------
 
 
-def test_production_mille_fiches_dans_une_borne_large():
+def test_production_mille_fiches_dans_la_dimension_du_modele_nomme():
+    """Cent fois le cas nominal, en dimension 384 — celle du modèle nommé — et non 32 : la borne doit porter sur ce que la fiche décrit."""
     records = [{"name": f"Client {i} {LETTERS[i % 26]}{LETTERS[(i * 7) % 26]}", "city": "Paris"} for i in range(1000)]
     debut = time.perf_counter()
-    find_duplicates(records, encoder=FakeEncoder(dimensions=32))
-    assert time.perf_counter() - debut < 60
+    find_duplicates(records, encoder=FakeEncoder(dimensions=384))
+    # Marge de dix : la borne attrape un effondrement, elle ne mesure pas.
+    assert time.perf_counter() - debut < 10
 
 
 def test_production_accents_decomposes_espaces_insecables_et_casse_partent_normalises():

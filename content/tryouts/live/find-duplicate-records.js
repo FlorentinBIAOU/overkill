@@ -175,8 +175,8 @@ export default {
         'Sophie Dupont ; 75011 ; Paris',
       fails: true,
       why: {
-        fr: 'Jean et Jeanne Dupont sortent en doublon à 0,92 : pour la distance d’édition, deux lettres de plus sur vingt-cinq caractères ne pèsent presque rien. Le score ne sait pas qu’un prénom a changé.',
-        en: 'Jean and Jeanne Dupont come out as duplicates at 0.92: to edit distance, two extra letters out of twenty-five characters weigh almost nothing. The score cannot tell that a first name changed.',
+        fr: 'Jean et Jeanne Dupont sortent en doublon à 0,89 : pour la distance d’édition, deux lettres de plus sur un nom de treize caractères ne pèsent presque rien, et le code postal comme la ville sont les mêmes. Le score ne sait pas qu’un prénom a changé.',
+        en: 'Jean and Jeanne Dupont come out as duplicates at 0.89: to edit distance, two extra letters in a thirteen-character name weigh almost nothing, and the postcode and town are the same. The score cannot tell that a first name changed.',
       },
     },
     {

@@ -3,7 +3,7 @@ id: find-duplicate-records
 family: detect-filter
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
@@ -22,8 +22,8 @@ rungs:
   - level: N0
     available: true
     name:
-      fr: "Normalisation, clé de blocage, puis distance d’édition"
-      en: "Normalisation, blocking key, then edit distance"
+      fr: "Normalisation, plusieurs clés de blocage, puis comparaison champ par champ"
+      en: "Normalisation, several blocking keys, then a field-by-field comparison"
     cost: nul
     latency: "<1 ms"
     risks:
@@ -44,11 +44,11 @@ rungs:
       javascript: snippets/find-duplicate-records/n0.js
       verification: executed
     breaking_point:
-      fr: "Deux graphies qui ne partagent pas la clé de blocage ne sont jamais comparées, quel que soit le seuil. Un chiffre faux dans le code postal suffit : le test montre les deux textes à 0,96, très au-dessus du seuil, et la paire absente du résultat, parce que la comparaison n’a jamais lieu. « Dupont Jean » saisi à la place de « Jean Dupont » est manqué deux fois : la clé sépare les deux fiches, et la distance d’édition ne les aurait pas rapprochées non plus, puisqu’elle compte un mot déplacé comme une suite de caractères changés."
-      en: "Two spellings that do not share the blocking key are never compared, whatever the threshold. One wrong digit in a postcode is enough: the test scores the two texts at 0.96, far above the threshold, and still returns nothing, because the comparison is never run. A name entered family-name first is missed twice over: the key separates the two records, and edit distance would not have brought them together either, since it counts a moved word as a run of changed characters."
+      fr: "Une paire qu’aucune clé ne rapproche n’est jamais comparée, quel que soit le seuil. « Jean Dupont » à 75011 et le même à 75012, sans courriel ni téléphone, ne partagent aucune des trois clés : 0,96 de ressemblance sur le texte entier, et rien dans le résultat. Témoin : le même couple avec le même courriel des deux côtés est comparé, et sort à 0,863."
+      en: "A pair that no key brings together is never compared, whatever the threshold. “Jean Dupont” at 75011 and the same man at 75012, with no email and no phone number, share none of the three keys: 0.96 alike over the whole text, and nothing in the result. Witness: the same two records carrying the same email address are compared, and come out at 0.863."
     escalate_when:
-      fr: "Vous retrouvez à la main des doublons dont le champ qui sert de clé diffère : un code postal saisi de travers, un nom et un prénom intervertis d’une source à l’autre."
-      en: "You keep finding duplicates by hand whose key field differs: a mistyped postcode, or a first name and a family name swapped between two sources."
+      fr: "Vos doublons n’ont plus aucun champ fiable en commun sur lequel écrire une clé de plus : ni nom écrit pareil, ni courriel, ni téléphone. Tant qu’il en reste un, la réponse est une clé, pas un niveau."
+      en: "Your duplicates no longer share a single dependable field to write one more key on: no name spelt the same way, no email, no phone number. As long as one remains, the answer is a key, not a level."
 
   - level: N1
     available: true
@@ -119,8 +119,8 @@ rungs:
       en: "Comparing pairs through a general-purpose model is quadratic: ten thousand records make fifty million calls. And the call only answers the easy question, judging a pair somebody already picked out: a lower level still has to choose which pair to send."
 
 verdict_rationale:
-  fr: "N0 est le seul niveau qui décide à l’avance quelles paires méritent un regard, et c’est ce qui le laisse tenir quand le fichier grossit, tant que la clé garde les groupes petits : N1 et N2 comparent toutes les paires du fichier, N0 celles de chaque groupe. Son prix est écrit dans le code, c’est la clé de blocage, et il est réglable : vous choisissez ce que vous acceptez de ne jamais comparer, et le test vous montre exactement ce que cela coûte. Montez à N1 le jour où vos doublons se cachent précisément dans le champ dont la clé est faite, pas avant."
-  en: "N0 is the only level that decides in advance which pairs deserve a look, which is what keeps it standing as the file grows, as long as the key keeps the groups small: N1 and N2 compare every pair of the file, N0 the pairs of each group. Its price is written into the code as the blocking key, and it is yours to set: you choose what you agree never to compare, and the test shows you exactly what that costs. Move up to N1 the day your duplicates hide in the very field the key is made of, not before."
+  fr: "N0 est le seul niveau qui décide à l’avance quelles paires méritent un regard, et c’est ce qui le laisse tenir quand le fichier grossit, tant que les clés gardent les groupes petits : N1 et N2 comparent toutes les paires du fichier, N0 celles de chaque groupe. Quand une clé manque un doublon, la réponse est une seconde clé — le courriel, le téléphone — et non la suppression du blocage : l’union de deux règles coûte la somme de deux jeux de petits groupes, quand N1 coûte toutes les paires. Montez à N1 le jour où vos doublons ne partagent plus aucun champ sur lequel écrire une clé, pas avant."
+  en: "N0 is the only level that decides in advance which pairs deserve a look, which is what keeps it standing as the file grows, as long as the keys keep the groups small: N1 and N2 compare every pair of the file, N0 the pairs of each group. When a key misses a duplicate, the answer is a second key — the email, the phone number — not the removal of blocking: the union of two rules costs the sum of two sets of small groups, where N1 costs every pair. Move up to N1 the day your duplicates share no field left to write a key on, not before."
 
 further_reading:
   - label: "Splink — règles de blocage, ou pourquoi on ne compare pas toutes les paires"
