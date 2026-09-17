@@ -170,10 +170,16 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
     assert classify("My lamp arrived damaged.") == {"spam": False, "reason": "a customer asking about an order"}
 
 
-def test_le_client_par_defaut_echoue_en_service_indisponible_sans_appel(openai_kit):
-    with pytest.raises(ClassificationUnavailable, match="complete"):
-        classify("My lamp arrived damaged.")
-    assert openai_kit.calls == []
+def test_le_client_par_defaut_envoie_la_requete_que_le_kit_attend(openai_kit):
+    """L'adaptateur appelle `chat.completions.create`, la seule surface que le kit publié offre."""
+    classify("My lamp arrived damaged.")
+    assert openai_kit.calls == [
+        {
+            "model": "gpt-4.1-mini",
+            "messages": [{"role": "user", "content": PROMPT.format(message="My lamp arrived damaged.")}],
+            "temperature": 0,
+        }
+    ]
 
 
 def test_l_extrait_n_importe_que_json():

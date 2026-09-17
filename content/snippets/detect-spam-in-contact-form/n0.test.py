@@ -123,9 +123,10 @@ def test_le_repli_survit_a_la_casse_et_aux_accents():
 
 def test_un_rejet_vient_avec_ses_motifs_une_liste_vide_veut_dire_accepter():
     """docstring de reasons : « Every reason to reject this submission. An empty list means: accept it »."""
-    fields = {"message": "casino crypto http://a.com http://b.com http://c.com", "website": "x"}
+    fields = {"message": "online casino viagra http://a.com http://b.com http://c.com", "website": "x"}
     assert reasons(fields, 0) == [
-        "honeypot filled", "submitted too fast", "too many links", "banned phrase: casino", "banned phrase: crypto",
+        "honeypot filled", "submitted too fast", "too many links",
+        "banned phrase: online casino", "banned phrase: viagra",
     ]
     assert is_spam(fields, 0) is True and is_spam(GENUINE, 42) is False
 

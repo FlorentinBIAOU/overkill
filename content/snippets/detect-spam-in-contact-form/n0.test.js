@@ -89,9 +89,10 @@ test('le repli survit à la casse et aux accents', () => {
 });
 
 test('un rejet vient avec ses motifs, une liste vide veut dire accepter', () => {
-  const fields = { message: 'casino crypto http://a.com http://b.com http://c.com', website: 'x' };
+  const fields = { message: 'online casino viagra http://a.com http://b.com http://c.com', website: 'x' };
   assert.deepEqual(reasons(fields, 0), [
-    'honeypot filled', 'submitted too fast', 'too many links', 'banned phrase: casino', 'banned phrase: crypto',
+    'honeypot filled', 'submitted too fast', 'too many links',
+    'banned phrase: online casino', 'banned phrase: viagra',
   ]);
   assert.equal(isSpam(fields, 0), true);
   assert.equal(isSpam(GENUINE, 42), false);

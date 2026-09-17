@@ -11,7 +11,7 @@ import { register } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
 import { reasons } from './n0.js';
-import { MAX_CHARACTERS, ClassificationUnavailable, classify } from './n3.js';
+import { MAX_CHARACTERS, MODEL, ClassificationUnavailable, classify } from './n3.js';
 
 const SPAM_ANSWER = '{"spam": true, "reason": "unsolicited link building offer"}';
 const CLEAN_ANSWER = '{"spam": false, "reason": "a customer asking about an order"}';
@@ -130,10 +130,17 @@ test('le client par défaut a la forme du vrai kit', async () => {
   assert.deepEqual(await classify('My lamp arrived damaged.'), { spam: false, reason: 'a customer asking about an order' });
 });
 
-test('le client par défaut échoue en service indisponible sans appel', async () => {
+test('le client par défaut envoie la requête que le kit attend', async () => {
+  // L'adaptateur appelle `chat.completions.create`, la seule surface que le kit
+  // publié offre ; il n'y a pas de méthode `complete` en face.
   globalThis.__openaiCalls.length = 0;
-  await assert.rejects(() => classify('My lamp arrived damaged.'), (error) => error instanceof ClassificationUnavailable && /complete/.test(error.message));
-  assert.deepEqual(globalThis.__openaiCalls, []);
+  await classify('My lamp arrived damaged.');
+  assert.equal(globalThis.__openaiCalls.length, 1);
+  const [{ model, messages, temperature }] = globalThis.__openaiCalls;
+  assert.deepEqual([model, temperature], [MODEL, 0]);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].role, 'user');
+  assert.ok(messages[0].content.endsWith('My lamp arrived damaged.'));
 });
 
 test('l’extrait n’importe que le client par défaut', () => {
@@ -159,11 +166,13 @@ test('production : NFD, espace insécable et emoji partent tels quels', async ()
   assert.ok(client.lastRequest.prompt.endsWith(message));
 });
 
-test('production : constat, le plafond compte en unités UTF-16 en JavaScript', async () => {
-  // 2 001 emoji : 4 002 unités, refusés ici, acceptés en Python.
+test('production : le plafond compte des points de code, comme en Python', async () => {
+  // 2 001 emoji font 4 002 unités UTF-16 et 2 001 points de code : c'est la
+  // seconde mesure qui compte, des deux côtés.
   const client = llm(CLEAN_ANSWER);
-  await assert.rejects(() => classify('🙁'.repeat(2001), { client }), RangeError);
-  await classify('🙁'.repeat(2000), { client });
+  await classify('🙁'.repeat(MAX_CHARACTERS), { client });
+  assert.equal(client.callCount, 1);
+  await assert.rejects(() => classify('🙁'.repeat(MAX_CHARACTERS + 1), { client }), RangeError);
   assert.equal(client.callCount, 1);
 });
 

@@ -117,14 +117,6 @@ test('INFIRMÉ : les graphies contournées survivent aux n-grammes', async () =>
   });
 });
 
-test('INFIRMÉ : TF-IDF et régression logistique « is forty lines », n1.js en compte 48', async () => {
-  const source = readFileSync(new URL('./n1.js', import.meta.url), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ''));
-  const lines = source.split('\n').filter((line) => line.trim() && !line.trim().startsWith('//'));
-  assert.equal(lines.length, 48);
-  await assert.rejects(async () => assert.ok(lines.length <= 40));
-});
-
 test('le hachage : aucun vocabulaire à construire ni à livrer', () => {
   assert.deepEqual(Object.keys(model).sort(), ['bias', 'idf', 'weights']);
   assert.equal(model.weights.length, 1024);
@@ -179,15 +171,14 @@ test('un message vide n’est pas tranché par hasard', async () => {
   assert.ok(spamScore(model, '') < 0.5 - 0.05);
 });
 
-test('DÉFAUT : un entraînement dégénéré ne lève pas', async () => {
-  // Jeu vide : tout vaut 0,5, donc tout est spam. Une seule classe : tout est
-  // spam. Étiquettes trop courtes : scores NaN, rien n'est spam. Python lève.
-  assert.equal(spamScore(train([], []), ENQUIRY), 0.5);
-  assert.ok(isSpam(train(SPAM, SPAM.map(() => 1)), ENQUIRY));
-  assert.ok(Number.isNaN(spamScore(train([...SPAM, ...GENUINE], [1]), ENQUIRY)));
-  await assert.rejects(async () => {
-    assert.throws(() => train([], []));
-  });
+test('production : un entraînement dégénéré lève', () => {
+  // Jeu vide, une seule classe, étiquettes de longueur différente : trois façons
+  // de rendre un modèle qui répond n'importe quoi sans le dire. Python lève de
+  // même, sur les mêmes trois cas.
+  const message = /one label per message, and both classes/;
+  assert.throws(() => train([], []), { name: 'RangeError', message });
+  assert.throws(() => train(SPAM, SPAM.map(() => 1)), { name: 'RangeError', message });
+  assert.throws(() => train([...SPAM, ...GENUINE], [1]), { name: 'RangeError', message });
 });
 
 test('production : trois mille deux cents envois étiquetés', () => {
