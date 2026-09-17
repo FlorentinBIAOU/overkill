@@ -93,6 +93,12 @@ test('accepte la clôture de code que les modèles ajoutent, sans nouvel appel',
   const client = llm(`\`\`\`\n${JSON.stringify(ANSWER)}\n\`\`\``);
   assert.equal((await extractFields(TEXT, PAGE, { client })).total, 92.4);
   assert.equal(client.callCount, 1);
+  // Une clôture ouverte et jamais refermée, ou de la prose autour d'elle, n'est
+  // pas cette forme-là : la réponse est refusée.
+  const body = JSON.stringify(ANSWER);
+  for (const malClose of [`\`\`\`json\n${body}`, `Voici :\n\`\`\`json\n${body}\n\`\`\``]) {
+    await assert.rejects(() => extractFields(TEXT, PAGE, { client: llm(malClose) }), ExtractionUnavailable);
+  }
 });
 
 test('un champ absent de la page revient vide', async () => {

@@ -108,7 +108,9 @@ async function ask(client, text, imageUrl, attempts) {
  * stripping it is cheaper than another call.
  */
 function decode(answer) {
-  const stripped = answer.trim().replace(/^```(?:json)?/, '').replace(/```$/, '');
+  const trimmed = answer.trim();
+  const fenced = trimmed.startsWith('```') && trimmed.endsWith('```') && trimmed.split('```').length === 3;
+  const stripped = fenced ? trimmed.slice(3, -3).replace(/^json/, '') : trimmed;
   let parsed;
   try {
     parsed = JSON.parse(stripped);

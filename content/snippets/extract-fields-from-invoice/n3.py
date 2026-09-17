@@ -109,7 +109,9 @@ def _decode(answer: str) -> dict:
     Models like to wrap JSON in a code fence. That is noise, not an error, and
     stripping it is cheaper than another call.
     """
-    stripped = answer.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
+    stripped = answer.strip()
+    if stripped.startswith("```") and stripped.endswith("```") and stripped.count("```") == 2:
+        stripped = stripped[3:-3].removeprefix("json")
     try:
         parsed = json.loads(stripped)
     except ValueError as error:

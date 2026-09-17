@@ -108,6 +108,11 @@ def test_accepte_la_cloture_de_code_que_les_modeles_ajoutent_sans_nouvel_appel()
     client = FakeLLM(response=f"```\n{json.dumps(ANSWER)}\n```")
     assert extract_fields(TEXT, PAGE, client=client)["total"] == 92.40
     assert client.call_count == 1
+    # Une clôture ouverte et jamais refermée, ou de la prose autour d'elle, n'est
+    # pas cette forme-là : la réponse est refusée.
+    for mal_close in (f"```json\n{json.dumps(ANSWER)}", f"Voici :\n```json\n{json.dumps(ANSWER)}\n```"):
+        with pytest.raises(ExtractionUnavailable):
+            extract_fields(TEXT, PAGE, client=FakeLLM(response=mal_close))
 
 
 def test_un_champ_absent_de_la_page_revient_vide():
