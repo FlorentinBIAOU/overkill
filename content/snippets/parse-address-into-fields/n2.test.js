@@ -158,13 +158,15 @@ test("refuse une adresse trop longue avant d'analyser quoi que ce soit", async (
   }
 });
 
-test('INFIRMÉ : « six lines of 38 characters. Anything longer […] is refused » ; le plafond vaut 300, une adresse de 239 caractères passe', async () => {
+test('le plafond est posé au-dessus des six lignes de la norme', async () => {
+  // « six lines of 38 characters, which is 228 characters plus the separators.
+  // The cap is set above that, at 300 ».
   const parser = new FakeClassifier({}, { city: 'paris' });
   const sixLignes = Array(6).fill('x'.repeat(38)).join(', ');
   assert.equal(sixLignes.length, 238);
-  await assert.rejects(async () => {
-    await assert.rejects(() => parseAddresses([`${sixLignes}x`], parser), RangeError);
-  }, assert.AssertionError);
+  assert.equal((await parseAddresses([sixLignes], parser))[0].city, 'paris');
+  assert.equal(MAX_CHARACTERS, 300);
+  await assert.rejects(() => parseAddresses(['x'.repeat(MAX_CHARACTERS + 1)], parser), RangeError);
 });
 
 test('un échec est retenté une fois, pas davantage', async () => {

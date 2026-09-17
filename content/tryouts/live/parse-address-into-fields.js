@@ -2,51 +2,17 @@
  * Essai interactif — découper une adresse en champs.
  *
  * Le vrai extrait du niveau recommandé, importé tel quel : ce qui tourne dans
- * le navigateur est exactement ce que la fiche affiche au-dessus.
+ * le navigateur est exactement ce que la fiche affiche au-dessus. Rien n'est
+ * entraîné, rien n'est chargé : deux dictionnaires et une ancre sur le code
+ * postal.
  *
  * Une adresse postale française ne se traduit pas : les exemples sont donc les
- * mêmes dans les deux langues, et seuls les noms de champs changent. Un seul
- * modèle, entraîné une fois au chargement de la page sur dix-huit adresses
- * étiquetées mot par mot — la forme que prend le travail de ce niveau, et son
- * coût réel.
+ * mêmes dans les deux langues, et seuls les noms de champs changent.
  *
  * Aucune de ces adresses n'est le domicile de quelqu'un ni le siège d'une
  * société : elles sont inventées, comme celles des tests.
  */
-import { parse, tokenise, train } from '../../snippets/parse-address-into-fields/n1.js';
-
-/* Étiqueté par segments et non par mot : c'est la forme qu'un humain peut
-   relire, et l'erreur d'alignement est ce qui fait rater ce niveau. */
-const ETIQUETEES = [
-  [['8', 'number'], ['rue', 'street_type'], ['des Lilas', 'street'], ['75011', 'postcode'], ['Paris', 'city']],
-  [['14', 'number'], ['avenue', 'street_type'], ['des Cerisiers', 'street'], ['69003', 'postcode'], ['Lyon', 'city']],
-  [['3', 'number'], ['allée', 'street_type'], ['du Château', 'street'], ['33000', 'postcode'], ['Bordeaux', 'city']],
-  [['27', 'number'], ['boulevard', 'street_type'], ['des Acacias', 'street'], ['13006', 'postcode'], ['Marseille', 'city']],
-  [['5', 'number'], ['impasse', 'street_type'], ['des Peupliers', 'street'], ['44000', 'postcode'], ['Nantes', 'city']],
-  [['2', 'number'], ['place', 'street_type'], ['des Tilleuls', 'street'], ['31000', 'postcode'], ['Toulouse', 'city']],
-  [['41', 'number'], ['chemin', 'street_type'], ['des Vignes', 'street'], ['38000', 'postcode'], ['Grenoble', 'city']],
-  [['9', 'number'], ['route', 'street_type'], ['de la Forêt', 'street'], ['35000', 'postcode'], ['Rennes', 'city']],
-  [['12 bis', 'number'], ['rue', 'street_type'], ['des Écoles', 'street'], ['59000', 'postcode'], ['Lille', 'city']],
-  [['6', 'number'], ['quai', 'street_type'], ['des Ormes', 'street'], ['67000', 'postcode'], ['Strasbourg', 'city']],
-  [['8', 'number'], ['rue', 'street_type'], ['des Lilas', 'street'], ['Bâtiment C', 'complement'], ['75011', 'postcode'], ['Paris', 'city']],
-  [['14', 'number'], ['avenue', 'street_type'], ['des Cerisiers', 'street'], ['Appartement 12', 'complement'], ['69003', 'postcode'], ['Lyon', 'city']],
-  [['Appartement 4', 'complement'], ['3', 'number'], ['allée', 'street_type'], ['du Château', 'street'], ['33000', 'postcode'], ['Bordeaux', 'city']],
-  [['Bâtiment B', 'complement'], ['Escalier 2', 'complement'], ['27', 'number'], ['boulevard', 'street_type'], ['des Acacias', 'street'], ['13006', 'postcode'], ['Marseille', 'city']],
-  [['5', 'number'], ['impasse', 'street_type'], ['des Peupliers', 'street'], ['Résidence Les Ormes', 'complement'], ['44000', 'postcode'], ['Nantes', 'city']],
-  [['2', 'number'], ['place', 'street_type'], ['des Tilleuls', 'street'], ['Escalier A', 'complement'], ['31000', 'postcode'], ['Toulouse', 'city']],
-  [['41', 'number'], ['chemin', 'street_type'], ['des Vignes', 'street'], ['Étage 3', 'complement'], ['38000', 'postcode'], ['Grenoble', 'city']],
-  [['9', 'number'], ['route', 'street_type'], ['de la Forêt', 'street'], ['Porte 12', 'complement'], ['35000', 'postcode'], ['Rennes', 'city']],
-];
-
-/** Des segments vers le couple [adresse, une étiquette par mot] attendu. */
-function deplier(segments) {
-  return [
-    segments.map(([texte]) => texte).join(' '),
-    segments.flatMap(([texte, etiquette]) => tokenise(texte).map(() => etiquette)),
-  ];
-}
-
-const MODELE = train(ETIQUETEES.map(deplier));
+import { parse } from '../../snippets/parse-address-into-fields/n0.js';
 
 /* Le type de voie ouvre déjà la voie dans la sortie de l'extrait : l'afficher
    sur sa propre ligne le répéterait sans rien apprendre. */
@@ -60,26 +26,27 @@ const CHAMPS = [
 
 const T = {
   fr: {
-    colonnes: ['Champ', 'Ce que le modèle y met'],
+    colonnes: ['Champ', 'Ce que l’extrait y met'],
     vide: '— rien',
-    note: 'Modèle entraîné sur 18 adresses étiquetées mot par mot.',
+    note: 'Découpage seul : rien ici ne vérifie que l’adresse existe.',
   },
   en: {
-    colonnes: ['Field', 'What the model puts there'],
+    colonnes: ['Field', 'What the snippet puts there'],
     vide: '— nothing',
-    note: 'Model trained on 18 addresses tagged word by word.',
+    note: 'Splitting only: nothing here checks that the address exists.',
   },
 };
+
+const MOTS = /[^\s]+/g;
 
 /**
  * Où se trouve, dans l'adresse tapée, ce que l'extrait a rangé dans un champ.
  *
- * L'extrait rend les mots d'un champ recollés par un espace ; la ponctuation
- * de l'adresse est perdue au passage, et deux compléments écrits « Appartement
- * 12, Bâtiment C » reviennent sans leur virgule. La valeur est donc cherchée
- * telle quelle d'abord, puis, à défaut, mot par mot du premier au dernier, ce
- * qui donne l'étendue exacte que le champ occupe dans l'adresse. Quand un mot
- * ne se retrouve pas, rien n'est surligné : on ne surligne jamais à peu près.
+ * L'extrait rend les mots d'un champ recollés par un espace, et il réécrit
+ * l'abréviation du type de voie : « bd » devient « boulevard », qui ne figure
+ * pas dans le texte tapé. La valeur est donc cherchée telle quelle d'abord,
+ * puis, à défaut, mot par mot du premier au dernier. Quand un mot ne se
+ * retrouve pas, rien n'est surligné : on ne surligne jamais à peu près.
  */
 function situer(texte, valeur) {
   if (!valeur) return null;
@@ -89,7 +56,7 @@ function situer(texte, valeur) {
   let curseur = 0;
   let debut = -1;
   let fin = -1;
-  for (const mot of tokenise(valeur)) {
+  for (const mot of valeur.match(MOTS) ?? []) {
     const place = texte.indexOf(mot, curseur);
     if (place === -1) return null;
     if (debut === -1) debut = place;
@@ -100,16 +67,16 @@ function situer(texte, valeur) {
 }
 
 export default {
-  level: 'N1',
+  level: 'N0',
 
   note: {
-    fr: 'Le modèle est entraîné dans votre navigateur au chargement de la page, sur les adresses étiquetées écrites juste à côté. Aucune adresse ne part ailleurs.',
-    en: 'The model is trained in your browser as the page loads, on the tagged addresses written right beside it. No address leaves the page.',
+    fr: 'Le découpage se fait dans votre navigateur, sans modèle ni appel : le code postal coupe la ligne, un dictionnaire de types de voie et un dictionnaire de compléments font le reste. Aucune adresse ne part ailleurs.',
+    en: 'The split happens in your browser, with no model and no call: the postcode cuts the line, a dictionary of street types and a dictionary of complements do the rest. No address leaves the page.',
   },
 
   run(adresse, lang) {
     const t = T[lang];
-    const champs = parse(MODELE, adresse);
+    const champs = parse(adresse);
 
     /* Chaque morceau rangé dans un champ est surligné là où il se trouve dans
        l'adresse, et porte le nom du champ : on lit le découpage sur l'adresse
@@ -136,26 +103,31 @@ export default {
   cases: [
     {
       label: {
-        fr: 'Une rue, une résidence et une ville jamais vues',
-        en: 'A street, a residence and a town never seen',
+        fr: 'Une rue au nom d’une personne, une ville à trait d’union',
+        en: 'A street named after a person, a hyphenated town',
       },
-      input: '7 rue du Moulin, Résidence Les Charmes, 21000 Dijon',
+      input: '15 rue Victor Hugo 92100 Boulogne-Billancourt',
     },
     {
       label: { fr: 'Deux compléments placés devant la voie', en: 'Two complements put before the street' },
       input: 'Appartement 12, Bâtiment C, 8 rue des Lilas, 75011 Paris',
     },
     {
-      label: { fr: 'Tout en capitales, sans une virgule', en: 'All capitals, not a single comma' },
-      input: '6 QUAI DES ORMES 67000 STRASBOURG',
+      label: { fr: 'Le bon code postal, la mauvaise ville', en: 'The right postcode, the wrong town' },
+      input: '8 rue des Lilas, 75011 Lyon',
+      fails: true,
+      why: {
+        fr: 'Les cinq champs ressortent propres, et l’adresse n’existe pas : 75011 est un code postal parisien. Découper n’est pas vérifier, et rien dans cette sortie ne distingue une adresse livrable d’une adresse impossible. C’est le géocodeur national qui répond à cette question-là, en une requête, et c’est une étape de plus.',
+        en: 'All five fields come back clean, and the address does not exist: 75011 is a Paris postcode. Splitting is not checking, and nothing in this output tells a deliverable address from an impossible one. The national geocoder is what answers that question, in one request, and it is a further step.',
+      },
     },
     {
       label: { fr: 'Une adresse allemande', en: 'A German address' },
       input: 'Hauptstrasse 5, 10115 Berlin',
       fails: true,
       why: {
-        fr: 'Toutes les adresses étiquetées placent le numéro devant et cinq chiffres avant la ville. Ici le nom de la rue porte le type de voie et passe en complément, la voie ressort vide, et le 5 devient un numéro alors qu’il est le numéro… par accident de position. Rien ne permet au modèle de dire qu’il n’a jamais vu ça : il étiquette quand même. Couvrir un pays de plus, c’est une campagne d’étiquetage de plus.',
-        en: 'Every tagged address puts the number first and five digits before the town. Here the street name carries its own street type and lands in the complement, the street comes back empty, and the 5 becomes a house number — right, but by accident of position. Nothing lets the model say it has never seen this: it labels the tokens anyway. Covering one more country means one more round of hand tagging.',
+        fr: 'Le numéro allemand s’écrit derrière le nom de la rue, et l’extrait attend l’inverse : le 5 reste dans la voie, le numéro ressort vide. L’ancre du code postal, elle, tient par accident — cinq chiffres aussi en Allemagne. Sur « 42 Rowan Street, Bristol BS1 4TQ », il n’y a plus d’ancre du tout, et ni code postal ni ville ne ressortent.',
+        en: 'A German house number is written after the street name, and the snippet expects the opposite: the 5 stays inside the street and the number comes back empty. The postcode anchor holds by accident — five digits in Germany too. On “42 Rowan Street, Bristol BS1 4TQ” there is no anchor left at all, and neither postcode nor town comes out.',
       },
     },
   ],

@@ -11,7 +11,8 @@ from n0 import FIELDS, STREET_TYPES, fold, normalise, parse
 # Toutes les adresses sont inventées : aucune n'est le domicile d'une personne
 # réelle ni le siège d'une société réelle.
 EMPTY = dict.fromkeys(FIELDS, "")
-LILAS = {"number": "8", "street_type": "rue", "street": "rue des Lilas", "postcode": "75011", "city": "Paris"}
+LILAS = {"number": "8", "street_type": "rue", "street": "rue des Lilas", "complement": "",
+         "postcode": "75011", "city": "Paris"}
 
 
 # ---------------------------------------------------------------------------
@@ -19,38 +20,61 @@ LILAS = {"number": "8", "street_type": "rue", "street": "rue des Lilas", "postco
 # ---------------------------------------------------------------------------
 
 
-def test_point_de_rupture_un_complement_ecrit_apres_finit_dans_le_nom_de_la_rue():
-    """« dans « 8 rue des Lilas Bâtiment C Appartement 12, 75011 Paris », le bâtiment et l'appartement finissent dans le nom de la rue »."""
+def test_un_complement_ecrit_apres_la_voie_sort_dans_son_champ():
+    """docstring : « The complement is the part the postal standard puts on lines of its own »."""
     assert parse("8 rue des Lilas Bâtiment C Appartement 12, 75011 Paris") == {
-        **LILAS, "street": "rue des Lilas Bâtiment C Appartement 12"}
-    # Témoin : sans complément, l'adresse est découpée juste.
+        **LILAS, "complement": "Bâtiment C Appartement 12"}
+    assert parse("8 rue des Lilas Bât C Apt 12, 75011 Paris") == {
+        **LILAS, "complement": "Bât C Apt 12"}
+    # Témoin : sans complément, l'adresse est découpée juste, et le champ est vide.
     assert parse("8 rue des Lilas, 75011 Paris") == LILAS
 
 
-def test_point_de_rupture_un_complement_ecrit_devant_vide_le_numero():
-    """« Écrit devant, le même complément fait pire : la ligne ne commence plus par un chiffre, le numéro revient vide »."""
-    parsed = parse("Appartement 12, Bâtiment C, 8 rue des Lilas, 75011 Paris")
-    assert parsed["number"] == "" and parsed["street_type"] == ""
-    assert parsed["street"] == "Appartement 12 Bâtiment C 8 rue des Lilas"
+def test_un_complement_ecrit_devant_la_voie_sort_aussi_dans_son_champ():
+    """`_cut_complement` : « Found at the start, it closes on the first house number or street type that follows »."""
+    assert parse("Appartement 12, Bâtiment C, 8 rue des Lilas, 75011 Paris") == {
+        **LILAS, "complement": "Appartement 12 Bâtiment C"}
+    assert parse("Résidence du Parc, 3 rue de la Paix, 75002 Paris") == {
+        "number": "3", "street_type": "rue", "street": "rue de la Paix",
+        "complement": "Résidence du Parc", "postcode": "75002", "city": "Paris"}
 
 
-def test_point_de_rupture_toute_la_ligne_de_voie_complement_compris_passe_en_nom_de_rue():
-    """« et toute la ligne de voie, complément compris, passe en nom de rue » ; le code postal et la ville restent lus."""
-    parsed = parse("Appartement 12, Bâtiment C, 8 rue des Lilas, 75011 Paris")
-    assert parsed == {"number": "", "street_type": "", "street": "Appartement 12 Bâtiment C 8 rue des Lilas",
-                      "postcode": "75011", "city": "Paris"}
+def test_un_complement_seul_sans_voie_occupe_toute_la_ligne():
+    """`_cut_complement` : « Found at the start with nothing after it that looks like a street, the whole line is the complement »."""
+    assert parse("Lieu-dit Les Granges 24200 Sarlat-la-Canéda") == {
+        "number": "", "street_type": "", "street": "", "complement": "Lieu-dit Les Granges",
+        "postcode": "24200", "city": "Sarlat-la-Canéda"}
+
+
+def test_les_adresses_ordinaires_que_le_niveau_recommande_doit_lire_juste():
+    """
+    Entrée ordinaire de la population visée (règle T5) : une rue au nom d'une
+    personne, une ville à trait d'union, une abréviation de type de voie, un
+    CEDEX.
+    """
+    assert parse("15 rue Victor Hugo 92100 Boulogne-Billancourt") == {
+        "number": "15", "street_type": "rue", "street": "rue Victor Hugo", "complement": "",
+        "postcode": "92100", "city": "Boulogne-Billancourt"}
+    assert parse("10 bd Saint-Michel 75005 Paris") == {
+        "number": "10", "street_type": "boulevard", "street": "boulevard Saint-Michel",
+        "complement": "", "postcode": "75005", "city": "Paris"}
+    assert parse("3 rue de la République, CEDEX 5, 69002 Lyon") == {
+        "number": "3", "street_type": "rue", "street": "rue de la République",
+        "complement": "CEDEX 5", "postcode": "69002", "city": "Lyon"}
 
 
 def test_point_de_rupture_hors_de_france_le_numero_allemand_reste_dans_la_rue():
     """« « Hauptstrasse 5, 10115 Berlin » laisse le numéro dans la rue »."""
     assert parse("Hauptstrasse 5, 10115 Berlin") == {
-        "number": "", "street_type": "", "street": "Hauptstrasse 5", "postcode": "10115", "city": "Berlin"}
+        "number": "", "street_type": "", "street": "Hauptstrasse 5", "complement": "",
+        "postcode": "10115", "city": "Berlin"}
 
 
 def test_point_de_rupture_une_adresse_britannique_ressort_sans_code_postal_ni_ville():
     """« « 42 Rowan Street, Bristol BS1 4TQ », sans suite de cinq chiffres, ressort sans code postal ni ville »."""
     assert parse("42 Rowan Street, Bristol BS1 4TQ") == {
-        "number": "42", "street_type": "", "street": "Rowan Street Bristol BS1 4TQ", "postcode": "", "city": ""}
+        "number": "42", "street_type": "", "street": "Rowan Street Bristol BS1 4TQ",
+        "complement": "", "postcode": "", "city": ""}
 
 
 def test_point_de_rupture_la_ville_ecrite_d_abord_aspire_la_rue():
@@ -88,7 +112,8 @@ def test_une_lettre_isolee_n_est_un_indice_que_collee_au_numero_le_r_reste_un_ty
     assert parse("12b rue des Lilas 75011 Paris")["number"] == "12 b"
     # Décision du rédacteur : une lettre séparée du numéro passe dans la voie, qui perd son type.
     assert parse("12 B rue des Lilas 75011 Paris") == {
-        "number": "12", "street_type": "", "street": "B rue des Lilas", "postcode": "75011", "city": "Paris"}
+        "number": "12", "street_type": "", "street": "B rue des Lilas", "complement": "",
+        "postcode": "75011", "city": "Paris"}
 
 
 def test_garde_l_indice_de_repetition_et_la_plage_avec_le_numero():
@@ -108,7 +133,16 @@ def test_un_nombre_de_cinq_chiffres_place_avant_le_vrai_code_postal_n_est_pas_pr
     """Commentaire : « Take the last run of five digits […] a five-digit number earlier in the line is not taken for the postcode. »"""
     parsed = parse("BP 40012, 8 rue des Lilas, 75011 Paris")
     assert parsed["postcode"] == "75011" and parsed["city"] == "Paris"
-    assert parsed["street"] == "BP 40012 8 rue des Lilas"
+    # « BP » est un mot du dictionnaire de compléments : la boîte postale sort là.
+    assert parsed["complement"] == "BP 40012" and parsed["street"] == "rue des Lilas"
+
+
+def test_un_mot_de_complement_dans_un_nom_de_rue_reste_dans_la_rue():
+    """`_cut_complement` : « Without that condition "rue de la Porte Maillot" would lose half its name to the word "Porte" »."""
+    parsed = parse("8 rue de la Porte Maillot 75017 Paris")
+    assert parsed["street"] == "rue de la Porte Maillot" and parsed["complement"] == ""
+    # Témoin : le même mot suivi d'un numéro, lui, ouvre bien un complément.
+    assert parse("8 rue des Lilas Porte 4 75011 Paris")["complement"] == "Porte 4"
 
 
 def test_une_annee_dans_le_nom_de_rue_reste_dans_la_rue():
@@ -189,4 +223,5 @@ def test_production_une_plage_de_numeros_ne_passe_pas_dans_la_rue():
     assert parse("1234-5678 rue X 75011 Paris")["number"] == "1234-5678"
     # Une plage écrite avec des espaces n'est pas reconnue : « - 10 » passe dans la voie.
     assert parse("8 - 10 rue des Lilas 75011 Paris") == {
-        "number": "8", "street_type": "", "street": "- 10 rue des Lilas", "postcode": "75011", "city": "Paris"}
+        "number": "8", "street_type": "", "street": "- 10 rue des Lilas", "complement": "",
+        "postcode": "75011", "city": "Paris"}

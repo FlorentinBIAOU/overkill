@@ -2,8 +2,8 @@
 id: parse-address-into-fields
 family: extract
 status: published
-verdict: N1
-updated: 2026-09-14
+verdict: N0
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
@@ -22,8 +22,8 @@ rungs:
   - level: N0
     available: true
     name:
-      fr: "Ancrage sur le code postal et dictionnaire de types de voie"
-      en: "Postcode anchor and street-type dictionary"
+      fr: "Ancrage sur le code postal, dictionnaire de types de voie et dictionnaire de compléments"
+      en: "Postcode anchor, street-type dictionary and complement dictionary"
     cost: nul
     latency: "<1 ms"
     risks:
@@ -40,11 +40,11 @@ rungs:
       javascript: snippets/parse-address-into-fields/n0.js
       verification: executed
     breaking_point:
-      fr: "Le complément d’adresse n’a pas d’ancre à lui : dans « 8 rue des Lilas Bâtiment C Appartement 12, 75011 Paris », le bâtiment et l’appartement finissent dans le nom de la rue. Écrit devant, le même complément fait pire : la ligne ne commence plus par un chiffre, le numéro revient vide, et toute la ligne de voie, complément compris, passe en nom de rue. Hors de France, l’ancre elle-même tombe : « Hauptstrasse 5, 10115 Berlin » laisse le numéro dans la rue, et « 42 Rowan Street, Bristol BS1 4TQ », sans suite de cinq chiffres, ressort sans code postal ni ville."
-      en: "A complement has no anchor of its own: in 8 rue des Lilas Bâtiment C Appartement 12, 75011 Paris, the building and the flat end up inside the street name. Written first, the same complement does worse: the line no longer opens on a digit, the house number comes back empty, and the whole street line, complement included, becomes the street. Outside France the anchor itself fails: Hauptstrasse 5, 10115 Berlin leaves the number inside the street, and 42 Rowan Street, Bristol BS1 4TQ, with no run of five digits, comes back with neither postcode nor town."
+      fr: "Hors de France, l’ancre tombe. « Hauptstrasse 5, 10115 Berlin » laisse le numéro dans la rue, puisqu’il s’écrit derrière ; « 42 Rowan Street, Bristol BS1 4TQ », sans suite de cinq chiffres, ressort sans code postal ni ville. Et même en France, le découpage ne vérifie rien : « 8 rue des Lilas, 75011 Lyon » ressort en cinq champs propres, avec un code postal parisien sur une ville qui n’est pas la sienne."
+      en: "Outside France the anchor fails. Hauptstrasse 5, 10115 Berlin leaves the number inside the street, because a German number is written after it; 42 Rowan Street, Bristol BS1 4TQ, with no run of five digits, comes back with neither postcode nor town. And even in France, splitting checks nothing: 8 rue des Lilas, 75011 Lyon comes back as five clean fields, with a Paris postcode on a town that is not its own."
     escalate_when:
-      fr: "Vos formulaires reçoivent des compléments — bâtiment, escalier, résidence, appartement — et vous les retrouvez collés au nom de la rue dans vos exports."
-      en: "Your forms are taking complements — building, staircase, residence, flat — and you find them glued to the street name in your exports."
+      fr: "Des adresses étrangères arrivent, ou le mot qui ouvre un complément n’est pas dans le dictionnaire, et vous ajoutez une exception par semaine."
+      en: "Foreign addresses start arriving, or the word that opens a complement is not in the dictionary, and you are adding one exception a week."
 
   - level: N1
     available: true
@@ -71,17 +71,17 @@ rungs:
       javascript: snippets/parse-address-into-fields/n1.js
       verification: executed
     breaking_point:
-      fr: "Le modèle ne connaît que les conventions qu’on lui a étiquetées, et toutes les adresses de son jeu d’entraînement placent le numéro devant et cinq chiffres avant la ville. Sur « Hauptstrasse 5, 10115 Berlin », il rend une rue vide et un numéro qui vaut 5 ; sur « 42 Rowan Street, Bristol BS1 4TQ », pas de code postal, et « 4TQ » pour toute ville — et comme rien ne lui permet de dire qu’il n’a jamais vu ça, il étiquette quand même."
-      en: "The model knows only the conventions it was tagged on, and every address in its training set puts the number first and five digits before the town. On Hauptstrasse 5, 10115 Berlin it returns an empty street and a house number of 5; on 42 Rowan Street, Bristol BS1 4TQ, no postcode at all and 4TQ for a town — and since nothing lets it say it has never seen this, it labels the tokens anyway."
+      fr: "Le modèle régresse sur les adresses françaises les plus ordinaires, que N0 lit juste. Entraîné sur les dix-huit adresses du test : « 15 rue Victor Hugo 92100 Boulogne-Billancourt » rend la voie « rue », le complément « Victor Hugo Boulogne » et la ville « Billancourt » ; « 10 bd Saint-Michel » rend la voie « bd » ; « Lieu-dit Les Granges 24200 Sarlat-la-Canéda » rend la ville « Canéda ». Une rue au nom d’une personne, une ville à trait d’union, une abréviation : ce n’est pas une marge. Et il ne s’abstient jamais : sur « Hauptstrasse 5, 10115 Berlin », il étiquette quand même."
+      en: "The model regresses on the most ordinary French addresses, which N0 reads correctly. Trained on the eighteen addresses in the test: 15 rue Victor Hugo 92100 Boulogne-Billancourt comes back with the street “rue”, the complement “Victor Hugo Boulogne” and the town “Billancourt”; 10 bd Saint-Michel comes back with the street “bd”; Lieu-dit Les Granges 24200 Sarlat-la-Canéda comes back with the town “Canéda”. A street named after a person, a hyphenated town, an abbreviation: that is not an edge. And it never abstains: on Hauptstrasse 5, 10115 Berlin it labels the tokens anyway."
     escalate_when:
-      fr: "Des adresses étrangères arrivent, et couvrir chaque nouveau pays demanderait sa propre campagne d’étiquetage."
-      en: "Foreign addresses start arriving, and covering each new country would take its own round of hand tagging."
+      fr: "Vous relisez les sorties et vous voyez des noms de rue coupés là où le modèle n’a rien vu de semblable dans son jeu d’étiquetage."
+      en: "You read the output and see street names cut where the model saw nothing like them in its tagged set."
 
   - level: N2
     available: true
     name:
-      fr: "Analyseur d’adresses statistique auto-hébergé (libpostal)"
-      en: "Self-hosted statistical address parser (libpostal)"
+      fr: "Analyseur d’adresses statistique auto-hébergé (libpostal), l’alternative de tout le monde"
+      en: "Self-hosted statistical address parser (libpostal), everyone’s alternative"
     cost: faible
     latency: "<1 ms"
     risks:
@@ -102,8 +102,8 @@ rungs:
       javascript: snippets/parse-address-into-fields/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Il découpe, il ne vérifie pas : libpostal rend des étiquettes, ni score ni refus. Si une ligne qui n’est pas une adresse — « the meeting is at ten in room four » — revient étiquetée en numéro et en rue, ou si « 8 rue des Lilas, 75011 Lyon », qui pose un code postal parisien sur une autre ville, revient en champs propres — deux réponses que le test simule —, rien dans le code ne distingue ce résultat d’un bon."
-      en: "It splits, it does not check: libpostal returns labels, neither a score nor a refusal. If a line that is not an address at all — the meeting is at ten in room four — comes back labelled as a house number and a street, or 8 rue des Lilas, 75011 Lyon, which puts a Paris postcode on another town, comes back as clean fields — two answers the test simulates —, nothing in the code tells that result from a good one."
+      fr: "Il découpe, il ne vérifie pas, et il coûte un modèle volumineux à charger au démarrage et à tenir en mémoire : la classe de latence affichée vaut par appel, une fois le modèle chargé, pas au premier. libpostal rend des étiquettes, ni score ni refus. Si une ligne qui n’est pas une adresse — « the meeting is at ten in room four » — revient étiquetée en numéro et en rue, ou si « 8 rue des Lilas, 75011 Lyon », qui pose un code postal parisien sur une autre ville, revient en champs propres — deux réponses que le test simule —, rien dans le code ne distingue ce résultat d’un bon."
+      en: "It splits, it does not check, and it costs a large model to load at start-up and keep in memory: the latency class shown here is per call, once the model is loaded, not on the first one. libpostal returns labels, neither a score nor a refusal. If a line that is not an address at all — the meeting is at ten in room four — comes back labelled as a house number and a street, or 8 rue des Lilas, 75011 Lyon, which puts a Paris postcode on another town, comes back as clean fields — two answers the test simulates —, nothing in the code tells that result from a good one."
     escalate_when:
       fr: "Ce que vous recevez n’est plus une ligne d’adresse mais du texte libre — une signature de courriel, un message où l’adresse est noyée dans une phrase — et il n’y a plus de ligne à découper."
       en: "What you receive is no longer an address line but free text — an email signature, a message where the address sits inside a sentence — and there is no line left to split."
@@ -142,20 +142,22 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N1 pour une raison précise : le complément. Bâtiment, escalier, résidence, appartement : la norme postale leur donne des lignes à part, un formulaire d’une ligne les reçoit mêlés à la voie, et N0 les colle dans le nom de la rue sans jamais le signaler. Le prix de N1 est un jeu d’adresses étiquetées à la main — dix-huit dans le test —, qui reste chez vous et se mesure ; montez à N2 le jour où des adresses étrangères arrivent, parce que N1 ne connaît que les conventions qu’on lui a étiquetées, quand libpostal a été entraîné sur des adresses de tous les pays habités."
-  en: "N1, for one precise reason: the complement. Building, staircase, residence, flat: the postal standard gives them lines of their own, a single-line form receives them mixed in with the street, and N0 buries them in the street name without ever flagging it. The price of N1 is a set of hand-tagged addresses — eighteen in the test — which stays on your infrastructure and can be measured; move up to N2 the day foreign addresses arrive, because N1 knows only the conventions it was tagged on, whereas libpostal was trained on addresses from every inhabited country."
+  fr: "N0, parce que le complément — bâtiment, escalier, résidence, appartement, CEDEX, BP — a des mots-clés en nombre fini, exactement comme le type de voie : un dictionnaire et une ancre le traitent, et le résultat se teste unitairement. N1 était recommandé pour cette seule raison, et il la paie cher : entraîné sur dix-huit adresses, il casse sur « 15 rue Victor Hugo 92100 Boulogne-Billancourt » et « 10 bd Saint-Michel », que N0 lit juste. Montez à N2 le jour où des adresses étrangères arrivent : libpostal a été entraîné sur des adresses de tous les pays habités, et c’est l’alternative de tout le monde, pas seulement de l’étranger — son prix est un modèle volumineux à charger et à tenir en mémoire. Et quel que soit le niveau, découper n’est pas vérifier : « 8 rue des Lilas, 75011 Lyon » ressort en champs propres et ne désigne aucun lieu. C’est le service de géocodage de la Géoplateforme qui répond à cette question-là, gratuitement et contre le référentiel national ; c’est l’étape qui suit le découpage, et elle fait sortir l’adresse de votre infrastructure."
+  en: "N0, because the complement — building, staircase, residence, flat, CEDEX, PO box — has a finite set of keywords, exactly like the street type: a dictionary and an anchor handle it, and the result is unit testable. N1 was recommended for that one reason, and it pays dearly for it: trained on eighteen addresses, it breaks on 15 rue Victor Hugo 92100 Boulogne-Billancourt and 10 bd Saint-Michel, which N0 reads correctly. Move up to N2 the day foreign addresses arrive: libpostal was trained on addresses from every inhabited country, and it is everyone’s alternative, not only the foreign traveller’s — its price is a large model to load and keep in memory. And whatever the level, splitting is not checking: 8 rue des Lilas, 75011 Lyon comes back as clean fields and names no place at all. The Géoplateforme geocoding service is what answers that, free of charge and against the national reference; it is the step after the split, and it takes the address out of your infrastructure."
 
 further_reading:
   - label: "libpostal — analyseur d’adresses international, entraîné sur données ouvertes"
     url: "https://github.com/openvenues/libpostal"
   - label: "Géoplateforme — service de géocodage des adresses françaises, qui remplace l’API de la Base Adresse Nationale"
-    url: "https://adresse.data.gouv.fr/outils/api-doc/adresse"
+    url: "https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/geocodage/"
   - label: "Michael Tandy — Falsehoods programmers believe about addresses"
     url: "https://www.mjt.me.uk/posts/falsehoods-programmers-believe-about-addresses/"
   - label: "OpenStreetMap — clé addr, le vocabulaire des composants d’adresse"
     url: "https://wiki.openstreetmap.org/wiki/Key:addr"
 
 sources:
+  - label: "Géoplateforme, guide du géocodage (consulté) : point d’accès https://data.geopf.fr/geocodage/search, service public gratuit, usage limité à cinquante requêtes par seconde depuis une même adresse IP ; l’API Adresse de la Base Adresse Nationale y est intégrée"
+    url: "https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/geocodage/"
   - label: "La Poste, SP 8855 volume 2 — adressage des plis : l’adresse d’un particulier en six lignes, code postal et localité en dernière ligne, 38 caractères par ligne"
     url: "https://lastation.laposte.fr/sites/p8_u1/files/2023-03/SP8855-Volume%202_V1.11%20-%20Adressage%20des%20plis.pdf"
   - label: "libpostal — README : entraîné sur plus d’un milliard d’adresses de tous les pays habités, étiquettes de l’analyseur"

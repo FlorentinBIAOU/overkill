@@ -8,28 +8,17 @@ prouvent pas : que le modèle découpe bien les adresses.
 """
 
 import json
-from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import FIELDS, MAX_CHARACTERS, PROMPT, ParsingUnavailable, parse
+from _harness.fake_sdk import FakeSDK
+from n3 import FIELDS, MAX_CHARACTERS, MODEL, PROMPT, ParsingUnavailable, ProviderClient, parse
 
 # Adresses inventées.
 FRENCH = "8 rue des Lilas, Appartement 12, 75011 Paris"
 FULL = {"number": "8", "street": "rue des Lilas", "complement": "Appartement 12", "postcode": "75011", "city": "Paris"}
 EMPTY = dict.fromkeys(FIELDS, "")
-
-
-class RealShapedClient:
-    """Surface du kit `openai` publié : chat.completions.create(model=..., messages=[...]), réponse dans choices[0].message.content."""
-
-    def __init__(self, content):
-        self.content = content
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-    def _create(self, **kwargs):
-        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(role="assistant", content=self.content))])
 
 
 # ---------------------------------------------------------------------------
@@ -87,12 +76,12 @@ def test_un_champ_invente_est_ecarte():
     assert parse("rue des Lilas, Paris", client=client) == {**EMPTY, "street": "rue des Lilas", "city": "Paris"}
 
 
-def test_defaut_un_fragment_d_un_autre_champ_ne_passe_pas_pour_un_code_postal():
+def test_production_un_fragment_d_un_autre_champ_ne_passe_pas_pour_un_code_postal():
     client = FakeLLM(response='{"street": "rue des Lilas", "complement": "Appartement 12", "postcode": "12", "city": "Paris"}')
     assert parse("rue des Lilas, Appartement 12, Paris", client=client)["postcode"] == ""
 
 
-def test_defaut_un_code_postal_rendu_en_nombre_n_est_pas_perdu():
+def test_production_un_code_postal_rendu_en_nombre_n_est_pas_perdu():
     client = FakeLLM(response='{"number": 8, "street": "rue des Lilas", "postcode": 75011, "city": "Paris"}')
     parsed = parse(FRENCH, client=client)
     assert parsed["postcode"] == "75011" and parsed["number"] == "8"
@@ -124,13 +113,31 @@ def test_une_reponse_inutilisable_leve_plutot_que_rendre_des_champs_vides():
         assert client.call_count == 3, answer
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le client par défaut `OpenAI()` n'a pas de méthode `complete` ; la surface réelle est "
-    "chat.completions.create(model=..., messages=[...]). L'AttributeError est avalée et sort en ParsingUnavailable",
-)
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    assert parse(FRENCH, client=RealShapedClient(json.dumps(FULL))) == FULL
+def test_l_adaptateur_parle_au_kit_du_fournisseur():
+    """`ProviderClient` : « The one call this snippet makes, on top of the provider's SDK »."""
+    sdk = FakeSDK(content=json.dumps(FULL))
+    assert parse(FRENCH, client=ProviderClient(sdk=sdk)) == FULL
+    assert sdk.last_request == {
+        "endpoint": "chat.completions",
+        "model": MODEL,
+        "messages": [{"role": "user", "content": PROMPT.format(address=FRENCH)}],
+        "temperature": 0,
+    }
+
+
+def test_l_adaptateur_rend_un_refus_du_modele_comme_une_reponse_inutilisable():
+    """`content` nul n'est jamais passé au décodeur JSON."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(ParsingUnavailable):
+        parse(FRENCH, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3  # redemandé, puis levé
+
+
+def test_l_adaptateur_retente_une_panne_du_kit():
+    """Une panne du kit est une panne de fournisseur : retentée, pas une de plus."""
+    sdk = FakeSDK(content=json.dumps(FULL), fail_times=2)
+    assert parse(FRENCH, client=ProviderClient(sdk=sdk)) == FULL
+    assert len(sdk.requests) == 3
 
 
 # ---------------------------------------------------------------------------

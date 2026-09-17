@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parse as parseN0 } from './n0.js';
 import { LABELS, features, fold, parse, tokenise, train } from './n1.js';
-import essai from '../../tryouts/live/parse-address-into-fields.js';
 
 // Le jeu d'entraînement de ce niveau : des adresses étiquetées à la main, jeton
 // par jeton. Toutes sont inventées.
@@ -83,10 +82,13 @@ test('découpe une adresse ordinaire', () => {
 });
 
 test("un complément au milieu de la ligne n'avale plus la voie", () => {
+  // Sur l'exemple du point de rupture de N0 — que N0 lit désormais juste lui
+  // aussi, avec son dictionnaire de compléments : les deux niveaux s'accordent.
   const address = '8 rue des Lilas Bâtiment C Appartement 12, 75011 Paris';
   assert.equal(parse(model, address).street, 'rue des Lilas');
   assert.equal(parse(model, address).complement, 'Bâtiment C Appartement 12');
-  assert.equal(parseN0(address).street, 'rue des Lilas Bâtiment C Appartement 12');
+  assert.equal(parseN0(address).street, 'rue des Lilas');
+  assert.equal(parseN0(address).complement, 'Bâtiment C Appartement 12');
 });
 
 test('sépare un complément que N0 avalait', () => {
@@ -94,24 +96,6 @@ test('sépare un complément que N0 avalait', () => {
   assert.equal(parsed.complement, 'Appartement 12 Bâtiment C');
   assert.equal(parsed.number, '8');
   assert.equal(parsed.street, 'rue des Lilas');
-});
-
-test("l'essai : une rue, une résidence et une ville jamais vues ; deux compléments devant ; tout en capitales", () => {
-  const seen = TAGGED.flat().map(([text]) => text).join(' ');
-  for (const word of ['Moulin', 'Charmes', 'Dijon', '21000']) assert.ok(!seen.includes(word), word);
-  const [jamais, devant, capitales] = essai.cases;
-  const valeurs = (cas) => Object.fromEntries(essai.run(cas.input, 'fr').rows.rows.map(([champ, cellule]) => [champ, cellule.v ?? '']));
-  assert.deepEqual(valeurs(jamais), { Numéro: '7', Voie: 'rue du Moulin', Complément: 'Résidence Les Charmes', 'Code postal': '21000', Ville: 'Dijon' });
-  assert.deepEqual(valeurs(devant), { Numéro: '8', Voie: 'rue des Lilas', Complément: 'Appartement 12 Bâtiment C', 'Code postal': '75011', Ville: 'Paris' });
-  assert.deepEqual(valeurs(capitales), { Numéro: '6', Voie: 'QUAI DES ORMES', Complément: '', 'Code postal': '67000', Ville: 'STRASBOURG' });
-});
-
-test("l'essai allemand : la rue passe en complément, la voie ressort vide, le 5 devient un numéro", () => {
-  const allemand = essai.cases[3];
-  assert.equal(allemand.fails, true);
-  const rows = Object.fromEntries(essai.run(allemand.input, 'fr').rows.rows.map(([champ, cellule]) => [champ, cellule.v ?? '']));
-  assert.deepEqual(rows, { Numéro: '5', Voie: '', Complément: 'Hauptstrasse', 'Code postal': '10115', Ville: 'Berlin' });
-  assert.equal(essai.run(allemand.input, 'fr').note, 'Modèle entraîné sur 18 adresses étiquetées mot par mot.');
 });
 
 test("chaque mot est étiqueté d'après ce à quoi il ressemble et ce qui l'entoure", () => {

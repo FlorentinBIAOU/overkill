@@ -505,3 +505,7 @@ tatoeba
 example
 iban
 dateparser
+billancourt
+canéda
+sarlat
+géoplateforme

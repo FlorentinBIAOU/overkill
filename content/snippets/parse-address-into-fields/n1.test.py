@@ -98,13 +98,15 @@ def test_decoupe_une_adresse_ordinaire(model):
 
 def test_un_complement_au_milieu_de_la_ligne_n_avale_plus_la_voie(model):
     """
-    Docstring : « un complément au milieu de la ligne n'avale plus la voie » ;
-    verdict : « N0 le colle dans le nom de la rue sans jamais le signaler ». Sur l'exemple même du point de rupture de N0.
+    Docstring : « un complément au milieu de la ligne n'avale plus la voie ».
+    Sur l'exemple du point de rupture de N0 — que N0 lit désormais juste lui
+    aussi, avec son dictionnaire de compléments : les deux niveaux s'accordent.
     """
     address = "8 rue des Lilas Bâtiment C Appartement 12, 75011 Paris"
     assert parse(model, address)["street"] == "rue des Lilas"
     assert parse(model, address)["complement"] == "Bâtiment C Appartement 12"
-    assert parse_n0(address)["street"] == "rue des Lilas Bâtiment C Appartement 12"
+    assert parse_n0(address)["street"] == "rue des Lilas"
+    assert parse_n0(address)["complement"] == "Bâtiment C Appartement 12"
 
 
 def test_separe_un_complement_que_n0_avalait(model):

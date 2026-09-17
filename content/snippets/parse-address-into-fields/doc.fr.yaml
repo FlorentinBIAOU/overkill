@@ -15,9 +15,18 @@ n0: |
   est la ville. Vouloir reconnaître la ville à son nom obligerait à embarquer
   une liste des communes et à la tenir à jour.
 
-  Ensuite, le type de voie est lu dans un dictionnaire plutôt que deviné, pour
-  que les abréviations que les gens tapent vraiment — « av. », « bd », « imp. »
-  — ressortent sous une seule orthographe canonique.
+  Ensuite, le type de voie et le complément sont lus dans des dictionnaires
+  plutôt que devinés, pour que les abréviations que les gens tapent vraiment —
+  « av. », « bd », « bât », « appt » — ressortent sous une seule orthographe
+  canonique. Le complément est la part que la norme postale met sur des lignes
+  à part, et qu'un formulaire d'une ligne reçoit mêlée à la voie ; ses
+  mots-clés sont en nombre fini, et c'est pourquoi un dictionnaire suffit.
+
+  Ce que cela ne fait pas, c'est vérifier que l'adresse existe. Découper sans
+  vérifier donne des champs propres qui peuvent être faux : « 8 rue des Lilas,
+  75011 Lyon » se découpe parfaitement et ne désigne aucun lieu. C'est le
+  service de géocodage national qui répond à cette question, et c'est une
+  étape à part.
 
 n1.js: |
   Étiqueter chaque jeton d'une adresse par une régression logistique sur des

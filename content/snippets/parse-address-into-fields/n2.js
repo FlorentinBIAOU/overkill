@@ -15,8 +15,10 @@
  * function below is where that becomes your problem.
  */
 
-// A postal address is short: La Poste's rules allow six lines of 38 characters.
-// Anything longer is not an address line, and is refused before parsing.
+// A postal address is short: La Poste's rules allow six lines of 38 characters,
+// which is 228 characters plus the separators. The cap is set above that, at
+// 300, so that a line written with generous punctuation still goes through;
+// anything past it is not an address, and is refused before parsing.
 export const MAX_CHARACTERS = 300;
 
 export const FIELDS = ['number', 'street', 'complement', 'postcode', 'city'];

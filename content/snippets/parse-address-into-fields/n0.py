@@ -11,9 +11,17 @@ two: what comes before is the street line, what comes after is the town. Trying
 to recognise the town by its name would mean shipping a list of communes and
 keeping it up to date.
 
-Second, the street type is read from a dictionary rather than guessed, so the
-abbreviations people actually type — "av.", "bd", "imp." — come out as one
-canonical spelling.
+Second, the street type and the complement are read from dictionaries rather
+than guessed, so the abbreviations people actually type — "av.", "bd", "bât",
+"appt" — come out as one canonical spelling. The complement is the part the
+postal standard puts on lines of its own, and a one-line form receives mixed
+into the street; its keywords are a closed list, which is why a dictionary
+settles it.
+
+What this does not do is check that the address exists. Splitting without
+checking gives clean fields that can still be wrong: "8 rue des Lilas,
+75011 Lyon" splits perfectly and names no real place. The national geocoding
+service is what answers that, and it is a separate step.
 """
 
 import re
@@ -37,7 +45,21 @@ STREET_TYPES = {
     "cite": "cité", "villa": "villa", "esplanade": "esplanade",
 }
 
-FIELDS = ("number", "street_type", "street", "postcode", "city")
+# The complement keywords of a French address, with the abbreviations people
+# type. Trade knowledge again, and a closed list: the postal standard gives
+# each of these a line of its own, and a one-line form gets them mixed into the
+# street.
+COMPLEMENTS = {
+    "bat": "bâtiment", "batt": "bâtiment", "batiment": "bâtiment", "immeuble": "immeuble",
+    "esc": "escalier", "escalier": "escalier",
+    "app": "appartement", "apt": "appartement", "appt": "appartement", "appartement": "appartement",
+    "etage": "étage", "porte": "porte", "hall": "hall", "entree": "entrée",
+    "res": "résidence", "residence": "résidence", "lotissement": "lotissement",
+    "lieu-dit": "lieu-dit", "lieudit": "lieu-dit",
+    "bp": "BP", "cs": "CS", "tsa": "TSA", "cedex": "CEDEX", "chez": "chez",
+}
+
+FIELDS = ("number", "street_type", "street", "complement", "postcode", "city")
 
 # A house number or a range of them, and the repetition index that may follow:
 # 8, 8-10, 8 bis, 12B. A lone letter counts only when it touches the number, so
@@ -60,9 +82,47 @@ def fold(word: str) -> str:
     return "".join(c for c in decomposed if not unicodedata.combining(c)).rstrip(".")
 
 
+def _is_designator(word: str) -> bool:
+    """What follows a complement keyword: a number, a single letter, another keyword."""
+    return word.isdigit() or (len(word) == 1 and word.isalpha()) or fold(word) in COMPLEMENTS
+
+
+def _cut_complement(words: list[str]) -> tuple[list[str], list[str]]:
+    """
+    Take the complement out of the street line, and return the two parts.
+
+    Mid-line, a complement keyword opens a complement that runs to the end of
+    the line — "8 rue des Lilas Bât C Apt 12" — but only when it is followed by
+    what a complement is followed by: a number, a single letter, another
+    keyword. Without that condition "rue de la Porte Maillot" would lose half
+    its name to the word "Porte".
+
+    At the start of the line, the complement closes where the street opens: the
+    first street type, and the house number in front of it if there is one.
+    "Résidence du Parc 3 rue de la Paix" cuts before the 3. With no street type
+    at all, the whole line is the complement: "Lieu-dit Les Granges".
+    """
+    opening = next(
+        (i for i, word in enumerate(words)
+         if fold(word) in COMPLEMENTS and (i == 0 or i == len(words) - 1 or _is_designator(words[i + 1]))),
+        None,
+    )
+    if opening is None:
+        return words, []
+    if opening > 0:
+        return words[:opening], words[opening:]
+
+    street = next((i for i, word in enumerate(words[1:], 1) if fold(word) in STREET_TYPES), None)
+    if street is None:
+        return [], words
+    closing = street - 1 if street > 1 and HOUSE_NUMBER.fullmatch(words[street - 1]) else street
+    return words[closing:], words[:closing]
+
+
 def parse(address: str) -> dict:
     """
-    Split an address into number, street type, street, postcode and town.
+    Split an address into number, street type, street, complement, postcode and
+    town.
 
     Every field is a string, empty when the address does not carry it. Returning
     an empty string rather than nothing at all keeps the caller from having to
@@ -80,6 +140,10 @@ def parse(address: str) -> dict:
         fields["postcode"] = found.group()
         fields["city"] = text[found.end():].strip()
         text = text[: found.start()].strip()
+
+    words, complement = _cut_complement(text.split())
+    fields["complement"] = " ".join(complement)
+    text = " ".join(words)
 
     number = HOUSE_NUMBER.match(text)
     if number:

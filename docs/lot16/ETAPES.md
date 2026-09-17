@@ -21,3 +21,7 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
   document puis de l'appelant puis abstention (N0), N1 remplacé par un analyseur
   éprouvé (dateparser / chrono-node), référence obligatoire et égale à la date
   du document en N1 et N3, deux marquages retirés. Reste : rien.
+- **parse-address-into-fields** — dictionnaire de compléments dans N0, verdict
+  ramené à N0, essai refait sur N0, régression de N1 écrite dans son point de
+  rupture, géocodeur de la Géoplateforme nommé et sourcé, plafond de N2 expliqué,
+  adaptateur N3 testé. Reste : rien.

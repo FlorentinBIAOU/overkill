@@ -9,16 +9,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { FIELDS, MAX_CHARACTERS, ParsingUnavailable, parse } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import { FIELDS, MAX_CHARACTERS, MODEL, ParsingUnavailable, parse, providerClient } from './n3.js';
 
 const FRENCH = '8 rue des Lilas, Appartement 12, 75011 Paris';
 const FULL = { number: '8', street: 'rue des Lilas', complement: 'Appartement 12', postcode: '75011', city: 'Paris' };
 const EMPTY = Object.fromEntries(FIELDS.map((name) => [name, '']));
-
-/** Surface du kit `openai` publié : chat.completions.create({ model, messages }), réponse dans choices[0].message.content. */
-const realShapedClient = (content) => ({
-  chat: { completions: { create: async () => ({ choices: [{ message: { role: 'assistant', content } }] }) } },
-});
 
 // ---------------------------------------------------------------------------
 // Point de rupture (plomberie)
@@ -104,16 +100,29 @@ test('une réponse inutilisable lève plutôt que rendre des champs vides', asyn
   }
 });
 
-test('DÉFAUT : le client par défaut `new OpenAI()` n’a pas de méthode `complete` ; la surface réelle est chat.completions.create', async () => {
-  await assert.rejects(async () => {
-    let parsed;
-    try {
-      parsed = await parse(FRENCH, { client: realShapedClient(JSON.stringify(FULL)) });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.deepEqual(parsed, FULL);
-  }, assert.AssertionError);
+test('l’adaptateur parle au kit du fournisseur', async () => {
+  // `providerClient` : la seule requête que l'extrait envoie, sur le kit.
+  const sdk = new FakeSDK({ content: JSON.stringify(FULL) });
+  assert.deepEqual(await parse(FRENCH, { client: await providerClient(sdk) }), FULL);
+  assert.equal(sdk.lastRequest.endpoint, 'chat.completions');
+  assert.equal(sdk.lastRequest.model, MODEL);
+  assert.equal(sdk.lastRequest.temperature, 0);
+  assert.equal(sdk.lastRequest.messages.length, 1);
+  assert.equal(sdk.lastRequest.messages[0].role, 'user');
+  assert.ok(sdk.lastRequest.messages[0].content.endsWith(`\n${FRENCH}`));
+});
+
+test('l’adaptateur rend un refus du modèle comme une réponse inutilisable', async () => {
+  // `content` nul n'est jamais passé au décodeur JSON.
+  const sdk = new FakeSDK({ content: null });
+  await assert.rejects(async () => parse(FRENCH, { client: await providerClient(sdk) }), ParsingUnavailable);
+  assert.equal(sdk.requests.length, 3); // redemandé, puis levé
+});
+
+test('l’adaptateur retente une panne du kit', async () => {
+  const sdk = new FakeSDK({ content: JSON.stringify(FULL), failTimes: 2 });
+  assert.deepEqual(await parse(FRENCH, { client: await providerClient(sdk) }), FULL);
+  assert.equal(sdk.requests.length, 3);
 });
 
 // ---------------------------------------------------------------------------

@@ -153,17 +153,15 @@ def test_refuse_une_adresse_trop_longue_avant_d_analyser_quoi_que_ce_soit():
         parse_addresses(["x" * (MAX_CHARACTERS + 1)])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le commentaire dit que La Poste permet six lignes de 38 caractères et que tout ce qui est plus long "
-    "est refusé ; le plafond vaut 300, et une adresse de 239 caractères (six lignes pleines séparées par « , », plus un) passe",
-)
-def test_une_adresse_plus_longue_que_six_lignes_de_trente_huit_caracteres_est_refusee():
+def test_le_plafond_est_pose_au_dessus_des_six_lignes_de_la_norme():
+    """Commentaire : « six lines of 38 characters, which is 228 characters plus the separators. The cap is set above that, at 300 »."""
     parser = FakeClassifier({}, default={"city": "paris"})
     six_lignes = ", ".join(["x" * 38] * 6)
     assert len(six_lignes) == 238
-    with pytest.raises(ValueError):
-        parse_addresses([six_lignes + "x"], parser)
+    assert parse_addresses([six_lignes], parser)[0]["city"] == "paris"
+    assert MAX_CHARACTERS == 300
+    with pytest.raises(ValueError, match="300"):
+        parse_addresses(["x" * (MAX_CHARACTERS + 1)], parser)
 
 
 def test_un_echec_est_retente_une_fois_pas_davantage():

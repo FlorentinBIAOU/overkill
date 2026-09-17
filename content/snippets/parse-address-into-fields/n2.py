@@ -16,8 +16,10 @@ below is where that becomes your problem.
 
 from __future__ import annotations
 
-# A postal address is short: La Poste's rules allow six lines of 38 characters.
-# Anything longer is not an address line, and is refused before parsing.
+# A postal address is short: La Poste's rules allow six lines of 38 characters,
+# which is 228 characters plus the separators. The cap is set above that, at
+# 300, so that a line written with generous punctuation still goes through;
+# anything past it is not an address, and is refused before parsing.
 MAX_CHARACTERS = 300
 
 FIELDS = ("number", "street", "complement", "postcode", "city")
