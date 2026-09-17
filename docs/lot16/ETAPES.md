@@ -17,3 +17,7 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
   majuscules seules, clôture de code décodée en N3, titre anglais et `need`
   ramenés aux coordonnées, N1 dit qu'il bloque au lieu de masquer, deux
   marquages retirés. Reste : rien.
+- **extract-dates-from-text** — mois abrégés lus, convention jour-mois tirée du
+  document puis de l'appelant puis abstention (N0), N1 remplacé par un analyseur
+  éprouvé (dateparser / chrono-node), référence obligatoire et égale à la date
+  du document en N1 et N3, deux marquages retirés. Reste : rien.

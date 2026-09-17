@@ -16,8 +16,12 @@ n0.py: |
   de 1900 une année commune.
 
   Ce que les chiffres ne peuvent pas dire, c'est si 03/04/2024 est un 3 avril
-  ou un 4 mars. Aucune correspondance de motif ne tranche cela, alors
-  l'appelant le tranche une fois.
+  ou un 4 mars. Le document le dit le plus souvent ailleurs : une de ses dates
+  dont le premier champ dépasse douze ne peut être qu'un jour d'abord, et cela
+  fixe toutes les autres dates du même document. À défaut, l'appelant connaît
+  peut-être la locale de l'expéditeur. À défaut encore, l'extrait s'abstient :
+  la date revient sans son jour plutôt qu'avec une supposition qui a la forme
+  d'un fait.
 
 n0.js: |
   Extraire les dates d'un texte : une expression régulière par format, puis une
@@ -35,59 +39,82 @@ n0.js: |
   date et de relire ses parties.
 
   Ce que les chiffres ne peuvent pas dire, c'est si 03/04/2024 est un 3 avril
-  ou un 4 mars. Aucune correspondance de motif ne tranche cela, alors
-  l'appelant le tranche une fois.
+  ou un 4 mars. Le document le dit le plus souvent ailleurs : une de ses dates
+  dont le premier champ dépasse douze ne peut être qu'un jour d'abord, et cela
+  fixe toutes les autres dates du même document. À défaut, l'appelant connaît
+  peut-être la locale de l'expéditeur. À défaut encore, l'extrait s'abstient :
+  la date revient sans son jour plutôt qu'avec une supposition qui a la forme
+  d'un fait.
 
 n1.py: |
-  Décider si 03/04/2024 est un 3 avril ou un 4 mars, avec un classifieur léger.
+  Lire les dates qu'un motif ne peut pas lire : un analyseur de dates éprouvé.
 
-  Niveau N1. Une règle trouve toujours les candidats : une date est une forme,
-  et une forme est ce à quoi servent les expressions régulières. La règle
-  employée ici est plus étroite que celle de N0, et ne couvre que la forme tout
-  en chiffres à année sur quatre positions, la seule qu'elle lise. Une année sur
-  deux chiffres, 03/04/24, est tout aussi ambiguë et lui échappe ; les mois
-  écrits en lettres aussi, et un document qui en contient a encore besoin de N0
-  à côté.
+  Niveau N1. Le niveau N0 énumère les formes qu'il connaît, et une échéance
+  relative n'a pas de forme à énumérer : « dans 15 jours » se compte depuis une
+  date. C'est ce comptage, dans une trentaine de langues, que fait une
+  bibliothèque d'analyse de dates. `dateparser` ici, `chrono-node` en
+  JavaScript : locale, gratuite, déterministe, et installée plutôt qu'écrite.
 
-  Ce qu'aucune règle ne peut faire, c'est lire 03/04/2024, parce que rien dans
-  ces chiffres ne dit quel champ est le jour. N0 répond en demandant à
-  l'appelant de choisir une convention pour tout un document, ce qui est faux
-  dès l'instant où ce document cite un fournisseur étranger.
+  Il faut lui dire deux choses dont un motif n'avait pas besoin. Quelles langues
+  le texte peut employer — un analyseur à qui l'on donne toutes celles qu'il
+  connaît lit davantage, et lit davantage de travers. Et depuis quelle date
+  compter : `reference` n'a pas de valeur par défaut ici, à dessein, parce que
+  la date depuis laquelle compter est celle du document, pas celle de
+  l'exécution. « jeudi prochain » dans un courriel reçu il y a trois semaines
+  n'est pas jeudi prochain.
 
-  La convention n'est pas dans les chiffres, elle est dans la prose autour. Cela
-  relève de la classification, et les règles tranchent encore tous les cas
-  qu'elles peuvent trancher seules.
+  Un extrait qui confie le travail à une bibliothèque hérite de la
+  bibliothèque, pas d'une spécification : les deux langages de cette page n'ont
+  pas le même analyseur, et ils ne lisent pas les mêmes choses. Sur
+  « 3 janv. 2024 », `dateparser` répond le 3 janvier 2025 et `chrono-node` ne
+  répond rien, là où le niveau N0 répond le 3 janvier 2024 — c'est pourquoi N0
+  reste dessous, et non à côté. Sur « jeudi prochain » ils divergent aussi : le
+  14 mars pour l'un, le 21 pour l'autre.
 
 n1.js: |
-  Décider si 03/04/2024 est un 3 avril ou un 4 mars, avec un classifieur léger.
+  Lire les dates qu'un motif ne peut pas lire : un analyseur de dates éprouvé.
 
-  Niveau N1. Une règle trouve toujours les candidats : une date est une forme,
-  et une forme est ce à quoi servent les expressions régulières. La règle
-  employée ici est plus étroite que celle de N0, et ne couvre que la forme tout
-  en chiffres à année sur quatre positions, la seule qu'elle lise. Une année sur
-  deux chiffres, 03/04/24, est tout aussi ambiguë et lui échappe ; les mois
-  écrits en lettres aussi, et un document qui en contient a encore besoin de N0
-  à côté.
+  Niveau N1. Le niveau N0 énumère les formes qu'il connaît, et une échéance
+  relative n'a pas de forme à énumérer : « dans 15 jours » se compte depuis une
+  date. C'est ce comptage, dans plusieurs langues, que fait une bibliothèque
+  d'analyse de dates. `chrono-node` ici, `dateparser` en Python : locale,
+  gratuite, déterministe, et installée plutôt qu'écrite.
 
-  Ce qu'aucune règle ne peut faire, c'est lire 03/04/2024, parce que rien dans
-  ces chiffres ne dit quel champ est le jour. N0 répond en demandant à
-  l'appelant de choisir une convention pour tout un document, ce qui est faux
-  dès l'instant où ce document cite un fournisseur étranger.
+  Il faut lui dire deux choses dont un motif n'avait pas besoin. Quelles langues
+  le texte peut employer — `chrono` a un analyseur par langue, et le français ne
+  lit rien d'anglais. Et depuis quelle date compter : `reference` n'a pas de
+  valeur par défaut ici, à dessein, parce que la date depuis laquelle compter
+  est celle du document, pas celle de l'exécution. « jeudi prochain » dans un
+  courriel reçu il y a trois semaines n'est pas jeudi prochain.
 
-  La convention n'est pas dans les chiffres, elle est dans la prose autour. Cela
-  relève de la classification, et les règles tranchent encore tous les cas
-  qu'elles peuvent trancher seules.
-
-  La régression logistique sur des comptes de mots est écrite ici en entier
-  plutôt que tirée d'une bibliothèque : tout le modèle tient en un poids par mot
-  et un biais.
+  Un extrait qui confie le travail à une bibliothèque hérite de la
+  bibliothèque, pas d'une spécification : les deux langages de cette page n'ont
+  pas le même analyseur, et ils ne lisent pas les mêmes choses. Sur
+  « 3 janv. 2024 », `dateparser` répond le 3 janvier 2025 et `chrono-node` ne
+  répond rien, là où le niveau N0 répond le 3 janvier 2024 — c'est pourquoi N0
+  reste dessous, et non à côté. Sur « jeudi prochain » ils divergent aussi : le
+  14 mars pour l'un, le 21 pour l'autre.
 
 n3: |
   Extraire les dates en interrogeant un modèle généraliste.
 
-  Niveau N3. C'est le seul niveau de cette fiche dont la requête demande de
-  résoudre les dates relatives, « jeudi prochain » : il envoie la date du jour
-  avec le texte, et demande chaque date sous forme de jour du calendrier.
+  Niveau N3. Sa requête demande de résoudre les dates relatives, « jeudi
+  prochain » : elle envoie une date de référence avec le texte, et demande
+  chaque date sous forme de jour du calendrier. Le niveau N1 résout les mêmes
+  tournures sur place et pour rien ; ce niveau ne vaut son prix que sur celles
+  qu'un analyseur manque.
+
+  La référence est la date du document, pas le jour de l'exécution : « jeudi
+  prochain » dans un courriel reçu il y a trois semaines n'est pas jeudi
+  prochain. Elle n'a pas de valeur par défaut ici, à dessein, parce qu'une
+  valeur par défaut serait discrètement aujourd'hui, et qu'un arriéré retraité
+  un lundi déplacerait toutes les échéances.
+
+  Le plafond sur l'entrée lève au lieu de tronquer : un contrat coupé en deux
+  reviendrait avec une liste d'échéances qui a l'air complète. Ce que fait un
+  appelant au-dessus du plafond, c'est découper le document en morceaux qui se
+  recouvrent et fusionner les réponses ; cet extrait ne le fait pas, à dessein,
+  parce qu'il montre un appel.
 
   Voyez ce que le code doit faire et que N0 ne faisait pas : passer une date de
   référence, parce que rien d'autre n'indique au modèle le jour qu'il est ;

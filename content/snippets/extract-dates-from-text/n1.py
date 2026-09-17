@@ -1,79 +1,54 @@
 """
-Decide whether 03/04/2024 is 3 April or 4 March, with a light classifier.
+Read the dates a pattern cannot: a mature date parser.
 
-Rung N1. A rule still finds the candidates: a date is a shape, and a shape is
-what regular expressions are for. The rule here is narrower than the one in N0,
-and only covers the all-numeric form with a four-digit year, which is the one
-form it reads. A two-digit year, 03/04/24, is just as ambiguous and escapes it;
-so do months written in letters, for which a document still needs N0 beside
-this.
+Rung N1. Rung N0 enumerates the shapes it knows, and a relative deadline has
+no shape to enumerate: "dans 15 jours" has to be counted from a date. That
+counting, in thirty-odd languages, is what a date parser library does.
+`dateparser` here, `chrono-node` in JavaScript: local, free, deterministic,
+and installed rather than written.
 
-What no rule can do is read 03/04/2024, because nothing in those digits says
-which field is the day. N0 answers by asking the caller to pick one convention
-for a whole document, which is wrong the moment a document quotes a supplier
-from abroad.
+Two things have to be told to it that a pattern never needed. Which languages
+the text may be in — a parser given every language it knows reads more, and
+reads more wrongly. And which date to count from: `reference` has no default
+here, on purpose, because the date to count from is the date of the document,
+not the date of the run. "jeudi prochain" in an email received three weeks ago
+is not next Thursday.
 
-The convention is not in the digits, it is in the prose around them. That is a
-classification problem, and the rules still settle every case they can settle
-on their own.
+A snippet that hands the job to a library inherits the library, not a
+specification: the two languages of this page do not have the same parser, and
+they do not read the same things. On "3 janv. 2024" `dateparser` answers
+3 January 2025 and `chrono-node` answers nothing, where rung N0 answers
+3 January 2024 — which is why N0 stays underneath rather than beside. On
+"jeudi prochain" they disagree too: 14 March for one, 21 March for the other.
 """
 
-import re
-from datetime import date
+from datetime import date, datetime
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
+from dateparser.search import search_dates
 
-CANDIDATE = re.compile(r"(?<!\d)(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?!\d)")
-WINDOW = 40  # characters of context kept on each side of a candidate
+LANGUAGES = ("fr", "en")
 
 
-def context(text: str, span: tuple[int, int]) -> str:
+def extract_dates(text: str, reference: date, languages=LANGUAGES) -> list[tuple[str, date]]:
     """
-    The words around a date, with every digit removed.
+    Return every date found in `text`, as (what was written, what it means).
 
-    Removing the digits is what stops the classifier memorising the dates of
-    the training set instead of learning the habits of the prose around them.
+    `reference` is the date the relative expressions count from: the date of
+    the document. It is required, because a default would silently be the day
+    of the run, and a backlog reprocessed on Monday would move every deadline.
+
+    "PREFER_DATES_FROM: future" is the reading of a deadline: "le 3 janvier" in
+    a March document is the next one, not the one gone by.
     """
-    start, end = span
-    around = text[max(0, start - WINDOW):start] + " " + text[end:end + WINDOW]
-    return re.sub(r"\d+", " ", around).lower()
-
-
-def train(texts: list[str], labels: list[int]):
-    """`labels` is 1 when the text writes the day first, 0 when the month comes first."""
-    model = make_pipeline(
-        TfidfVectorizer(ngram_range=(1, 2), min_df=1),
-        LogisticRegression(class_weight="balanced", max_iter=1000),
-    )
-    # A sentence without a candidate trains on an empty context, as in JavaScript.
-    found = (CANDIDATE.search(t) for t in texts)
-    model.fit([context(t, m.span()) if m else "" for t, m in zip(texts, found)], labels)
-    return model
-
-
-def _to_date(year: int, month: int, day: int) -> date | None:
-    """Real calendar validation, kept from N0: a regular expression accepts 31 February."""
-    try:
-        return date(year, month, day)
-    except ValueError:
-        return None
-
-
-def extract_dates(model, text: str) -> list[tuple[str, date]]:
-    """Return every real date in `text`, reading each one the way its context suggests."""
-    found = []
-    for match in CANDIDATE.finditer(text):
-        first, second, year = (int(group) for group in match.groups())
-        if second > 12:  # the second field cannot be a month, so it is a day
-            day_first = False
-        elif first > 12:  # symmetrically, the first field can only be a day
-            day_first = True
-        else:  # nothing in the digits decides it, so ask the prose
-            day_first = model.predict_proba([context(text, match.span())])[0][1] >= 0.5
-        day, month = (first, second) if day_first else (second, first)
-        value = _to_date(year, month, day)
-        if value is not None:
-            found.append((match.group(0), value))
-    return found
+    if not isinstance(reference, date):
+        raise TypeError("reference must be a date: the date of the document, not of the run")
+    if not languages:
+        # An empty list means "every language it knows" to the library. Asked
+        # for nothing, this returns nothing, as the JavaScript version does.
+        raise ValueError("at least one language is needed")
+    settings = {
+        "RELATIVE_BASE": datetime(reference.year, reference.month, reference.day),
+        "PREFER_DATES_FROM": "future",
+    }
+    found = search_dates(text, languages=list(languages), settings=settings)
+    return [(written, value.date()) for written, value in found or []]

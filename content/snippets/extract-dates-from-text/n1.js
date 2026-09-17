@@ -1,94 +1,60 @@
 /**
- * Decide whether 03/04/2024 is 3 April or 4 March, with a light classifier.
+ * Read the dates a pattern cannot: a mature date parser.
  *
- * Rung N1. A rule still finds the candidates: a date is a shape, and a shape
- * is what regular expressions are for. The rule here is narrower than the one
- * in N0, and only covers the all-numeric form with a four-digit year, which is
- * the one form it reads. A two-digit year, 03/04/24, is just as ambiguous and
- * escapes it; so do months written in letters, for which a document still
- * needs N0 beside this.
+ * Rung N1. Rung N0 enumerates the shapes it knows, and a relative deadline has
+ * no shape to enumerate: "dans 15 jours" has to be counted from a date. That
+ * counting, in several languages, is what a date parser library does.
+ * `chrono-node` here, `dateparser` in Python: local, free, deterministic, and
+ * installed rather than written.
  *
- * What no rule can do is read 03/04/2024, because nothing in those digits says
- * which field is the day. N0 answers by asking the caller to pick one
- * convention for a whole document, which is wrong the moment a document quotes
- * a supplier from abroad.
+ * Two things have to be told to it that a pattern never needed. Which languages
+ * the text may be in — `chrono` has one parser per language, and the French one
+ * reads nothing English. And which date to count from: `reference` has no
+ * default here, on purpose, because the date to count from is the date of the
+ * document, not the date of the run. "jeudi prochain" in an email received
+ * three weeks ago is not next Thursday.
  *
- * The convention is not in the digits, it is in the prose around them. That is
- * a classification problem, and the rules still settle every case they can
- * settle on their own.
- *
- * Logistic regression on word counts is written out here rather than pulled
- * from a library: the whole model is one weight per word and a bias.
+ * A snippet that hands the job to a library inherits the library, not a
+ * specification: the two languages of this page do not have the same parser, and
+ * they do not read the same things. On "3 janv. 2024" `dateparser` answers
+ * 3 January 2025 and `chrono-node` answers nothing, where rung N0 answers
+ * 3 January 2024 — which is why N0 stays underneath rather than beside. On
+ * "jeudi prochain" they disagree too: 14 March for one, 21 March for the other.
  */
 
-const CANDIDATE = /(?<!\d)(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?!\d)/g;
-const WINDOW = 40; // characters of context kept on each side of a candidate
+import * as chrono from 'chrono-node';
+
+export const LANGUAGES = ['fr', 'en'];
 
 /**
- * The words around a date, with every digit removed.
+ * Return every date found in `text`, as { text: what was written, date }.
  *
- * Removing the digits is what stops the classifier memorising the dates of the
- * training set instead of learning the habits of the prose around them.
+ * `reference` is the date the relative expressions count from: the date of the
+ * document. It is required, because a default would silently be the day of the
+ * run, and a backlog reprocessed on Monday would move every deadline.
+ *
+ * `forwardDate` is the reading of a deadline: "le 3 janvier" in a March
+ * document is the next one, not the one gone by.
  */
-export function context(text, start, end) {
-  const around = `${text.slice(Math.max(0, start - WINDOW), start)} ${text.slice(end, end + WINDOW)}`;
-  return around.toLowerCase().replace(/\d+/g, ' ');
-}
-
-/** Word counts of one context, normalised so that long sentences do not shout. */
-function features(text) {
-  const counts = new Map();
-  for (const word of text.match(/\p{L}+/gu) ?? []) counts.set(word, (counts.get(word) ?? 0) + 1);
-  const norm = Math.hypot(...counts.values());
-  return new Map([...counts].map(([word, count]) => [word, count / norm]));
-}
-
-/** Probability that this context comes from a document writing the day first. */
-function probability(model, row) {
-  let z = model.bias;
-  for (const [word, value] of row) z += (model.weights.get(word) ?? 0) * value;
-  return 1 / (1 + Math.exp(-z));
-}
-
-function firstContext(text) {
-  const [match] = text.matchAll(CANDIDATE);
-  return match ? context(text, match.index, match.index + match[0].length) : '';
-}
-
-/** `labels` is 1 when the text writes the day first, 0 when the month comes first. */
-export function train(texts, labels, { epochs = 300, rate = 0.5 } = {}) {
-  const rows = texts.map((text) => features(firstContext(text)));
-  const model = { weights: new Map(), bias: 0 };
-  for (let epoch = 0; epoch < epochs; epoch += 1) {
-    rows.forEach((row, i) => {
-      const error = probability(model, row) - labels[i];
-      for (const [word, value] of row) {
-        model.weights.set(word, (model.weights.get(word) ?? 0) - rate * error * value);
-      }
-      model.bias -= rate * error;
-    });
+export function extractDates(text, reference, languages = LANGUAGES) {
+  if (!(reference instanceof Date) || Number.isNaN(reference.getTime())) {
+    throw new TypeError('reference must be a Date: the date of the document, not of the run');
   }
-  return model;
-}
-
-/** Real calendar validation, kept from N0: a regular expression accepts 31 February. */
-function toDate(year, month, day) {
-  const value = new Date(Date.UTC(year, month - 1, day));
-  const real = value.getUTCFullYear() === year && value.getUTCMonth() === month - 1 && value.getUTCDate() === day;
-  return real ? value : null;
-}
-
-/** Return every real date in `text`, reading each one the way its context suggests. */
-export function extractDates(model, text) {
+  // Asked for no language, this returns nothing, and says so rather than
+  // quietly reading none — the Python library would read every language it knows.
+  if (languages.length === 0) throw new RangeError('at least one language is needed');
   const found = [];
-  for (const match of text.matchAll(CANDIDATE)) {
-    const [first, second, year] = match.slice(1).map(Number);
-    const [start, end] = [match.index, match.index + match[0].length];
-    // The rules settle what they can; the classifier only sees what is left.
-    const dayFirst = second > 12 ? false : first > 12 ? true
-      : probability(model, features(context(text, start, end))) >= 0.5;
-    const date = toDate(year, dayFirst ? second : first, dayFirst ? first : second);
-    if (date) found.push({ text: match[0], date });
+  for (const language of languages) {
+    const parser = chrono[language];
+    if (!parser) throw new RangeError(`chrono has no parser for ${language}`);
+    for (const result of parser.parse(text, reference, { forwardDate: true })) {
+      // One parser per language means the same words can be read twice: the
+      // first language asked for wins, as in the Python version.
+      const end = result.index + result.text.length;
+      if (found.some((seen) => seen.index < end && result.index < seen.index + seen.text.length)) continue;
+      found.push({ index: result.index, text: result.text, date: result.start.date() });
+    }
   }
-  return found;
+  found.sort((a, b) => a.index - b.index);
+  return found.map(({ text: written, date }) => ({ text: written, date }));
 }

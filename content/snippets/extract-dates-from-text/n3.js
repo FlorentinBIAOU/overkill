@@ -1,9 +1,20 @@
 /**
  * Extract dates by asking a general-purpose model.
  *
- * Rung N3. It is the only rung on this entry whose request asks for relative
- * dates, "jeudi prochain", to be resolved: it sends today's date along with the
- * text, and asks for every date as a calendar day.
+ * Rung N3. Its request asks for relative dates, "jeudi prochain", to be
+ * resolved: it sends a reference date along with the text, and asks for every
+ * date as a calendar day. Rung N1 resolves the same expressions locally and for
+ * nothing; this rung is worth its price only on the ones a parser misses.
+ *
+ * The reference is the date of the document, not the day of the run: "jeudi
+ * prochain" in an email received three weeks ago is not next Thursday. It has no
+ * default here, on purpose, because a default would quietly be today and a
+ * backlog reprocessed on Monday would move every deadline.
+ *
+ * The cap on the input raises rather than truncating: a contract cut in half
+ * would come back with a list of deadlines that looks complete. What a caller
+ * does above the cap is split the document into overlapping chunks and merge the
+ * answers; this snippet does not, on purpose, because it shows one call.
  *
  * Note what the code has to do that N0 did not: pass a reference date, because
  * the model is not told what day it is otherwise; cap the input size; retry on
@@ -17,8 +28,8 @@ const PROMPT = [
   'Find every date mentioned in the text below. Answer with JSON only: a list',
   'of objects with keys `text` and `date`, where `text` is the words as written',
   'and `date` is the day in ISO format, YYYY-MM-DD. Resolve relative dates such',
-  'as "next Thursday" against today, which is {today}. If there is no date,',
-  'answer with an empty list.', '', 'Text:',
+  'as "next Thursday" against the date of the document, which is {reference}.',
+  'If there is no date, answer with an empty list.', '', 'Text:',
 ].join('\n');
 const ISO_DAY = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
 
@@ -70,11 +81,14 @@ function localDay(date) {
  * @param {object} options
  * @param {{complete: Function}} [options.client] injected so this can be
  *   tested without a network call; defaults to a real provider client
- * @param {Date} [options.today] the day relative dates are resolved against,
- *   read in the local time zone
+ * @param {Date} options.reference the date of the document, which relative
+ *   dates are resolved against, read in the local time zone. Required.
  * @param {number} [options.attempts]
  */
-export async function extractDates(text, { client, today = new Date(), attempts = 3 } = {}) {
+export async function extractDates(text, { client, reference, attempts = 3 } = {}) {
+  if (!(reference instanceof Date) || Number.isNaN(reference.getTime())) {
+    throw new TypeError('reference must be a Date: the date of the document, not of the run');
+  }
   // The provider bills every token of the prompt. Refusing oversized input
   // before the call is a cost control; the cap counts characters, not tokens,
   // and code points, as Python does, not UTF-16 units.
@@ -82,7 +96,7 @@ export async function extractDates(text, { client, today = new Date(), attempts 
   if (!text.trim()) return []; // nothing to read, so nothing to pay for
   client ??= await providerClient();
 
-  const items = await ask(client, text, localDay(today), attempts);
+  const items = await ask(client, text, localDay(reference), attempts);
   // A day that does not exist is not a date, however fluent the answer.
   return items.map((item) => ({ text: typeof item.text === 'string' ? item.text : '', date: parseIsoDay(item.date) }))
     .filter((item) => item.date);
@@ -94,19 +108,36 @@ function isUsable(parsed) {
     item !== null && typeof item === 'object' && typeof item.date === 'string' && ISO_DAY.test(item.date));
 }
 
-async function ask(client, text, today, attempts) {
+/**
+ * Strip a code fence that wraps the whole answer, and nothing else.
+ *
+ * Models often hand back a JSON answer inside one fenced block, and refusing
+ * that form would pay for a second call for nothing. Any other departure — text
+ * before or after, two blocks, a fence never closed — is left alone, and fails
+ * to parse, which is the point.
+ */
+function unfenced(answer) {
+  const stripped = answer.trim();
+  const fences = stripped.match(/```/g)?.length ?? 0;
+  if (stripped.startsWith('```') && stripped.endsWith('```') && fences === 2) {
+    return stripped.slice(3, -3).replace(/^json/, '');
+  }
+  return stripped;
+}
+
+async function ask(client, text, reference, attempts) {
   let lastError;
   for (let i = 0; i < attempts; i += 1) {
     try {
       // Temperature zero: a date that changes between two identical calls
       // cannot be reviewed.
-      const prompt = `${PROMPT.replace('{today}', today)}\n${text}`;
+      const prompt = `${PROMPT.replace('{reference}', reference)}\n${text}`;
       const answer = await client.complete({ prompt, temperature: 0 });
       if (answer === null || answer === undefined) { // a refusal carries no content: unusable, not empty
         lastError = new Error('the model returned no content');
         continue;
       }
-      const parsed = JSON.parse(answer);
+      const parsed = JSON.parse(unfenced(answer));
       if (isUsable(parsed)) return parsed;
       // A list of anything else would read as "no date found", which it is not.
       lastError = new Error('the model answered something other than a list of ISO days');

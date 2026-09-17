@@ -3,7 +3,7 @@ id: extract-dates-from-text
 family: extract
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
@@ -15,15 +15,15 @@ need:
   en: "Find the dates mentioned in a message or a document, whatever their format."
 
 scenario:
-  fr: "On voit régulièrement un appel de modèle généraliste sur chaque document pour en sortir les échéances. Les dates y sont pourtant écrites selon des motifs que l’on peut énumérer (12/03/2024, 2024-03-12, 3 avril 2024), et les trouver n’est pas la partie difficile : la difficulté est que 31/02/2024 a toutes les apparences d’une date sans en être une, et que 03/04/2024 en désigne deux. Ni l’une ni l’autre ne se tranche par la compréhension du texte : la première se tranche avec un calendrier, la seconde avec une convention que le document ne dit pas toujours."
-  en: "Calling a general-purpose model on every document to pull out its deadlines is a common reflex. Yet dates follow patterns you can list (12/03/2024, 2024-03-12, 3 April 2024, March 3, 2024), and finding them is not the hard part: the hard part is that 31/02/2024 has every appearance of a date without being one, and that 03/04/2024 names two different days. Neither is settled by understanding the text: the first is settled by a calendar, the second by a convention the document does not always state."
+  fr: "On voit régulièrement un appel de modèle généraliste sur chaque document pour en sortir les échéances. Les dates y sont pourtant écrites selon des motifs que l’on peut énumérer (12/03/2024, 2024-03-12, 3 avril 2024, 3 janv. 2024), et les trouver n’est pas la partie difficile : la difficulté est que 31/02/2024 a toutes les apparences d’une date sans en être une, et que 03/04/2024 en désigne deux. Ni l’une ni l’autre ne se tranche par la compréhension du texte : la première se tranche avec un calendrier, la seconde avec une convention que le document porte le plus souvent ailleurs dans ses propres pages."
+  en: "Calling a general-purpose model on every document to pull out its deadlines is a common reflex. Yet dates follow patterns you can list (12/03/2024, 2024-03-12, 3 April 2024, Mar 3, 2024), and finding them is not the hard part: the hard part is that 31/02/2024 has every appearance of a date without being one, and that 03/04/2024 names two different days. Neither is settled by understanding the text: the first is settled by a calendar, the second by a convention the document most often carries elsewhere in its own pages."
 
 rungs:
   - level: N0
     available: true
     name:
-      fr: "Une expression régulière par format, puis validation calendaire"
-      en: "One regular expression per format, then calendar validation"
+      fr: "Une expression régulière par format, validation calendaire, convention lue dans le document"
+      en: "One regular expression per format, calendar validation, convention read off the document"
     cost: nul
     latency: "<1 ms"
     risks:
@@ -40,48 +40,48 @@ rungs:
       javascript: snippets/extract-dates-from-text/n0.js
       verification: executed
     breaking_point:
-      fr: "Les dates relatives. « jeudi prochain », « dans quinze jours », « à partir de demain » : il n’y a pas de chiffres à faire correspondre, donc il ne se trouve rien du tout. « dans 15 jours », qui a des chiffres, ne rend rien non plus. L’échec est silencieux, une liste vide et non une erreur. Et une date abrégée comme « 3/4/24 » est écartée exprès : une année sur deux chiffres n’est lue qu’avec un jour et un mois sur deux chiffres, sans quoi « version 2.1.24 » deviendrait un 2 janvier."
-      en: "Relative dates. \"next Thursday\", \"in a fortnight\", \"from tomorrow\": there are no digits to match, so nothing at all is found. \"in 15 days\", which has digits, returns nothing either. The failure is silent, an empty list rather than an error. And a short date such as 3/4/24 is dropped on purpose: a two-digit year is only read with a two-digit day and month, or \"version 2.1.24\" would become 2 January."
+      fr: "Les dates relatives. « jeudi prochain », « dans 15 jours », « à partir de demain » : il n’y a rien à faire correspondre, et l’échec est silencieux, une liste vide et non une erreur. C’est le niveau N1 qui les lit. Même silence sur « le 5 mars », sans année : cela nomme un jour, pas une date."
+      en: "Relative dates. \"next Thursday\", \"in 15 days\", \"from tomorrow\": there is nothing to match, and the failure is silent, an empty list rather than an error. Rung N1 is what reads those. Same silence on \"5 March\" with no year: that names a day, not a date."
     escalate_when:
-      fr: "Un même corpus mêle les conventions : des documents français écrits en jour-mois et des documents venus d’ailleurs écrits en mois-jour. La convention unique que vous passez à l’extrait est alors fausse pour une partie du fichier, et elle rend des dates plausibles."
-      en: "One corpus mixes conventions: French documents written day-first and documents from elsewhere written month-first. The single convention you hand the snippet is then wrong for part of the file, and it returns plausible dates."
+      fr: "Vos documents portent des échéances écrites en relation avec leur propre date — « sous quinzaine », « dans 15 jours » — et la liste des dates que N0 rend est vide là où il y avait une échéance."
+      en: "Your documents carry deadlines written relative to their own date — \"within a fortnight\", \"in 15 days\" — and the list N0 hands back is empty where a deadline stood."
 
   - level: N1
     available: true
     name:
-      fr: "Candidats trouvés par règle, puis classifieur de contexte pour l’ambiguïté jour-mois"
-      en: "Rule-found candidates, then a context classifier for the day-month ambiguity"
-    cost: négligeable
-    latency: "<1 ms"
+      fr: "Un analyseur de dates éprouvé : dateparser en Python, chrono-node en JavaScript"
+      en: "A mature date parser: dateparser in Python, chrono-node in JavaScript"
+    cost: nul
+    latency: "~10 ms"
     risks:
       data_egress: none
       deterministic: true
-      testability: statistical
+      testability: unit
       vendor_lock: library
       footprint: low
       regulatory:
         fr:
-          - "Traitement des documents sur votre infrastructure"
-          - "Le corpus d’entraînement est fait de phrases tirées de documents réels : il entre dans votre registre des traitements si vous en tenez un"
+          - "Traitement des documents sur votre infrastructure : la bibliothèque est locale et n’ouvre aucune connexion"
+          - "Aucun corpus : rien du document n’est appris ni conservé au-delà de l’exécution"
         en:
-          - "Processing of the documents on your own infrastructure"
-          - "The training corpus is made of sentences taken from real documents: it belongs in your record of processing activities, where you keep one"
+          - "Processing of the documents on your own infrastructure: the library is local and opens no connection"
+          - "No corpus: nothing of the document is learnt or kept beyond the run"
     code:
       python: snippets/extract-dates-from-text/n1.py
       javascript: snippets/extract-dates-from-text/n1.js
       verification: executed
     breaking_point:
-      fr: "Le classifieur ne s’abstient jamais. Sur « 03/04/2024 » seul, sans une phrase autour à lire, il tranche quand même, dans le sens vers lequel penchait le jeu d’entraînement, et rend sa supposition avec exactement la forme d’un fait : rien dans la sortie ne dit à l’appelant laquelle des deux il tient. Et la règle qui fournit les candidats est plus étroite que celle de N0 : elle ne voit que la forme tout en chiffres à année sur quatre positions. « 3 avril 2024 », « 12.03.24 » et « 2024-03-12 », que N0 trouvait, ne ressortent plus. Les dates relatives, elles, restent invisibles, puisque les candidats viennent toujours d’une règle."
-      en: "The classifier never abstains. On a bare 03/04/2024, with no prose around it to read, it commits anyway, to whichever way the training set leaned, and hands its guess back in exactly the shape of a fact: nothing in the output tells the caller which of the two it is holding. And the rule that supplies the candidates is narrower than the one in N0: it only sees the all-numeric shape with a four-digit year. \"3 avril 2024\", \"12.03.24\" and \"2024-03-12\", which N0 found, no longer come out. Relative dates stay invisible as well, since the candidates still come from a rule."
+      fr: "Une durée écrite en toutes lettres : « dans quinze jours » ne rend rien, quand « dans 15 jours » rend le 27 mars. Et l’analyseur ne s’abstient jamais : sur « 03/04/2024 » seul il tranche selon ses propres règles, et les deux bibliothèques ne tranchent pas pareil — 4 mars pour dateparser, 3 avril pour chrono-node."
+      en: "A spelled-out duration: \"in a fortnight\" returns nothing, where \"in 15 days\" returns 27 March. And the parser never abstains: on a bare 03/04/2024 it commits by its own rules, and the two libraries do not commit the same way — 4 March for dateparser, 3 April for chrono-node."
     escalate_when:
-      fr: "Vos textes portent des dates qu’aucune règle ne peut trouver, et pas seulement des dates qu’une règle lit à l’envers."
-      en: "Your texts hold dates no rule can find at all, not just dates a rule reads back to front."
+      fr: "Vos échéances s’écrivent d’une façon qu’aucun des deux analyseurs ne lit, et vous le voyez sur un échantillon relu à la main."
+      en: "Your deadlines are written in a way neither parser reads, and you can see it on a sample checked by hand."
 
   - level: N2
     available: false
     unavailable_reason:
-      fr: "Un modèle de reconnaissance d’entités nommées, celui de spaCy par exemple, étiquette un passage DATE, « jeudi prochain » compris, mais rend le passage et ses positions, pas le jour qu’il désigne : il ne tranche ni 03/04/2024 ni « jeudi prochain ». Il ajoute des poids à télécharger pour repérer ce que les motifs de N0 repèrent déjà, et laisse entier ce que N1 et N3 tranchent."
-      en: "A named-entity model, spaCy's for instance, labels a DATE span, \"next Thursday\" included, but hands back the span and its offsets, not the day it names: it settles neither 03/04/2024 nor \"next Thursday\". It adds weights to download to spot what N0's patterns already spot, and leaves untouched what N1 and N3 settle."
+      fr: "Un modèle de reconnaissance d’entités nommées, celui de spaCy par exemple, étiquette un passage DATE, « jeudi prochain » compris, mais rend le passage et ses positions, pas le jour qu’il désigne : il ne tranche ni 03/04/2024 ni « jeudi prochain ». Il ajoute des poids à télécharger pour repérer ce que les motifs de N0 repèrent déjà, et laisse entier ce que l’analyseur de N1 tranche pour rien."
+      en: "A named-entity model, spaCy's for instance, labels a DATE span, \"next Thursday\" included, but hands back the span and its offsets, not the day it names: it settles neither 03/04/2024 nor \"next Thursday\". It adds weights to download to spot what N0's patterns already spot, and leaves untouched what the parser at N1 settles for nothing."
 
   - level: N3
     available: true
@@ -117,10 +117,14 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0, parce que la difficulté de ce besoin n’est pas de repérer les dates mais de refuser celles qui n’existent pas, et c’est un calendrier qui le fait, pas un modèle : 31/02/2024 et 29/02/1900 sont écartés par celui de la bibliothèque standard, et le résultat se teste unitairement. Ce que ce niveau ne voit pas, il le rend en liste vide ; ce qu’il lit selon la mauvaise convention, il le rend comme une date plausible, et c’est ce qui décide de monter. Montez à N1 le jour où un même corpus mêle les conventions jour-mois et mois-jour, en sachant que sa règle ne reconnaît plus que la forme tout en chiffres et qu’il faut garder N0 à côté pour les mois écrits en lettres ; à N3 seulement si les échéances de vos textes s’écrivent en relation avec aujourd’hui, en sachant que vous échangerez un test unitaire contre une réponse à relire."
-  en: "N0, because the hard part of this need is not spotting dates but refusing the ones that do not exist, and a calendar does that, not a model: 31/02/2024 and 29/02/1900 are dropped by the standard library's own, and the result is unit testable. What this level cannot see, it returns as an empty list; what it reads with the wrong convention, it returns as a plausible date, and that is what calls for moving up. Move up to N1 the day one corpus mixes day-first and month-first conventions, knowing that its rule recognises only the all-numeric shape and that N0 has to stay alongside it for months written in letters; to N3 only if your texts write their deadlines relative to today, knowing you will trade a unit test for an answer that needs reviewing."
+  fr: "N0, parce que la difficulté de ce besoin n’est pas de repérer les dates mais de refuser celles qui n’existent pas, et c’est un calendrier qui le fait, pas un modèle : 31/02/2024 et 29/02/1900 sont écartés par celui de la bibliothèque standard, et le résultat se teste unitairement. Sur 03/04/2024, il lit la convention dans le document lui-même — une date dont le premier champ dépasse douze la fixe pour tout le document — puis ce que l’appelant sait, puis il s’abstient : la date revient sans son jour plutôt qu’avec une supposition. Ajoutez N1, un analyseur éprouvé, le jour où vos échéances s’écrivent en relation avec la date du document ; c’est local, gratuit et déterministe, et cela ne demande aucun appel facturé. N3 ne se justifie qu’au-delà, sur les tournures que ces analyseurs ne lisent pas, en sachant que vous échangerez un test unitaire contre une réponse à relire. Dans les deux cas, la date de référence est celle du document, pas celle du traitement : c’est pourquoi ni N1 ni N3 ne lui donnent de valeur par défaut."
+  en: "N0, because the hard part of this need is not spotting dates but refusing the ones that do not exist, and a calendar does that, not a model: 31/02/2024 and 29/02/1900 are dropped by the standard library's own, and the result is unit testable. On 03/04/2024 it reads the convention off the document itself — one date whose first field is above twelve fixes it for the whole document — then what the caller knows, then it abstains: the date comes back without its day rather than with a guess. Add N1, a mature parser, the day your deadlines are written relative to the document's own date; it is local, free and deterministic, and it asks for no billed call. N3 only earns its place beyond that, on the turns of phrase those parsers do not read, knowing you will trade a unit test for an answer that needs reviewing. Either way the reference date is the document's, not the run's: which is why neither N1 nor N3 gives it a default."
 
 further_reading:
+  - label: "dateparser — analyse des dates relatives et des formats de plusieurs langues, en Python"
+    url: "https://dateparser.readthedocs.io/"
+  - label: "chrono-node — l’équivalent en JavaScript, un analyseur par langue"
+    url: "https://github.com/wanasit/chrono"
   - label: "Python — module datetime, le calendrier grégorien proleptique et ses années bissextiles"
     url: "https://docs.python.org/3/library/datetime.html"
   - label: "MDN — constructeur Date, et le report silencieux des dates impossibles"
@@ -131,6 +135,10 @@ further_reading:
     url: "https://cldr.unicode.org/translation/date-time/date-time-patterns"
 
 sources:
+  - label: "dateparser 1.2.2, exécuté : « dans 15 jours » rend le 27 mars depuis le 12 mars 2024, « dans quinze jours » ne rend rien, « le 03/04/2024 » est lu 4 mars, « 3 janv. 2024 » est lu 3 janvier 2025"
+    url: "https://dateparser.readthedocs.io/en/latest/"
+  - label: "chrono-node 2.9.0, exécuté : mêmes entrées, « le 03/04/2024 » est lu 3 avril et « 3 janv. 2024 » n’est pas lu du tout"
+    url: "https://github.com/wanasit/chrono"
   - label: "MySQL 8.4 Reference Manual — 2-Digit Years in Dates : 00-69 deviennent 2000-2069, 70-99 deviennent 1970-1999"
     url: "https://dev.mysql.com/doc/refman/8.4/en/two-digit-years.html"
   - label: "Python — module time : strptime lit 69-99 comme 1969-1999, selon POSIX, un an plus tôt que MySQL"

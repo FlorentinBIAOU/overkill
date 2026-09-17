@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { extractDates } from './n0.js';
+import { documentConvention, extractDates } from './n0.js';
 import essai from '../../tryouts/live/extract-dates-from-text.js';
 
-/** Dates are compared as ISO days: the time of day is not part of the answer. */
-const iso = (date) => date.toISOString().slice(0, 10);
+/** Dates are compared as ISO days: the time of day is not part of the answer.
+ *  A date the document does not settle comes back null, and stays null here. */
+const iso = (date) => (date === null ? null : date.toISOString().slice(0, 10));
 const days = (text, dayFirst) => extractDates(text, dayFirst).map((d) => iso(d.date));
 const pairs = (text, dayFirst) => extractDates(text, dayFirst).map((d) => [d.text, iso(d.date)]);
 
@@ -36,10 +37,10 @@ test('point de rupture : une date relative avec des chiffres ne rend rien non pl
 test('point de rupture : une date abrégée 3/4/24 est écartée exprès', () => {
   assert.deepEqual(days('rendez-vous le 3/4/24'), []);
   assert.deepEqual(days('mise à jour vers la version 2.1.24'), []);
-  assert.deepEqual(pairs('rendez-vous le 03/04/24'), [['03/04/24', '2024-04-03']]);
+  assert.deepEqual(pairs('rendez-vous le 03/04/24', true), [['03/04/24', '2024-04-03']]);
   assert.deepEqual(days('le 03/4/24'), []);
   assert.deepEqual(days('le 3/04/24'), []);
-  assert.deepEqual(pairs('le 3/4/2024'), [['3/4/2024', '2024-04-03']]);
+  assert.deepEqual(pairs('le 3/4/2024', true), [['3/4/2024', '2024-04-03']]);
 });
 
 // ---------------------------------------------------------------------------
@@ -48,14 +49,14 @@ test('point de rupture : une date abrégée 3/4/24 est écartée exprès', () =>
 
 test('lit les motifs énumérés du scénario', () => {
   const text = 'Réunion le 12/03/2024, specs 2024-03-12, livraison le 3 avril 2024, invoice March 3, 2024.';
-  assert.deepEqual(pairs(text), [
+  assert.deepEqual(pairs(text, true), [
     ['12/03/2024', '2024-03-12'], ['2024-03-12', '2024-03-12'], ['3 avril 2024', '2024-04-03'], ['March 3, 2024', '2024-03-03'],
   ]);
 });
 
 test('lit les trois formats dans une phrase', () => {
   const text = 'Réunion le 12/03/2024, livraison le 3 avril 2024, gel des specs 2024-03-01.';
-  assert.deepEqual(pairs(text), [['12/03/2024', '2024-03-12'], ['3 avril 2024', '2024-04-03'], ['2024-03-01', '2024-03-01']]);
+  assert.deepEqual(pairs(text, true), [['12/03/2024', '2024-03-12'], ['3 avril 2024', '2024-04-03'], ['2024-03-01', '2024-03-01']]);
 });
 
 test('lit les mois en lettres, avec et sans accents, en français et en anglais', () => {
@@ -65,13 +66,35 @@ test('lit les mois en lettres, avec et sans accents, en français et en anglais'
   assert.deepEqual(pairs('à compter du 1er mars 2024'), [['1er mars 2024', '2024-03-01']]);
 });
 
+test('les mois abrégés d’une facture sont lus', () => {
+  // « with the abbreviations an invoice, a delivery note or an email actually
+  // use » ; « The full stop of an abbreviation and the comma that often follows
+  // the month are both optional ».
+  assert.deepEqual(pairs('Échéance le 3 janv. 2024'), [['3 janv. 2024', '2024-01-03']]);
+  assert.deepEqual(pairs('le 03 sept. 2024'), [['03 sept. 2024', '2024-09-03']]);
+  assert.deepEqual(pairs('Due Mar 3, 2024'), [['Mar 3, 2024', '2024-03-03']]);
+  assert.deepEqual(pairs('3 April, 2024'), [['3 April, 2024', '2024-04-03']]);
+  assert.deepEqual(pairs('le 3 déc 2024'), [['3 déc 2024', '2024-12-03']]);
+  assert.deepEqual(pairs('due 3 Feb. 2024'), [['3 Feb. 2024', '2024-02-03']]);
+  // Témoin : un mot qui n'est pas un mois reste un mot.
+  assert.deepEqual(days('le 3 truc 2024'), []);
+});
+
+test('une date sans année n’est pas lue', () => {
+  // « « le 5 mars », sans année, nomme un jour et pas une date ».
+  assert.deepEqual(days('rendez-vous le 5 mars'), []);
+  assert.deepEqual(days('due March 5'), []);
+  // Témoin : la même date avec son année est lue.
+  assert.deepEqual(pairs('rendez-vous le 5 mars 2024'), [['5 mars 2024', '2024-03-05']]);
+});
+
 test('les années sur deux chiffres se lisent comme MySQL : 00-69 en 2000, 70-99 en 1900', () => {
-  assert.deepEqual(days('01/01/00'), ['2000-01-01']);
+  assert.deepEqual(days('01/01/00', true), ['2000-01-01']);
   assert.deepEqual(days('31/12/99'), ['1999-12-31']);
-  assert.deepEqual(days('facture du 12.03.24'), ['2024-03-12']);
-  assert.deepEqual(days('archive du 12.03.97'), ['1997-03-12']);
-  assert.deepEqual(days('01/01/69'), ['2069-01-01']);
-  assert.deepEqual(days('01/01/70'), ['1970-01-01']);
+  assert.deepEqual(days('facture du 12.03.24', true), ['2024-03-12']);
+  assert.deepEqual(days('archive du 12.03.97', true), ['1997-03-12']);
+  assert.deepEqual(days('01/01/69', true), ['2069-01-01']);
+  assert.deepEqual(days('01/01/70', true), ['1970-01-01']);
 });
 
 test('new Date(2024, 1, 31) glisse au 2 mars, et l’extrait refuse le 31/02/2024', () => {
@@ -82,6 +105,12 @@ test('new Date(2024, 1, 31) glisse au 2 mars, et l’extrait refuse le 31/02/202
   assert.deepEqual(days('livraison le 31/02/2024'), []);
   assert.deepEqual(days('livraison le 31/04/2024'), []);
   assert.deepEqual(days('livraison le 29/02/2023'), []);
+});
+
+test('le pivot des années courtes est juste pour une échéance, faux pour une naissance', () => {
+  // « The pivot is right for deadlines and wrong for birth dates: "12/03/65"
+  // comes out 2065 ».
+  assert.deepEqual(pairs('né le 12/03/65', true), [['12/03/65', '2065-03-12']]);
 });
 
 test('l’expression régulière accepte 31/02/2024 et 29/02/2023, le calendrier les refuse', () => {
@@ -98,11 +127,27 @@ test('années bissextiles, règle du siècle comprise', () => {
   assert.deepEqual(days('29/02/1900'), []);
 });
 
-test('jour ou mois d’abord, c’est l’appelant qui tranche', () => {
-  assert.deepEqual(days('03/04/2024'), ['2024-04-03']);
+test('le document tranche d’abord, puis l’appelant, puis l’abstention', () => {
+  // « one date in it whose first field is above twelve can only be day-first,
+  // and that settles every other date of the same document. Failing that, the
+  // caller may know the locale of the sender. Failing that too, the snippet
+  // abstains ».
+  // 1. La preuve interne du document : 25 ne peut être qu'un jour.
+  assert.deepEqual(pairs('Commande 25/03/2024, livraison 03/04/2024'), [
+    ['25/03/2024', '2024-03-25'], ['03/04/2024', '2024-04-03'],
+  ]);
+  assert.equal(documentConvention('Commande 25/03/2024, livraison 03/04/2024'), true);
+  assert.equal(documentConvention('Order 03/25/2024, delivery 03/04/2024'), false);
+  // 2. À défaut, ce que l'appelant sait.
+  assert.deepEqual(days('03/04/2024', true), ['2024-04-03']);
   assert.deepEqual(days('03/04/2024', false), ['2024-03-04']);
-  // Read the other way round, 13 is not a month, and the check catches it.
-  assert.deepEqual(days('13/04/2024', false), []);
+  // 3. À défaut, l'abstention : la date est rendue sans son jour.
+  assert.deepEqual(extractDates('03/04/2024'), [{ text: '03/04/2024', date: null }]);
+  assert.equal(documentConvention('03/04/2024'), null);
+  // Un document qui se contredit ne tranche rien non plus.
+  assert.equal(documentConvention('25/03/2024 puis 03/25/2024'), null);
+  // La preuve interne passe avant l'appelant, date par date : 13 n'est pas un mois.
+  assert.deepEqual(days('13/04/2024', false), ['2024-04-13']);
 });
 
 test('l’ordre ISO ne dépend pas de la convention', () => {
@@ -118,9 +163,9 @@ test('jamais un morceau d’un nombre pointé plus long', () => {
   for (const text of ['serveur 10.1.1.24', 'serveur 10.01.01.24', 'réf. 12/03/2024/5', 'réf. 1.12.03.2024', 'v2.1.24']) {
     assert.deepEqual(days(text), [], text);
   }
-  assert.deepEqual(pairs('le 01.01.24'), [['01.01.24', '2024-01-01']]);
-  assert.deepEqual(pairs('facture du 12.03.24.'), [['12.03.24', '2024-03-12']]);
-  assert.deepEqual(pairs('facture du 12/03/2024.'), [['12/03/2024', '2024-03-12']]);
+  assert.deepEqual(pairs('le 01.01.24', true), [['01.01.24', '2024-01-01']]);
+  assert.deepEqual(pairs('facture du 12.03.24.', true), [['12.03.24', '2024-03-12']]);
+  assert.deepEqual(pairs('facture du 12/03/2024.', true), [['12/03/2024', '2024-03-12']]);
 });
 
 test('un passage qui chevauche une date retenue n’est pas une seconde date', () => {
@@ -143,7 +188,7 @@ test('l’extrait est déterministe et n’importe rien', () => {
   const source = readFileSync(new URL('./n0.js', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /^\s*import\s|\brequire\(|\bimport\(|\bfetch\(/m);
   const text = 'Réunion le 12/03/2024, livraison le 3 avril 2024.';
-  assert.deepEqual(pairs(text), pairs(text));
+  assert.deepEqual(pairs(text, true), pairs(text, true));
 });
 
 // ---------------------------------------------------------------------------
@@ -179,19 +224,21 @@ test('une longue suite de lettres est lue une fois, pas une fois par lettre', ()
   assert.ok(performance.now() - debut < 1_000);
 });
 
-test('DÉFAUT : une longue suite de marques combinantes est lue une fois par marque (10 000 marques : 1,1 s)', async () => {
-  // Le regard arrière de MONTH_FIRST n'exclut que les lettres, et WORD accepte les marques.
-  await assert.rejects(async () => {
-    const debut = performance.now();
-    assert.deepEqual(days(`a${'\u0301'.repeat(10_000)}`), []);
-    assert.ok(performance.now() - debut < 500);
-  }, assert.AssertionError);
+test('une longue suite de marques combinantes est lue une fois, elle aussi', () => {
+  // « a combining mark is not the start of a word — so a long run of letters
+  // or of marks is read once, not once per character ». Sans le regard arrière
+  // sur les marques, vingt mille marques prenaient plusieurs secondes.
+  const debut = performance.now();
+  assert.deepEqual(days(`a${'\u0301'.repeat(20_000)}`), []);
+  assert.ok(performance.now() - debut < 1_000);
+  // Témoin : une date derrière la même suite est toujours lue.
+  assert.deepEqual(pairs(`a${'\u0301'.repeat(20_000)} March 3, 2024`), [['March 3, 2024', '2024-03-03']]);
 });
 
 test('production : espaces insécables, BOM et largeur nulle autour de la date', () => {
   assert.deepEqual(pairs('3\u00a0avril\u00a02024'), [['3\u00a0avril\u00a02024', '2024-04-03']]);
   assert.deepEqual(pairs('3\u202favril 2024'), [['3\u202favril 2024', '2024-04-03']]);
-  assert.deepEqual(pairs('\ufeff12/03/2024\u200b'), [['12/03/2024', '2024-03-12']]);
+  assert.deepEqual(pairs('\ufeff12/03/2024\u200b', true), [['12/03/2024', '2024-03-12']]);
 });
 
 test('production : casse mixte dans le nom du mois', () => {
@@ -217,23 +264,23 @@ test('production : la forme anglaise mois, jour, année est lue', () => {
 });
 
 test('production : des chiffres pleine chasse sont lus dans les deux langages', () => {
-  assert.deepEqual(pairs('１２/０３/２０２４'), [['１２/０３/２０２４', '2024-03-12']]);
+  assert.deepEqual(pairs('１２/０３/２０２４', true), [['１２/０３/２０２４', '2024-03-12']]);
   assert.deepEqual(pairs('３ avril ２０２４'), [['３ avril ２０２４', '2024-04-03']]);
   assert.deepEqual(days('٠٣/٠٤/٢٠٢٤'), []);
 });
 
 test('production : l’an 24 écrit sur quatre chiffres reste l’an 24', () => {
   // Commentaire de toDate : « unlike Date.UTC, keeps year 24 as 24, not 1924 ».
-  assert.deepEqual(pairs('01/01/0024'), [['01/01/0024', '0024-01-01']]);
+  assert.deepEqual(pairs('01/01/0024', true), [['01/01/0024', '0024-01-01']]);
   assert.deepEqual(pairs('0024-01-01'), [['0024-01-01', '0024-01-01']]);
-  assert.deepEqual(pairs('01/01/0001'), [['01/01/0001', '0001-01-01']]);
-  assert.deepEqual(days('01/01/0000'), []);
+  assert.deepEqual(pairs('01/01/0001', true), [['01/01/0001', '0001-01-01']]);
+  assert.deepEqual(days('01/01/0000', true), []);
 });
 
 test('production : valeurs aux limites du calendrier', () => {
   assert.deepEqual(days('31/12/9999'), ['9999-12-31']);
-  assert.deepEqual(days('00/01/2024'), []);
-  assert.deepEqual(days('01/13/2024'), []);
+  assert.deepEqual(days('00/01/2024', true), []);
+  assert.deepEqual(days('01/13/2024', true), ['2024-01-13']);
   assert.deepEqual(days('31/01/2024'), ['2024-01-31']);
   assert.deepEqual(days('32/01/2024'), []);
 });

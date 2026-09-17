@@ -61,8 +61,8 @@ export default {
   level: 'N0',
 
   note: {
-    fr: 'La convention jour-mois est un choix de l’appelant, pas une propriété du texte. Les deux colonnes donnent les deux lectures du même passage.',
-    en: 'The day-month convention is the caller’s choice, not a property of the text. The two columns give both readings of the same passage.',
+    fr: 'Les deux colonnes donnent les deux lectures du même passage. L’extrait, lui, lit d’abord la convention dans le document — une date dont le premier champ dépasse douze la fixe pour tout le document — et s’abstient quand le document se tait.',
+    en: 'The two columns give both readings of the same passage. The snippet itself reads the convention off the document first — one date whose first field is above twelve fixes it for the whole document — and abstains when the document says nothing.',
   },
 
   run(texte, lang) {

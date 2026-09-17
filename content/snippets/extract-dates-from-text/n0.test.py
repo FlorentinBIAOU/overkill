@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from n0 import NUMERIC, extract_dates
+from n0 import NUMERIC, document_convention, extract_dates
 
 
 # ---------------------------------------------------------------------------
@@ -52,10 +52,10 @@ def test_point_de_rupture_une_date_abregee_3_4_24_est_ecartee_expres():
     """
     assert extract_dates("rendez-vous le 3/4/24") == []
     assert extract_dates("mise à jour vers la version 2.1.24") == []
-    assert extract_dates("rendez-vous le 03/04/24") == [("03/04/24", date(2024, 4, 3))]
+    assert extract_dates("rendez-vous le 03/04/24", day_first=True) == [("03/04/24", date(2024, 4, 3))]
     # Limites : un seul des deux champs non complété suffit à écarter ; une année sur quatre chiffres, non.
     assert extract_dates("le 03/4/24") == [] and extract_dates("le 3/04/24") == []
-    assert extract_dates("le 3/4/2024") == [("3/4/2024", date(2024, 4, 3))]
+    assert extract_dates("le 3/4/2024", day_first=True) == [("3/4/2024", date(2024, 4, 3))]
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ def test_point_de_rupture_une_date_abregee_3_4_24_est_ecartee_expres():
 def test_lit_les_motifs_enumeres_du_scenario():
     """scenario : « des motifs que l'on peut énumérer (12/03/2024, 2024-03-12, 3 avril 2024) », en : « March 3, 2024 »."""
     text = "Réunion le 12/03/2024, specs 2024-03-12, livraison le 3 avril 2024, invoice March 3, 2024."
-    assert extract_dates(text) == [
+    assert extract_dates(text, day_first=True) == [
         ("12/03/2024", date(2024, 3, 12)),
         ("2024-03-12", date(2024, 3, 12)),
         ("3 avril 2024", date(2024, 4, 3)),
@@ -77,7 +77,7 @@ def test_lit_les_motifs_enumeres_du_scenario():
 def test_lit_les_trois_formats_dans_une_phrase():
     """name : « Une expression régulière par format, puis validation calendaire »."""
     text = "Réunion le 12/03/2024, livraison le 3 avril 2024, gel des specs 2024-03-01."
-    assert extract_dates(text) == [
+    assert extract_dates(text, day_first=True) == [
         ("12/03/2024", date(2024, 3, 12)),
         ("3 avril 2024", date(2024, 4, 3)),
         ("2024-03-01", date(2024, 3, 1)),
@@ -92,14 +92,44 @@ def test_lit_les_mois_en_lettres_avec_et_sans_accents_en_francais_et_en_anglais(
         assert extract_dates(f"à compter du {written}") == [(written, date(2024, month, day))], written
 
 
+def test_les_mois_abreges_d_une_facture_sont_lus():
+    """
+    Commentaire de MONTHS : « with the abbreviations an invoice, a delivery
+    note or an email actually use » ; commentaire de TEXTUAL : « The full stop
+    of an abbreviation and the comma that often follows the month are both
+    optional ».
+    """
+    assert extract_dates("Échéance le 3 janv. 2024") == [("3 janv. 2024", date(2024, 1, 3))]
+    assert extract_dates("le 03 sept. 2024") == [("03 sept. 2024", date(2024, 9, 3))]
+    assert extract_dates("Due Mar 3, 2024") == [("Mar 3, 2024", date(2024, 3, 3))]
+    assert extract_dates("3 April, 2024") == [("3 April, 2024", date(2024, 4, 3))]
+    assert extract_dates("le 3 déc 2024") == [("3 déc 2024", date(2024, 12, 3))]
+    assert extract_dates("due 3 Feb. 2024") == [("3 Feb. 2024", date(2024, 2, 3))]
+    # Témoin : un mot qui n'est pas un mois reste un mot.
+    assert extract_dates("le 3 truc 2024") == []
+
+
+def test_une_date_sans_annee_n_est_pas_lue():
+    """breaking_point : « « le 5 mars », sans année, nomme un jour et pas une date »."""
+    assert extract_dates("rendez-vous le 5 mars") == []
+    assert extract_dates("due March 5") == []
+    # Témoin : la même date avec son année est lue.
+    assert extract_dates("rendez-vous le 5 mars 2024") == [("5 mars 2024", date(2024, 3, 5))]
+
+
 def test_les_annees_sur_deux_chiffres_se_lisent_comme_mysql_00_69_en_2000_70_99_en_1900():
     """_full_year : « Two-digit years as MySQL reads them: 00-69 are 2000-2069, 70-99 are 1970-1999 »."""
-    assert extract_dates("01/01/00") == [("01/01/00", date(2000, 1, 1))]
+    assert extract_dates("01/01/00", day_first=True) == [("01/01/00", date(2000, 1, 1))]
     assert extract_dates("31/12/99") == [("31/12/99", date(1999, 12, 31))]
-    assert extract_dates("facture du 12.03.24") == [("12.03.24", date(2024, 3, 12))]
-    assert extract_dates("archive du 12.03.97") == [("12.03.97", date(1997, 3, 12))]
-    assert extract_dates("01/01/69") == [("01/01/69", date(2069, 1, 1))]
-    assert extract_dates("01/01/70") == [("01/01/70", date(1970, 1, 1))]
+    assert extract_dates("facture du 12.03.24", day_first=True) == [("12.03.24", date(2024, 3, 12))]
+    assert extract_dates("archive du 12.03.97", day_first=True) == [("12.03.97", date(1997, 3, 12))]
+    assert extract_dates("01/01/69", day_first=True) == [("01/01/69", date(2069, 1, 1))]
+    assert extract_dates("01/01/70", day_first=True) == [("01/01/70", date(1970, 1, 1))]
+
+
+def test_le_pivot_des_annees_courtes_est_juste_pour_une_echeance_faux_pour_une_naissance():
+    """_full_year : « The pivot is right for deadlines and wrong for birth dates: "12/03/65" comes out 2065 »."""
+    assert extract_dates("né le 12/03/65", day_first=True) == [("12/03/65", date(2065, 3, 12))]
 
 
 def test_l_expression_reguliere_accepte_31_02_2024_et_29_02_2023_le_calendrier_les_refuse():
@@ -119,12 +149,28 @@ def test_annees_bissextiles_regle_du_siecle_comprise():
     assert extract_dates("29/02/1900") == []
 
 
-def test_jour_ou_mois_d_abord_c_est_l_appelant_qui_tranche():
-    """docstring : « l'appelant le tranche une fois » ; scenario : « 03/04/2024 en désigne deux »."""
-    assert extract_dates("03/04/2024") == [("03/04/2024", date(2024, 4, 3))]
+def test_le_document_tranche_d_abord_puis_l_appelant_puis_l_abstention():
+    """
+    docstring : « one date in it whose first field is above twelve can only be
+    day-first, and that settles every other date of the same document. Failing
+    that, the caller may know the locale of the sender. Failing that too, the
+    snippet abstains ».
+    """
+    # 1. La preuve interne du document : 25 ne peut être qu'un jour.
+    lu = extract_dates("Commande 25/03/2024, livraison 03/04/2024")
+    assert lu == [("25/03/2024", date(2024, 3, 25)), ("03/04/2024", date(2024, 4, 3))]
+    assert document_convention("Commande 25/03/2024, livraison 03/04/2024") is True
+    assert document_convention("Order 03/25/2024, delivery 03/04/2024") is False
+    # 2. À défaut, ce que l'appelant sait.
+    assert extract_dates("03/04/2024", day_first=True) == [("03/04/2024", date(2024, 4, 3))]
     assert extract_dates("03/04/2024", day_first=False) == [("03/04/2024", date(2024, 3, 4))]
-    # Read the other way round, 13 is not a month, and the check catches it.
-    assert extract_dates("13/04/2024", day_first=False) == []
+    # 3. À défaut, l'abstention : la date est rendue sans son jour.
+    assert extract_dates("03/04/2024") == [("03/04/2024", None)]
+    assert document_convention("03/04/2024") is None
+    # Un document qui se contredit ne tranche rien non plus.
+    assert document_convention("25/03/2024 puis 03/25/2024") is None
+    # La preuve interne passe avant l'appelant, date par date : 13 n'est pas un mois.
+    assert extract_dates("13/04/2024", day_first=False) == [("13/04/2024", date(2024, 4, 13))]
 
 
 def test_l_ordre_iso_ne_depend_pas_de_la_convention():
@@ -146,9 +192,9 @@ def test_jamais_un_morceau_d_un_nombre_pointe_plus_long():
     for text in ("serveur 10.1.1.24", "serveur 10.01.01.24", "réf. 12/03/2024/5", "réf. 1.12.03.2024", "v2.1.24"):
         assert extract_dates(text) == [], text
     # Témoin : la même date seule, et en fin de phrase suivie d'un point, est lue.
-    assert extract_dates("le 01.01.24") == [("01.01.24", date(2024, 1, 1))]
-    assert extract_dates("facture du 12.03.24.") == [("12.03.24", date(2024, 3, 12))]
-    assert extract_dates("facture du 12/03/2024.") == [("12/03/2024", date(2024, 3, 12))]
+    assert extract_dates("le 01.01.24", day_first=True) == [("01.01.24", date(2024, 1, 1))]
+    assert extract_dates("facture du 12.03.24.", day_first=True) == [("12.03.24", date(2024, 3, 12))]
+    assert extract_dates("facture du 12/03/2024.", day_first=True) == [("12/03/2024", date(2024, 3, 12))]
 
 
 def test_un_passage_qui_chevauche_une_date_retenue_n_est_pas_une_seconde_date():
@@ -227,22 +273,24 @@ def test_une_longue_suite_de_lettres_est_lue_une_fois_pas_une_fois_par_lettre():
     assert time.perf_counter() - debut < 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une longue suite de marques combinantes est lue une fois par marque : le regard arrière de "
-    "MONTH_FIRST n'exclut que les lettres, et WORD accepte les marques, donc chaque marque ouvre une tentative "
-    "qui relit toute la suite. 5 000 marques : 0,6 s ; 10 000 : 2,3 s ; 20 000 : 9 s (JavaScript : 0,3, 1,1, 4,3 s)",
-)
-def test_defaut_une_longue_suite_de_marques_combinantes_termine_vite():
+def test_une_longue_suite_de_marques_combinantes_est_lue_une_fois_elle_aussi():
+    """
+    Commentaire de MONTH_FIRST : « a combining mark is not the start of a word
+    — so a long run of letters or of marks is read once, not once per
+    character ». Sans le regard arrière sur les marques, vingt mille marques
+    prenaient neuf secondes.
+    """
     debut = time.perf_counter()
-    assert extract_dates("a" + "\u0301" * 10_000) == []
-    assert time.perf_counter() - debut < 0.5
+    assert extract_dates("a" + "\u0301" * 20_000) == []
+    assert time.perf_counter() - debut < 1
+    # Témoin : une date derrière la même suite est toujours lue.
+    assert extract_dates("a" + "\u0301" * 20_000 + " March 3, 2024") == [("March 3, 2024", date(2024, 3, 3))]
 
 
 def test_production_espaces_insecables_bom_et_largeur_nulle_autour_de_la_date():
     assert extract_dates("3\u00a0avril\u00a02024") == [("3\u00a0avril\u00a02024", date(2024, 4, 3))]
     assert extract_dates("3\u202favril 2024") == [("3\u202favril 2024", date(2024, 4, 3))]
-    assert extract_dates("\ufeff12/03/2024\u200b") == [("12/03/2024", date(2024, 3, 12))]
+    assert extract_dates("\ufeff12/03/2024\u200b", day_first=True) == [("12/03/2024", date(2024, 3, 12))]
 
 
 def test_production_casse_mixte_dans_le_nom_du_mois():
@@ -273,7 +321,7 @@ def test_production_la_forme_anglaise_mois_jour_annee_est_lue():
 
 def test_production_des_chiffres_pleine_chasse_sont_lus_dans_les_deux_langages():
     """Commentaire de D : « ASCII digits and full-width digits, read the same way in Python and JavaScript »."""
-    assert extract_dates("１２/０３/２０２４") == [("１２/０３/２０２４", date(2024, 3, 12))]
+    assert extract_dates("１２/０３/２０２４", day_first=True) == [("１２/０３/２０２４", date(2024, 3, 12))]
     assert extract_dates("３ avril ２０２４") == [("３ avril ２０２４", date(2024, 4, 3))]
     # Les chiffres arabes-indiens ne sont lus ni en Python ni en JavaScript.
     assert extract_dates("٠٣/٠٤/٢٠٢٤") == []
@@ -281,15 +329,15 @@ def test_production_des_chiffres_pleine_chasse_sont_lus_dans_les_deux_langages()
 
 def test_production_l_an_24_ecrit_sur_quatre_chiffres_reste_l_an_24():
     """Le pivot ne s'applique qu'à une année écrite sur deux chiffres ; l'an 0 n'existe pas (même sortie en JavaScript)."""
-    assert extract_dates("01/01/0024") == [("01/01/0024", date(24, 1, 1))]
+    assert extract_dates("01/01/0024", day_first=True) == [("01/01/0024", date(24, 1, 1))]
     assert extract_dates("0024-01-01") == [("0024-01-01", date(24, 1, 1))]
-    assert extract_dates("01/01/0001") == [("01/01/0001", date(1, 1, 1))]
-    assert extract_dates("01/01/0000") == []
+    assert extract_dates("01/01/0001", day_first=True) == [("01/01/0001", date(1, 1, 1))]
+    assert extract_dates("01/01/0000", day_first=True) == []
 
 
 def test_production_valeurs_aux_limites_du_calendrier():
     assert extract_dates("31/12/9999") == [("31/12/9999", date(9999, 12, 31))]
-    assert extract_dates("00/01/2024") == []
-    assert extract_dates("01/13/2024") == []
+    assert extract_dates("00/01/2024", day_first=True) == []
+    assert extract_dates("01/13/2024", day_first=True) == [("01/13/2024", date(2024, 1, 13))]
     assert extract_dates("31/01/2024") == [("31/01/2024", date(2024, 1, 31))]
     assert extract_dates("32/01/2024") == []

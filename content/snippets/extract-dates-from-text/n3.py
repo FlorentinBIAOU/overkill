@@ -1,9 +1,20 @@
 """
 Extract dates by asking a general-purpose model.
 
-Rung N3. It is the only rung on this entry whose request asks for relative
-dates, "jeudi prochain", to be resolved: it sends today's date along with the
-text, and asks for every date as a calendar day.
+Rung N3. Its request asks for relative dates, "jeudi prochain", to be
+resolved: it sends a reference date along with the text, and asks for every
+date as a calendar day. Rung N1 resolves the same expressions locally and for
+nothing; this rung is worth its price only on the ones a parser misses.
+
+The reference is the date of the document, not the day of the run: "jeudi
+prochain" in an email received three weeks ago is not next Thursday. It has no
+default here, on purpose, because a default would quietly be today and a
+backlog reprocessed on Monday would move every deadline.
+
+The cap on the input raises rather than truncating: a contract cut in half
+would come back with a list of deadlines that looks complete. What a caller
+does above the cap is split the document into overlapping chunks and merge the
+answers; this snippet does not, on purpose, because it shows one call.
 
 Note what the code has to do that N0 did not: pass a reference date, because
 the model is not told what day it is otherwise; cap the input size; retry on
@@ -21,8 +32,8 @@ PROMPT = (
     "Find every date mentioned in the text below. Answer with JSON only: a list\n"
     "of objects with keys `text` and `date`, where `text` is the words as written\n"
     "and `date` is the day in ISO format, YYYY-MM-DD. Resolve relative dates such\n"
-    "as 'next Thursday' against today, which is {today}. If there is no date,\n"
-    "answer with an empty list.\n\nText:\n{text}"
+    "as 'next Thursday' against the date of the document, which is {reference}.\n"
+    "If there is no date, answer with an empty list.\n\nText:\n{text}"
 )
 ISO_DAY = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
@@ -57,13 +68,19 @@ class ProviderClient:
         return response.choices[0].message.content
 
 
-def extract_dates(text: str, client=None, *, today: date | None = None, attempts: int = 3):
+def extract_dates(text: str, client=None, *, reference: date, attempts: int = 3):
     """
     Return every date the model reports, as (what was written, what it means).
+
+    `reference` is the date the relative expressions are resolved against: the
+    date of the document. It has no default: it is a keyword argument the
+    caller has to pass, because a default would quietly be today.
 
     `client` is injected so this function can be tested without a network call.
     In production it defaults to a real provider client.
     """
+    if not isinstance(reference, date):
+        raise TypeError("reference must be a date: the date of the document, not of the run")
     # The provider bills every token of the prompt. Refusing oversized input
     # before the call is a cost control; the cap counts characters, not tokens.
     if len(text) > MAX_CHARACTERS:
@@ -73,7 +90,7 @@ def extract_dates(text: str, client=None, *, today: date | None = None, attempts
     client = client or ProviderClient()
 
     found = []
-    for item in _ask(client, text, today or date.today(), attempts):
+    for item in _ask(client, text, reference, attempts):
         try:
             # The same calendar check as N0, on the model's answer this time.
             value = date.fromisoformat(item["date"])
@@ -84,6 +101,21 @@ def extract_dates(text: str, client=None, *, today: date | None = None, attempts
     return found
 
 
+def _unfenced(answer: str) -> str:
+    """
+    Strip a code fence that wraps the whole answer, and nothing else.
+
+    Models often hand back a JSON answer inside one fenced block, and refusing
+    that form would pay for a second call for nothing. Any other departure —
+    text before or after, two blocks, a fence never closed — is left alone, and
+    fails to parse, which is the point.
+    """
+    stripped = answer.strip()
+    if stripped.startswith("```") and stripped.endswith("```") and stripped.count("```") == 2:
+        return stripped[3:-3].removeprefix("json")
+    return stripped
+
+
 def _is_usable(parsed) -> bool:
     """A list of objects, each with a `date` written YYYY-MM-DD, as the prompt asked."""
     return isinstance(parsed, list) and all(
@@ -92,12 +124,12 @@ def _is_usable(parsed) -> bool:
     )
 
 
-def _ask(client, text: str, today: date, attempts: int) -> list[dict]:
+def _ask(client, text: str, reference: date, attempts: int) -> list[dict]:
     last_error: Exception | None = None
     for _ in range(attempts):
         try:
             answer = client.complete(
-                prompt=PROMPT.format(text=text, today=today.isoformat()),
+                prompt=PROMPT.format(text=text, reference=reference.isoformat()),
                 # Temperature zero: a date that changes between two identical
                 # calls cannot be reviewed.
                 temperature=0,
@@ -105,7 +137,7 @@ def _ask(client, text: str, today: date, attempts: int) -> list[dict]:
             if answer is None:  # a refusal carries no content: unusable, not empty
                 last_error = ValueError("the model returned no content")
                 continue
-            parsed = json.loads(answer)
+            parsed = json.loads(_unfenced(answer))
             if _is_usable(parsed):
                 return parsed
             # A list of anything else would read as "no date found", which it is not.
