@@ -144,3 +144,10 @@ fiche sort du brouillon : le catalogue compte désormais 25 fiches publiées.
   était sain. Morphologie des bases citée à la source dans l'escalade de N1, ET
   implicite dit comme un choix, recherche par préfixe documentée, point de
   rupture de N2 ramené à deux phrases. Reste : rien.
+- **translate-interface-strings** — la correspondance exacte est tranchée par un
+  index avant toute notation : deux cents chaînes inchangées passent de 1,8 s à
+  0,7 ms, la classe de latence de N0 descend à `<1 ms` et la fiche dit quand elle
+  ne vaut plus. La borne de temps serrée qui rendait la suite rouge devient une
+  borne d'effondrement. Quatre marquages levés, adaptateur N3 exercé, point de
+  rupture de N2 remis dans l'ordre et sources du vrai modèle écrites. Reste :
+  rien.

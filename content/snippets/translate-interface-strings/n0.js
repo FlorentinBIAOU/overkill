@@ -52,17 +52,35 @@ export function normalise(text) {
 }
 
 /**
+ * The memory keyed by what an exact match compares.
+ *
+ * Build it once for a whole file and pass it to every `lookup`: most of an
+ * interface does not change from one version to the next, so most strings are
+ * found here, and scoring is what costs.
+ */
+export function index(memory) {
+  return new Map(Object.entries(memory).map(([known, target]) => [exactKey(known), [known, target]]));
+}
+
+/**
  * Look a string up in a memory of `source: target` pairs already translated.
  *
  * Returns the status (`exact`, `fuzzy` or `none`), the target when there is
  * one, the score, and whether a human has to look at it.
+ *
+ * The exact match is settled first, by lookup in a map, and only a string that
+ * is not in the memory is scored against every entry of it. Scoring a string
+ * that was already there is the expensive way to learn nothing: `exact` is that
+ * map, built here when the caller does not hand one in.
  */
-export function lookup(source, memory, threshold = 0.75) {
+export function lookup(source, memory, threshold = 0.75, exact = null) {
   const key = exactKey(source);
   const folded = normalise(source);
+  const found = (exact ?? index(memory)).get(key);
+  if (found) return decide('exact', source, found[0], found[1], 1);
+
   let best = { source: null, target: null, score: 0 };
   for (const [known, target] of Object.entries(memory)) {
-    if (exactKey(known) === key) return decide('exact', source, known, target, 1);
     const candidate = normalise(known);
     // Lengths in code points, as in Python.
     if (Math.max([...folded].length, [...candidate].length) > MAX_FUZZY_CHARACTERS) continue;

@@ -12,28 +12,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
 import { FakeSeq2Seq } from '../_harness/fake-model.mjs';
 import { translate as translateN2 } from './n2.js';
-import { MAX_CHARACTERS, TranslationUnavailable, placeholders, translate } from './n3.js';
-
-/**
- * Imite la surface du kit `openai` publié (7.x) : `client.chat.completions.create({ model, messages })`,
- * réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
- */
-function realShapedClient(content) {
-  const requests = [];
-  return {
-    requests,
-    chat: {
-      completions: {
-        async create(body) {
-          requests.push(body);
-          return { choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] };
-        },
-      },
-    },
-  };
-}
+import {
+  MAX_CHARACTERS,
+  MODEL,
+  TranslationUnavailable,
+  placeholders,
+  providerClient,
+  translate,
+} from './n3.js';
 
 const promptFor = ({ language, context, variables, source }) =>
   [
@@ -168,17 +157,33 @@ test('le client est injecté pour tester sans réseau', async () => {
   });
 });
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit ; `client.complete` n’existe pas', async () => {
-  const client = realShapedClient(JSON.stringify({ translation: 'Enregistrer' }));
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await translate('Save', 'French', { client });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(out.target, 'Enregistrer');
-  }, assert.AssertionError);
+test('production : l’adaptateur appelle la surface du vrai kit', async () => {
+  // L'adaptateur sur le double du harnais, à la forme du kit `openai` publié,
+  // sans méthode `complete` : `chat.completions.create({ model, messages,
+  // temperature })`, réponse lue dans `choices[0].message.content`.
+  const sdk = new FakeSDK({ content: JSON.stringify({ translation: 'Enregistrer' }) });
+  assert.equal(sdk.complete, undefined);
+  const client = await providerClient(sdk);
+  assert.equal((await translate('Save', 'French', { client })).target, 'Enregistrer');
+  const { endpoint, model, messages, temperature } = sdk.lastRequest;
+  assert.deepEqual([endpoint, model, temperature], ['chat.completions', MODEL, 0]);
+  assert.equal(messages[0].role, 'user');
+  assert.ok(messages[0].content.includes('Save'));
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('production : l’adaptateur, une réponse sans contenu lève après les essais', async () => {
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  await assert.rejects(() => translate('Save', 'French', { client }), TranslationUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  const sdk = new FakeSDK({ content: JSON.stringify({ translation: 'Enregistrer' }), failTimes: 2 });
+  const client = await providerClient(sdk);
+  assert.equal((await translate('Save', 'French', { client })).target, 'Enregistrer');
+  assert.equal(sdk.requests.length, 3);
 });
 
 // ---------------------------------------------------------------------------

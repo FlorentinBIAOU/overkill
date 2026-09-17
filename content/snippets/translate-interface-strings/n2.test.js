@@ -107,10 +107,14 @@ test('point de rupture : l’essai montre la variable perdue en relecture', asyn
   assert.equal(fr.note, 'Le modèle a reçu « [0] items selected » — 1 appel.');
 });
 
-test('INFIRMÉ : le `why` de l’essai parle d’une « variable traduite, « {compte} » » ; le modèle ne reçoit jamais « count »', async () => {
+test('le modèle ne voit jamais le nom de la variable', async () => {
+  // C'est l'argument du niveau : la variable est retirée avant l'appel et
+  // remise après, de sorte que le modèle ne peut pas la traduire. Le marqueur
+  // part à sa place.
   const model = new FakeSeq2Seq({}, '{compte} éléments sélectionnés');
   await translate('{count} items selected', { model });
-  assert.throws(() => assert.ok(model.calls[0].includes('count')), assert.AssertionError);
+  assert.ok(!model.calls[0].includes('count'));
+  assert.ok(model.calls[0].includes('[0]'));
 });
 
 // ---------------------------------------------------------------------------

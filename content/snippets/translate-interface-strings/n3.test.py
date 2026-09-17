@@ -18,26 +18,12 @@ from types import SimpleNamespace
 import pytest
 
 from _harness.fake_llm import FakeLLM
+from _harness.fake_sdk import FakeSDK
 from _harness.fake_model import FakeSeq2Seq
 from n2 import translate as translate_n2
-from n3 import MAX_CHARACTERS, PROMPT, TranslationUnavailable, placeholders, translate
+from n3 import MAX_CHARACTERS, MODEL, PROMPT, ProviderClient, TranslationUnavailable, placeholders, translate
 
 
-class RealShapedClient:
-    """
-    Imite la surface du kit `openai` publié (3.x) : `client.chat.completions.create(model=..., messages=[...])`,
-    réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
-    """
-
-    def __init__(self, content: str):
-        self.content = content
-        self.requests = []
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-    def _create(self, **kwargs):
-        self.requests.append(kwargs)
-        message = SimpleNamespace(role="assistant", content=self.content)
-        return SimpleNamespace(choices=[SimpleNamespace(index=0, message=message, finish_reason="stop")])
 
 
 # ---------------------------------------------------------------------------
@@ -180,15 +166,38 @@ def test_le_client_est_injecte_pour_tester_sans_reseau():
         translate("Save", "French")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle `client.complete(prompt=…, "
-    "temperature=0)`, qui n'existe pas dans le kit `openai` ; l'AttributeError est avalée, retentée, et sort en "
-    "TranslationUnavailable comme une panne du fournisseur",
-)
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    client = RealShapedClient(json.dumps({"translation": "Enregistrer"}))
-    assert translate("Save", "French", client=client)["target"] == "Enregistrer"
+def test_production_l_adaptateur_appelle_la_surface_du_vrai_kit():
+    """
+    docstring de `ProviderClient` : « The one call this snippet makes, on top of
+    the provider's SDK ». Sur le double du harnais, à la forme du kit `openai`
+    publié, sans méthode `complete` : `chat.completions.create(model=...,
+    messages=[...], temperature=...)`, réponse lue dans
+    `choices[0].message.content`.
+    """
+    sdk = FakeSDK(content=json.dumps({"translation": "Enregistrer"}))
+    assert not hasattr(sdk, "complete")
+    assert translate("Save", "French", client=ProviderClient(sdk=sdk))["target"] == "Enregistrer"
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL
+    assert request["temperature"] == 0
+    assert request["messages"][0]["role"] == "user"
+    assert "Save" in request["messages"][0]["content"]
+    assert len(sdk.requests) == 1
+
+
+def test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_les_essais():
+    """Le kit type `content` comme facultatif : `None` n'est pas une traduction."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(TranslationUnavailable):
+        translate("Save", "French", client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content=json.dumps({"translation": "Enregistrer"}), fail_times=2)
+    assert translate("Save", "French", client=ProviderClient(sdk=sdk))["target"] == "Enregistrer"
+    assert len(sdk.requests) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +205,7 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-def test_defaut_une_chaine_vide_ne_coute_pas_trois_appels_et_ne_leve_pas():
+def test_production_une_chaine_vide_ne_coute_pas_trois_appels_et_ne_leve_pas():
     client = FakeLLM(response={"translation": ""})
     try:
         result = translate("", "French", client=client)

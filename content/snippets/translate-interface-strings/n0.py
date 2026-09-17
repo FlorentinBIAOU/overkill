@@ -60,18 +60,37 @@ def normalise(text: str) -> str:
     return " ".join(without_accents.lower().split())
 
 
-def lookup(source: str, memory: dict[str, str], threshold: float = 0.75) -> dict:
+def index(memory: dict[str, str]) -> dict[str, tuple[str, str]]:
+    """
+    The memory keyed by what an exact match compares.
+
+    Build it once for a whole file and pass it to every `lookup`: most of an
+    interface does not change from one version to the next, so most strings
+    are found here, and scoring is what costs.
+    """
+    return {exact_key(known): (known, target) for known, target in memory.items()}
+
+
+def lookup(source: str, memory: dict[str, str], threshold: float = 0.75, exact=None) -> dict:
     """
     Look a string up in a memory of `source: target` pairs already translated.
 
     Returns the status (`exact`, `fuzzy` or `none`), the target when there is
     one, the score, and whether a human has to look at it.
+
+    The exact match is settled first, by lookup in a dictionary, and only a
+    string that is not in the memory is scored against every entry of it.
+    Scoring a string that was already there is the expensive way to learn
+    nothing: `exact` is that dictionary, built here when the caller does not
+    hand one in.
     """
     key, folded = exact_key(source), normalise(source)
+    found = (index(memory) if exact is None else exact).get(key)
+    if found is not None:
+        return _decide("exact", source, found[0], found[1], 1.0)
+
     best_source, best_target, best_score = None, None, 0.0
     for known, target in memory.items():
-        if exact_key(known) == key:
-            return _decide("exact", source, known, target, 1.0)
         candidate = normalise(known)
         if max(len(folded), len(candidate)) > MAX_FUZZY_CHARACTERS:
             continue

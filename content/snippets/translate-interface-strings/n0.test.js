@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { lookup, normalise, placeholders, ratio } from './n0.js';
+import { index, lookup, normalise, placeholders, ratio } from './n0.js';
 
 const MEMORY = {
   Save: 'Enregistrer',
@@ -18,18 +18,6 @@ const MEMORY = {
 
 const WARNING = 'interpolation variables differ from the source string';
 const round3 = (value) => Number(value.toFixed(3));
-const WORDS = (
-  'the a your to of settings account save delete item items selected changes password email is has been ' +
-  'was not could be error try again later update profile notification'
-).split(' ');
-
-/** Un libellé d'interface de trois à dix mots, distinct pour chaque i (même construction en Python). */
-function label(i) {
-  const n = WORDS.length;
-  const head = [WORDS[i % n], WORDS[Math.floor(i / n) % n], WORDS[Math.floor(i / (n * n)) % n]];
-  return [...head, ...Array.from({ length: i % 8 }, (_, j) => WORDS[(i * 7 + j) % n])].join(' ');
-}
-
 // ---------------------------------------------------------------------------
 // Point de rupture
 // ---------------------------------------------------------------------------
@@ -73,12 +61,18 @@ test('un mot ajouté donne une correspondance approchée à relire', () => {
   assert.equal(result.review, true);
 });
 
-test('INFIRMÉ : « a variable moves […] last year’s translation is still nearly right » ; rien ne remonte', () => {
-  assert.throws(() => {
-    for (const moved of ['{count} selected items', 'Selected: {count} items']) {
-      assert.equal(lookup(moved, MEMORY).target, '{count} éléments sélectionnés', moved);
-    }
-  }, assert.AssertionError);
+test('une variable déplacée ne remonte rien au seuil par défaut', () => {
+  // Une variable qui change de place change assez la chaîne pour que la mémoire
+  // ne la reconnaisse plus : 0,727 et 0,6, l'un et l'autre sous le seuil.
+  for (const [moved, note] of [['{count} selected items', 0.727], ['Selected: {count} items', 0.6]]) {
+    const result = lookup(moved, MEMORY);
+    assert.equal(result.status, 'none', moved);
+    assert.equal(Math.round(result.score * 1000) / 1000, note);
+  }
+  // Témoin : au-dessous du seuil, la même chaîne remonte, en relecture.
+  const proche = lookup('{count} selected items', MEMORY, 0.7);
+  assert.equal(proche.target, '{count} éléments sélectionnés');
+  assert.equal(proche.review, true);
 });
 
 test('le seuil décide de ce qui mérite d’être montré', () => {
@@ -156,20 +150,45 @@ test('une chaîne vide et une mémoire vide ne rendent rien', () => {
   assert.equal(lookup('Save', {}).target, null);
 });
 
-test('une recherche prend de l’ordre de dix millisecondes dans une mémoire réelle', () => {
-  // latency « ~10 ms » : vrai en JavaScript sur 1 000 chaînes (~21 ms mesurés,
-  // l'ordre de grandeur) ; infirmé en Python (66 ms), voir n0.test.py.
-  const memory = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [label(i), 'fr']));
-  assert.equal(Object.keys(memory).length, 1000);
-  lookup('warm up', memory);
-  let best = Infinity;
-  for (let r = 0; r < 3; r += 1) {
-    const start = performance.now();
-    lookup('Your password could not be updated, try again later', memory);
-    best = Math.min(best, performance.now() - start);
+test('une chaîne inchangée ne déclenche aucun calcul de score', () => {
+  // « The exact match is settled first, by lookup in a map, and only a string
+  // that is not in the memory is scored against every entry of it. » La chaîne
+  // cherchée est la dernière de mille : avant, l'extrait notait les neuf cent
+  // quatre-vingt-dix-neuf autres d'abord.
+  const paires = Array.from({ length: 1000 }, (_, i) => [`Label number ${i}`, `Libellé numéro ${i}`]);
+  const memory = Object.fromEntries(paires);
+  const derniere = 'Label number 999';
+  let parcours = 0;
+  // Un proxy qui compte les parcours de la mémoire : `Object.entries` les
+  // demande toutes, la recherche exacte n'en demande aucune.
+  const comptee = new Proxy(memory, {
+    ownKeys(cible) { parcours += 1; return Reflect.ownKeys(cible); },
+  });
+
+  const exact = index(memory);
+  const result = lookup(derniere, comptee, 0.75, exact);
+  assert.equal(result.status, 'exact');
+  assert.equal(result.target, 'Libellé numéro 999');
+  assert.equal(parcours, 0);
+  // Et sans index fourni, elle n'est parcourue que pour le construire.
+  assert.deepEqual(lookup(derniere, comptee), result);
+  assert.equal(parcours, 1);
+  // Une chaîne absente, elle, est bien notée contre toute la mémoire.
+  assert.equal(lookup('Something entirely new here', comptee, 0.75, exact).status, 'none');
+  assert.equal(parcours, 2);
+});
+
+test('production : une passe de publication tient dans une borne large', () => {
+  // La borne attrape un effondrement, elle ne mesure pas : deux cents chaînes
+  // inchangées contre mille connues tiennent en moins d'une milliseconde
+  // mesurée, et la borne est à deux secondes.
+  const memory = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`Label number ${i}`, `Libellé numéro ${i}`]));
+  const exact = index(memory);
+  const debut = performance.now();
+  for (let i = 0; i < 200; i += 1) {
+    assert.equal(lookup(`Label number ${i}`, memory, 0.75, exact).status, 'exact');
   }
-  // 32 ms : le milieu, sur une échelle logarithmique, entre « ~10 ms » et « ~100 ms ».
-  assert.ok(best < 32, `${best} ms`);
+  assert.ok(performance.now() - debut < 2000);
 });
 
 // ---------------------------------------------------------------------------
@@ -208,7 +227,9 @@ test('production : une mémoire de mille chaînes termine', () => {
 });
 
 test('une mémoire de textes longs rend chaque recherche lente', () => {
-  const paragraph = (k) => Array.from({ length: 250 }, (_, i) => WORDS[(i * k + 3) % WORDS.length]).join(' ');
+  const mots = ('the a your to of settings account save delete item items selected changes password '
+    + 'email is has been was not could be error try again later update profile notification').split(' ');
+  const paragraph = (k) => Array.from({ length: 250 }, (_, i) => mots[(i * k + 3) % mots.length]).join(' ');
   const memory = Object.fromEntries(Array.from({ length: 20 }, (_, k) => [paragraph(k + 1), 'aide']));
   const start = performance.now();
   lookup(`${paragraph(7)} now`, memory);

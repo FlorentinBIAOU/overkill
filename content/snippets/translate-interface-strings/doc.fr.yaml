@@ -20,6 +20,12 @@ n0: |
   texte nouveau, dont ce niveau n'a rien à dire — voyez le point de rupture
   dans le test.
 
+  La correspondance exacte est tranchée d'abord, par une recherche dans un
+  dictionnaire, et seule une chaîne absente de la mémoire est notée contre
+  toutes ses entrées. Noter une chaîne qui y était déjà, c'est la façon chère de
+  n'apprendre rien : « index » construit ce dictionnaire, une fois pour tout un
+  fichier.
+
   Les variables d'interpolation sont vérifiées à part du score. Une traduction
   dont les variables ne correspondent pas à la source est une interface cassée,
   quel que soit son score : elle est donc signalée même sur une correspondance

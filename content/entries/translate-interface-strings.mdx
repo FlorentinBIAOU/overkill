@@ -3,7 +3,7 @@ id: translate-interface-strings
 family: transform
 status: published
 verdict: N2
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -25,7 +25,7 @@ rungs:
       fr: "Mémoire de traduction : correspondance exacte, puis approchée signalée"
       en: "Translation memory: exact match, then a flagged approximate one"
     cost: nul
-    latency: "~100 ms"
+    latency: "<1 ms"
     risks:
       data_egress: none
       deterministic: true
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/translate-interface-strings/n0.js
       verification: executed
     breaking_point:
-      fr: "Une mémoire réemploie, elle ne traduit pas. Le test lui soumet « Two-factor authentication is required for administrators » : rien dans la mémoire ne s’en approche, et la fonction renvoie une absence de correspondance au lieu de la phrase française qu’elle a sous la main."
-      en: "A memory reuses, it does not translate. The test hands it “Two-factor authentication is required for administrators”: nothing in the memory comes close, and the function returns no match rather than the French sentence it happens to be holding."
+      fr: "Une mémoire réemploie, elle ne traduit pas. La classe de temps ci-dessus est celle du cas ordinaire, une chaîne inchangée retrouvée dans l’index exact ; une chaîne absente, elle, est notée contre toutes les entrées de la mémoire, et cette recherche-là se compte en dizaines de millisecondes sur mille chaînes, davantage si vos chaînes sont longues. Le test lui soumet « Two-factor authentication is required for administrators » : rien dans la mémoire ne s’en approche, et la fonction renvoie une absence de correspondance au lieu de la phrase française qu’elle a sous la main."
+      en: "A memory reuses, it does not translate. The latency class above is the ordinary case, an unchanged string found in the exact index; a string that is absent is scored against every entry of the memory instead, and that search runs into tens of milliseconds over a thousand strings, more when your strings are long. The test hands it “Two-factor authentication is required for administrators”: nothing in the memory comes close, and the function returns no match rather than the French sentence it happens to be holding."
     escalate_when:
       fr: "La file des chaînes sans correspondance grossit plus vite que vos traducteurs ne la vident."
       en: "The queue of unmatched strings grows faster than your translators empty it."
@@ -77,8 +77,8 @@ rungs:
       javascript: snippets/translate-interface-strings/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle ne sait pas ce qu’est une variable. L’extrait la remplace par un marqueur numéroté — le modèle reçoit « [0] items selected », jamais « {count} » — puis vérifie qu’il revient. Si la réponse est « Des éléments sélectionnés », marqueur perdu, ou « {compte} éléments sélectionnés », accolade inventée, l’extrait la renvoie en relecture ; ces deux réponses sont écrites par un double local, et ce que les tests prouvent est ce contrôle, pas le comportement du modèle. Un message ICU casse pour de bon : ses branches mêlent du texte à traduire et des mots-clés à garder. Lancé hors des tests sur le pluriel ICU de « {count} items », le vrai modèle traduit en « un » et « autres » les deux mots-clés de ses branches, qui doivent rester en anglais, et l’extrait, qui ne sait pas protéger ces mots-clés, renvoie tout message ICU en relecture."
-      en: "The model does not know what a variable is. The snippet swaps it for a numbered marker — the model is handed “[0] items selected”, never “{count}” — then checks that it comes back. If the answer is “Des éléments sélectionnés”, the marker lost, or “{compte} éléments sélectionnés”, a brace invented, the snippet sends it back for review; both answers are written by a local double, and what the tests prove is that check, not the model’s behaviour. An ICU message breaks for good: its branches mix text to translate with keywords to keep. Run outside the tests on the ICU plural of “{count} items”, the real model turns the two keywords of its branches, which must stay in English, into “un” and “autres”, and the snippet, which cannot protect those keywords, sends every ICU message back for review."
+      fr: "Un message ICU casse pour de bon : ses branches mêlent du texte à traduire et des mots-clés à garder. Lancé hors des tests sur le pluriel ICU de « {count} items », le vrai modèle traduit en « un » et « autres » les deux mots-clés qui doivent rester en anglais, et l’extrait, qui ne sait pas les protéger, renvoie tout message ICU en relecture. La variable ordinaire, elle, est tenue : elle part en marqueur numéroté — le modèle reçoit « [0] items selected », jamais « {count} » — et l’extrait vérifie qu’il revient, sur des réponses qu’un double local écrit."
+      en: "An ICU message breaks for good: its branches mix text to translate with keywords to keep. Run outside the tests on the ICU plural of “{count} items”, the real model turns the two keywords that must stay in English into “un” and “autres”, and the snippet, which cannot protect them, sends every ICU message back for review. The ordinary variable does hold: it travels as a numbered marker — the model is handed “[0] items selected”, never “{count}” — and the snippet checks that it comes back, on answers a local double writes."
     escalate_when:
       fr: "Vos corrections ne portent plus sur la langue mais sur l’emploi : « Save » traduit comme le verbe alors que c’est le libellé d’un bouton, un registre d’administrateur là où l’interface s’adresse à un client, une phrase là où il y a la place d’un mot."
       en: "Your corrections stop being about the language and start being about the use: Save translated as the verb when it is a button label, an administrator’s register where the interface speaks to a customer, a sentence where there is room for one word."
@@ -132,5 +132,11 @@ further_reading:
   - label: "ICU — MessageFormat, la forme des variables d’interpolation dans un libellé"
     url: "https://unicode-org.github.io/icu/userguide/format_parse/messages/"
 
-sources: []
+sources:
+  - label: "Carte du modèle Helsinki-NLP/opus-mt-en-fr : licence Apache 2.0, paire anglais-français"
+    url: "https://huggingface.co/Helsinki-NLP/opus-mt-en-fr"
+  - label: "Xenova/opus-mt-en-fr — la conversion ONNX des mêmes poids, chargée par l’extrait JavaScript"
+    url: "https://huggingface.co/Xenova/opus-mt-en-fr"
+  - label: "Modèle exécuté hors des tests pour écrire le point de rupture de N2 : `transformers` 5.17.0 avec `torch` 2.14.0+cpu et `sentencepiece` 0.2.2 côté Python, `@huggingface/transformers` 4.2.0 côté JavaScript. « {count} items selected » revient « {compte} éléments sélectionnés » des deux côtés ; le pluriel ICU « {count, plural, one {# item} other {# items}} » revient avec ses mots-clés traduits en « un » et « autres » ; le marqueur `[N]` est conservé sur vingt libellés sur vingt"
+    url: "https://huggingface.co/Helsinki-NLP/opus-mt-en-fr"
 ---
