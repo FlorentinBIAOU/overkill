@@ -75,9 +75,8 @@
 - Aucune des deux prévisions ne rend d'intervalle. Celui qui commande le stock
   a besoin d'un ordre de grandeur de l'erreur autant que du point ; une phrase
   suffit.
-- `unavailable_reason` N3 : bon argument (rejouer, expliquer). La phrase « la
-  documentation d'un fournisseur le dit » dans le `scenario` mériterait le lien
-  en `sources`.
+- `unavailable_reason` N3 : bon argument (rejouer, expliquer), et la phrase du
+  `scenario` sur le non-déterminisme par défaut est sourcée.
 
 ### Ce qui est solide
 

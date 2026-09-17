@@ -74,10 +74,6 @@
 - `écris à jean [at] gmail [dot] com` passe : c'est bien de l'obfuscation, et
   c'est la forme la plus répandue. Elle mériterait d'être l'exemple cité, plus
   parlant que les emojis.
-- `scenario` : « la syntaxe d'une adresse électronique n'a pas changé depuis la
-  RFC 2822 de 2001 » — la RFC 5322 (2008) l'a remplacée, et les adresses
-  internationalisées (RFC 6531) existent. L'argument tient, la date est à
-  reformuler (« n'a pas changé sur l'essentiel depuis… »), ou citer 5322.
 - N3 : l'extrait envoie le message entier au fournisseur pour en retirer des
   données personnelles. Le bloc `regulatory` le dit ; c'est la meilleure
   raison de ne pas le prendre, et le verdict pourrait la dire en premier.
