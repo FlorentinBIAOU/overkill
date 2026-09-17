@@ -11,13 +11,12 @@ Ce qu'ils ne prouvent pas : que le modèle répare une ligne correctement.
 
 import json
 import time
-from types import SimpleNamespace
-
 import pytest
 
 from _harness.fake_llm import FakeLLM
+from _harness.fake_sdk import FakeSDK
 from n0 import clean_csv
-from n3 import PROMPT, repair_rejected_rows
+from n3 import MODEL, PROMPT, ProviderClient, repair_rejected_rows
 
 HEADER = ["id", "name", "joined", "amount", "active"]
 SCHEMA = {"id": "integer", "name": "text", "joined": "date", "amount": "number", "active": "boolean"}
@@ -30,23 +29,6 @@ REJECT = {
 }
 
 GOOD_ANSWER = json.dumps({"id": "3", "name": "Carol", "joined": "2024-03-02", "amount": "3.5", "active": "yes"})
-
-
-class RealShapedClient:
-    """
-    Imite la surface du kit `openai` publié (3.x) : `client.chat.completions.create(model=..., messages=[...])`,
-    réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
-    """
-
-    def __init__(self, content: str):
-        self.content = content
-        self.requests = []
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-    def _create(self, **kwargs):
-        self.requests.append(kwargs)
-        message = SimpleNamespace(role="assistant", content=self.content)
-        return SimpleNamespace(choices=[SimpleNamespace(index=0, message=message, finish_reason="stop")])
 
 
 # ---------------------------------------------------------------------------
@@ -145,15 +127,14 @@ def test_rien_d_autre_du_fichier_n_est_envoye():
     assert "Bob" in prompts and "Alice" not in prompts
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : « the number of calls made is exactly the length of that journal » ; les pannes retentées "
-    "s'ajoutent : deux lignes refusées et une panne font trois appels",
-)
-def test_le_nombre_d_appels_est_exactement_la_longueur_du_journal():
-    client = FakeLLM(response="{}", fail_times=1)
+def test_un_appel_par_entree_du_journal_et_au_plus_attempts_pour_celle_qui_echoue():
+    """`repair_rejected_rows` : « one call per entry of that journal, and up to `attempts` for an entry whose calls fail »."""
+    client = FakeLLM(response="{}")
     repair_rejected_rows(HEADER, [REJECT, REJECT], SCHEMA, client=client)
     assert client.call_count == 2
+    client = FakeLLM(response="{}", fail_times=1)
+    repair_rejected_rows(HEADER, [REJECT, REJECT], SCHEMA, client=client)
+    assert client.call_count == 3
 
 
 def test_une_panne_est_retentee_une_reponse_inutilisable_ne_l_est_pas():
@@ -189,15 +170,50 @@ def test_le_client_est_injecte_pour_tester_sans_reseau():
         repair_rejected_rows(HEADER, [REJECT], SCHEMA)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle `client.complete(prompt=…, "
-    "temperature=0)`, qui n'existe pas dans le kit `openai` ; l'erreur est avalée, retentée, et chaque ligne sort "
-    "en « the model did not return a usable object », sans exception",
-)
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    result = repair_rejected_rows(HEADER, [REJECT], SCHEMA, client=RealShapedClient(GOOD_ANSWER))
+def test_la_convention_decimale_du_fichier_vaut_aussi_pour_la_reparation():
+    """`repair_rejected_rows` : « a repair is read under the same convention as the rest of the file »."""
+    reject = {"line": 4, "column": "amount", "reason": "ambiguous decimal mark: declare decimal=',' or decimal='.'",
+              "fields": ["3", "Carol", "2024-03-02", "12,500", "yes"]}
+    answer = json.dumps({"id": "3", "name": "Carol", "joined": "2024-03-02", "amount": "12,500", "active": "yes"})
+    result = repair_rejected_rows(HEADER, [reject], SCHEMA, client=FakeLLM(response=answer), decimal=",")
+    assert [row["amount"] for row in result["rows"]] == [12.5]
+    result = repair_rejected_rows(HEADER, [reject], SCHEMA, client=FakeLLM(response=answer), decimal=".")
+    assert [row["amount"] for row in result["rows"]] == [12500.0]
+    # Sans convention, la réparation est refusée de nouveau plutôt que devinée.
+    result = repair_rejected_rows(HEADER, [reject], SCHEMA, client=FakeLLM(response=answer))
+    assert result["rows"] == []
+    assert result["unrepairable"][0]["reason"].startswith("the repair was refused too: ambiguous decimal mark")
+
+
+def test_l_adaptateur_parle_au_kit_du_fournisseur():
+    """`ProviderClient` : « The one call this snippet makes, on top of the provider's SDK »."""
+    sdk = FakeSDK(content=GOOD_ANSWER)
+    result = repair_rejected_rows(HEADER, [REJECT], SCHEMA, client=ProviderClient(sdk=sdk))
     assert len(result["rows"]) == 1
+    assert sdk.last_request == {
+        "endpoint": "chat.completions",
+        "model": MODEL,
+        "messages": [{"role": "user", "content": sdk.last_request["messages"][0]["content"]}],
+        "temperature": 0,
+    }
+    assert sdk.last_request["messages"][0]["content"].startswith("A row of a CSV file was refused")
+
+
+def test_l_adaptateur_rend_none_quand_le_modele_refuse_de_repondre():
+    """`_ask` : « a refusal comes back as no content » ; `content` nul n'est jamais passé au décodeur JSON."""
+    sdk = FakeSDK(content=None)
+    result = repair_rejected_rows(HEADER, [REJECT], SCHEMA, client=ProviderClient(sdk=sdk))
+    assert result["rows"] == []
+    assert result["unrepairable"] == [{**REJECT, "reason": "the model did not return a usable object"}]
+    assert len(sdk.requests) == 1  # une réponse inutilisable n'est pas retentée
+
+
+def test_l_adaptateur_retente_une_panne_du_kit():
+    """Une panne du kit est une panne de fournisseur : retentée `attempts` fois, pas une de plus."""
+    sdk = FakeSDK(content=GOOD_ANSWER, fail_times=2)
+    result = repair_rejected_rows(HEADER, [REJECT], SCHEMA, client=ProviderClient(sdk=sdk), attempts=3)
+    assert len(result["rows"]) == 1
+    assert len(sdk.requests) == 3
 
 
 def test_verdict_cent_mille_lignes_dont_trois_coincent_font_trois_appels():

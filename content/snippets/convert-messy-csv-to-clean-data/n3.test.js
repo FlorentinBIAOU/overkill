@@ -11,8 +11,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
 import { cleanCsv } from './n0.js';
-import { repairRejectedRows } from './n3.js';
+import { MODEL, providerClient, repairRejectedRows } from './n3.js';
 
 const HEADER = ['id', 'name', 'joined', 'amount', 'active'];
 const SCHEMA = { id: 'integer', name: 'text', joined: 'date', amount: 'number', active: 'boolean' };
@@ -20,25 +21,6 @@ const SCHEMA = { id: 'integer', name: 'text', joined: 'date', amount: 'number', 
 const REJECT = { line: 4, column: 'joined', reason: 'not a real date', fields: ['3', 'Carol', '31/02/2024', '3.5', 'yes'] };
 
 const GOOD_ANSWER = JSON.stringify({ id: '3', name: 'Carol', joined: '2024-03-02', amount: '3.5', active: 'yes' });
-
-/**
- * Imite la surface du kit `openai` publié (7.x) : `client.chat.completions.create({ model, messages })`,
- * réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
- */
-function realShapedClient(content) {
-  const requests = [];
-  return {
-    requests,
-    chat: {
-      completions: {
-        async create(body) {
-          requests.push(body);
-          return { choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] };
-        },
-      },
-    },
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Point de rupture
@@ -134,10 +116,15 @@ test('rien d’autre du fichier n’est envoyé', async () => {
   assert.ok(prompts.includes('Bob') && !prompts.includes('Alice'));
 });
 
-test('INFIRMÉ : « the number of calls made is exactly the length of that journal » ; une panne en ajoute', async () => {
-  const client = new FakeLLM({ response: '{}', failTimes: 1 });
+test('un appel par entrée du journal, et au plus `attempts` pour celle qui échoue', async () => {
+  // « one call per entry of that journal, and up to `attempts` for an entry
+  // whose calls fail ».
+  let client = new FakeLLM({ response: '{}' });
   await repairRejectedRows(HEADER, [REJECT, REJECT], SCHEMA, { client });
-  assert.throws(() => assert.equal(client.callCount, 2), assert.AssertionError);
+  assert.equal(client.callCount, 2);
+  client = new FakeLLM({ response: '{}', failTimes: 1 });
+  await repairRejectedRows(HEADER, [REJECT, REJECT], SCHEMA, { client });
+  assert.equal(client.callCount, 3);
 });
 
 test('une panne est retentée, une réponse inutilisable ne l’est pas', async () => {
@@ -172,9 +159,49 @@ test('le client est injecté pour tester sans réseau', async () => {
   });
 });
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit ; `client.complete` n’existe pas', async () => {
-  const result = await repairRejectedRows(HEADER, [REJECT], SCHEMA, { client: realShapedClient(GOOD_ANSWER) });
-  assert.throws(() => assert.equal(result.rows.length, 1), assert.AssertionError);
+test('la convention décimale du fichier vaut aussi pour la réparation', async () => {
+  // « a repair is read under the same convention as the rest of the file ».
+  const reject = { line: 4, column: 'amount', reason: "ambiguous decimal mark: declare decimal=',' or decimal='.'", fields: ['3', 'Carol', '2024-03-02', '12,500', 'yes'] };
+  const answer = JSON.stringify({ id: '3', name: 'Carol', joined: '2024-03-02', amount: '12,500', active: 'yes' });
+  const run = (decimal) => repairRejectedRows(HEADER, [reject], SCHEMA, { client: new FakeLLM({ response: answer }), decimal });
+  assert.deepEqual((await run(',')).rows.map((r) => r.amount), [12.5]);
+  assert.deepEqual((await run('.')).rows.map((r) => r.amount), [12500]);
+  // Sans convention, la réparation est refusée de nouveau plutôt que devinée.
+  const sans = await run(null);
+  assert.deepEqual(sans.rows, []);
+  assert.ok(sans.unrepairable[0].reason.startsWith('the repair was refused too: ambiguous decimal mark'));
+});
+
+test('l’adaptateur parle au kit du fournisseur', async () => {
+  // `providerClient` : la seule requête que l'extrait envoie, sur le kit.
+  const sdk = new FakeSDK({ content: GOOD_ANSWER });
+  const client = await providerClient(sdk);
+  const result = await repairRejectedRows(HEADER, [REJECT], SCHEMA, { client });
+  assert.equal(result.rows.length, 1);
+  assert.equal(sdk.lastRequest.endpoint, 'chat.completions');
+  assert.equal(sdk.lastRequest.model, MODEL);
+  assert.equal(sdk.lastRequest.temperature, 0);
+  assert.equal(sdk.lastRequest.messages.length, 1);
+  assert.equal(sdk.lastRequest.messages[0].role, 'user');
+  assert.ok(sdk.lastRequest.messages[0].content.startsWith('A row of a CSV file was refused'));
+});
+
+test('l’adaptateur rend null quand le modèle refuse de répondre', async () => {
+  // « a refusal comes back as no content » : jamais passé au décodeur JSON.
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  const result = await repairRejectedRows(HEADER, [REJECT], SCHEMA, { client });
+  assert.deepEqual(result.rows, []);
+  assert.deepEqual(result.unrepairable, [{ ...REJECT, reason: 'the model did not return a usable object' }]);
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('l’adaptateur retente une panne du kit', async () => {
+  const sdk = new FakeSDK({ content: GOOD_ANSWER, failTimes: 2 });
+  const client = await providerClient(sdk);
+  const result = await repairRejectedRows(HEADER, [REJECT], SCHEMA, { client, attempts: 3 });
+  assert.equal(result.rows.length, 1);
+  assert.equal(sdk.requests.length, 3);
 });
 
 test('verdict : cent mille lignes dont trois coincent font trois appels', async () => {

@@ -38,7 +38,8 @@ const UNDEFINED_IN_CP1252 = /[\u0081\u008d\u008f\u0090\u009d]/g;
  * A byte order mark is a statement about the file, so it wins. Failing that,
  * strict UTF-8 either succeeds, and the file is read as UTF-8, or
  * fails, and the file is read as cp1252, the Windows single-byte encoding for
- * Western European languages.
+ * Western European languages. cp1252 and not Latin-1, which has no euro
+ * sign: a price column would come back with a control character in it.
  *
  * UTF-32, and UTF-16 without a mark, are not decoded: they come out full of
  * NUL characters, and `cleanCsv` refuses such a file in its journal.
@@ -88,6 +89,11 @@ function countOutsideQuotes(line, delimiter, quote) {
  * lines. A file separated by semicolons whose free-text column is full of
  * commas still lands on its feet, because the comma count varies from line to
  * line while the semicolon count does not.
+ *
+ * The sample is twenty physical lines, not twenty records, because the records
+ * cannot be cut out before the dialect is known. A quoted field that holds line
+ * breaks — an address, a comment — is therefore counted line by line: a file
+ * made of such fields is judged on very few of its records.
  *
  * @returns {{delimiter: string, quote: string}}
  */
@@ -228,6 +234,9 @@ const INTEGER = /^[+-]?\d+$/;
 const NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_FIRST = /^(\d{2})[/.](\d{2})[/.](\d{4})$/;
+// '1,234': one mark, three digits after it, at most three before. Reads as a
+// thousands group or as a decimal, and nothing in the value says which.
+const GROUPED = /^[+-]?\d{1,3}[,.]\d{3}$/;
 const MONTH_LENGTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 const TRUE_WORDS = new Set(['true', 'yes', 'y', '1', 'vrai', 'oui', 'o']);
@@ -242,19 +251,51 @@ function toInteger(raw) {
 }
 
 /**
- * Accept the decimal marks a European spreadsheet actually writes.
+ * Read a number, and refuse rather than guess when the mark is ambiguous.
  *
- * When a comma and a dot are both present, the last one is the decimal mark
- * and the other groups the thousands. When only a comma is present it is the
- * decimal mark, which is the convention across most of the continent.
+ * `decimal` is the convention of the file, declared by the caller: ',' or '.'.
+ * Three cases, in order:
+ *
+ * - both marks present, or the same mark twice: the shape settles it. The last
+ *   mark of the two is the decimal one, a mark repeated only groups;
+ * - one mark, followed by exactly three digits, with at most three before:
+ *   '12,500' is 12.5 under one convention and 12500 under the other. Without
+ *   `decimal`, the value goes to the journal rather than being divided by a
+ *   thousand in silence;
+ * - one mark that cannot group, because the digits do not fall in threes:
+ *   '12,50' is 12.5 whoever wrote it.
+ *
+ * A mark that contradicts the declared convention is refused too: under
+ * `decimal = '.'`, '12,50' is not a number, it is a file read with the wrong
+ * convention.
  */
-function toNumber(raw) {
+function toNumber(raw, decimal = null) {
   let text = raw.replace(SPACES, '');
-  if (text.includes(',') && text.includes('.')) {
-    const grouping = text.lastIndexOf('.') > text.lastIndexOf(',') ? ',' : '.';
-    text = text.split(grouping).join('');
+  if (decimal !== null && decimal !== ',' && decimal !== '.') {
+    throw new TypeError("decimal must be ',' or '.'");
   }
-  text = text.split(',').join('.');
+  const marks = [',', '.'].filter((mark) => text.includes(mark));
+  const repeated = (mark) => text.indexOf(mark) !== text.lastIndexOf(mark);
+  let point;
+  if (marks.length === 2) {
+    point = text.lastIndexOf(',') > text.lastIndexOf('.') ? ',' : '.';
+  } else if (marks.length === 1 && repeated(marks[0])) {
+    point = null; // repeated, so it groups thousands: '1,234,567'
+  } else if (marks.length === 1 && GROUPED.test(text)) {
+    if (decimal === null) {
+      throw new TypeError("ambiguous decimal mark: declare decimal=',' or decimal='.'");
+    }
+    point = marks[0] === decimal ? marks[0] : null;
+  } else {
+    point = marks.length === 1 ? marks[0] : null;
+  }
+  if (decimal !== null && point !== null && point !== decimal) {
+    throw new TypeError(`decimal mark is not the '${decimal}' declared for the file`);
+  }
+  for (const mark of [',', '.']) {
+    if (mark !== point) text = text.split(mark).join('');
+  }
+  if (point) text = text.split(point).join('.');
   if (!NUMBER.test(text)) throw new TypeError('not a number');
   return Number(text);
 }
@@ -286,12 +327,14 @@ function toBoolean(raw) {
   throw new TypeError('not a true or false value');
 }
 
+// Every coercer takes the declared decimal mark, so that the signature does
+// not depend on the type: only `toNumber` has anything to do with it.
 export const COERCERS = {
   text: (raw) => raw.trim(),
-  integer: toInteger,
+  integer: (raw) => toInteger(raw),
   number: toNumber,
-  date: toDate,
-  boolean: toBoolean,
+  date: (raw) => toDate(raw),
+  boolean: (raw) => toBoolean(raw),
 };
 
 /** One value the schema refuses, carrying the column and the reason. */
@@ -310,7 +353,7 @@ export class Rejected extends Error {
  * Whoever repairs the file then has one thing to look at rather than a list of
  * consequences.
  */
-export function coerceRow(header, fields, schema) {
+export function coerceRow(header, fields, schema, decimal = null) {
   const row = {};
   header.forEach((name, i) => {
     const value = (fields[i] ?? '').trim();
@@ -320,7 +363,7 @@ export function coerceRow(header, fields, schema) {
     if (value === '') row[name] = null;
     else {
       try {
-        row[name] = coerce(value);
+        row[name] = coerce(value, decimal);
       } catch (error) {
         throw new Rejected(name, error.message);
       }
@@ -334,6 +377,8 @@ export function coerceRow(header, fields, schema) {
  *
  * `data` is the raw bytes of the file and `schema` maps a column name to one
  * of the keys of COERCERS. A column absent from the schema is kept as text.
+ * `decimal` declares the decimal mark of the file, ',' or '.'; without it a
+ * value that the two conventions read differently is refused to the journal.
  *
  * The journal is the whole point. Each entry carries the line, the column and
  * the reason, plus the fields as they were read, so the refusal can be acted
@@ -342,8 +387,9 @@ export function coerceRow(header, fields, schema) {
  *
  * @param {Uint8Array} data
  * @param {Record<string,string>} schema
+ * @param {','|'.'|null} decimal  the decimal mark declared for the file
  */
-export function cleanCsv(data, schema) {
+export function cleanCsv(data, schema, decimal = null) {
   const text = decodeText(data);
   const { delimiter, quote } = detectDialect(text);
   if (text.includes('\0')) {
@@ -374,7 +420,7 @@ export function cleanCsv(data, schema) {
       rejects.push({ line, column: '', reason, fields });
     } else {
       try {
-        rows.push(coerceRow(header, fields, schema));
+        rows.push(coerceRow(header, fields, schema, decimal));
       } catch (refusal) {
         if (!(refusal instanceof Rejected)) throw refusal;
         rejects.push({ line, column: refusal.column, reason: refusal.reason, fields });

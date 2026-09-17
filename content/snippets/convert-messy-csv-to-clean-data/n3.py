@@ -56,7 +56,9 @@ class ProviderClient:
         return response.choices[0].message.content
 
 
-def repair_rejected_rows(header, rejects, schema, client=None, *, attempts: int = 3) -> dict:
+def repair_rejected_rows(
+    header, rejects, schema, client=None, *, attempts: int = 3, decimal: str | None = None
+) -> dict:
     """
     Return the rows that were repaired, and the ones that were not.
 
@@ -67,6 +69,10 @@ def repair_rejected_rows(header, rejects, schema, client=None, *, attempts: int 
     A row that cannot be repaired comes back in `unrepairable`, carrying its
     original line, column and fields, plus the reason the repair failed. It is
     never dropped: this rung exists because rung N0 refused to drop it either.
+
+    `decimal` is the decimal mark declared for the file, passed on to the
+    coercion of rung N0: a repair is read under the same convention as the
+    rest of the file.
 
     `client` is injected so this function can be tested without a network
     call. In production it defaults to a real provider client.
@@ -100,7 +106,7 @@ def repair_rejected_rows(header, rejects, schema, client=None, *, attempts: int 
                 unrepairable.append({**reject, "reason": "the answer empties the refused value"})
                 continue
             try:
-                rows.append(coerce_row(header, fields, schema))
+                rows.append(coerce_row(header, fields, schema, decimal))
             except Rejected as refusal:
                 unrepairable.append(
                     {

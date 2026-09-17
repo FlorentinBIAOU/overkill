@@ -147,14 +147,15 @@ def test_les_traits_de_forme_ne_dependent_pas_de_la_taille_de_l_echantillon():
     assert deeper[:5] == features[:5]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : « a column sampled from ten rows and one sampled from ten thousand are described on the same "
-    "scale » ; la part de valeurs distinctes baisse avec l'échantillon : la colonne 0, 1, 2, 3 est « integer » sur "
-    "8 lignes et « boolean » sur 200, et N0 refuse alors chaque 2 et chaque 3",
-)
-def test_une_colonne_est_typee_pareil_sur_dix_lignes_et_sur_deux_cents():
-    assert classify(MODEL, repeat(["0", "1", "2", "3"], 8)) == classify(MODEL, repeat(["0", "1", "2", "3"], 200))
+def test_la_part_de_valeurs_distinctes_baisse_avec_l_echantillon():
+    """`column_features` : « Small integers repeated, 0 to 3, read as integer on eight rows and as boolean on two hundred, and rung N0 then refuses every 2 and every 3 »."""
+    assert classify(MODEL, repeat(["0", "1", "2", "3"], 8)) == "integer"
+    assert classify(MODEL, repeat(["0", "1", "2", "3"], 200)) == "boolean"
+    # Et le journal de N0 le paie, comme la docstring l'annonce.
+    data = ("flag\n" + "\n".join(repeat(["0", "1", "2", "3"], 200)) + "\n").encode("utf-8")
+    rejects = clean_csv(data, {"flag": "boolean"})["rejects"]
+    assert len(rejects) == 100
+    assert {r["reason"] for r in rejects} == {"not a true or false value"}
 
 
 def test_les_valeurs_vides_sont_mises_de_cote_et_comptees_a_part():
@@ -171,15 +172,15 @@ def test_les_colonnes_ou_il_n_y_a_presque_rien():
     assert classify(MODEL, ["2023-04-12"]) == "date"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : « A couple of hundred rows say as much about the shape of a column as a million do » ; une "
-    "colonne de montants entiers sur ses 200 premières lignes puis décimaux est typée « integer », et N0 refuse "
-    "chaque montant décimal qui suit",
-)
-def test_deux_cents_lignes_disent_la_forme_de_toute_la_colonne():
+def test_seules_les_deux_cents_premieres_lignes_sont_lues():
+    """`infer_schema` : « whole amounts on the first two hundred rows and decimals after give integer, and rung N0 then refuses every decimal »."""
     rows = [[str(i)] for i in range(1, 201)] + [["12.50"]] * 50
-    assert infer_schema(MODEL, ["amount"], rows) == infer_schema(MODEL, ["amount"], rows[150:])
+    assert infer_schema(MODEL, ["amount"], rows) == {"amount": "integer"}
+    assert infer_schema(MODEL, ["amount"], rows[150:]) == {"amount": "number"}
+    data = ("amount\n" + "\n".join(row[0] for row in rows) + "\n").encode("utf-8")
+    rejects = clean_csv(data, infer_schema(MODEL, ["amount"], rows))["rejects"]
+    assert len(rejects) == 50
+    assert {r["reason"] for r in rejects} == {"not an integer"}
 
 
 def test_l_echantillon_est_de_deux_cents_lignes_et_les_lignes_courtes_comptent_vide():
@@ -195,20 +196,25 @@ def test_n1_est_deterministe():
     assert infer_schema(again, HEADER, ROWS) == infer_schema(MODEL, HEADER, ROWS)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ (Python) : latency « ~10 ms » ; 0,3 ms pour les 5 colonnes du test, 45 ms pour les deux cents "
-    "colonnes que la docstring cite (200 lignes chacune), plus près de « ~100 ms » ; JavaScript : 18 ms",
-)
-def test_deux_cents_colonnes_s_inferent_de_l_ordre_de_dix_millisecondes():
-    header = [f"c{i}" for i in range(200)]
-    rows = [[str(j * i % 97) if i % 3 == 0 else ("2023-04-12" if i % 3 == 1 else "Alice") for i in range(200)] for j in range(200)]
+def test_le_fichier_nominal_s_infere_sous_la_milliseconde():
+    """latency « <1 ms », mesurée sur le fichier nominal des tests, comme N0."""
     best = float("inf")
     for _ in range(3):
         start = time.perf_counter()
-        infer_schema(MODEL, header, rows)
+        infer_schema(MODEL, HEADER, ROWS)
         best = min(best, time.perf_counter() - start)
-    assert best < 0.032  # milieu logarithmique entre « ~10 ms » et « ~100 ms »
+    # Marge de dix sur la classe déclarée : la borne attrape un effondrement,
+    # elle ne mesure pas.
+    assert best < 0.010, f"{best * 1000:.3f} ms"
+
+
+def test_production_deux_cents_colonnes_terminent_dans_une_borne_large():
+    """Cent fois le cas nominal : la borne attrape un algorithme quadratique caché, pas une classe de latence."""
+    header = [f"c{i}" for i in range(200)]
+    rows = [[str(j * i % 97) if i % 3 == 0 else ("2023-04-12" if i % 3 == 1 else "Alice") for i in range(200)] for j in range(200)]
+    start = time.perf_counter()
+    infer_schema(MODEL, header, rows)
+    assert time.perf_counter() - start < 5.0
 
 
 def test_verdict_n1_devine_le_schema_que_n0_reclame():

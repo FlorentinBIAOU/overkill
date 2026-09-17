@@ -74,11 +74,16 @@ test('point de rupture : l’essai montre la date qui change de sens', () => {
   ]);
 });
 
-test('INFIRMÉ : le `why` de l’essai parle des « lignes 41 et 42 » ; ce sont les identifiants, le tableau affiche les lignes 2 et 3', () => {
-  const out = essai.run(essai.cases[3].input, 'fr');
-  assert.throws(() => {
-    assert.ok(out.rows.rows.some((r) => r[0] === '41'));
-  }, assert.AssertionError);
+test('l’essai nomme les factures, pas les lignes du tableau', () => {
+  // `why` : « Les factures 41 et 42 […] Seule la facture 43 est refusée ».
+  const cas = essai.cases[3];
+  assert.match(cas.why.fr, /Les factures 41 et 42/);
+  assert.match(cas.why.en, /Invoices 41 and 42/);
+  const out = essai.run(cas.input, 'fr');
+  // 41, 42, 43 sont bien des identifiants de facture, en deuxième colonne ;
+  // la première porte le numéro de ligne du fichier.
+  assert.deepEqual(out.rows.rows.map((r) => r[0]), ['2', '3', '4']);
+  assert.deepEqual(out.rows.rows.map((r) => (typeof r[1] === 'string' ? r[1] : r[1].v)), ['41', '42', '43']);
 });
 
 // ---------------------------------------------------------------------------
@@ -157,7 +162,7 @@ test('les cinq octets indéfinis de cp1252 deviennent le caractère de remplacem
 });
 
 test('production : une marque UTF-8 suivie d’un octet invalide est remplacée', () => {
-  // Python lève UnicodeDecodeError sur ces octets (DÉFAUT, n0.test.py) : les deux versions divergent.
+  // Les deux versions rendent le même texte : la marque est décodée avec remplacement.
   const data = Buffer.from([0xef, 0xbb, 0xbf, ...bytes('city\nBesan'), 0xe7, ...bytes('on\nNimes\n')]);
   assert.deepEqual(cleanCsv(data, {}).rows, [{ city: 'Besan�on' }, { city: 'Nimes' }]);
 });
@@ -170,15 +175,86 @@ test('un encodage non pris en charge est lu en colonnes illisibles sans journal'
   }
 });
 
+test('cp1252 et non Latin-1, pour le signe euro', () => {
+  // « cp1252 and not Latin-1, which has no euro sign ».
+  assert.equal(decodeText(Buffer.from([0x80])), '€');
+  // En Latin-1 (ISO 8859-1), un octet vaut son propre point de code : 0x80 y
+  // est un caractère de commande. (« latin1 » est un alias de cp1252 dans
+  // l'encodage du WHATWG, il ne sert donc pas de témoin ici.)
+  assert.equal(String.fromCharCode(0x80), '\u0080');
+});
+
+test('l’échantillon du dialecte compte vingt lignes physiques', () => {
+  // « twenty physical lines, not twenty records […] judged on very few of its
+  // records ».
+  const inside = Array.from({ length: 22 }, (_, i) => `ligne ${i}`).join('\n');
+  const text = `id;note\n1;"${inside}"\n2;ok\n`;
+  assert.ok(text.split('\n').length > 20);
+  assert.deepEqual(detectDialect(text), { delimiter: ';', quote: '"' });
+  // Le fichier est lu en entier malgré tout : l'échantillon ne borne que la
+  // devinette, pas la lecture.
+  assert.deepEqual(cleanCsv(bytes(text), {}).rows.map((row) => row.id), ['1', '2']);
+});
+
 test('une virgule et un point : la dernière marque est décimale', () => {
+  // « both marks present […] The last mark of the two is the decimal one » ;
+  // « one mark that cannot group […] is 12.5 whoever wrote it ».
   const data = bytes('amount\n"1.234,56"\n"1,234.56"\n"12,5"\n1 234\n"1 234,56"\n"1 234,56"\n5.\n.5\n');
   assert.deepEqual(cleanCsv(data, { amount: 'number' }).rows.map((row) => row.amount), [1234.56, 1234.56, 12.5, 1234, 1234.56, 1234.56, 5, 0.5]);
 });
 
-test('production : un séparateur de milliers seul est lu comme une marque décimale', () => {
-  const result = cleanCsv(bytes('amount\n"1,234"\n1.234\n'), { amount: 'number' });
-  assert.deepEqual(result.rows.map((row) => row.amount), [1.234, 1.234]);
+test('production : une marque ambiguë sans convention va au journal', () => {
+  // « Without `decimal`, the value goes to the journal rather than being
+  // divided by a thousand in silence ».
+  const result = cleanCsv(bytes('amount\n"1,234"\n"12,500"\n1.234\n'), { amount: 'number' });
+  assert.deepEqual(result.rows, []);
+  const ambigu = "ambiguous decimal mark: declare decimal=',' or decimal='.'";
+  assert.deepEqual(result.rejects.map((r) => [r.line, r.column, r.reason]), [
+    [2, 'amount', ambigu],
+    [3, 'amount', ambigu],
+    [4, 'amount', ambigu],
+  ]);
+});
+
+test('production : la convention déclarée tranche la marque ambiguë', () => {
+  const data = bytes('amount\n"1,234"\n"12,500"\n');
+  assert.deepEqual(cleanCsv(data, { amount: 'number' }, '.').rows.map((r) => r.amount), [1234, 12500]);
+  assert.deepEqual(cleanCsv(data, { amount: 'number' }, ',').rows.map((r) => r.amount), [1.234, 12.5]);
+});
+
+test('production : une marque qui contredit la convention va au journal', () => {
+  const result = cleanCsv(bytes('amount\n"12,50"\n"12.50"\n'), { amount: 'number' }, '.');
+  assert.deepEqual(result.rows.map((r) => r.amount), [12.5]);
+  assert.deepEqual(result.rejects.map((r) => [r.line, r.reason]), [
+    [2, "decimal mark is not the '.' declared for the file"],
+  ]);
+});
+
+test('production : une marque répétée groupe les milliers', () => {
+  const data = bytes('amount\n"1,234,567"\n"1.234.567"\n"1 234 567,89"\n');
+  const result = cleanCsv(data, { amount: 'number' });
+  assert.deepEqual(result.rows.map((r) => r.amount), [1234567, 1234567, 1234567.89]);
   assert.deepEqual(result.rejects, []);
+});
+
+test('production : un export de boutique en ligne ordinaire est lu ou refusé', () => {
+  const data = bytes(
+    'order,city,total,placed\n' +
+      '41,Boulogne-Billancourt,"1,234.50",12/04/2023\n' +
+      '42,Besançon,"12,500",13/04/2023\n' +
+      '43,Le Puy-en-Velay,49.90,14/04/2023\n',
+  );
+  const schema = { order: 'integer', city: 'text', total: 'number', placed: 'date' };
+  const result = cleanCsv(data, schema, '.');
+  assert.deepEqual(result.rejects, []);
+  assert.deepEqual(result.rows.map((r) => [r.city, r.total]), [
+    ['Boulogne-Billancourt', 1234.5],
+    ['Besançon', 12500],
+    ['Le Puy-en-Velay', 49.9],
+  ]);
+  // Le même fichier sans convention : rien n'est deviné, tout est dit.
+  const sans = cleanCsv(data, schema);
+  assert.deepEqual(sans.rejects.map((r) => [r.line, r.column]), [[3, 'total']]);
 });
 
 test('une date hors forme ISO est lue jour d’abord et le calendrier est vérifié', () => {

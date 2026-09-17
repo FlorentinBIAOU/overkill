@@ -41,7 +41,8 @@ def decode_text(data: bytes) -> str:
     A byte order mark is a statement about the file, so it wins. Failing that,
     strict UTF-8 either succeeds, and the file is read as UTF-8, or
     fails, and the file is read as cp1252, the Windows single-byte encoding
-    for Western European languages.
+    for Western European languages. cp1252 and not Latin-1, which has no euro
+    sign: a price column would come back with a control character in it.
 
     UTF-32, and UTF-16 without a mark, are not decoded: they come out full of
     NUL characters, and `clean_csv` refuses such a file in its journal.
@@ -87,6 +88,11 @@ def detect_dialect(text: str) -> tuple[str, str]:
     lines. A file separated by semicolons whose free-text column is full of
     commas still lands on its feet, because the comma count varies from line
     to line while the semicolon count does not.
+
+    The sample is twenty physical lines, not twenty records, because the
+    records cannot be cut out before the dialect is known. A quoted field that
+    holds line breaks — an address, a comment — is therefore counted line by
+    line: a file made of such fields is judged on very few of its records.
     """
     sample = [line for line in text.split("\n")[:SAMPLE_LINES] if line.strip()]
     delimiter, best = ",", (-1.0, -1)
@@ -121,6 +127,9 @@ _INTEGER = re.compile(r"[+-]?[0-9]+")
 _NUMBER = re.compile(r"[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)")
 _ISO_DATE = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2})")
 _DAY_FIRST = re.compile(r"([0-9]{2})[/.]([0-9]{2})[/.]([0-9]{4})")
+# "1,234": one mark, three digits after it, at most three before. Reads as a
+# thousands group or as a decimal, and nothing in the value says which.
+_GROUPED = re.compile(r"[+-]?[0-9]{1,3}[,.][0-9]{3}")
 
 TRUE_WORDS = frozenset({"true", "yes", "y", "1", "vrai", "oui", "o"})
 FALSE_WORDS = frozenset({"false", "no", "n", "0", "faux", "non"})
@@ -133,19 +142,47 @@ def _to_integer(raw: str) -> int:
     return int(text)
 
 
-def _to_number(raw: str) -> float:
+def _to_number(raw: str, decimal: str | None = None) -> float:
     """
-    Accept the decimal marks a European spreadsheet actually writes.
+    Read a number, and refuse rather than guess when the mark is ambiguous.
 
-    When a comma and a dot are both present, the last one is the decimal mark
-    and the other groups the thousands. When only a comma is present it is the
-    decimal mark, which is the convention across most of the continent.
+    `decimal` is the convention of the file, declared by the caller: "," or
+    ".". Three cases, in order:
+
+    - both marks present, or the same mark twice: the shape settles it. The
+      last mark of the two is the decimal one, a mark repeated only groups;
+    - one mark, followed by exactly three digits, with at most three before:
+      "12,500" is 12.5 under one convention and 12500 under the other. Without
+      `decimal`, the value goes to the journal rather than being divided by a
+      thousand in silence;
+    - one mark that cannot group, because the digits do not fall in threes:
+      "12,50" is 12.5 whoever wrote it.
+
+    A mark that contradicts the declared convention is refused too: under
+    `decimal="."`, "12,50" is not a number, it is a file read with the wrong
+    convention.
     """
     text = _SPACES.sub("", raw)
-    if "," in text and "." in text:
-        grouping = "," if text.rindex(".") > text.rindex(",") else "."
-        text = text.replace(grouping, "")
-    text = text.replace(",", ".")
+    if decimal not in (None, ",", "."):
+        raise ValueError("decimal must be ',' or '.'")
+    marks = [mark for mark in (",", ".") if mark in text]
+    if len(marks) == 2:
+        point = "," if text.rindex(",") > text.rindex(".") else "."
+    elif len(marks) == 1 and text.count(marks[0]) > 1:
+        point = None  # repeated, so it groups thousands: "1,234,567"
+    elif len(marks) == 1 and _GROUPED.fullmatch(text):
+        if decimal is None:
+            raise ValueError("ambiguous decimal mark: declare decimal=',' or decimal='.'")
+        point = marks[0] if marks[0] == decimal else None
+    else:
+        point = marks[0] if marks else None
+    if decimal is not None and point is not None and point != decimal:
+        raise ValueError(f"decimal mark is not the {decimal!r} declared for the file")
+    grouping = {",", "."} - {point}
+    for mark in grouping:
+        text = text.replace(mark, "")
+    if point:
+        text = text.replace(point, ".")
     if not _NUMBER.fullmatch(text):
         raise ValueError("not a number")
     return float(text)
@@ -177,12 +214,14 @@ def _to_boolean(raw: str) -> bool:
     raise ValueError("not a true or false value")
 
 
+# Every coercer takes the declared decimal mark, so that the signature does
+# not depend on the type: only `_to_number` has anything to do with it.
 COERCERS = {
-    "text": lambda raw: raw.strip(),
-    "integer": _to_integer,
+    "text": lambda raw, decimal: raw.strip(),
+    "integer": lambda raw, decimal: _to_integer(raw),
     "number": _to_number,
-    "date": _to_date,
-    "boolean": _to_boolean,
+    "date": lambda raw, decimal: _to_date(raw),
+    "boolean": lambda raw, decimal: _to_boolean(raw),
 }
 
 
@@ -200,7 +239,9 @@ class Rejected(Exception):
         self.reason = reason
 
 
-def coerce_row(header: list[str], fields: list[str], schema: dict) -> dict:
+def coerce_row(
+    header: list[str], fields: list[str], schema: dict, decimal: str | None = None
+) -> dict:
     """
     Coerce one row, or refuse it at the first value that does not fit.
 
@@ -215,7 +256,7 @@ def coerce_row(header: list[str], fields: list[str], schema: dict) -> dict:
             row[name] = None  # an empty cell is missing, not malformed
             continue
         try:
-            row[name] = COERCERS[schema.get(name, "text")](value)
+            row[name] = COERCERS[schema.get(name, "text")](value, decimal)
         except ValueError as error:
             raise Rejected(name, str(error)) from error
     return row
@@ -257,12 +298,14 @@ def read_records(text: str, delimiter: str, quote: str):
             done = start + 1
 
 
-def clean_csv(data: bytes, schema: dict) -> dict:
+def clean_csv(data: bytes, schema: dict, decimal: str | None = None) -> dict:
     """
     Return the rows that survived, and a journal of everything refused.
 
     `data` is the raw bytes of the file and `schema` maps a column name to one
     of the keys of COERCERS. A column absent from the schema is kept as text.
+    `decimal` declares the decimal mark of the file, "," or "."; without it a
+    value that the two conventions read differently is refused to the journal.
 
     The journal is the whole point. Each entry carries the line, the column
     and the reason, plus the fields as they were read, so the refusal can be
@@ -296,7 +339,7 @@ def clean_csv(data: bytes, schema: dict) -> dict:
             rejects.append(_journal(line, "", reason, fields))
             continue
         try:
-            rows.append(coerce_row(header, fields, schema))
+            rows.append(coerce_row(header, fields, schema, decimal))
         except Rejected as refusal:
             rejects.append(_journal(line, refusal.column, refusal.reason, fields))
     return {

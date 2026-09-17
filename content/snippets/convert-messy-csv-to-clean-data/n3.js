@@ -61,6 +61,10 @@ export async function providerClient(sdk, model = MODEL) {
  * original line, column and fields, plus the reason the repair failed. It is
  * never dropped: this rung exists because rung N0 refused to drop it either.
  *
+ * `decimal` is the decimal mark declared for the file, passed on to the
+ * coercion of rung N0: a repair is read under the same convention as the rest
+ * of the file.
+ *
  * @param {string[]} header
  * @param {Array<object>} rejects the journal from rung N0
  * @param {Record<string,string>} schema
@@ -68,8 +72,9 @@ export async function providerClient(sdk, model = MODEL) {
  * @param {{complete: Function}} [options.client] injected so this can be
  *   tested without a network call; defaults to a real provider client
  * @param {number} [options.attempts]
+ * @param {','|'.'|null} [options.decimal]
  */
-export async function repairRejectedRows(header, rejects, schema, { client, attempts = 3 } = {}) {
+export async function repairRejectedRows(header, rejects, schema, { client, attempts = 3, decimal = null } = {}) {
   if (rejects.length === 0) return { rows: [], unrepairable: [] };
   client ??= await providerClient();
 
@@ -103,7 +108,7 @@ export async function repairRejectedRows(header, rejects, schema, { client, atte
         continue;
       }
       try {
-        rows.push(coerceRow(header, fields, schema));
+        rows.push(coerceRow(header, fields, schema, decimal));
       } catch (refusal) {
         if (!(refusal instanceof Rejected)) throw refusal;
         unrepairable.push({

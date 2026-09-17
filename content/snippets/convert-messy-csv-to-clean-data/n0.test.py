@@ -203,18 +203,94 @@ def test_defaut_un_encodage_non_pris_en_charge_est_signale():
         assert result["columns"] == ["city"] or result["rejects"], result["columns"]
 
 
+def test_cp1252_et_non_latin_1_pour_le_signe_euro():
+    """`decode_text` : « cp1252 and not Latin-1, which has no euro sign »."""
+    # 0x80 n'est pas de l'UTF-8 valide : le repli tranche, et il tranche pour
+    # cp1252, où cet octet est l'euro. En Latin-1 ce serait un caractère de
+    # commande.
+    assert decode_text(bytes([0x80])) == "€"
+    assert bytes([0x80]).decode("latin-1") == "\x80"
+
+
+def test_l_echantillon_du_dialecte_compte_vingt_lignes_physiques():
+    """`detect_dialect` : « twenty physical lines, not twenty records […] judged on very few of its records »."""
+    from n0 import SAMPLE_LINES
+
+    assert SAMPLE_LINES == 20
+    # Trois enregistrements dont le premier porte vingt-deux retours à la ligne
+    # dans un champ entre guillemets : l'échantillon est épuisé avant le
+    # deuxième.
+    inside = "\n".join(f"ligne {i}" for i in range(22))
+    text = f'id;note\n1;"{inside}"\n2;ok\n'
+    assert len(text.split("\n")) > SAMPLE_LINES
+    assert detect_dialect(text) == (";", '"')
+    # Le fichier est lu en entier malgré tout : l'échantillon ne borne que la
+    # devinette, pas la lecture.
+    result = clean_csv(text.encode("utf-8"), {})
+    assert [row["id"] for row in result["rows"]] == ["1", "2"]
+
+
 def test_une_virgule_et_un_point_la_derniere_marque_est_decimale():
-    """`_to_number` : « When a comma and a dot are both present, the last one is the decimal mark […] When only a comma is present it is the decimal mark »."""
+    """`_to_number` : « both marks present […] The last mark of the two is the decimal one » ; « one mark that cannot group […] is 12.5 whoever wrote it »."""
     data = 'amount\n"1.234,56"\n"1,234.56"\n"12,5"\n1 234\n"1 234,56"\n"1 234,56"\n5.\n.5\n'.encode("utf-8")
     result = clean_csv(data, {"amount": "number"})
     assert [row["amount"] for row in result["rows"]] == [1234.56, 1234.56, 12.5, 1234.0, 1234.56, 1234.56, 5.0, 0.5]
 
 
-def test_production_un_separateur_de_milliers_seul_est_lu_comme_une_marque_decimale():
-    """Précision : « 1,234 » (anglais) et « 1.234 » (allemand) valent 1,234, sans journal."""
-    result = clean_csv(b'amount\n"1,234"\n1.234\n', {"amount": "number"})
-    assert [row["amount"] for row in result["rows"]] == [1.234, 1.234]
+def test_production_une_marque_ambigue_sans_convention_va_au_journal():
+    """`_to_number` : « Without `decimal`, the value goes to the journal rather than being divided by a thousand in silence »."""
+    result = clean_csv(b'amount\n"1,234"\n"12,500"\n1.234\n', {"amount": "number"})
+    assert result["rows"] == []
+    assert [(r["line"], r["column"], r["reason"]) for r in result["rejects"]] == [
+        (2, "amount", "ambiguous decimal mark: declare decimal=',' or decimal='.'"),
+        (3, "amount", "ambiguous decimal mark: declare decimal=',' or decimal='.'"),
+        (4, "amount", "ambiguous decimal mark: declare decimal=',' or decimal='.'"),
+    ]
+
+
+def test_production_la_convention_declaree_tranche_la_marque_ambigue():
+    """`clean_csv` : « `decimal` declares the decimal mark of the file »."""
+    data = b'amount\n"1,234"\n"12,500"\n'
+    assert [row["amount"] for row in clean_csv(data, {"amount": "number"}, decimal=".")["rows"]] == [1234.0, 12500.0]
+    assert [row["amount"] for row in clean_csv(data, {"amount": "number"}, decimal=",")["rows"]] == [1.234, 12.5]
+
+
+def test_production_une_marque_qui_contredit_la_convention_va_au_journal():
+    """`_to_number` : « under `decimal="."`, "12,50" is not a number, it is a file read with the wrong convention »."""
+    result = clean_csv(b'amount\n"12,50"\n"12.50"\n', {"amount": "number"}, decimal=".")
+    assert [row["amount"] for row in result["rows"]] == [12.5]
+    assert [(r["line"], r["reason"]) for r in result["rejects"]] == [
+        (2, "decimal mark is not the '.' declared for the file"),
+    ]
+
+
+def test_production_une_marque_repetee_groupe_les_milliers():
+    """`_to_number` : « a mark repeated only groups »."""
+    data = b'amount\n"1,234,567"\n"1.234.567"\n"1 234 567,89"\n'
+    result = clean_csv(data, {"amount": "number"})
+    assert [row["amount"] for row in result["rows"]] == [1234567.0, 1234567.0, 1234567.89]
     assert result["rejects"] == []
+
+
+def test_production_un_export_de_boutique_en_ligne_ordinaire_est_lu_ou_refuse():
+    """Entrée banale : un export de commandes tel qu'une plateforme anglophone l'écrit, avec sa convention déclarée."""
+    data = (
+        "order,city,total,placed\n"
+        "41,Boulogne-Billancourt,\"1,234.50\",12/04/2023\n"
+        "42,Besançon,\"12,500\",13/04/2023\n"
+        "43,Le Puy-en-Velay,49.90,14/04/2023\n"
+    ).encode("utf-8")
+    schema = {"order": "integer", "city": "text", "total": "number", "placed": "date"}
+    result = clean_csv(data, schema, decimal=".")
+    assert result["rejects"] == []
+    assert [(row["city"], row["total"]) for row in result["rows"]] == [
+        ("Boulogne-Billancourt", 1234.5),
+        ("Besançon", 12500.0),
+        ("Le Puy-en-Velay", 49.9),
+    ]
+    # Le même fichier sans convention : rien n'est deviné, tout est dit.
+    sans = clean_csv(data, schema)
+    assert [(r["line"], r["column"]) for r in sans["rejects"]] == [(3, "total")]
 
 
 def test_une_date_hors_forme_iso_est_lue_jour_d_abord_et_le_calendrier_est_verifie():
