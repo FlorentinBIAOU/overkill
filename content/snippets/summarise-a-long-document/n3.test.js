@@ -148,8 +148,16 @@ test('des points clés qui ne sont pas des chaînes sont refusés', async () => 
   await assert.rejects(() => summarise(REPORT, { client: llm({ summary: 'fine', key_points: [{ a: 2 }, 3] }), attempts: 1 }), SummaryUnavailable);
 });
 
-test('une réponse en clôture de code n’est pas décodée', async () => {
+test('une réponse entièrement close est décodée, les autres non', async () => {
+  // Une seule clôture qui enveloppe toute la réponse est lue ; tout autre écart
+  // coûte les trois essais.
   assert.ok((await summarise(REPORT, { client: llm(`\`\`\`json\n${ANSWER}\n\`\`\``) })).summary);
+  assert.ok((await summarise(REPORT, { client: llm(`\`\`\`\n${ANSWER}\n\`\`\``) })).summary);
+  for (const malClose of [`\`\`\`json\n${ANSWER}`, `Voici :\n\`\`\`json\n${ANSWER}\n\`\`\``]) {
+    const client = llm(malClose);
+    await assert.rejects(() => summarise(REPORT, { client }), SummaryUnavailable);
+    assert.equal(client.callCount, 3);
+  }
 });
 
 test('le client par défaut a la forme du vrai kit', async () => {

@@ -184,8 +184,15 @@ def test_defaut_des_points_cles_qui_ne_sont_pas_des_chaines_sont_refuses():
         summarise(REPORT, client=llm({"summary": "fine", "key_points": [{"a": 2}, 3]}), attempts=1)
 
 
-def test_defaut_une_reponse_en_cloture_de_code_n_est_pas_decodee():
+def test_une_reponse_entierement_close_est_decodee_les_autres_non():
+    """Une seule clôture qui enveloppe toute la réponse est lue ; tout autre écart coûte les trois essais."""
     assert summarise(REPORT, client=llm(f"```json\n{ANSWER}\n```"))["summary"]
+    assert summarise(REPORT, client=llm(f"```\n{ANSWER}\n```"))["summary"]
+    for mal_close in (f"```json\n{ANSWER}", f"Voici :\n```json\n{ANSWER}\n```"):
+        client = llm(mal_close)
+        with pytest.raises(SummaryUnavailable):
+            summarise(REPORT, client=client)
+        assert client.call_count == 3
 
 
 def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
