@@ -46,3 +46,12 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
   regroupement), taux de fausses alertes dit dans le verdict et borné par un
   test, série construite où N0 se tait et N1 parle, six marquages retirés.
   Reste : rien.
+
+**Point d'étape groupe 1 — onze fiches sur onze.** `npm run check:fast` au vert
+(chaîne, contenu, schéma, harnais, routes, couleurs, illustrations, figures,
+polices, contrastes, français, construction, liens, référencement, poids).
+Deux dépendances sont entrées dans le dépôt pour l'échelle de
+`extract-dates-from-text` : `dateparser==1.2.2` (Python) et `chrono-node` 2.9.0
+(JavaScript, en `devDependencies`). Le niveau N2 de `fuzzy-match-company-names`
+est passé en indisponible et ses extraits supprimés ; le manifeste est
+régénéré.
