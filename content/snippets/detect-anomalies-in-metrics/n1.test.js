@@ -168,13 +168,11 @@ test('aucune ligne ou une seule ligne rend des scores NaN au lieu de lever', asy
   assert.ok(Number.isFinite(score(train([[1, 2, 3]]), [1, 2, 3])));
 });
 
-test('DÉFAUT : une valeur manquante fait signaler presque toutes les minutes', async () => {
-  // 72 minutes sur 92 passent le seuil ; scikit-learn accepte le NaN et rend [90, 91].
+test('production : une valeur manquante ne fait pas sonner toute la série', () => {
+  // La même sortie que scikit-learn, qui accepte le NaN : les deux minutes
+  // aberrantes, et elles seules.
   const rows = [...ROWS.slice(0, -1), [NaN, 1, 1]];
-  assert.equal(anomalies(train(rows), rows, THRESHOLD).length, 72);
-  await assert.rejects(async () => {
-    assert.deepEqual(anomalies(train(rows), rows, THRESHOLD), [90, 91]);
-  });
+  assert.deepEqual(anomalies(train(rows), rows, THRESHOLD), [90, 91]);
 });
 
 test('production : score égal au seuil n’est pas signalé', () => {

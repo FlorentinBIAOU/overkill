@@ -318,15 +318,22 @@ test('essai : saisie vide et historique trop court', () => {
   });
 });
 
-test('DÉFAUT : l’essai lit « 4,800 » comme 4,8 et « 4 800 » comme deux points', async () => {
-  // Le libellé anglais écrit lui-même « 4,800 ».
+test('essai : le séparateur de milliers de chaque langue est lu comme un seul nombre', () => {
+  // Le libellé anglais écrit « 4,800 », le français « 4 800 » avec une espace fine.
   const base = points(0).slice(0, 33).join(' ');
-  await assert.rejects(async () => {
-    const withComma = essai.run(`${base} 4,800`, 'en');
-    assert.equal(withComma.rows?.rows?.[0]?.[1]?.v, '4800');
-  });
-  await assert.rejects(async () => {
-    const withSpace = essai.run(`${base} 4 800`, 'fr');
-    assert.equal(withSpace.rows?.rows?.[0]?.[1]?.v, '4800');
-  });
+  assert.equal(essai.run(`${base} 4,800`, 'en').rows.rows[0][1].v, '4800');
+  for (const espace of ['\u202f', '\u00a0']) {
+    assert.equal(essai.run(`${base} 4${espace}800`, 'fr').rows.rows[0][1].v, '4800');
+  }
+});
+
+test('essai : limite, une espace ordinaire sépare deux minutes, pas des milliers', () => {
+  // La note de l'essai le dit en toutes lettres : « Une espace ordinaire sépare
+  // deux minutes : “1080 1120” est deux points, et “4 800” aussi ». Lever
+  // l'ambiguïté demanderait de deviner, dans une suite de nombres séparés par
+  // des espaces, lesquelles séparent des chiffres et lesquelles des points.
+  const base = points(0).slice(0, 33).join(' ');
+  const sortie = essai.run(`${base} 4 800`, 'fr');
+  assert.equal(sortie.rows.rows.length, 2);
+  assert.equal(sortie.rows.rows[0][1].v, '4');
 });
