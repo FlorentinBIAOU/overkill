@@ -254,20 +254,32 @@ def test_rien_hors_dun_objet_texte_nest_lu():
     assert read_text_layer(build_pdf(b"(hors objet) Tj BT (dedans) Tj ET (apres) Tj"))["text"] == "dedans"
 
 
-def test_une_page_dont_un_caractere_sur_dix_se_lit_nest_pas_lue():
-    """Commentaire : « A page whose strings decode one character in ten has not been read » ; limite exacte à la moitié."""
-    dixieme = [65] * 30 + [1] * 270
-    assert read_text_layer(build_pdf(shown_codes(dixieme)))["has_text_layer"] is False
-    moitie = [65] * 30 + [1] * 30
-    assert read_text_layer(build_pdf(shown_codes(moitie)))["has_text_layer"] is True
-    juste_sous = [65] * 30 + [1] * 31
-    assert read_text_layer(build_pdf(shown_codes(juste_sous)))["has_text_layer"] is False
+def test_une_page_dont_un_seul_code_sort_hors_table_nest_pas_lue():
+    """Docstring de `_is_control` : « one of them is enough to know the bytes are not letters yet »."""
+    # Un dixième lisible, une moitié lisible, ou vingt-quatre lettres pour un
+    # seul code hors table : dans les trois cas la page est refusée, et nommée.
+    for codes in ([65] * 30 + [1] * 270, [65] * 30 + [1] * 30, [65] * 24 + [1]):
+        report = read_text_layer(build_pdf(shown_codes(codes)))
+        assert report["has_text_layer"] is False
+        assert report["reason"] == (
+            "a text layer encoded by a font table: this needs a full PDF library, not a scan"
+        )
+    # Témoin : les mêmes vingt-quatre lettres, avec une tabulation à la place du
+    # code hors table, se lisent. Ce n'est pas la proportion qui refuse.
+    temoin = read_text_layer(build_pdf(shown_codes([65] * 24 + [9])))
+    assert temoin["has_text_layer"] is True and temoin["characters"] == 24
 
 
-def test_les_codes_de_controle_127_a_159_et_le_caractere_de_remplacement_ne_sont_pas_lisibles():
-    """Docstring de _readable : les codes renumérotés sortent en caractères de contrôle, et ne comptent pas."""
-    report = read_text_layer(build_pdf(shown_codes([127, 128, 150, 159] * 10)))
-    assert report["characters"] == 0
+def test_les_codes_127_a_159_sont_lus_dans_la_table_winansi():
+    """Commentaire : WinAnsiEncoding « holds the euro sign and typographic quotes, and a bullet on every unused code »."""
+    # PDF 32000-1, annexe D : ces codes portent un glyphe, ils se lisent.
+    for code, glyphe in ((0x7F, "•"), (0x80, "€"), (0x81, "•"), (0x92, "’"), (0x9F, "Ÿ")):
+        report = read_text_layer(build_pdf(shown_codes([code] * 40)))
+        assert report["text"].startswith(glyphe), hex(code)
+        assert report["characters"] == 40
+    # Venus d'une chaîne UTF-16, en revanche, U+0080 à U+009F ne sont la sortie
+    # d'aucune table : la page est refusée. Et U+FFFD ne compte jamais.
+    assert read_text_layer(build_pdf(b"BT <FEFF0080> Tj ET"))["has_text_layer"] is False
     assert read_text_layer(build_pdf(b"BT <FEFFFFFD> Tj ET"))["characters"] == 0
 
 

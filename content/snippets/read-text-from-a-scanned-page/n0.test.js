@@ -209,14 +209,35 @@ test('rien hors d’un objet texte n’est lu', () => {
   assert.equal(readTextLayer(buildPdf('(hors objet) Tj BT (dedans) Tj ET (apres) Tj')).text, 'dedans');
 });
 
-test('une page dont un caractère sur dix se lit n’est pas lue', () => {
-  assert.equal(readTextLayer(buildPdf(shownCodes([...Array(30).fill(65), ...Array(270).fill(1)]))).hasTextLayer, false);
-  assert.equal(readTextLayer(buildPdf(shownCodes([...Array(30).fill(65), ...Array(30).fill(1)]))).hasTextLayer, true);
-  assert.equal(readTextLayer(buildPdf(shownCodes([...Array(30).fill(65), ...Array(31).fill(1)]))).hasTextLayer, false);
+test('une page dont un seul code sort hors table n’est pas lue', () => {
+  // Un dixième lisible, une moitié lisible, ou vingt-quatre lettres pour un seul
+  // code hors table : dans les trois cas la page est refusée, et nommée.
+  const cas = [
+    [...Array(30).fill(65), ...Array(270).fill(1)],
+    [...Array(30).fill(65), ...Array(30).fill(1)],
+    [...Array(24).fill(65), 1],
+  ];
+  for (const codes of cas) {
+    const report = readTextLayer(buildPdf(shownCodes(codes)));
+    assert.equal(report.hasTextLayer, false);
+    assert.equal(report.reason, 'a text layer encoded by a font table: this needs a full PDF library, not a scan');
+  }
+  // Témoin : les mêmes vingt-quatre lettres, avec une tabulation à la place du
+  // code hors table, se lisent. Ce n'est pas la proportion qui refuse.
+  const temoin = readTextLayer(buildPdf(shownCodes([...Array(24).fill(65), 9])));
+  assert.deepEqual([temoin.hasTextLayer, temoin.characters], [true, 24]);
 });
 
-test('les codes de contrôle 127 à 159 et le caractère de remplacement ne sont pas lisibles', () => {
-  assert.equal(readTextLayer(buildPdf(shownCodes(Array(10).fill([127, 128, 150, 159]).flat()))).characters, 0);
+test('les codes 127 à 159 sont lus dans la table WinAnsi', () => {
+  // PDF 32000-1, annexe D : ces codes portent un glyphe, ils se lisent.
+  for (const [code, glyphe] of [[0x7f, '•'], [0x80, '€'], [0x81, '•'], [0x92, '’'], [0x9f, 'Ÿ']]) {
+    const report = readTextLayer(buildPdf(shownCodes(Array(40).fill(code))));
+    assert.ok(report.text.startsWith(glyphe), code.toString(16));
+    assert.equal(report.characters, 40);
+  }
+  // Venus d'une chaîne UTF-16, en revanche, U+0080 à U+009F ne sont la sortie
+  // d'aucune table : la page est refusée. Et U+FFFD ne compte jamais.
+  assert.equal(readTextLayer(buildPdf('BT <FEFF0080> Tj ET')).hasTextLayer, false);
   assert.equal(readTextLayer(buildPdf('BT <FEFFFFFD> Tj ET')).characters, 0);
 });
 

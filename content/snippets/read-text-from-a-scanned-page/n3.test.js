@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { performance } from 'node:perf_hooks';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { MAX_IMAGE_BYTES, PROMPT, ReadingUnavailable, readPage } from './n3.js';
+import { MAX_IMAGE_BYTES, MODEL, PROMPT, ReadingUnavailable, readPage } from './n3.js';
 
 // Enough of a PNG to be recognised as one. Nothing here decodes the pixels —
 // neither this test, nor the snippet, nor anything else on this rung.
@@ -97,11 +97,20 @@ test('point de rupture : témoin, un fragment avoué illisible lève le drapeau'
 // ---------------------------------------------------------------------------
 
 test('le client par défaut a la forme du vrai kit', async () => {
-  // `new OpenAI()` puis `client.complete(...)` : la méthode n'existe pas ; la
-  // TypeError est avalée et retentée, et aucune requête ne part.
+  // `new OpenAI()` puis `chat.completions.create` : la seule surface que le kit
+  // publié offre, et celle que l'adaptateur appelle. L'image voyage dans le
+  // message, en URL de données.
   globalThis.__openai = { requests: [] };
   assert.equal((await readPage(PNG)).text, TRANSCRIPTION.text);
-  assert.equal(globalThis.__openai.requests.length, 0);
+  assert.equal(globalThis.__openai.requests.length, 1);
+  const [{ model, messages, temperature }] = globalThis.__openai.requests;
+  assert.deepEqual([model, temperature], [MODEL, 0]);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].role, 'user');
+  const [texte, image] = messages[0].content;
+  assert.deepEqual(texte, { type: 'text', text: PROMPT });
+  assert.equal(image.type, 'image_url');
+  assert.ok(image.image_url.url.startsWith(`data:image/png;base64,${PNG.toString('base64').slice(0, 8)}`));
 });
 
 // ---------------------------------------------------------------------------
@@ -127,8 +136,9 @@ test('envoie l’image encodée avec son type, la consigne et une température n
 });
 
 for (const [nom, octets, attendu] of [
-  ['PNG', PNG, 'image/png'], ['JPEG', JPEG, 'image/jpeg'], ['TIFF II', TIFF, 'image/tiff'],
-  ['TIFF MM', Buffer.concat([Buffer.from('MM\0*', 'latin1'), Buffer.alloc(64)]), 'image/tiff'],
+  ['PNG', PNG, 'image/png'], ['JPEG', JPEG, 'image/jpeg'], ['GIF89a', GIF, 'image/gif'],
+  ['GIF87a', Buffer.concat([Buffer.from('GIF87a', 'latin1'), Buffer.alloc(64)]), 'image/gif'],
+  ['WEBP', WEBP, 'image/webp'],
 ]) {
   test(`lit le format dans les octets et non dans un nom (${nom})`, async () => {
     const client = new FakeLLM({ response: JSON.stringify(TRANSCRIPTION) });
@@ -137,7 +147,11 @@ for (const [nom, octets, attendu] of [
   });
 }
 
-for (const [nom, octets] of [['GIF', GIF], ['WEBP', WEBP], ['PDF', Buffer.from('%PDF-1.4\n')], ['vide', Buffer.alloc(0)], ['PNG tronqué', PNG.subarray(0, 3)]]) {
+for (const [nom, octets] of [
+  ['TIFF II', TIFF], ['TIFF MM', Buffer.concat([Buffer.from('MM\0*', 'latin1'), Buffer.alloc(64)])],
+  ['RIFF WAVE', Buffer.concat([Buffer.from('RIFF\0\0\0\0WAVEfmt ', 'latin1'), Buffer.alloc(64)])],
+  ['PDF', Buffer.from('%PDF-1.4\n')], ['vide', Buffer.alloc(0)], ['PNG tronqué', PNG.subarray(0, 3)],
+]) {
   test(`refuse un format non reconnu avant de rien dépenser (${nom})`, async () => {
     const client = new FakeLLM({ response: JSON.stringify(TRANSCRIPTION) });
     await assert.rejects(() => readPage(octets, { client }), /unrecognised image format/);
@@ -146,7 +160,7 @@ for (const [nom, octets] of [['GIF', GIF], ['WEBP', WEBP], ['PDF', Buffer.from('
 }
 
 test('les formats envoyés sont ceux que le fournisseur accepte', async () => {
-  // L'extrait envoie TIFF (refusé par le fournisseur) et refuse GIF et WEBP (acceptés).
+  // « The formats the provider's vision input lists: PNG, JPEG, WEBP and GIF ».
   const envoyes = new Set();
   for (const octets of [PNG, JPEG, TIFF, GIF, WEBP]) {
     const client = new FakeLLM({ response: JSON.stringify(TRANSCRIPTION) });

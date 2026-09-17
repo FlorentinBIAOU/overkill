@@ -134,7 +134,8 @@ def test_envoie_limage_encodee_avec_son_type_la_consigne_et_une_temperature_null
 
 @pytest.mark.parametrize("octets, attendu", [
     (PNG, "image/png"), (JPEG, "image/jpeg"),
-    (b"II*\x00" + b"\x00" * 64, "image/tiff"), (b"MM\x00*" + b"\x00" * 64, "image/tiff"),
+    (b"GIF87a" + b"\x00" * 64, "image/gif"), (b"GIF89a" + b"\x00" * 64, "image/gif"),
+    (b"RIFF\x00\x00\x00\x00WEBPVP8 " + b"\x00" * 64, "image/webp"),
 ])
 def test_lit_le_format_dans_les_octets_et_non_dans_un_nom(octets, attendu):
     """Docstring de _media_type : « Read the format from the bytes, rather than trusting a file extension »."""
@@ -144,7 +145,8 @@ def test_lit_le_format_dans_les_octets_et_non_dans_un_nom(octets, attendu):
 
 
 @pytest.mark.parametrize("octets", [
-    b"GIF89a" + b"\x00" * 64, b"RIFF\x00\x00\x00\x00WEBPVP8 " + b"\x00" * 64, b"%PDF-1.4\n", b"", b"\x89PN",
+    b"II*\x00" + b"\x00" * 64, b"MM\x00*" + b"\x00" * 64,
+    b"RIFF\x00\x00\x00\x00WAVEfmt " + b"\x00" * 64, b"%PDF-1.4\n", b"", b"\x89PN",
 ])
 def test_refuse_un_format_non_reconnu_avant_de_rien_depenser(octets):
     client = FakeLLM(response=json.dumps(TRANSCRIPTION))
@@ -153,7 +155,8 @@ def test_refuse_un_format_non_reconnu_avant_de_rien_depenser(octets):
     assert client.call_count == 0
 
 
-def test_infirme_les_formats_envoyes_sont_ceux_que_le_fournisseur_accepte():
+def test_les_formats_envoyes_sont_ceux_que_le_fournisseur_accepte():
+    """Commentaire : « The formats the provider's vision input lists: PNG, JPEG, WEBP and GIF »."""
     envoyes = {media for _, media in n3.SIGNATURES}
     assert envoyes == FORMATS_DU_FOURNISSEUR
 
