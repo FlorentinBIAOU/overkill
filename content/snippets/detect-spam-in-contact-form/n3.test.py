@@ -158,8 +158,15 @@ def test_la_forme_rendue_est_spam_et_raison_en_chaine():
     assert classify("x", client=FakeLLM(response='{"spam": true, "reason": 42, "extra": 1}')) == {"spam": True, "reason": "42"}
 
 
-def test_defaut_une_reponse_en_cloture_de_code_n_est_pas_decodee():
+def test_une_reponse_entierement_close_est_decodee_les_autres_non():
+    """Une seule clôture qui enveloppe toute la réponse est lue ; tout autre écart coûte les trois essais."""
     assert classify("x", client=FakeLLM(response=f"```json\n{SPAM_ANSWER}\n```"))["spam"] is True
+    assert classify("x", client=FakeLLM(response=f"```\n{SPAM_ANSWER}\n```"))["spam"] is True
+    for mal_close in (f"```json\n{SPAM_ANSWER}", f"Voici :\n```json\n{SPAM_ANSWER}\n```"):
+        client = FakeLLM(response=mal_close)
+        with pytest.raises(ClassificationUnavailable):
+            classify("x", client=client)
+        assert client.call_count == 3
 
 
 def test_defaut_une_raison_nulle_devient_none():

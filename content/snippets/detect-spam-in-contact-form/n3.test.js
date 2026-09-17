@@ -122,8 +122,16 @@ test('la forme rendue est spam et raison en chaîne', async () => {
   assert.deepEqual(await classify('x', { client: llm('{"spam": true, "reason": null}') }), { spam: true, reason: '' });
 });
 
-test('une réponse en clôture de code n’est pas décodée', async () => {
+test('une réponse entièrement close est décodée, les autres non', async () => {
+  // Une seule clôture qui enveloppe toute la réponse est lue ; tout autre écart
+  // coûte les trois essais.
   assert.equal((await classify('x', { client: llm(`\`\`\`json\n${SPAM_ANSWER}\n\`\`\``) })).spam, true);
+  assert.equal((await classify('x', { client: llm(`\`\`\`\n${SPAM_ANSWER}\n\`\`\``) })).spam, true);
+  for (const malClose of [`\`\`\`json\n${SPAM_ANSWER}`, `Voici :\n\`\`\`json\n${SPAM_ANSWER}\n\`\`\``]) {
+    const client = llm(malClose);
+    await assert.rejects(() => classify('x', { client }), ClassificationUnavailable);
+    assert.equal(client.callCount, 3);
+  }
 });
 
 test('le client par défaut a la forme du vrai kit', async () => {

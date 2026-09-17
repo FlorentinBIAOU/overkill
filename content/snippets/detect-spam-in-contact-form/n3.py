@@ -101,8 +101,11 @@ def _parse(answer) -> dict | None:
     """The verdict in `answer`, or None: no text, not JSON, or no boolean `spam`."""
     if not isinstance(answer, str):  # the SDK types the content as optional
         return None
-    # A Markdown code fence around the JSON is unwrapped, not counted as a failure.
-    text = answer.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
+    # A JSON answer wrapped whole in one code fence is read; nothing else is:
+    # a fence opened and never closed, or prose around it, is a failed answer.
+    text = answer.strip()
+    if text.startswith("```") and text.endswith("```") and text.count("```") == 2:
+        text = text[3:-3].removeprefix("json")
     try:
         parsed = json.loads(text)
     except (ValueError, RecursionError):

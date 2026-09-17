@@ -95,8 +95,11 @@ async function ask(client, message, attempts) {
 /** The verdict in `answer`, or null: no text, not JSON, or no boolean `spam`. */
 function parse(answer) {
   if (typeof answer !== 'string') return null; // the SDK types the content as nullable
-  // A Markdown code fence around the JSON is unwrapped, not counted as a failure.
-  const text = answer.trim().replace(/^```(?:json)?/, '').replace(/```$/, '');
+  // A JSON answer wrapped whole in one code fence is read; nothing else is: a
+  // fence opened and never closed, or prose around it, is a failed answer.
+  const trimmed = answer.trim();
+  const fenced = trimmed.startsWith('```') && trimmed.endsWith('```') && trimmed.split('```').length === 3;
+  const text = fenced ? trimmed.slice(3, -3).replace(/^json/, '') : trimmed;
   try {
     const parsed = JSON.parse(text);
     return parsed && typeof parsed.spam === 'boolean' ? parsed : null;
