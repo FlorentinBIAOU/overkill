@@ -46,8 +46,8 @@
    (pas fabriqué à la main) qui le montre. C'est fait quand la fiche ne promet
    plus de régler le besoin d'un document que son code renvoie ailleurs.
 
-2. **[style]** `breaking_point` de N0 : environ 170 mots en français, neuf
-   phrases, trois sujets (page scannée, renvois vers une bibliothèque,
+2. **[style]** `breaking_point` de N0 : environ 230 mots en français,
+   trois sujets (page scannée, renvois vers une bibliothèque,
    police renumérotée à partir de 33). La charte demande une ou deux phrases et
    un exemple concret. Le lecteur ne trouve pas le point de rupture dans ce
    paragraphe : il trouve le relevé du testeur. Ce qu'il faut faire : garder
