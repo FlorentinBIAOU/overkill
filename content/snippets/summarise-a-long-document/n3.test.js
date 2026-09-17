@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { MAX_CHARACTERS, SummaryUnavailable, summarise } from './n3.js';
+import { MAX_CHARACTERS, MODEL, SummaryUnavailable, summarise } from './n3.js';
 import essai from '../../tryouts/frozen/summarise-a-long-document.js';
 
 const REPORT = [
@@ -156,10 +156,17 @@ test('le client par défaut a la forme du vrai kit', async () => {
   assert.equal((await summarise(REPORT)).summary, 'The ticketing system moved to a new platform in March.');
 });
 
-test('le client par défaut échoue en service indisponible sans appel', async () => {
+test('le client par défaut envoie la requête que le kit attend', async () => {
+  // L'adaptateur appelle `chat.completions.create`, la seule surface que le kit
+  // publié offre ; il n'y a pas de méthode `complete` en face.
   globalThis.__openaiCalls.length = 0;
-  await assert.rejects(() => summarise(REPORT), (error) => error instanceof SummaryUnavailable && /complete/.test(error.message));
-  assert.deepEqual(globalThis.__openaiCalls, []);
+  await summarise(REPORT);
+  assert.equal(globalThis.__openaiCalls.length, 1);
+  const [{ model, messages, temperature }] = globalThis.__openaiCalls;
+  assert.deepEqual([model, temperature], [MODEL, 0]);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].role, 'user');
+  assert.ok(messages[0].content.includes(REPORT));
 });
 
 // ---------------------------------------------------------------------------
@@ -179,10 +186,13 @@ test('production : une injection dans le document part telle quelle', async () =
   assert.ok(client.lastRequest.prompt.includes(injection));
 });
 
-test('production : constat, le plafond compte en unités UTF-16 en JavaScript', async () => {
+test('production : le plafond compte des points de code, comme en Python', async () => {
+  // Un emoji fait deux unités UTF-16 et un seul point de code : c'est la seconde
+  // mesure qui compte, des deux côtés.
   const client = llm(ANSWER);
-  await assert.rejects(() => summarise('🧾'.repeat(20001), { client }), RangeError);
+  await assert.rejects(() => summarise('🧾'.repeat(MAX_CHARACTERS + 1), { client }), RangeError);
   assert.equal(client.callCount, 0);
+  assert.ok((await summarise('🧾'.repeat(MAX_CHARACTERS), { client })).summary);
 });
 
 // ---------------------------------------------------------------------------
@@ -220,8 +230,9 @@ test('essai : un document de 40 001 caractères, refusé avant le premier appel'
 });
 
 test('essai : le fournisseur échoue deux fois, trois appels', async () => {
-  // « facturés » : qu'un appel en échec soit facturé dépend du fournisseur, non testable ici.
-  assert.equal((await run(3, 'fr')).note, '3 appels facturés : les deux premiers ont échoué, le troisième a répondu.');
+  // « envoyés » : qu'un appel en échec soit facturé dépend du fournisseur, la
+  // note ne dit donc que ce qui est parti.
+  assert.equal((await run(3, 'fr')).note, '3 appels envoyés : les deux premiers ont échoué, le troisième a répondu.');
 });
 
 test('essai : le modèle répond en prose, réponse rejetée après trois appels', async () => {

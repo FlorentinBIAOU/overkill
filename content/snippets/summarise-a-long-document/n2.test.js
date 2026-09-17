@@ -1,10 +1,11 @@
 /**
  * Ces tests injectent un double local au lieu de charger un modèle.
  *
- * Le chargement par défaut importe '@xenova/transformers'. Un crochet de
+ * Le chargement par défaut importe '@huggingface/transformers'. Un crochet de
  * résolution, posé pour ce seul processus de test, remplace ce paquet par un
  * module à la surface publiée : `pipeline('summarization', nom)` rend une
- * fonction qui rend `[{ summary_text }]`. Il compte les chargements.
+ * fonction qui porte un `tokenizer` (`encode`, `model_max_length`) et rend
+ * `[{ summary_text }]`. Il compte les chargements.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,10 +17,13 @@ globalThis.__summariserLoads = [];
 const FAKE_TRANSFORMERS = `
   export async function pipeline(task, model) {
     globalThis.__summariserLoads.push([task, model]);
-    return async (text, options) => [{ summary_text: 'summary of ' + text.length + ' characters' }];
+    const run = async (text) => [{ summary_text: 'summary of ' + text.length + ' characters' }];
+    // Un jeton pour quatre caractères : l'ordre de grandeur du vrai tokenizer.
+    run.tokenizer = { model_max_length: 1024, encode: (t) => new Array(Math.ceil(t.length / 4)).fill(0) };
+    return run;
   }`;
 register(`data:text/javascript,${encodeURIComponent(`export async function resolve(specifier, context, next) {
-  if (specifier === '@xenova/transformers') {
+  if (specifier === '@huggingface/transformers') {
     return { url: 'data:text/javascript,' + encodeURIComponent(${JSON.stringify(FAKE_TRANSFORMERS)}), shortCircuit: true };
   }
   return next(specifier, context);
@@ -104,7 +108,9 @@ test('rend ce que le modèle a écrit', async () => {
 });
 
 test('la découpe se fait aux frontières de phrase sans rien perdre', () => {
-  assert.equal(CHUNK_CHARACTERS, 3000);
+  // La fenêtre du modèle est de 1 024 jetons ; 2 000 caractères de prose en font
+  // environ 727, ce qui laisse de la marge.
+  assert.equal(CHUNK_CHARACTERS, 2000);
   const pieces = chunk(LONG, 400);
   assert.ok(pieces.length > 1);
   assert.ok(pieces.every((p) => p.length <= 400 && p.endsWith('.')));
@@ -112,8 +118,8 @@ test('la découpe se fait aux frontières de phrase sans rien perdre', () => {
 });
 
 test('production : limite de la découpe au caractère près', () => {
-  const exactly = `${'a'.repeat(1499)}. ${'b'.repeat(1498)}.`;
-  assert.equal(exactly.length, 3000);
+  const exactly = `${'a'.repeat(999)}. ${'b'.repeat(998)}.`;
+  assert.equal(exactly.length, CHUNK_CHARACTERS);
   assert.deepEqual(chunk(exactly), [exactly]);
   assert.equal(chunk(`${exactly} c.`).length, 2);
 });
@@ -170,19 +176,17 @@ test('le modèle nommé est distilbart-cnn-12-6', () => {
   assert.equal(MODEL_NAME, 'Xenova/distilbart-cnn-12-6');
 });
 
-test('le modèle par défaut a la surface de @xenova/transformers', async () => {
+test('le modèle par défaut a la surface de @huggingface/transformers', async () => {
   globalThis.__summariserLoads.length = 0;
   assert.equal(await summarise(REPORT), `summary of ${REPORT.length} characters`);
   assert.deepEqual(globalThis.__summariserLoads, [['summarization', MODEL_NAME]]);
 });
 
-test('DÉFAUT : le modèle par défaut est rechargé à chaque document', async () => {
-  await assert.rejects(async () => {
-    globalThis.__summariserLoads.length = 0;
-    await summarise(REPORT);
-    await summarise(REPORT);
-    assert.equal(globalThis.__summariserLoads.length, 1);
-  });
+test('le modèle par défaut est chargé une fois pour la vie du processus', () => {
+  // Le chargement du test précédent a suffi : le second document n'en demande
+  // pas un autre.
+  const avant = globalThis.__summariserLoads.length;
+  return summarise(REPORT).then(() => assert.equal(globalThis.__summariserLoads.length, avant));
 });
 
 test('la seconde passe dépasse la fenêtre', async () => {

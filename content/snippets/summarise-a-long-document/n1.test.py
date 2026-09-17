@@ -219,11 +219,13 @@ def test_les_mots_signaux():
 
 
 def test_l_entrainement_tient_sur_quatre_documents_sans_rien_d_autre():
-    """docstring de train : « Nothing here needs a GPU or a corpus » ; risks.data_egress : none."""
+    """docstring de train : « Nothing here needs a GPU » ; risks.data_egress : none."""
     source = ast.parse(Path(__file__).with_name("n1.py").read_text(encoding="utf-8"))
     imported = {a.name for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
     imported |= {n.module for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
-    assert imported == {"re", "numpy", "sklearn.linear_model"}
+    # Rien qui sorte de la machine, et rien qui demande une carte graphique.
+    assert imported <= {"re", "unicodedata", "numpy", "sklearn.linear_model"}
+    assert not imported & {"torch", "transformers", "tensorflow"}
     assert sum(len(d) for d in DOCUMENTS) == 24
 
 

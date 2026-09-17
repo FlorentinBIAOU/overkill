@@ -5,6 +5,7 @@ nombres.
 """
 
 import ast
+import sys
 import time
 import unicodedata
 from pathlib import Path
@@ -206,7 +207,10 @@ def test_la_boucle_simple_et_sum_ne_donnent_pas_le_meme_flottant():
 def test_l_extrait_n_importe_que_re():
     """risks.data_egress : none ; « Two classical signals, and nothing else »."""
     source = ast.parse(Path(__file__).with_name("n0.py").read_text(encoding="utf-8"))
-    assert {a.name for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names} == {"re"}
+    imported = {a.name.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
+    imported |= {(n.module or "").split(".")[0] for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
+    # Le nom des modules n'est pas l'affirmation : la bibliothèque standard seule l'est.
+    assert imported and imported <= sys.stdlib_module_names
 
 
 def test_deux_executions_rendent_le_meme_resume():

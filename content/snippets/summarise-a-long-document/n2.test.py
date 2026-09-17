@@ -11,6 +11,8 @@ import sys
 import types
 import unicodedata
 import warnings
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -59,17 +61,56 @@ class NoteTaker(FakeSeq2Seq):
 
 @pytest.fixture
 def transformers(monkeypatch):
-    """Un module `transformers` à la surface publiée : `pipeline("summarization", model=…)` rend un appelable qui rend `[{"summary_text": …}]`."""
+    """
+    Un module `transformers` 5 à la surface publiée : plus de pipeline
+    `summarization`, mais `AutoTokenizer.from_pretrained` et
+    `AutoModelForSeq2SeqLM.from_pretrained`. Le tokenizer rend des
+    `input_ids` dont `.shape[1]` est un nombre de jetons, le modèle porte ses
+    `config.task_specific_params["summarization"]`, et `decode` relit la longueur.
+    """
     module = types.ModuleType("transformers")
     module.loads = []
+    module.generated = []
+    reglages = {"max_length": 142, "min_length": 56, "num_beams": 4}
 
-    def pipeline(task, model):
-        module.loads.append((task, model))
-        return lambda text, truncation: [{"summary_text": f"summary of {len(text)} characters"}]
+    class Tenseur(list):
+        @property
+        def shape(self):
+            return (1, len(self[0]))
 
-    module.pipeline = pipeline
+    class Tokenizer:
+        model_max_length = 1024
+
+        def __call__(self, text, return_tensors=None):
+            # Un jeton pour quatre caractères : l'ordre de grandeur du vrai.
+            return {"input_ids": Tenseur([[len(text)] * max(1, len(text) // 4)])}
+
+        def decode(self, ids, skip_special_tokens=False):
+            return f"summary of {ids[0]} characters"
+
+    class Model:
+        config = SimpleNamespace(task_specific_params={"summarization": reglages})
+
+        def generate(self, **kwargs):
+            module.generated.append(kwargs)
+            return [kwargs["input_ids"][0]]
+
+    def from_pretrained(quoi):
+        def charger(name):
+            module.loads.append((quoi, name))
+            return Tokenizer() if quoi == "tokenizer" else Model()
+
+        return SimpleNamespace(from_pretrained=charger)
+
+    module.AutoTokenizer = from_pretrained("tokenizer")
+    module.AutoModelForSeq2SeqLM = from_pretrained("model")
+    module.REGLAGES = reglages
     monkeypatch.setitem(sys.modules, "transformers", module)
-    return module
+    # Le modèle par défaut est gardé pour la vie du processus : sans ce vidage,
+    # un test repartirait du modèle qu'un test précédent a mis en cache.
+    n2.default_model.cache_clear()
+    yield module
+    n2.default_model.cache_clear()
 
 
 # ---------------------------------------------------------------------------
@@ -134,8 +175,8 @@ def test_rend_ce_que_le_modele_a_ecrit():
 
 
 def test_la_decoupe_se_fait_aux_frontieres_de_phrase_sans_rien_perdre():
-    """docstring : « it has to be cut at sentence boundaries » ; CHUNK_CHARACTERS."""
-    assert CHUNK_CHARACTERS == 3000
+    """docstring : « it has to be cut at sentence boundaries » ; CHUNK_CHARACTERS, la fenêtre de 1 024 jetons."""
+    assert CHUNK_CHARACTERS == 2000
     pieces = chunk(LONG, size=400)
     assert len(pieces) > 1
     assert all(len(p) <= 400 and p.endswith(".") for p in pieces)
@@ -144,8 +185,8 @@ def test_la_decoupe_se_fait_aux_frontieres_de_phrase_sans_rien_perdre():
 
 
 def test_production_limite_de_la_decoupe_au_caractere_pres():
-    exactly = "a" * 1499 + ". " + "b" * 1498 + "."
-    assert len(exactly) == 3000
+    exactly = "a" * 999 + ". " + "b" * 998 + "."
+    assert len(exactly) == CHUNK_CHARACTERS
     assert chunk(exactly) == [exactly]
     assert len(chunk(exactly + " c.")) == 2
 
@@ -206,51 +247,43 @@ def test_une_reponse_vide_ou_nulle_leve_plutot_que_laisser_un_trou():
             summarise(REPORT, model=model)
 
 
-def test_le_modele_nomme_est_bart_large_cnn():
-    """Constat : Python charge facebook/bart-large-cnn, JavaScript Xenova/distilbart-cnn-12-6 (fenêtre de 1 024 positions pour les deux)."""
-    assert MODEL_NAME == "facebook/bart-large-cnn"
+def test_le_modele_nomme_est_distilbart_cnn():
+    """Commentaire : « The same weights in both languages: JavaScript loads their ONNX conversion »."""
+    # Mêmes poids des deux côtés, deux dépôts : JavaScript charge la conversion
+    # ONNX du même point de contrôle, `Xenova/distilbart-cnn-12-6` (n2.js).
+    assert MODEL_NAME == "sshleifer/distilbart-cnn-12-6"
 
 
 def test_le_modele_par_defaut_a_la_surface_de_transformers(transformers):
-    """docstring : « In production it defaults to the real model » ; `pipeline(…)(text, truncation=True)[0]["summary_text"]`."""
+    """docstring : « In production it defaults to the real model » ; `transformers` 5, classes Auto, plus de pipeline."""
     assert summarise(REPORT) == f"summary of {len(REPORT)} characters"
-    assert transformers.loads == [("summarization", MODEL_NAME)]
+    assert transformers.loads == [("tokenizer", MODEL_NAME), ("model", MODEL_NAME)]
+    # Les réglages publiés avec le point de contrôle sont passés à `generate`.
+    assert transformers.generated
+    for appel in transformers.generated:
+        assert {k: v for k, v in appel.items() if k != "input_ids"} == transformers.REGLAGES
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : LocalSummariser se dit « Loaded once and kept for the life of the "
-        "process: it is the loading that is slow » ; mais summarise construit un "
-        "LocalSummariser neuf à chaque appel sans modèle injecté, donc recharge les poids "
-        "à chaque document"
-    ),
-)
-def test_defaut_le_modele_par_defaut_est_recharge_a_chaque_document(transformers):
+def test_le_modele_par_defaut_est_charge_une_fois_pour_la_vie_du_processus(transformers):
+    """docstring de `default_model` : « Loaded once and kept for the life of the process »."""
     summarise(REPORT)
-    summarise(REPORT)
-    assert len(transformers.loads) == 1
+    summarise(LONG)
+    # Un chargement, c'est-à-dire un tokenizer et un modèle, et pas deux.
+    assert transformers.loads == [("tokenizer", MODEL_NAME), ("model", MODEL_NAME)]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DÉFAUT : `transformers` 5 a retiré les pipelines `summarization`, `translation` "
-        "et `text2text-generation` (MIGRATION_GUIDE_V5.md : « Text2TextGenerationPipeline, "
-        "including its related SummarizationPipeline and TranslationPipeline, were "
-        "deprecated and will now be removed ») ; sur une installation courante, le "
-        "chargement par défaut lève « Unknown task summarization » avant tout résumé"
-    ),
-)
-def test_defaut_transformers_5_n_a_plus_de_pipeline_summarization(monkeypatch):
-    module = types.ModuleType("transformers")
-
-    def pipeline(task, model):
-        raise KeyError(f"Unknown task {task}, available tasks are ['feature-extraction', 'text-generation', ...]")
-
-    module.pipeline = pipeline
-    monkeypatch.setitem(sys.modules, "transformers", module)
-    assert isinstance(summarise(REPORT), str)
+def test_le_chargement_par_defaut_n_appelle_aucun_pipeline():
+    """
+    Commentaire : « transformers 5 removed the "summarization" pipeline: call the
+    model itself ». MIGRATION_GUIDE_V5.md : « Text2TextGenerationPipeline,
+    including its related SummarizationPipeline and TranslationPipeline, were
+    deprecated and will now be removed ». Un extrait qui appellerait
+    `pipeline("summarization", …)` lèverait « Unknown task summarization ».
+    """
+    source = Path(__file__).with_name("n2.py").read_text(encoding="utf-8")
+    code = "\n".join(l for l in source.splitlines() if not l.lstrip().startswith("#"))
+    assert "pipeline" not in code
+    assert "from transformers import AutoModelForSeq2SeqLM, AutoTokenizer" in code
 
 
 def test_defaut_la_seconde_passe_depasse_la_fenetre():

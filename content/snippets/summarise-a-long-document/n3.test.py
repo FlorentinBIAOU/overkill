@@ -18,7 +18,7 @@ from types import SimpleNamespace
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_CHARACTERS, SummaryUnavailable, summarise
+from n3 import MAX_CHARACTERS, MODEL, PROMPT, SummaryUnavailable, summarise
 
 REPORT = (
     "The support team migrated the ticketing system to a new platform in March. "
@@ -192,10 +192,14 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
     assert summarise(REPORT)["summary"] == "The ticketing system moved to a new platform in March."
 
 
-def test_le_client_par_defaut_echoue_en_service_indisponible_sans_appel(openai_kit):
-    with pytest.raises(SummaryUnavailable, match="complete"):
-        summarise(REPORT)
-    assert openai_kit.calls == []
+def test_le_client_par_defaut_envoie_la_requete_que_le_kit_attend(openai_kit):
+    """L'adaptateur appelle `chat.completions.create`, la seule surface que le kit publié offre."""
+    summarise(REPORT)
+    assert len(openai_kit.calls) == 1
+    requete = openai_kit.calls[0]
+    assert requete["model"] == MODEL == "gpt-4.1-mini"
+    assert requete["temperature"] == 0
+    assert requete["messages"] == [{"role": "user", "content": PROMPT.format(sentences=3, document=REPORT)}]
 
 
 def test_l_extrait_n_importe_que_json():
