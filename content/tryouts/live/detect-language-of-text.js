@@ -8,8 +8,9 @@
  * un paragraphe par langue, trois cents trigrammes classés, rien d'autre.
  *
  * Le tableau montre les trois langues et pas seulement la gagnante, parce que
- * l'écart entre les deux premières est la seule mesure honnête de la confiance
- * qu'on peut accorder à la réponse.
+ * l'écart entre les deux premières dit ce que la deuxième a manqué — et parce
+ * qu'il ne dit rien de plus : sur « chat », il est large et la réponse est
+ * fausse.
  */
 import { PROFILE_SIZE, profile, ranked } from '../../snippets/detect-language-of-text/n0.js';
 
@@ -84,8 +85,8 @@ export default {
   level: 'N0',
 
   note: {
-    fr: 'Le modèle est fait de trois paragraphes, un par langue. Une distance basse dit que le texte emploie les mêmes trigrammes que l’échantillon ; l’écart entre les deux premières dit ce que vaut la réponse.',
-    en: 'The model is three paragraphs, one per language. A low distance says the text uses the same trigrams as the sample; the gap between the top two says what the answer is worth.',
+    fr: 'Le modèle est fait de trois paragraphes, un par langue. Une distance basse dit que le texte emploie les mêmes trigrammes que l’échantillon ; l’écart dit de combien la deuxième a manqué, et rien d’autre : sur un mot isolé, il peut être large et la réponse fausse.',
+    en: 'The model is three paragraphs, one per language. A low distance says the text uses the same trigrams as the sample; the gap says by how much the runner-up missed, and nothing more: on a single word it can be wide and the answer wrong.',
   },
 
   run(texte, lang) {

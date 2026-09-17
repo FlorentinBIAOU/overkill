@@ -515,3 +515,5 @@ zzz
 suggesteur
 elasticsearch
 statsmodels
+latn
+und

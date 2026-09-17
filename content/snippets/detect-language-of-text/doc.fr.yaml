@@ -28,6 +28,11 @@ n0: |
   trigrammes, si bien qu'un texte long et un texte court tombent sur la même
   échelle.
 
+  Un paragraphe par langue suffit à voir la méthode fonctionner. Il ne suffit
+  pas à déployer : les profils ne valent que l'échantillon dont on les tire, et
+  un paragraphe laisse de côté l'essentiel d'une langue. Cavnar et Trenkle ont
+  bâti les leurs sur des corpus. Prenez plusieurs pages.
+
 n1.py: |
   Détecter la langue d'un texte avec un classifieur bayésien naïf sur des
   n-grammes de caractères.
@@ -67,19 +72,47 @@ n1.js: |
   naïf multinomial n'est que du comptage, et tient dans ce fichier. C'est l'argument de ce
   niveau : l'outil classique est assez petit pour être lu.
 
+n2: |
+  Détecter la langue avec un identifiant dédié, hébergé chez vous.
+
+  Niveau N2. N0 et N1 ne connaissent que les langues dont vous leur avez donné
+  un échantillon. CLD3, le Compact Language Detector de Google, est un petit
+  réseau de neurones qui couvre une centaine de langues et que le paquet
+  embarque avec son modèle : rien à échantillonner, rien à entraîner, pas de
+  clé, pas de téléchargement, et aucun texte ne quitte votre machine. « gcld3 »
+  en Python, « cld3-asm » en JavaScript, le même modèle dessous.
+
+  Ce que vous possédez à ce niveau n'est pas le modèle. Ce sont trois choses.
+
+  La correspondance entre ses codes et les vôtres : CLD3 répond en style
+  BCP 47, et distingue l'hindi en écriture latine de l'hindi en devanagari par
+  « hi-Latn ». L'appelant qui attend « hi » reçoit un code qu'il n'a jamais vu.
+
+  Le refus, et le plancher d'octets sur lequel il repose. En dessous de
+  « min_bytes », la bibliothèque répond « und » au lieu de deviner, et ce
+  plancher — 140 octets par défaut — est justement ce que N0 et N1 n'ont pas :
+  c'est le message de deux mots, l'objet de courriel, le champ de recherche,
+  refusés par la bibliothèque elle-même. Au-dessus du plancher, « is_reliable »
+  et « probability » sont deux poignées de plus, et cet extrait fait des trois
+  un refus.
+
+  Et le chargement. Le modèle est lu quand l'identifiant est construit, et
+  l'identifiant retient de la mémoire dont le ramasse-miettes ne s'occupe pas :
+  construisez-en un, gardez-le, n'en construisez pas un par message.
+
 n3: |
   Détecter la langue d'un texte en interrogeant un modèle généraliste.
 
   Niveau N3. C'est l'option vers laquelle on se tourne d'abord. Elle est ici
   pour qu'on voie ce qu'elle coûte, pas parce que cette fiche la recommande.
 
-  Voyez ce que le code doit faire et que N0 ne faisait pas : plafonner
-  l'entrée, n'envoyer qu'un extrait, réessayer en cas d'échec, analyser une
-  réponse qui n'est que probablement du JSON valide, normaliser un code que le
-  modèle peut écrire en capitales, avec une région ou entouré d'espaces, et
-  refuser une réponse qui sort de la liste qu'on lui a fournie. Cette
-  plomberie est le vrai coût de ce niveau, et c'est la part que vos tests
-  doivent couvrir, parce que le modèle lui-même n'est pas testable.
+  Voyez ce que le code doit faire et que N0 ne faisait pas : n'envoyer qu'un
+  extrait, réessayer en cas d'échec, analyser une réponse qui n'est que
+  probablement du JSON valide, normaliser un code que le modèle peut écrire en
+  capitales, avec une région ou entouré d'espaces, et refuser une réponse qui
+  sort de la liste qu'on lui a fournie. Cette plomberie est le vrai coût de ce
+  niveau, et c'est la part que vos tests doivent couvrir, parce que le modèle
+  lui-même n'est pas testable.
 
   La seule chose que ce niveau apporte vraiment, c'est qu'il n'a besoin
   d'aucun échantillon de la langue. La seule chose qu'il ne sait pas faire,

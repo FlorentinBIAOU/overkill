@@ -3,7 +3,7 @@ id: detect-language-of-text
 family: classify-route
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -43,8 +43,8 @@ rungs:
       fr: "Les textes très courts, et ceux qui contiennent deux langues. « chat » ressort en anglais : de ses quatre trigrammes, les deux derniers figurent dans le profil anglais, qui les tient de « that » et de « at », et aucun ne figure dans les profils français et espagnol ; sur « ça va », les trois langues sont à la distance maximale et c’est l’ordre alphabétique qui répond ; sur une phrase française suivie d’une phrase anglaise, l’espagnol arrive deuxième alors qu’il n’est nulle part dans le texte."
       en: "Very short texts, and texts that hold two languages. The word chat, French for cat, comes back as English: of its four trigrams, the last two are in the English profile, which gets them from that and at, and none is in the French or Spanish profile; on ça va the three languages all sit at the maximum distance and the alphabetical tie-break answers; and on a French sentence followed by an English one, Spanish comes second although it is nowhere in the text."
     escalate_when:
-      fr: "Vos textes tiennent en deux ou trois mots, un objet de message ou un champ de recherche, et vous voyez l’écart entre les deux premières langues tomber à zéro."
-      en: "Your texts are two or three words long, a subject line or a search box, and you can see the gap between the top two languages fall to zero."
+      fr: "Vos textes tiennent en un ou deux mots, un objet de message ou un champ de recherche. C’est leur longueur qui doit vous alerter, pas l’écart : l’écart ne signale rien sur un mot isolé, « chat » ressort en anglais avec un écart plus large que celui d’une phrase française entière."
+      en: "Your texts are one or two words long, a subject line or a search box. Their length is what should alert you, not the gap: the gap signals nothing on a lone word, and chat comes back as English with a wider gap than a whole French sentence gets."
 
   - level: N1
     available: true
@@ -74,14 +74,39 @@ rungs:
       fr: "La probabilité est un produit sur tous les n-grammes du texte : elle sature bien avant que les indices ne le justifient. Sur la phrase française suivie d’une phrase anglaise, le modèle n’a plus l’hésitation de N0, il répond français avec une quasi-certitude et le seuil qui s’abstenait sur « ça va » ne se déclenche pas ; et comme les probabilités somment à un sur les seules langues apprises, un texte portugais ressort en espagnol et un texte allemand en anglais, tous deux au-dessus du seuil."
       en: "The probability is a product over every n-gram of the text, so it saturates long before the evidence justifies it. On the French sentence followed by an English one the model has none of N0's hesitation: it answers French with near-certainty, and the threshold that abstained on ça va never fires. And since the probabilities sum to one over the trained languages alone, Portuguese comes back as Spanish and German as English, both above the threshold."
     escalate_when:
-      fr: "Vous devez reconnaître une langue dont vous n’avez aucun échantillon, et réentraîner à chaque nouvelle langue n’est pas envisageable."
-      en: "You have to recognise a language you hold no sample of, and retraining for every new one is not on the table."
+      fr: "Vous devez reconnaître une langue dont vous n’avez aucun échantillon, et réentraîner à chaque nouvelle langue n’est pas envisageable : un identifiant dédié, embarqué avec son modèle, couvre une centaine de langues sans échantillon de votre part et sans que le texte quitte votre machine."
+      en: "You have to recognise a language you hold no sample of, and retraining for every new one is not on the table: a dedicated identifier, shipped with its model, covers a hundred-odd languages with no sample from you and without the text leaving your machine."
 
   - level: N2
-    available: false
-    unavailable_reason:
-      fr: "Un modèle d’identification dédié, comme celui que publie fastText, reconnaît 176 langues sans échantillon de votre part. Mais ses poids sont entraînés sur Wikipédia et deux autres corpus publics, et distribués sous licence CC BY-SA 3.0 : c’est un artefact tiers à embarquer, à suivre et dont la licence est à examiner, quand un paragraphe par langue suffit à N0 et N1 pour les langues que vous traitez. Sur un texte trop court pour eux, la langue d’interface de l’utilisateur, l’en-tête Accept-Language ou les messages précédents du fil sont des indices qui ne coûtent rien."
-      en: "A dedicated identification model, such as the one fastText publishes, recognises 176 languages without any sample from you. Its weights, though, are trained on Wikipedia and two other public corpora, and released under CC BY-SA 3.0: a third-party artefact to ship, track and clear for licensing, when a paragraph per language is all N0 and N1 need for the languages you handle. On a text too short for them, the user’s interface language, the Accept-Language header, or the earlier messages in the thread are clues that cost nothing."
+    available: true
+    name:
+      fr: "Identifiant de langue dédié, embarqué avec son modèle (CLD3)"
+      en: "Dedicated language identifier, shipped with its model (CLD3)"
+    cost: négligeable
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le texte ne quitte pas votre infrastructure, le modèle est dans le paquet et rien n’est téléchargé à l’exécution"
+          - "Les poids viennent d’un tiers, sous licence Apache 2.0, et le dépôt est archivé depuis le 15 juin 2024 : le modèle est figé, personne ne corrigera une langue mal reconnue"
+        en:
+          - "No specific scope added: the text never leaves your infrastructure, the model ships inside the package, and nothing is downloaded at run time"
+          - "The weights come from a third party under the Apache 2.0 licence, and the repository has been archived since 15 June 2024: the model is frozen, and nobody will fix a language it reads badly"
+    code:
+      python: snippets/detect-language-of-text/n2.py
+      javascript: snippets/detect-language-of-text/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le code rendu est celui de CLD3, pas le vôtre : il répond en style BCP 47 et distingue l’hindi en écriture latine de l’hindi en devanagari par « hi-Latn », un code que l’appelant qui attend « hi » n’a jamais vu, sur la même langue. Et le plancher qui fait la valeur de ce niveau en fait aussi la limite : sa documentation donne 140 octets en dessous desquels il répond « und » — sur un objet de message, il ne se trompe pas, il ne répond pas."
+      en: "The code you get back is CLD3's, not yours: it answers in BCP 47 style and tells Latin-script Hindi from Devanagari Hindi with hi-Latn, a code a caller expecting hi has never seen, for the same language. And the floor that makes this level worth having is also its limit: its documentation gives 140 bytes, below which it answers und — on a subject line it does not get it wrong, it does not answer at all."
+    escalate_when:
+      fr: "Il vous faut une réponse malgré tout sur un texte plus court que ce plancher, ou sur une langue absente de la centaine que couvre le modèle — en sachant que le niveau au-dessus coûte un appel facturé et ne sait pas davantage dire qu’il se trompe."
+      en: "You need an answer anyway on a text shorter than that floor, or in a language outside the hundred-odd the model covers — knowing that the level above costs a billed call and is no better at saying when it is wrong."
 
   - level: N3
     available: true
@@ -119,8 +144,8 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N0 l’emporte sur le point qui décide de tout ici : savoir quand se taire. Son seul signal est l’écart entre les deux premières langues, et cet écart s’effondre exactement là où il le faut, sur le message bilingue ; la probabilité de N1 fait l’inverse et monte à la quasi-certitude sur ce même message. Montez à N1 le jour où vous voulez un seuil exprimé en probabilité plutôt qu’en écart de rang, en sachant qu’il s’abstient sur « ça va » mais laisse passer « chat » en anglais au-dessus du seuil, et qu’il ne connaît que les langues apprises."
-  en: "N0 wins on the point that decides everything here: knowing when to keep quiet. Its only signal is the gap between the top two languages, and that gap collapses exactly where it should, on the bilingual message; N1's probability does the opposite and climbs to near-certainty on that same message. Move up to N1 the day you want a threshold expressed as a probability rather than a rank gap, knowing that it abstains on ça va but lets chat through as English above the threshold, and that it only knows the languages it was trained on."
+  fr: "N0 l’emporte sur le message qui porte deux langues, le cas le plus fréquent d’une file de support : son écart se resserre quand les deux moitiés se brouillent, quand la probabilité de N1 fait l’inverse et monte à la quasi-certitude sur ce même message. Sur le mot isolé, en revanche, aucun des deux ne prévient : « chat » ressort en anglais en N0 avec un écart large, et en anglais en N1 au-dessus du seuil ; c’est un échec commun aux deux niveaux, que ni l’écart ni la probabilité ne signalent, et la seule parade est de savoir que vos textes sont courts. Montez à N1 le jour où vous voulez un seuil exprimé en probabilité plutôt qu’en écart de rang, en sachant qu’il s’abstient sur « ça va » et qu’il ne connaît que les langues apprises. Montez à N2 le jour où vous devez reconnaître une langue dont vous n’avez pas d’échantillon : couvrir une centaine de langues est l’affaire d’un identifiant dédié local, embarqué avec son modèle, pas d’un appel de modèle généraliste."
+  en: "N0 wins on the message that holds two languages, the commonest case in a support queue: its gap narrows as the two halves interfere, where N1's probability does the opposite and climbs to near-certainty on that same message. On a lone word, though, neither of them warns you: chat comes back as English on N0 with a wide gap, and as English on N1 above the threshold. That failure is common to both levels, signalled by neither the gap nor the probability, and the only defence is knowing that your texts are short. Move up to N1 the day you want a threshold expressed as a probability rather than a rank gap, knowing that it abstains on ça va and that it only knows the languages it was trained on. Move up to N2 the day you have to recognise a language you hold no sample of: covering a hundred-odd languages is the business of a local dedicated identifier, shipped with its model, not of a general-purpose model call."
 
 further_reading:
   - label: "Cavnar & Trenkle — N-Gram-Based Text Categorization, l’article dont vient la distance de rang"
@@ -129,8 +154,16 @@ further_reading:
     url: "https://www.rfc-editor.org/rfc/rfc5646.html"
   - label: "scikit-learn — Naive Bayes"
     url: "https://scikit-learn.org/stable/modules/naive_bayes.html"
-  - label: "fastText — Language identification, un modèle d’identification dédié"
+  - label: "fastText — Language identification, un autre modèle d’identification dédié"
     url: "https://fasttext.cc/docs/en/language-identification.html"
+  - label: "CLD3 — le modèle d’identification de Google, et sa table des langues reconnues"
+    url: "https://github.com/google/cld3"
 
-sources: []
+sources:
+  - label: "CLD3, `src/nnet_language_identifier.h` et `.cc` : `kMinNumBytesToConsider = 140`, `kMaxNumBytesToConsider = 700`, `kUnknown = \"und\"` ; `FindLanguage` prédit sur les premiers octets et « if N is less than min_num_bytes_ long, then this function returns kUnknown » ; « hi-Latn » figure dans la table des langues ; licence Apache 2.0, dépôt archivé le 15 juin 2024"
+    url: "https://github.com/google/cld3/blob/master/src/nnet_language_identifier.h"
+  - label: "gcld3 3.0.13 sur PyPI, publié par Google : « This package contains the inference code and a trained model » — rien n’est téléchargé à l’exécution"
+    url: "https://pypi.org/project/gcld3/"
+  - label: "cld3-asm 4.0.0, la liaison WebAssembly sous licence MIT : `loadModule()`, `create(minBytes, maxBytes)`, `findLanguage(text)`, et un `dispose()` que l’appelant doit appeler"
+    url: "https://github.com/kwonoj/cld3-asm"
 ---

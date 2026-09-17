@@ -215,10 +215,36 @@ def test_detect_rend_toujours_une_langue_meme_quand_il_ne_devrait_pas():
     assert detect("!!! 123", PROFILES) == "en"
 
 
-def test_escalate_when_l_ecart_tombe_a_zero_sur_deux_mots():
-    """escalate_when : « vous voyez l'écart entre les deux premières langues tomber à zéro » sur deux ou trois mots."""
+def test_l_ecart_se_resserre_sur_le_message_bilingue_et_tombe_a_zero_sur_ca_va():
+    """
+    verdict_rationale : « l'écart entre les deux premières langues se resserre
+    sur le message qui porte deux langues, et tombe à zéro sur « ça va » ».
+    """
     assert gap("ça va") == 0
-    assert gap(FRENCH) > 0
+    assert gap(MIXED) < gap(FRENCH)
+    assert (round(gap(MIXED), 1), round(gap(FRENCH), 1)) == (3.4, 12.1)
+
+
+def test_escalate_when_un_mot_isole_peut_sortir_faux_avec_l_ecart_le_plus_large():
+    """
+    escalate_when de N0 et verdict_rationale : « un mot isolé peut sortir faux
+    avec un écart large : « chat » ressort en anglais avec un écart de 142 sur
+    les 300 que vaut au plus la distance ». L'écart ne signale donc pas
+    l'erreur sur les textes courts, et l'événement observable est leur
+    longueur, pas l'écart.
+    """
+    assert detect("chat", PROFILES) == "en"  # faux : « chat » est français
+    assert round(gap("chat"), 1) == 142.0
+    # Et c'est un écart plus large que celui d'une phrase française, juste, elle.
+    assert gap("chat") > gap(FRENCH)
+    assert detect(FRENCH, PROFILES) == "fr"
+
+
+def test_la_distance_est_bornee_par_la_taille_du_profil():
+    """docstring de ranked : « `PROFILE_SIZE` at worst, when the language shares no trigram with the text »."""
+    for text in ("chat", "ça va", FRENCH, MIXED, "!!! 123"):
+        assert all(0 <= value <= PROFILE_SIZE for _, value in ranked(text, PROFILES)), text
+    assert max(value for _, value in ranked("ça va", PROFILES)) == PROFILE_SIZE
 
 
 def test_l_extrait_est_deterministe_et_n_importe_que_la_bibliotheque_standard():

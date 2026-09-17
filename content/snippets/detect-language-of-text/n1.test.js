@@ -156,14 +156,18 @@ test('le modèle est une table de comptes', () => {
   assert.ok([...english.values()].every(Number.isInteger));
 });
 
-test('verdict : la probabilité de N1 monte à la quasi-certitude quand l’écart de N0 s’effondre', () => {
+test('verdict : la probabilité de N1 monte à la quasi-certitude quand l’écart de N0 se resserre', () => {
+  // verdict_rationale : « son écart se resserre quand les deux moitiés se
+  // brouillent, quand la probabilité de N1 fait l'inverse et monte à la
+  // quasi-certitude sur ce même message ».
   assert.ok(n0Gap(MIXED) < 5);
   assert.ok(probabilities(MODEL, MIXED).fr > 0.99);
 });
 
 test('verdict : le seuil s’abstient sur « ça va » mais laisse passer « chat » en anglais, et ne connaît que les langues apprises', () => {
-  // verdict_rationale : « il s'abstient sur « ça va » mais laisse passer « chat »
-  // en anglais au-dessus du seuil, et […] il ne connaît que les langues apprises ».
+  // verdict_rationale : « il s'abstient sur « ça va » et […] il ne connaît que
+  // les langues apprises » ; et « « chat » ressort […] en anglais en N1
+  // au-dessus du seuil ».
   assert.equal(detect(MODEL, 'ça va', THRESHOLD), null);
   assert.equal(detect(MODEL, 'chat', THRESHOLD), 'en');
   assert.ok(probabilities(MODEL, 'chat').en > THRESHOLD);
@@ -172,6 +176,10 @@ test('verdict : le seuil s’abstient sur « ça va » mais laisse passer « cha
 });
 
 test('verdict : N0 ne se tait pas non plus sur « chat »', () => {
+  // verdict_rationale : « Sur le mot isolé, en revanche, aucun des deux ne
+  // prévient : « chat » ressort en anglais en N0 avec un écart large, et en
+  // anglais en N1 au-dessus du seuil ; c'est un échec commun aux deux niveaux,
+  // que ni l'écart ni la probabilité ne signalent. »
   const scores = n0.ranked('chat', N0_PROFILES);
   assert.equal(scores[0][0], 'en');
   assert.ok(scores[1][1] - scores[0][1] > 100);

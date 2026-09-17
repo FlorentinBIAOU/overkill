@@ -20,7 +20,6 @@ from _harness.fake_llm import FakeLLM
 from _harness.fake_sdk import FakeSDK
 from n3 import (
     EXCERPT_CHARACTERS,
-    MAX_CHARACTERS,
     MODEL,
     PROMPT,
     DetectionUnavailable,
@@ -149,12 +148,18 @@ def test_rend_none_quand_le_modele_dit_und():
     assert detect("Der Zug kam zu spät an.", LANGUAGES, client=client) is None
 
 
-def test_refuse_une_entree_trop_grande_avant_de_depenser_quoi_que_ce_soit():
-    """commentaire : « Refusing oversized input is not an optimisation, it is a cost control »."""
+def test_un_texte_tres_long_n_est_pas_refuse_seul_l_extrait_part():
+    """
+    commentaire : « That excerpt is the whole cost control — there is no cap on
+    the input, because a cap would refuse a long email that costs exactly the
+    same as a short one. »
+    """
     client = FakeLLM(response='{"language": "en"}')
-    with pytest.raises(ValueError):
-        detect("x" * (MAX_CHARACTERS + 1), LANGUAGES, client=client)
-    assert client.call_count == 0
+    assert detect("x" * 100_000, LANGUAGES, client=client) == "en"
+    assert client.call_count == 1
+    prompt = client.last_request["prompt"]
+    assert prompt.endswith("x" * EXCERPT_CHARACTERS)
+    assert "x" * (EXCERPT_CHARACTERS + 1) not in prompt
 
 
 def test_une_panne_est_retentee_et_reussit_au_troisieme_essai():
@@ -236,8 +241,6 @@ def test_production_le_client_par_defaut_n_est_construit_qu_apres_les_controles_
     monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=interdit))
     assert detect("", LANGUAGES) is None
     assert detect("  \n ", LANGUAGES) is None
-    with pytest.raises(ValueError):
-        detect("x" * (MAX_CHARACTERS + 1), LANGUAGES)
 
 
 # ---------------------------------------------------------------------------
@@ -246,20 +249,13 @@ def test_production_le_client_par_defaut_n_est_construit_qu_apres_les_controles_
 
 
 def test_production_un_texte_vide_ou_blanc_ne_coute_aucun_appel():
-    """commentaire : « Refusing oversized input, and blank input, is not an optimisation, it is a cost control »."""
+    """commentaire : « A blank text costs nothing to refuse and cannot say anything »."""
     for text in ("", "   \n "):
         client = FakeLLM(response='{"language": "und"}')
         assert detect(text, LANGUAGES, client=client) is None
         assert client.call_count == 0
 
 
-def test_production_exactement_8000_caracteres_passent_et_8001_sont_refuses():
-    client = FakeLLM(response='{"language": "en"}')
-    assert detect("x" * MAX_CHARACTERS, LANGUAGES, client=client) == "en"
-    assert client.last_request["prompt"].endswith("x" * EXCERPT_CHARACTERS)
-    with pytest.raises(ValueError):
-        detect("x" * (MAX_CHARACTERS + 1), LANGUAGES, client=client)
-    assert client.call_count == 1
 
 
 def test_production_un_emoji_a_la_frontiere_de_l_extrait_n_est_pas_coupe_en_deux():
@@ -322,11 +318,9 @@ def test_production_un_caractere_de_largeur_nulle_seul_n_est_pas_blanc_et_coute_
         assert client.call_count == 1, repr(text)
 
 
-def test_production_8001_caracteres_blancs_sont_refuses_avant_le_test_de_blancheur():
+def test_production_cent_mille_caracteres_blancs_ne_coutent_aucun_appel():
     client = FakeLLM(response='{"language": "und"}')
-    with pytest.raises(ValueError):
-        detect(" " * (MAX_CHARACTERS + 1), LANGUAGES, client=client)
-    assert detect(" " * MAX_CHARACTERS, LANGUAGES, client=client) is None
+    assert detect(" " * 100_000, LANGUAGES, client=client) is None
     assert client.call_count == 0
 
 

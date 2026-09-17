@@ -63,3 +63,13 @@ régénéré.
   langages, série témoin hors de la forme du modèle, saison fractionnaire,
   lissage exponentiel nommé et mesuré en sources. Reste : le lissage exponentiel
   n'est pas devenu un niveau — raison écrite dans la vérification.
+- **detect-language-of-text** — verdict réécrit sur le message bilingue, l'échec
+  commun aux deux niveaux sur « chat » dit en toutes lettres, `escalate_when` de
+  N0 porté sur la longueur des textes et non sur l'écart ; **N2 ouvert** sur
+  CLD3 (`gcld3` / `cld3-asm`, doublés, plancher de 140 octets et plafond de 700
+  lus dans l'en-tête de la bibliothèque, licence Apache 2.0 et dépôt archivé dits
+  dans le périmètre réglementaire) ; `MAX_CHARACTERS` supprimé de N3 dans les
+  deux langages, remplacé par un test de cent mille caractères qui vérifie que
+  seul l'extrait part ; réessai de N3 qui ne rattrape plus les erreurs de
+  programmation. Reste : aucun test ne mesure la justesse de CLD3, et les deux
+  fichiers le disent en tête.

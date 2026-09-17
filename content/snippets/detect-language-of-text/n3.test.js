@@ -16,7 +16,6 @@ import { FakeLLM } from '../_harness/fake-llm.mjs';
 import { FakeSDK } from '../_harness/fake-sdk.mjs';
 import {
   EXCERPT_CHARACTERS,
-  MAX_CHARACTERS,
   MODEL,
   DetectionUnavailable,
   buildPrompt,
@@ -119,10 +118,16 @@ test('rend null quand le modèle dit « und »', async () => {
   assert.equal(await detect('Der Zug kam zu spät an.', LANGUAGES, { client }), null);
 });
 
-test('refuse une entrée trop grande avant de dépenser quoi que ce soit', async () => {
+test('un texte très long n’est pas refusé, seul l’extrait part', async () => {
+  // Commentaire : « That excerpt is the whole cost control — there is no cap on
+  // the input, because a cap would refuse a long email that costs exactly the
+  // same as a short one. »
   const client = new FakeLLM({ response: '{"language": "en"}' });
-  await assert.rejects(() => detect('x'.repeat(MAX_CHARACTERS + 1), LANGUAGES, { client }), RangeError);
-  assert.equal(client.callCount, 0);
+  assert.equal(await detect('x'.repeat(100_000), LANGUAGES, { client }), 'en');
+  assert.equal(client.callCount, 1);
+  const { prompt } = client.lastRequest;
+  assert.ok(prompt.endsWith('x'.repeat(EXCERPT_CHARACTERS)));
+  assert.ok(!prompt.includes('x'.repeat(EXCERPT_CHARACTERS + 1)));
 });
 
 test('une panne est retentée et réussit au troisième essai', async () => {
@@ -190,7 +195,6 @@ test('production : le client par défaut n’est construit qu’après les contr
   // lui, va jusqu'à l'import.
   assert.equal(await detect('', LANGUAGES), null);
   assert.equal(await detect('  \n ', LANGUAGES), null);
-  await assert.rejects(() => detect('x'.repeat(MAX_CHARACTERS + 1), LANGUAGES), RangeError);
   await assert.rejects(() => detect(FRENCH, LANGUAGES), /openai/i);
 });
 
@@ -207,14 +211,6 @@ test('production : un texte vide ou blanc ne coûte aucun appel', async () => {
   }
 });
 
-test('production : exactement 8 000 caractères passent et 8 001 sont refusés', async () => {
-  const client = new FakeLLM({ response: '{"language": "en"}' });
-  assert.equal(await detect('x'.repeat(MAX_CHARACTERS), LANGUAGES, { client }), 'en');
-  assert.ok(client.lastRequest.prompt.endsWith('x'.repeat(EXCERPT_CHARACTERS)));
-  await assert.rejects(() => detect('x'.repeat(MAX_CHARACTERS + 1), LANGUAGES, { client }), RangeError);
-  assert.equal(client.callCount, 1);
-});
-
 test('production : un emoji à la frontière de l’extrait n’est pas coupé en deux', async () => {
   // Commentaire : « Counted in characters, as Python counts them: […] `slice` could cut one in half ».
   const client = new FakeLLM({ response: '{"language": "en"}' });
@@ -225,14 +221,11 @@ test('production : un emoji à la frontière de l’extrait n’est pas coupé e
 });
 
 test('production : cinq mille emoji font cinq mille caractères, pas dix mille', async () => {
-  // Commentaire : « `length` would count an emoji twice ». Plafond compté comme en Python :
-  // 8 000 emoji passent, 8 001 sont refusés.
-  const bord = new FakeLLM({ response: '{"language": "en"}' });
-  assert.equal(await detect('😀'.repeat(MAX_CHARACTERS), LANGUAGES, { client: bord }), 'en');
-  await assert.rejects(() => detect('😀'.repeat(MAX_CHARACTERS + 1), LANGUAGES, { client: bord }), RangeError);
-  assert.ok(bord.lastRequest.prompt.endsWith('😀'.repeat(EXCERPT_CHARACTERS)));
+  // Commentaire : « `length` would count an emoji twice ». Compté comme en Python :
+  // cinq mille emoji tiennent en cinq mille caractères, et l'extrait en prend six cents.
   const client = new FakeLLM({ response: '{"language": "en"}' });
   assert.equal(await detect('😀'.repeat(5000), LANGUAGES, { client }), 'en');
+  assert.ok(client.lastRequest.prompt.endsWith('😀'.repeat(EXCERPT_CHARACTERS)));
 });
 
 test('production : accents décomposés et espaces insécables partent intacts', async () => {
@@ -281,10 +274,9 @@ test('production : un caractère de largeur nulle seul n’est pas blanc et coû
   assert.equal(bom.callCount, 0);
 });
 
-test('production : 8 001 caractères blancs sont refusés avant le test de blancheur', async () => {
+test('production : cent mille caractères blancs ne coûtent aucun appel', async () => {
   const client = new FakeLLM({ response: '{"language": "und"}' });
-  await assert.rejects(() => detect(' '.repeat(MAX_CHARACTERS + 1), LANGUAGES, { client }), RangeError);
-  assert.equal(await detect(' '.repeat(MAX_CHARACTERS), LANGUAGES, { client }), null);
+  assert.equal(await detect(' '.repeat(100_000), LANGUAGES, { client }), null);
   assert.equal(client.callCount, 0);
 });
 

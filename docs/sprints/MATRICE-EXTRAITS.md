@@ -144,7 +144,7 @@ citations et le second degré.
 |---|---|---|
 | N0 | Profils de trigrammes de caractères par langue, distance de rang | **E** |
 | N1 | Classifieur bayésien naïf sur n-grammes de caractères | **E** |
-| N2 | — Un modèle d'identification dédié ne se distingue de N1 qu'en dessous de quelques dizaines de caractères, cas que le contexte applicatif tranche mieux | — |
+| N2 | Identifiant de langue dédié embarqué avec son modèle (CLD3), avec son plancher d'octets | **S** |
 | N3 | Détection par appel à un modèle généraliste | **S** |
 
 **Point de rupture N0** : les textes très courts, et les textes mélangeant deux langues.

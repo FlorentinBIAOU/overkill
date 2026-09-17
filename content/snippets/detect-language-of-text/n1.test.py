@@ -189,8 +189,8 @@ def test_le_modele_est_une_table_de_comptes():
     assert (counts == counts.round()).all()
 
 
-def test_verdict_la_probabilite_de_n1_monte_a_la_quasi_certitude_quand_l_ecart_de_n0_s_effondre():
-    """verdict_rationale : « cet écart s'effondre exactement là où il le faut, sur le message bilingue ; la probabilité de N1 fait l'inverse »."""
+def test_verdict_la_probabilite_de_n1_monte_a_la_quasi_certitude_quand_l_ecart_de_n0_se_resserre():
+    """verdict_rationale : « son écart se resserre quand les deux moitiés se brouillent, quand la probabilité de N1 fait l'inverse et monte à la quasi-certitude sur ce même message »."""
     scores = n0.ranked(MIXED, N0_PROFILES)
     assert scores[1][1] - scores[0][1] < 5
     assert probabilities(MODEL, MIXED)["fr"] > 0.99
@@ -198,8 +198,9 @@ def test_verdict_la_probabilite_de_n1_monte_a_la_quasi_certitude_quand_l_ecart_d
 
 def test_verdict_le_seuil_s_abstient_sur_ca_va_mais_laisse_passer_chat_en_anglais_et_ne_connait_que_les_langues_apprises():
     """
-    verdict_rationale : « il s'abstient sur « ça va » mais laisse passer « chat »
-    en anglais au-dessus du seuil, et […] il ne connaît que les langues apprises ».
+    verdict_rationale : « il s'abstient sur « ça va » et […] il ne connaît que
+    les langues apprises » ; et « « chat » ressort […] en anglais en N1 au-dessus
+    du seuil ».
     """
     assert detect(MODEL, "ça va", minimum=THRESHOLD) is None
     assert detect(MODEL, "chat", minimum=THRESHOLD) == "en"
@@ -209,7 +210,12 @@ def test_verdict_le_seuil_s_abstient_sur_ca_va_mais_laisse_passer_chat_en_anglai
 
 
 def test_verdict_n0_ne_se_tait_pas_non_plus_sur_chat():
-    """verdict_rationale : « N0 l'emporte sur […] savoir quand se taire » ; sur « chat », N0 répond aussi « en », avec un écart large."""
+    """
+    verdict_rationale : « Sur le mot isolé, en revanche, aucun des deux ne
+    prévient : « chat » ressort en anglais en N0 avec un écart large, et en
+    anglais en N1 au-dessus du seuil ; c'est un échec commun aux deux niveaux,
+    que ni l'écart ni la probabilité ne signalent. »
+    """
     scores = n0.ranked("chat", N0_PROFILES)
     assert scores[0][0] == "en"
     assert scores[1][1] - scores[0][1] > 100

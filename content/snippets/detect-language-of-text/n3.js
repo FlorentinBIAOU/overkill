@@ -4,12 +4,12 @@
  * Rung N3. This is the option people reach for first. It is here so you can
  * see what it costs, not because this entry recommends it.
  *
- * Note what the code has to do that N0 did not: cap the input, send only an
- * excerpt, retry on failure, parse an answer that is only probably valid
- * JSON, normalise a code the model may write in capitals, with a region or
- * with stray spaces, and refuse an answer that is outside the list it was
- * given. That plumbing is the real cost of this rung, and it is the part your
- * tests have to cover, because the model itself is not testable.
+ * Note what the code has to do that N0 did not: send only an excerpt, retry on
+ * failure, parse an answer that is only probably valid JSON, normalise a code
+ * the model may write in capitals, with a region or with stray spaces, and
+ * refuse an answer that is outside the list it was given. That plumbing is the
+ * real cost of this rung, and it is the part your tests have to cover, because
+ * the model itself is not testable.
  *
  * The one thing this rung genuinely adds is that it needs no sample of the
  * language. The one thing it cannot do is tell you it is wrong.
@@ -20,10 +20,11 @@
 // any object with a `complete({ prompt, temperature })` method.
 export const MODEL = 'gpt-4.1-mini'; // an example id: check the parameters your model accepts
 
-export const MAX_CHARACTERS = 8000;
-
 // Only the first characters are sent, a few sentences: N0 and N1 already name
 // the language of a single sentence, and the model bills every token past it.
+// That excerpt is the whole cost control — there is no cap on the input,
+// because a cap would refuse a long email that costs exactly the same as a
+// short one.
 export const EXCERPT_CHARACTERS = 600;
 
 export class DetectionUnavailable extends Error {}
@@ -74,11 +75,8 @@ export async function detect(text, languages, { client, attempts = 3 } = {}) {
   // emoji twice, and `slice` could cut one in half.
   const characters = [...text];
 
-  // A model charges by the token. Refusing oversized input, and blank input,
-  // is not an optimisation, it is a cost control.
-  if (characters.length > MAX_CHARACTERS) {
-    throw new RangeError(`text longer than ${MAX_CHARACTERS} characters`);
-  }
+  // A blank text costs nothing to refuse and cannot say anything. A long one is
+  // not refused: only its first characters are ever sent.
   if (!text.trim()) return null;
 
   client ??= await providerClient();
@@ -110,6 +108,9 @@ async function ask(client, excerpt, languages, attempts) {
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
       lastError = new Error('the model answered something that is not an object');
     } catch (error) {
+      // Only what the provider or the decoder can raise. A TypeError from this
+      // file is a bug, and retrying it would pay three bills for it.
+      if (error instanceof TypeError || error instanceof ReferenceError) throw error;
       lastError = error;
     }
   }

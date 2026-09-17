@@ -20,6 +20,11 @@ Second, the comparison is on ranks, not on raw counts. A count grows with the
 length of the text, a rank does not: the same text repeated four times keeps
 every rank. And the distance is divided by the number of trigrams, so a long
 text and a short one land on the same scale.
+
+One paragraph per language is enough to see this work. It is not enough to
+deploy: the profiles are only as good as the sample they are ranked from, and
+a paragraph leaves most of a language out. Cavnar and Trenkle built theirs on
+corpora. Take several pages.
 """
 
 import re
@@ -79,10 +84,13 @@ def distance(text: str, reference: dict[str, int], size: int = PROFILE_SIZE) -> 
 
 def ranked(text: str, profiles: dict[str, dict[str, int]]) -> list[tuple[str, float]]:
     """
-    Every candidate language, closest first.
+    Every candidate language, closest first, each with its distance.
 
-    The caller gets the gap between the first two, which is the only honest
-    measure of how sure this is.
+    The distances are on a fixed scale: `PROFILE_SIZE` at worst, when the
+    language shares no trigram with the text. The gap between the first two is
+    read against that scale — but read it for what it is, how far the
+    runner-up finished behind, not how right the winner is. A single word can
+    win by half the scale and still be the wrong language.
     """
     scores = [(name, distance(text, reference)) for name, reference in profiles.items()]
     return sorted(scores, key=lambda item: (item[1], item[0]))

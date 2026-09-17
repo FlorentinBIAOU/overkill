@@ -49,6 +49,8 @@ const MIXED = 'La réunion de lundi est reportée au mercredi suivant. '
   + 'Please let the London team know as soon as you can.';
 
 /** How far the winner is ahead of the runner-up. */
+const arrondi = (valeur) => Math.round(valeur * 10) / 10;
+
 function gap(text, profiles = PROFILES) {
   const scores = ranked(text, profiles);
   return scores[1][1] - scores[0][1];
@@ -187,9 +189,35 @@ test('detect rend toujours une langue, même quand il ne devrait pas', () => {
   assert.equal(detect('!!! 123', PROFILES), 'en');
 });
 
-test('escalate_when : l’écart tombe à zéro sur deux mots', () => {
+test('l’écart se resserre sur le message bilingue et tombe à zéro sur « ça va »', () => {
+  // verdict_rationale : « l'écart entre les deux premières langues se resserre
+  // sur le message qui porte deux langues, et tombe à zéro sur « ça va » ».
   assert.equal(gap('ça va'), 0);
-  assert.ok(gap(FRENCH) > 0);
+  assert.ok(gap(MIXED) < gap(FRENCH));
+  assert.deepEqual([arrondi(gap(MIXED)), arrondi(gap(FRENCH))], [3.4, 12.1]);
+});
+
+test('escalate_when : un mot isolé peut sortir faux avec l’écart le plus large', () => {
+  // escalate_when de N0 et verdict_rationale : « un mot isolé peut sortir faux
+  // avec un écart large : « chat » ressort en anglais avec un écart de 142 sur
+  // les 300 que vaut au plus la distance ». L'écart ne signale donc pas
+  // l'erreur sur les textes courts, et l'événement observable est leur
+  // longueur, pas l'écart.
+  assert.equal(detect('chat', PROFILES), 'en'); // faux : « chat » est français
+  assert.equal(arrondi(gap('chat')), 142);
+  assert.ok(gap('chat') > gap(FRENCH));
+  assert.equal(detect(FRENCH, PROFILES), 'fr');
+});
+
+test('la distance est bornée par la taille du profil', () => {
+  // Docstring de ranked : « `PROFILE_SIZE` at worst, when the language shares
+  // no trigram with the text ».
+  for (const text of ['chat', 'ça va', FRENCH, MIXED, '!!! 123']) {
+    for (const [, value] of ranked(text, PROFILES)) {
+      assert.ok(value >= 0 && value <= PROFILE_SIZE, `${text} : ${value}`);
+    }
+  }
+  assert.equal(Math.max(...ranked('ça va', PROFILES).map(([, v]) => v)), PROFILE_SIZE);
 });
 
 test('l’extrait est déterministe et n’importe rien', () => {
