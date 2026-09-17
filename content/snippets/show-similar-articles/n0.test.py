@@ -7,6 +7,7 @@ n0.test.js, ce qui tient les deux langages au même classement.
 import ast
 import inspect
 import random
+import sys
 import time
 import unicodedata
 from pathlib import Path
@@ -195,9 +196,10 @@ def test_la_table_ne_depend_d_aucun_lecteur():
 def test_l_extrait_n_importe_que_la_bibliotheque_standard():
     """docstring : « Standard library » ; risks.data_egress : none."""
     source = ast.parse(Path(__file__).with_name("n0.py").read_text(encoding="utf-8"))
-    imported = {a.name for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
-    imported |= {n.module for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
-    assert imported == {"math", "collections"}
+    imported = {a.name.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
+    imported |= {(n.module or "").split(".")[0] for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
+    # Le nom des modules n'est pas l'affirmation : « Standard library » l'est.
+    assert imported and imported <= sys.stdlib_module_names
 
 
 def test_deux_constructions_rendent_la_meme_table():

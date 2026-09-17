@@ -8,7 +8,7 @@
  *
  * Ce qu'ils ne prouvent pas : qu'un vrai encodeur rapproche les bons articles.
  *
- * Le chargement par défaut importe '@xenova/transformers'. Un crochet de
+ * Le chargement par défaut importe '@huggingface/transformers'. Un crochet de
  * résolution, posé pour ce seul processus de test, remplace ce paquet par un
  * module à la surface de la bibliothèque publiée, qui compte les chargements.
  */
@@ -31,7 +31,7 @@ const FAKE_TRANSFORMERS = `
     };
   }`;
 const HOOKS = `export async function resolve(specifier, context, next) {
-  if (specifier === '@xenova/transformers') {
+  if (specifier === '@huggingface/transformers') {
     return { url: 'data:text/javascript,' + encodeURIComponent(${JSON.stringify(FAKE_TRANSFORMERS)}), shortCircuit: true };
   }
   return next(specifier, context);
@@ -213,7 +213,7 @@ test('le modèle nommé est multilingue', () => {
   assert.equal(MODEL_NAME, 'Xenova/paraphrase-multilingual-MiniLM-L12-v2');
 });
 
-test('le modèle par défaut a la surface de @xenova/transformers', async () => {
+test('le modèle par défaut a la surface de @huggingface/transformers', async () => {
   globalThis.__transformersLoads.length = 0;
   assert.deepEqual(await buildNeighbourTable(ARTICLES, { k: 2 }), EXPECTED);
   assert.deepEqual(globalThis.__transformersLoads, [['feature-extraction', MODEL_NAME]]);

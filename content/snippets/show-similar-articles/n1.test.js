@@ -351,13 +351,13 @@ test('essai : des mots du corps, pas du titre, en français', () => {
   assert.deepEqual(tokenise(cas.input.fr).filter((t) => tokenise('Kimchi en bocal').includes(t)), []);
 });
 
-test('INFIRMÉ : le libellé anglais dit « Words from the body, not the title », « cucumbers » est dans le titre', async () => {
+test('essai : des mots du corps, pas du titre, en anglais', () => {
+  // « Garlic and dill before letting them ferment » : aucun de ces mots, mots
+  // vides mis à part, n'est dans le titre de l'article que la question ramène.
   const cas = essai.cases[1];
-  assert.deepEqual(inBlock(rowsOf('en', cas)), [['Pickled cucumbers in brine', '0.39']]);
-  await assert.rejects(async () => {
-    const title = new Set(tokenise('Pickled cucumbers in brine'));
-    assert.ok(tokenise(cas.input.en).every((t) => !title.has(t) || ENGLISH_FILLER.includes(t)));
-  });
+  assert.deepEqual(inBlock(rowsOf('en', cas)), [['Pickled cucumbers in brine', '0.18']]);
+  const title = new Set(tokenise('Pickled cucumbers in brine'));
+  assert.ok(tokenise(cas.input.en).every((t) => !title.has(t) || ENGLISH_FILLER.includes(t)));
 });
 
 test('essai : un sujet que le fonds ne traite pas ne passe pas le plancher', () => {
