@@ -38,6 +38,16 @@ n2: |
   propre disque, affiné sur les descriptions que votre boutique a déjà
   publiées. Rien ne sort de vos machines et rien n'est facturé au compteur.
 
+  L'affinage n'est pas dans ce fichier, et c'est le travail de ce niveau.
+  Partez d'un modèle qui écrit déjà le français : BARThez, un modèle de
+  séquence à séquence français de la forme de BART, préentraîné sur du texte
+  français brut, 165 M de paramètres dans sa taille de base, sous licence
+  Apache 2.0. Le jeu d'entraînement, c'est une paire par description que votre
+  catalogue a déjà publiée — le dossier sur une ligne, comme « _source »
+  l'écrit plus bas, et la description publiée en cible. Vous n'achetez pas un
+  corpus : vous vous servez de celui que votre boutique a écrit. Ce qui en
+  ressort est un point de contrôle à vous, celui que « CHECKPOINT » désigne.
+
   Autour du modèle, tout ce niveau est du code dont vous héritez : la ligne de
   source que le modèle a été affiné à lire, le plafond de taille, la reprise,
   la phrase qu'un petit modèle laisse à moitié finie quand son budget de jetons

@@ -5,6 +5,15 @@ Rung N2. A sequence-to-sequence checkpoint that lives on your own disk,
 fine-tuned on the descriptions your shop has already published. Nothing
 leaves your machines and nothing is metered.
 
+The fine-tuning is not in this file, and it is the work of this rung. Start
+from a model that already writes French: BARThez, a BART-shaped French
+sequence-to-sequence model pretrained on raw French text, 165 M parameters in
+its base size, Apache 2.0. The training set is one pair per
+description your catalogue has already published — the record on one line, as
+`_source` writes it below, and the published description as the target. You
+are not buying a corpus; you are using the one your shop wrote. What you get
+back is a checkpoint of your own, which is what `CHECKPOINT` points at.
+
 Around the model, everything on this rung is code you now own: the source line
 the model was fine-tuned to read, the size cap, the retry, the sentence a small
 model leaves half-finished when its token budget runs out, and the check at the
@@ -38,10 +47,20 @@ class UngroundedDescription(DescriptionUnavailable):
     """The copy claims an attribute the product record does not carry."""
 
 
+# What to fine-tune from, for a French catalogue. Read its card before you
+# commit to it: language, licence, size. This one says French, Apache 2.0,
+# 165 M parameters.
+BASE_CHECKPOINT = "moussaKam/barthez"
+
+# Where your fine-tuned weights are: the output of that training, not a model
+# to download.
+CHECKPOINT = "./models/catalogue-copy"
+
+
 class LocalCopywriter:
     """The real model: a fine-tuned checkpoint on your disk, loaded once."""
 
-    def __init__(self, checkpoint: str = "./models/catalogue-copy") -> None:
+    def __init__(self, checkpoint: str = CHECKPOINT) -> None:
         # transformers 5 removed the "text2text-generation" pipeline: the
         # tokenizer and the model are called directly.
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer  # a large local install

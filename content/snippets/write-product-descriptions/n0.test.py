@@ -420,13 +420,15 @@ def test_le_tirage_donne_le_meme_texte_qu_en_javascript():
     assert describe({**zoe, "name": nfd}) == describe(zoe).replace("Zoé", nfd, 1)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : verdict_rationale « le vingt-et-unième gabarit s'écrit à la main par quelqu'un qui en a déjà écrit "
-    "vingt » (et le test : « the twenty-first wording ») ; l'extrait compte seize formulations",
-)
-def test_le_gabarit_compte_vingt_formulations():
-    assert sum(len(block) for block in BLOCKS) == 20
+def test_le_gabarit_compte_seize_formulations():
+    """
+    verdict_rationale : « la dix-septième formulation s'écrit à la main par
+    quelqu'un qui en a déjà écrit seize ». Ce sont les formulations écrites dans
+    l'extrait, bloc par bloc ; les douze motifs du point de rupture sont ce
+    qu'elles produisent sur deux cents articles, une fois les valeurs propres au
+    produit effacées.
+    """
+    assert sum(len(block) for block in BLOCKS) == 16
 
 
 def test_une_description_se_rend_en_moins_d_une_milliseconde():

@@ -16,7 +16,7 @@ import pytest
 
 from _harness.fake_model import FakeSeq2Seq
 import n3
-from n2 import MAX_CHARACTERS, MIN_CHARACTERS, DescriptionUnavailable, UngroundedDescription, describe
+from n2 import BASE_CHECKPOINT, CHECKPOINT, MAX_CHARACTERS, MIN_CHARACTERS, DescriptionUnavailable, UngroundedDescription, describe
 
 # Un produit inventé : aucune marque, aucun catalogue existant.
 PRODUCT = {
@@ -209,6 +209,21 @@ def test_le_modele_est_injecte_et_par_defaut_c_est_le_vrai():
         describe(PRODUCT)
 
 
+def test_le_point_de_controle_de_depart_est_nomme_et_celui_qui_ecrit_est_le_votre():
+    """
+    docstring : « Start from a model that already writes French: BARThez […]
+    What you get back is a checkpoint of your own, which is what `CHECKPOINT`
+    points at. » L'extrait ne télécharge rien : il charge vos poids.
+    """
+    assert BASE_CHECKPOINT == "moussaKam/barthez"
+    assert CHECKPOINT.startswith("./")  # un chemin local, pas un dépôt à télécharger
+    import inspect
+
+    import n2
+
+    assert inspect.signature(n2.LocalCopywriter.__init__).parameters["checkpoint"].default == CHECKPOINT
+
+
 def test_le_meme_controle_qu_au_niveau_n3():
     """breaking_point N3 : « Ce qui l'attrape est le contrôle du niveau du dessous » : mêmes verdicts sur les mêmes copies."""
     import json
@@ -256,7 +271,8 @@ def test_production_une_longue_reponse_et_des_espaces_en_desordre():
     assert "\n" not in published and "  " not in published
 
 
-def test_defaut_une_reponse_d_un_autre_type_n_est_pas_publiee():
+def test_production_une_reponse_d_un_autre_type_n_est_pas_publiee():
+    """`_generate` : une réponse qui n'est pas une chaîne est retentée, puis levée. Même refus en JavaScript."""
     raw = [{"generated_text": "Aurore 500 accompagne les randonneurs à la journée."}]
     with pytest.raises(DescriptionUnavailable):
         describe(PRODUCT, FakeSeq2Seq({}, raw))

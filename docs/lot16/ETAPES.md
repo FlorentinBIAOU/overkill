@@ -82,3 +82,12 @@ régénéré.
   nouvelle docstring, adaptateur N3 exercé contre le double du harnais.
   Reste : aucun modèle de résumé multilingue n'est proposé en N2 — celui qui
   couvre le français est sous licence non commerciale, et c'est dit.
+- **write-product-descriptions** — le non-déterminisme n'est plus donné pour un
+  prix permanent : la copie se génère une fois, se stocke et se versionne, et
+  c'est la régénération qui relance la relecture ; N2 nomme enfin son point de
+  départ (BARThez, français, Apache 2.0, 165 M de paramètres, lu sur sa fiche) et
+  dit que l'affinage n'est pas dans le fichier ; deux marquages périmés réécrits
+  sur le chiffre actuel, adaptateur N3 exercé contre le double du harnais,
+  température comprise. Reste : la taille du corpus de préentraînement publiée
+  par le modèle n'est pas reprise, `check-figures` refusant une taille en octets
+  sans mesure faite ici.

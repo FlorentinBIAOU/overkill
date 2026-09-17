@@ -12,12 +12,21 @@ demain.
 
 import json
 import unicodedata
-from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_CHARACTERS, MIN_CHARACTERS, PROMPT, DescriptionUnavailable, UngroundedDescription, describe
+from _harness.fake_sdk import FakeSDK
+from n3 import (
+    MAX_CHARACTERS,
+    MIN_CHARACTERS,
+    MODEL,
+    PROMPT,
+    DescriptionUnavailable,
+    ProviderClient,
+    UngroundedDescription,
+    describe,
+)
 
 PRODUCT = {
     "name": "Aurore 500",
@@ -44,23 +53,6 @@ FOR_LIFE = (
 
 def answer(description) -> str:
     return json.dumps({"description": description})
-
-
-class RealShapedClient:
-    """
-    Imite la surface du kit `openai` publié (3.x) : `client.chat.completions.create(model=..., messages=[...])`,
-    réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
-    """
-
-    def __init__(self, content: str):
-        self.content = content
-        self.requests = []
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-    def _create(self, **kwargs):
-        self.requests.append(kwargs)
-        message = SimpleNamespace(role="assistant", content=self.content)
-        return SimpleNamespace(choices=[SimpleNamespace(index=0, message=message, finish_reason="stop")])
 
 
 # ---------------------------------------------------------------------------
@@ -231,14 +223,46 @@ def test_le_client_est_injecte_pour_tester_sans_reseau():
         describe(PRODUCT)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle `client.complete(prompt=…, "
-    "temperature=…)`, qui n'existe pas dans le kit `openai` ; l'erreur est avalée, retentée, et sort en "
-    "DescriptionUnavailable comme une panne du fournisseur",
-)
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    assert describe(PRODUCT, RealShapedClient(answer(COPY))) == COPY
+def test_production_l_adaptateur_appelle_la_surface_du_vrai_kit():
+    """
+    docstring de `ProviderClient` : « The one call this snippet makes, on top of
+    the provider's SDK ». Sur le double du harnais, à la forme du kit `openai`
+    publié, sans méthode `complete` : `chat.completions.create(model=...,
+    messages=[...], temperature=...)`, réponse lue dans
+    `choices[0].message.content`.
+    """
+    sdk = FakeSDK(content=answer(COPY))
+    assert not hasattr(sdk, "complete")
+    assert describe(PRODUCT, ProviderClient(sdk=sdk), temperature=0.4) == COPY
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL == "gpt-4.1-mini"
+    assert request["messages"][0]["role"] == "user"
+    assert PRODUCT["name"] in request["messages"][0]["content"]
+    # La température demandée est celle qui arrive au kit, pas une valeur par défaut.
+    assert request["temperature"] == 0.4
+    assert len(sdk.requests) == 1
+    tiede = FakeSDK(content=answer(COPY))
+    describe(PRODUCT, ProviderClient(sdk=tiede))
+    assert tiede.last_request["temperature"] == 0.7
+
+
+def test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_les_essais():
+    """Le kit type `content` comme facultatif : `None` n'est pas une copie, et il est redemandé."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(DescriptionUnavailable):
+        describe(PRODUCT, ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content=answer(COPY), fail_times=2)
+    assert describe(PRODUCT, ProviderClient(sdk=sdk)) == COPY
+    assert len(sdk.requests) == 3
+    mort = FakeSDK(content=answer(COPY), fail_times=3)
+    with pytest.raises(DescriptionUnavailable):
+        describe(PRODUCT, ProviderClient(sdk=mort))
+    assert len(mort.requests) == 3
 
 
 # ---------------------------------------------------------------------------

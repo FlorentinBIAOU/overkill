@@ -3,7 +3,7 @@ id: write-product-descriptions
 family: generate
 status: published
 verdict: N3
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -59,8 +59,8 @@ rungs:
   - level: N2
     available: true
     name:
-      fr: "Petit modèle génératif auto-hébergé, affiné sur vos descriptions déjà publiées"
-      en: "Small self-hosted generative model, fine-tuned on the descriptions you have already published"
+      fr: "Petit modèle génératif auto-hébergé (BARThez affiné sur vos descriptions déjà publiées)"
+      en: "Small self-hosted generative model (BARThez fine-tuned on the descriptions you have already published)"
     cost: modéré
     latency: "~1 s"
     risks:
@@ -73,13 +73,13 @@ rungs:
         fr:
           - "Traitement sur votre infrastructure : ni le dossier produit ni le texte n’en sortent"
           - "Le corpus d’affinage est fait de vos descriptions déjà publiées, avec la titularité des droits sur ces textes que cela suppose"
-          - "Licence et provenance du point de contrôle à établir avant mise en production"
-          - "Ne vous dispense pas de répondre des allégations que vous publiez : le contrôle d’ancrage ne couvre que les termes de la liste que vous tenez"
+          - "Licence et provenance du point de contrôle à établir avant mise en production : celui d’où part cette fiche, BARThez, est publié sous licence Apache 2.0"
+          - "Ne vous dispense pas de répondre des allégations que vous publiez : le contrôle d’ancrage ne couvre que les termes de la liste que vous tenez, et cette liste relève de qui répond des allégations — responsable qualité ou juriste —, pas de qui écrit le code"
         en:
           - "Processing on your own infrastructure: neither the product record nor the copy leaves it"
           - "The fine-tuning corpus is made of the descriptions you have already published, with the ownership of those texts that implies"
-          - "Licence and provenance of the checkpoint to be established before production use"
-          - "Does not excuse you from answering for the claims you publish: the grounding check only covers the terms on the list you maintain"
+          - "Licence and provenance of the checkpoint to be established before production use: the one this entry starts from, BARThez, is published under the Apache 2.0 licence"
+          - "Does not excuse you from answering for the claims you publish: the grounding check only covers the terms on the list you maintain, and that list belongs to whoever answers for the claims — quality lead or lawyer — not to whoever writes the code"
     code:
       python: snippets/write-product-descriptions/n2.py
       javascript: snippets/write-product-descriptions/n2.js
@@ -118,15 +118,15 @@ rungs:
       javascript: snippets/write-product-descriptions/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle promet ce que la boutique ne vend pas, avec l’aplomb de la phrase vraie qui le précède. Le test fait écrire au double local que le sac est « garanti à vie » quand le dossier dit deux ans. Ce qui l’attrape est le contrôle du niveau du dessous, terme à terme contre le dossier, et il ne vaut que ce que vaut votre liste. S’y ajoute ce qu’on achète ici : l’extrait demande une température non nulle, que le kit du fournisseur décrit comme rendant la sortie plus aléatoire, et rien ne fait de la copie relue hier celle qu’un nouvel appel écrit aujourd’hui."
-      en: "The model promises what the shop does not sell, with the same confidence as the true sentence before it. The test has the local double write that the bag is « garanti à vie », guaranteed for life, where the record says two years. What catches it is the check from the level below, term by term against the record, and it is worth exactly what your list is worth. On top of that comes the thing you are buying: the snippet asks for a non-zero temperature, which the provider’s SDK describes as making the output more random, and nothing makes the copy you reviewed yesterday the one a new call writes today."
+      fr: "Le modèle promet ce que la boutique ne vend pas, avec l’aplomb de la phrase vraie qui le précède. Le test fait écrire au double local que le sac est « garanti à vie » quand le dossier dit deux ans. Ce qui l’attrape est le contrôle du niveau du dessous, terme à terme contre le dossier, et il ne vaut que ce que vaut votre liste. S’y ajoute ce qu’on achète ici : l’extrait demande une température non nulle, que le kit du fournisseur décrit comme rendant la sortie plus aléatoire. La copie, elle, se génère une fois par article et se range dans le catalogue : c’est ce texte-là qu’on relit et qu’on publie. Ce qui se paie, c’est la régénération — un dossier produit corrigé, et la phrase relue hier n’est plus celle qui partira."
+      en: "The model promises what the shop does not sell, with the same confidence as the true sentence before it. The test has the local double write that the bag is « garanti à vie », guaranteed for life, where the record says two years. What catches it is the check from the level below, term by term against the record, and it is worth exactly what your list is worth. On top of that comes the thing you are buying: the snippet asks for a non-zero temperature, which the provider’s SDK describes as making the output more random. The copy itself is generated once per item and stored in the catalogue: that stored text is what you review and what you publish. What costs you is regeneration — correct a product record, and the sentence you reviewed yesterday is no longer the one that will go out."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N3, sans détour : ce qu’on achète ici est la variété, et c’est précisément ce que le niveau du bas ne fabrique pas — douze motifs de phrase pour deux cents produits, mesurés par le test de N0, et la dix-septième formulation s’écrit à la main par quelqu’un qui en a déjà écrit seize. N2 réclame d’avoir déjà publié le catalogue qu’on lui demande d’écrire, et le challenge E2E a trouvé que les modèles de séquence à séquence sans contrôle sémantique rendent souvent mal les attributs qu’on leur donne : il réclame le même contrôle que N3. Le prix est réel, un texte facturé au jeton par article, vos dossiers produit chez un tiers, et une copie tirée à température non nulle donc jamais relue une bonne fois ; ce qu’il achète, c’est une boutique qui ne se lit pas comme un formulaire. Si votre catalogue tient sur trente références qu’un rédacteur écrit une fois pour toutes, aucun niveau de cette fiche n’est la réponse."
-  en: "N3, and no apology for it: variety is what you are buying here, and variety is exactly what the bottom level cannot manufacture — twelve sentence frames for two hundred products, measured by the N0 test, and the seventeenth wording is written by hand by somebody who has already written sixteen. N2 demands that you already published the catalogue you are asking it to write, and the E2E challenge found that sequence-to-sequence models without a semantic control often fail to express the attributes they are given correctly: it needs the same check as N3. The price is real — copy metered by the token, one item at a time, your product records in a third party’s hands, and text drawn at a non-zero temperature and therefore never reviewed once and for all — and what it buys is a shop that does not read like a form. If your catalogue is thirty items a copywriter can write once, no level on this entry is the answer."
+  fr: "N3, sans détour : ce qu’on achète ici est la variété, et c’est précisément ce que le niveau du bas ne fabrique pas — seize formulations écrites dans l’extrait, qui retombent en douze motifs de phrase sur deux cents produits une fois les valeurs propres à l’article effacées, les deux mesurés par le test de N0 ; et la dix-septième formulation s’écrit à la main par quelqu’un qui en a déjà écrit seize. N2 réclame d’avoir déjà publié le catalogue qu’on lui demande d’écrire, et le challenge E2E a trouvé que les modèles de séquence à séquence sans contrôle sémantique rendent souvent mal les attributs qu’on leur donne : il réclame le même contrôle que N3. Le prix est réel, un texte facturé au jeton par article, vos dossiers produit chez un tiers, et une relecture à refaire à chaque régénération, puisque deux appels sur le même dossier n’écrivent pas la même phrase ; la copie, elle, se génère une fois, se range dans le catalogue et s’y versionne comme un texte de rédacteur — c’est le texte stocké qui est publié, pas un appel par affichage de page. Ce qu’il achète, c’est une boutique qui ne se lit pas comme un formulaire. Pour deux cents articles générés d’un coup, l’API de traitement par lots du fournisseur d’exemple est faite pour ça et coûte moins cher que deux cents appels un par un. Si votre catalogue tient sur trente références qu’un rédacteur écrit une fois pour toutes, aucun niveau de cette fiche n’est la réponse."
+  en: "N3, and no apology for it: variety is what you are buying here, and variety is exactly what the bottom level cannot manufacture — sixteen wordings written into the snippet, which collapse into twelve sentence frames over two hundred products once the item’s own values are blanked out, both measured by the N0 test; and the seventeenth wording is written by hand by somebody who has already written sixteen. N2 demands that you already published the catalogue you are asking it to write, and the E2E challenge found that sequence-to-sequence models without a semantic control often fail to express the attributes they are given correctly: it needs the same check as N3. The price is real — copy metered by the token, one item at a time, your product records in a third party’s hands, and a review to redo on every regeneration, since two calls on the same record do not write the same sentence — while the copy itself is generated once, stored in the catalogue and versioned there like a copywriter’s text: the stored text is what gets published, not a call per page view. What it buys is a shop that does not read like a form. For two hundred items generated in one go, the example provider’s batch API is built for that and costs less than two hundred calls made one at a time. If your catalogue is thirty items a copywriter can write once, no level on this entry is the answer."
 
 further_reading:
   - label: "The E2E Dataset: New Challenges For End-to-End Generation — écrire une description à partir d’attributs, posé comme tâche"
@@ -137,6 +137,14 @@ further_reading:
     url: "https://huggingface.co/docs/transformers/main_classes/text_generation"
   - label: "OpenAI — Structured Outputs, sur la réponse JSON que l’extrait N3 doit décoder"
     url: "https://developers.openai.com/api/docs/guides/structured-outputs"
+  - label: "BARThez — le modèle de séquence à séquence français dont part le niveau N2"
+    url: "https://huggingface.co/moussaKam/barthez"
+  - label: "OpenAI — Batch API, pour générer un catalogue entier hors ligne plutôt qu’article par article"
+    url: "https://developers.openai.com/api/docs/guides/batch"
 
-sources: []
+sources:
+  - label: "Fiche de moussaKam/barthez : « A french sequence to sequence pretrained model based on BART », préentraîné sur un corpus de texte français brut, `language: fr`, licence Apache 2.0, taille BASE 12 couches et 165 M de paramètres (mBARThez, LARGE, en compte 458 M) — c’est de cette taille que se lisent `cost: modéré` et `latency: ~1 s`, aucune mesure n’ayant été faite ici"
+    url: "https://huggingface.co/moussaKam/barthez"
+  - label: "OpenAI, guide Batch API : « 50% cost discount compared to synchronous APIs », « Each batch completes within 24 hours (and often more quickly) » — d’où la phrase du verdict sur la génération d’un catalogue d’un seul coup"
+    url: "https://developers.openai.com/api/docs/guides/batch"
 ---

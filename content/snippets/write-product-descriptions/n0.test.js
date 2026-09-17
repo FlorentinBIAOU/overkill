@@ -368,9 +368,12 @@ test('le tirage donne le même texte qu’en Python', () => {
   assert.equal(describe({ ...zoe, name: nfd }), describe(zoe).replace('Zoé', nfd));
 });
 
-test('INFIRMÉ : « le vingt-et-unième gabarit s’écrit à la main par quelqu’un qui en a déjà écrit vingt » ; seize formulations', () => {
+test('le gabarit compte seize formulations', () => {
+  // verdict_rationale : « la dix-septième formulation s'écrit à la main par
+  // quelqu'un qui en a déjà écrit seize ». Ce sont les formulations écrites dans
+  // l'extrait ; les douze motifs du point de rupture sont ce qu'elles produisent
+  // sur deux cents articles, une fois les valeurs propres au produit effacées.
   assert.equal(BLOCKS.flat().length, 16);
-  assert.throws(() => assert.equal(BLOCKS.flat().length, 20), assert.AssertionError);
 });
 
 test('une description se rend en moins d’une milliseconde', () => {

@@ -5,6 +5,15 @@
  * fine-tuned on the descriptions your shop has already published. Nothing
  * leaves your machines and nothing is metered.
  *
+ * The fine-tuning is not in this file, and it is the work of this rung. Start
+ * from a model that already writes French: BARThez, a BART-shaped French
+ * sequence-to-sequence model pretrained on raw French text, 165 M parameters
+ * in its base size, Apache 2.0. The training set is one pair per
+ * description your catalogue has already published — the record on one line,
+ * as `source` writes it below, and the published description as the target.
+ * You are not buying a corpus; you are using the one your shop wrote. What you
+ * get back is a checkpoint of your own, which is what `CHECKPOINT` points at.
+ *
  * Around the model, everything on this rung is code you now own: the source
  * line the model was fine-tuned to read, the size cap, the retry, the sentence
  * a small model leaves half-finished when its token budget runs out, and the
@@ -32,8 +41,17 @@ export class UngroundedDescription extends DescriptionUnavailable {}
  * The real model: a fine-tuned checkpoint on your disk, loaded once.
  * Transformers.js runs ONNX weights: convert the checkpoint first, with Optimum.
  */
+// What to fine-tune from, for a French catalogue. Read its card before you
+// commit to it: language, licence, size. This one says French, Apache 2.0,
+// 165 M parameters.
+export const BASE_CHECKPOINT = 'moussaKam/barthez';
+
+// Where your fine-tuned weights are: the output of that training, not a model
+// to download.
+export const CHECKPOINT = './models/catalogue-copy';
+
 export class LocalCopywriter {
-  static async load(checkpoint = './models/catalogue-copy') {
+  static async load(checkpoint = CHECKPOINT) {
     const { pipeline } = await import('@huggingface/transformers'); // a large local install
     return new LocalCopywriter(await pipeline('text2text-generation', checkpoint));
   }

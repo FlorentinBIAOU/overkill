@@ -12,8 +12,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
 import essai from '../../tryouts/frozen/write-product-descriptions.js';
-import { MAX_CHARACTERS, MIN_CHARACTERS, DescriptionUnavailable, UngroundedDescription, describe } from './n3.js';
+import {
+  MAX_CHARACTERS,
+  MIN_CHARACTERS,
+  MODEL,
+  DescriptionUnavailable,
+  UngroundedDescription,
+  describe,
+  providerClient,
+} from './n3.js';
 
 const PRODUCT = {
   name: 'Aurore 500',
@@ -55,18 +64,6 @@ const PROMPT = [
   '',
   'Caractéristiques :',
 ].join('\n');
-
-/**
- * Imite la surface du kit `openai` publié (7.x) : `client.chat.completions.create({ model, messages })`,
- * réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
- */
-function realShapedClient(content) {
-  const requests = [];
-  return {
-    requests,
-    chat: { completions: { async create(body) { requests.push(body); return { choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] }; } } },
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Point de rupture
@@ -229,16 +226,42 @@ test('le client est injecté pour tester sans réseau', async () => {
   });
 });
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit ; `client.complete` n’existe pas', async () => {
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await describe(PRODUCT, realShapedClient(answer(COPY)));
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(out, COPY);
-  }, assert.AssertionError);
+test('production : l’adaptateur appelle la surface du vrai kit', async () => {
+  // L'adaptateur sur le double du harnais, à la forme du kit `openai` publié,
+  // sans méthode `complete` : `chat.completions.create({ model, messages,
+  // temperature })`, réponse lue dans `choices[0].message.content`.
+  const sdk = new FakeSDK({ content: answer(COPY) });
+  assert.equal(sdk.complete, undefined);
+  const client = await providerClient(sdk);
+  assert.equal(await describe(PRODUCT, client, { temperature: 0.4 }), COPY);
+  const { endpoint, model, messages, temperature } = sdk.lastRequest;
+  assert.deepEqual([endpoint, model], ['chat.completions', MODEL]);
+  assert.equal(messages[0].role, 'user');
+  assert.ok(messages[0].content.includes(PRODUCT.name));
+  // La température demandée est celle qui arrive au kit, pas une valeur par défaut.
+  assert.equal(temperature, 0.4);
+  assert.equal(sdk.requests.length, 1);
+  const tiede = new FakeSDK({ content: answer(COPY) });
+  await describe(PRODUCT, await providerClient(tiede));
+  assert.equal(tiede.lastRequest.temperature, 0.7);
+});
+
+test('production : l’adaptateur, une réponse sans contenu lève après les essais', async () => {
+  // Le kit type `content` comme facultatif : `null` n'est pas une copie.
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  await assert.rejects(() => describe(PRODUCT, client), DescriptionUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  const sdk = new FakeSDK({ content: answer(COPY), failTimes: 2 });
+  assert.equal(await describe(PRODUCT, await providerClient(sdk)), COPY);
+  assert.equal(sdk.requests.length, 3);
+  const mort = new FakeSDK({ content: answer(COPY), failTimes: 3 });
+  const client = await providerClient(mort);
+  await assert.rejects(() => describe(PRODUCT, client), DescriptionUnavailable);
+  assert.equal(mort.requests.length, 3);
 });
 
 test('l’essai rend ses cinq premiers cas comme il les annonce', async () => {

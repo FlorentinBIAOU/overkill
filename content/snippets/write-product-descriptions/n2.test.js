@@ -10,10 +10,11 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { FakeSeq2Seq } from '../_harness/fake-model.mjs';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
 import * as n3 from './n3.js';
-import { LocalCopywriter, MAX_CHARACTERS, MIN_CHARACTERS, DescriptionUnavailable, UngroundedDescription, describe } from './n2.js';
+import { BASE_CHECKPOINT, CHECKPOINT, LocalCopywriter, MAX_CHARACTERS, MIN_CHARACTERS, DescriptionUnavailable, UngroundedDescription, describe } from './n2.js';
 
 const PRODUCT = {
   name: 'Aurore 500',
@@ -156,6 +157,15 @@ test('le modèle est injecté, et par défaut c’est le vrai', async () => {
   assert.deepEqual(seen, [{ max_new_tokens: 90, num_beams: 4 }]);
 });
 
+test('le point de contrôle de départ est nommé, et celui qui écrit est le vôtre', () => {
+  // « Start from a model that already writes French: BARThez […] What you get
+  // back is a checkpoint of your own, which is what `CHECKPOINT` points at. »
+  assert.equal(BASE_CHECKPOINT, 'moussaKam/barthez');
+  assert.ok(CHECKPOINT.startsWith('./')); // un chemin local, pas un dépôt à télécharger
+  const source = readFileSync(new URL('./n2.js', import.meta.url), 'utf8');
+  assert.match(source, /static async load\(checkpoint = CHECKPOINT\)/);
+});
+
 test('le même contrôle qu’au niveau N3', async () => {
   const verdict = async (call) => {
     try {
@@ -196,7 +206,7 @@ test('production : une longue réponse et des espaces en désordre', async () =>
 });
 
 test('production : une réponse d’un autre type n’est pas publiée', async () => {
-  // Python la publie telle quelle (DÉFAUT, n2.test.py) ; ici String() rend « [object Object] », refusé comme fragment.
+  // `typeof text === 'string'` : une réponse d'un autre type est retentée, puis levée. Même refus en Python.
   await assert.rejects(() => describe(PRODUCT, new FakeSeq2Seq({}, [{ generated_text: 'Aurore 500 accompagne les randonneurs à la journée.' }])), DescriptionUnavailable);
 });
 
