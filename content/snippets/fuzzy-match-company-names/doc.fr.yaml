@@ -83,25 +83,3 @@ n1.js: |
   comptes bruts, fréquence inverse de document lissée des deux côtés, puis
   lignes ramenées à la longueur un pour qu'un cosinus soit un produit
   scalaire.
-
-n2: |
-  Rapprocher des noms d'entreprises par le sens, avec un encodeur
-  auto-hébergé.
-
-  Niveau N2. N0 et N1 comparent tous deux des caractères, et tous deux
-  manquent donc la paire sur laquelle cette fiche revient sans cesse : un sigle
-  et la raison sociale qu'il abrège n'ont presque aucune lettre en commun.
-  L'encodeur projette chaque nom dans un vecteur conçu pour la recherche
-  sémantique, où la proximité est censée suivre le sens plutôt que
-  l'orthographe. S'il rapproche cette paire, rien ici ne le mesure.
-
-  Ce que cela coûte : des poids de modèle à télécharger et à conserver, un
-  processus qui les garde en mémoire, et un score qui ne s'explique pas
-  fragment par fragment, contrairement à celui de N1. Le registre doit en
-  outre être réencodé à chaque changement de modèle : les vecteurs de deux
-  modèles ne sont pas interchangeables.
-
-  Voyez ce qui n'est pas là : aucune forme juridique n'est retirée et rien
-  n'est mis en minuscules. L'encodeur est censé s'en charger lui-même. Savoir
-  s'il le fait est précisément la part qu'un double local ne peut pas
-  prouver — voyez le test.

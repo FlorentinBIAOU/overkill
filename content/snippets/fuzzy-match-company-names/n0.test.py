@@ -245,29 +245,45 @@ def test_production_grec_arabe_chinois_identiques_a_un_et_differents_sous_le_seu
     assert similarity("Αθηναϊκή Ζυθοποιία", "ΑΘΗΝΑΪΚΗ ΖΥΘΟΠΟΙΙΑ") == 1.0
     assert similarity("Αθηναϊκή Ζυθοποιία", "Ελληνικά Πετρέλαια") == pytest.approx(0.5556, abs=1e-4)
     assert similarity("شركة أرامكو", "شركة أرامكو") == 1.0
-    assert similarity("أرامكو السعودية", "مصرف الراجحي") == pytest.approx(0.5881, abs=1e-4)
+    assert similarity("أرامكو السعودية", "مصرف الراجحي") == pytest.approx(0.5784, abs=1e-4)
     assert similarity("東京電力", "東京電力") == 1.0
     assert similarity("中国石油", "中国银行") == pytest.approx(0.7333, abs=1e-4)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : toutes les marques de catégorie M sont retirées, y compris les voyelles du devanagari et du thaï, "
-    "qui ne sont pas des accents ; « कमल उद्योग » et « कोमल उद्योग », « กินดี » et « กันดี » obtiennent 1,0",
-)
-def test_defaut_deux_noms_qui_ne_different_que_par_une_voyelle_devanagari_ou_thai_ne_sont_pas_identiques():
+def test_seuls_les_diacritiques_latins_sont_retires():
+    """
+    Commentaire : « Latin diacritics only. Dropping every combining mark would
+    take the vowels of Devanagari and Thai with it, and "कमल उद्योग" and
+    "कोमल उद्योग" would score 1.0 ».
+    """
     assert similarity("कमल उद्योग", "कोमल उद्योग") < 1.0
     assert similarity("กินดี", "กันดี") < 1.0
+    # Témoin : un accent latin, lui, est bien retiré.
+    assert similarity("Société Générale", "Societe Generale") == 1.0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT (#28, non traité hors « spa ») : une forme est retirée où qu'elle soit dans le nom ; "
-    "« Sa Nostra » et « Nostra », « NV Energy » et « Energy Ltd » obtiennent 1,0",
-)
-def test_defaut_une_forme_juridique_en_tete_de_nom_ne_fusionne_pas():
+def test_une_forme_juridique_n_est_retiree_qu_ou_une_forme_juridique_s_ecrit():
+    """
+    Commentaire : « "sa" is not among them: it is an article in Catalan and
+    Corsican trading names, and dropping a leading one would merge "Sa Nostra"
+    with "Nostra". Nor is "nv", for the same reason in "NV Energy" ».
+    """
     assert similarity("Sa Nostra", "Nostra") < 1.0
     assert similarity("NV Energy", "Energy Ltd") < 1.0
+    # Témoin : en fin de nom, et en tête pour les formes qui s'y écrivent, elle part.
+    assert similarity("Boulangerie Martin SARL", "Boulangerie Martin SAS") == 1.0
+    assert similarity("SARL Dupont", "Dupont SAS") == 1.0
+
+
+def test_les_abreviations_du_registre_sont_developpees():
+    """Commentaire : « "Ets Martin" and "Établissements Martin" are one company and Jaro scores them 0.68 »."""
+    assert similarity("Ets Martin", "Établissements Martin") == 1.0
+    assert similarity("Sté Dupont", "Société Dupont") == 1.0
+    assert similarity("Cie des Eaux", "Compagnie des Eaux") == 1.0
+    # « & » est le même mot que « et ».
+    assert similarity("Dubois & Fils SARL", "Dubois et Fils") == 1.0
+    # Témoin : sans le développement, Jaro-Winkler laissait « Ets Martin » loin.
+    assert jaro_winkler("ets martin", "etablissements martin") == pytest.approx(0.682, abs=1e-3)
 
 
 def test_production_un_nom_fait_seulement_d_emoji_ou_de_ponctuation_est_vide():

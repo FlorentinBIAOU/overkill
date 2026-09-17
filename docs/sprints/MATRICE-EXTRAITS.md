@@ -182,7 +182,7 @@ mots de la requête.
 |---|---|---|
 | N0 | Normalisation, retrait des formes juridiques, similarité de Jaro-Winkler | **E** |
 | N1 | TF-IDF sur n-grammes de caractères et plus proches voisins par cosinus | **E** |
-| N2 | Embeddings auto-hébergés, pour rapprocher des raisons sociales sans caractères communs | **S** |
+| N2 | — Sa seule raison d'être serait le sigle, et rien ne démontre qu'un encodeur généraliste le rapproche de sa raison sociale ; une table de sigles (répertoire Sirene) le règle de façon déterministe | — |
 | N3 | — L'appariement est quadratique et doit être déterministe et rejouable : un modèle généraliste ne l'est pas | — |
 
 **Point de rupture N0** : deux noms de la même entreprise sans caractères communs, sigle

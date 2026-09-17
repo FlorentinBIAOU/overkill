@@ -194,23 +194,40 @@ test('production : grec, arabe, chinois identiques à 1 et différents sous le s
   assert.equal(similarity('Αθηναϊκή Ζυθοποιία', 'ΑΘΗΝΑΪΚΗ ΖΥΘΟΠΟΙΙΑ'), 1);
   assert.ok(close(similarity('Αθηναϊκή Ζυθοποιία', 'Ελληνικά Πετρέλαια'), 0.5556, 1e-4));
   assert.equal(similarity('شركة أرامكو', 'شركة أرامكو'), 1);
-  assert.ok(close(similarity('أرامكو السعودية', 'مصرف الراجحي'), 0.5881, 1e-4));
+  assert.ok(close(similarity('أرامكو السعودية', 'مصرف الراجحي'), 0.5784, 1e-4));
   assert.equal(similarity('東京電力', '東京電力'), 1);
   assert.ok(close(similarity('中国石油', '中国银行'), 0.7333, 1e-4));
 });
 
-test('DÉFAUT : toutes les marques de catégorie M sont retirées, voyelles du devanagari et du thaï comprises ; « कमल उद्योग » et « कोमल उद्योग » obtiennent 1,0', async () => {
-  await assert.rejects(async () => {
-    assert.ok(similarity('कमल उद्योग', 'कोमल उद्योग') < 1);
-    assert.ok(similarity('กินดี', 'กันดี') < 1);
-  }, assert.AssertionError);
+test('seuls les diacritiques latins sont retirés', () => {
+  // « Latin diacritics only. Dropping every combining mark would take the
+  // vowels of Devanagari and Thai with it ».
+  assert.ok(similarity('कमल उद्योग', 'कोमल उद्योग') < 1);
+  assert.ok(similarity('กินดี', 'กันดี') < 1);
+  // Témoin : un accent latin, lui, est bien retiré.
+  assert.equal(similarity('Société Générale', 'Societe Generale'), 1);
 });
 
-test('DÉFAUT : une forme juridique en tête de nom est retirée ; « Sa Nostra » et « Nostra », « NV Energy » et « Energy Ltd » obtiennent 1,0', async () => {
-  await assert.rejects(async () => {
-    assert.ok(similarity('Sa Nostra', 'Nostra') < 1);
-    assert.ok(similarity('NV Energy', 'Energy Ltd') < 1);
-  }, assert.AssertionError);
+test('une forme juridique n’est retirée qu’où une forme juridique s’écrit', () => {
+  // « "sa" is not among them: it is an article in Catalan and Corsican trading
+  // names […] Nor is "nv", for the same reason in "NV Energy" ».
+  assert.ok(similarity('Sa Nostra', 'Nostra') < 1);
+  assert.ok(similarity('NV Energy', 'Energy Ltd') < 1);
+  // Témoin : en fin de nom, et en tête pour les formes qui s'y écrivent, elle part.
+  assert.equal(similarity('Boulangerie Martin SARL', 'Boulangerie Martin SAS'), 1);
+  assert.equal(similarity('SARL Dupont', 'Dupont SAS'), 1);
+});
+
+test('les abréviations du registre sont développées', () => {
+  // « "Ets Martin" and "Établissements Martin" are one company and Jaro scores
+  // them 0.68 ».
+  assert.equal(similarity('Ets Martin', 'Établissements Martin'), 1);
+  assert.equal(similarity('Sté Dupont', 'Société Dupont'), 1);
+  assert.equal(similarity('Cie des Eaux', 'Compagnie des Eaux'), 1);
+  // « & » est le même mot que « et ».
+  assert.equal(similarity('Dubois & Fils SARL', 'Dubois et Fils'), 1);
+  // Témoin : sans le développement, Jaro-Winkler laissait « Ets Martin » loin.
+  assert.ok(Math.abs(jaroWinkler('ets martin', 'etablissements martin') - 0.682) < 1e-3);
 });
 
 test("production : un nom fait seulement d'emoji ou de ponctuation est vidé", () => {

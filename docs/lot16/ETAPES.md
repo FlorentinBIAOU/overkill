@@ -29,3 +29,8 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
   dix, latence de N0 déclarée `~10 ms`), plancher dans `tag` pour l'article
   multi-thèmes, cinq marquages retirés, `lemmatise` renommé, adaptateur N3
   testé. Reste : rien.
+- **fuzzy-match-company-names** — deux pharmacies en tête du point de rupture de
+  N0, abréviations du registre développées, diacritiques latins seuls, forme
+  juridique retirée aux seules places où elle s'écrit, SIREN et répertoire Sirene
+  entrés dans le scénario et le verdict, N2 passé en indisponible faute de
+  preuve, deux marquages retirés. Reste : rien.

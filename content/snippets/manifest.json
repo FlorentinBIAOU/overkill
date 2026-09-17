@@ -420,9 +420,8 @@
         },
         {
           "level": "N2",
-          "available": true,
-          "approach": "Embeddings auto-hébergés, pour rapprocher des raisons sociales sans caractères communs",
-          "verification": "stubbed"
+          "available": false,
+          "unavailable_reason": "Sa seule raison d'être serait le sigle, et rien ne démontre qu'un encodeur généraliste le rapproche de sa raison sociale ; une table de sigles (répertoire Sirene) le règle de façon déterministe"
         },
         {
           "level": "N3",
@@ -828,9 +827,9 @@
   ],
   "totals": {
     "entries": 25,
-    "available_rungs": 74,
+    "available_rungs": 73,
     "executed": 45,
-    "stubbed": 29,
-    "files": 296
+    "stubbed": 28,
+    "files": 292
   }
 }
