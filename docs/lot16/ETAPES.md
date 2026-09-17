@@ -121,3 +121,13 @@ régénéré.
   aveugle plutôt que marqué, moteur Python mis en cache pour tenir la promesse
   que JavaScript tenait déjà, adaptateur N3 exercé avec la forme du message
   image. Reste : rien.
+
+**Point d'étape groupe 2 — sept fiches sur sept.** `npm run check:fast` au vert,
+et `node scripts/test-snippets.mjs` sur les 146 extraits du dépôt, vert. Trois
+dépendances sont entrées : `fast-xml-parser` 5.2.5 (JavaScript, lecture des
+factures structurées, Node n'ayant pas d'analyseur XML), `pypdf` 6.1.3 (Python)
+et `pdfjs-dist` 5.4.149 (JavaScript) pour la couche de texte d'un PDF. Deux
+niveaux ont été fermés faute de point de contrôle publiable :
+`extract-fields-from-invoice` N2 et — au groupe 1 — `fuzzy-match-company-names`
+N2. Un verdict a changé, `extract-fields-from-invoice` passe de N2 à N0, et la
+fiche sort du brouillon : le catalogue compte désormais 25 fiches publiées.
