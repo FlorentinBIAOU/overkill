@@ -72,6 +72,16 @@ code réel qu'il enveloppe ne tourne pas.
    tranché, sur une sortie réelle ; d'ici là, dire explicitement que c'est la
    mécanique du seuil qui est démontrée, pas le modèle.
 
+4. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0` (py, js), `INFIRMÉ` : « trois chiffres exacts par groupe empêchent d'avaler une quantité et un prix unitaire comme un seul nombre » ; « 2 380,50 » l'est.
+   - `n1` (py, js), `INFIRMÉ` : annoter la facture corrigerait la lecture. Le `breaking_point` dit désormais l'inverse : **périmé**, à réécrire en démonstration.
+   - `n2` (py, js), `INFIRMÉ` : « relever le seuil n'y change rien ». Le `breaking_point` a été corrigé : **périmé**.
+   - `n2` (py, js), `DÉFAUT` : le modèle par défaut n'a pas la forme du vrai pipeline. **Vivant** (voir point 2).
+   - `n3` (py, js), `DÉFAUT` : le client par défaut n'a pas la forme du vrai kit. **Périmé** : l'adaptateur existe, mais le test passe le double du kit directement à `extract_fields` au lieu de `ProviderClient(sdk=…)`, et **aucun test ne fait tourner l'adaptateur** de cette fiche.
+
+   Ce qu'il faut faire : pour chaque ligne vivante, corriger le code ou la phrase ; pour chaque ligne périmée, réécrire le test sur la phrase actuelle, sans marquage ; ajouter un test de l'adaptateur avec `_harness/fake_sdk.py` / `fake-sdk.mjs`.
+
 ### Remarques non bloquantes
 
 - `breaking_point` N0 : l'exemple « Sous-total contient total » est le meilleur

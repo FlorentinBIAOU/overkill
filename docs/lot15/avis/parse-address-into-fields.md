@@ -57,6 +57,13 @@
    actuel du service, ses conditions d'usage et ses limites de débit, et les
    citer.
 
+3. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n2` (py, js), `INFIRMÉ` : le commentaire dit « six lines of 38 characters. Anything longer is not an address line, and is refused », et `MAX_CHARACTERS = 300`. **Vivant** : six fois 38 font 228 ; une adresse de 239 caractères passe. Corriger le commentaire ou le plafond.
+   - `n3` (py, js), `DÉFAUT` : le client par défaut `OpenAI()` n'a pas de méthode `complete`. **Périmé** : l'adaptateur existe, mais le test ne le fait pas tourner, et **aucun autre test non plus**.
+
+   Ce qu'il faut faire : corriger la ligne vivante, réécrire la périmée en test de `ProviderClient(sdk=FakeSDK(...))` / `providerClient(new FakeSDK(...))`, démarquer.
+
 ### Remarques non bloquantes
 
 - `escalate_when` de N1 envoie vers libpostal pour les adresses étrangères :

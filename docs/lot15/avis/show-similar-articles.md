@@ -1,8 +1,36 @@
 # show-similar-articles — avis du relecteur
 
-## Tour 1 — ACCEPTÉE
+## Tour 1 — REFUSÉE
 
 `node scripts/test-snippets.mjs show-similar-articles` : vert, 3 py, 3 js.
+
+### Raisons du refus
+
+Le fond de la fiche est bon, et le verdict tiendra. Le refus porte sur les
+preuves.
+
+1. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   Neuf affirmations marquées, toutes **périmées** d'après ma lecture : les
+   phrases qu'elles contredisent ont été retirées ou réécrites par le rédacteur
+   (aucune ne se retrouve dans les extraits ni dans la fiche), mais les tests
+   sont restés tels quels.
+
+   - `n0` (py, js) : « une étiquette presque universelle laisse des lignes vides » ;
+   - `n1` (py, js) : « l'annonce ne partage que de la grammaire » (elle partage « day ») ;
+   - `n1` (py, js) : « un mot présent partout ne pèse presque rien » ;
+   - `n1` (py, js) : « sans liste de mots vides, le classement tient encore » ;
+   - `n1` (py, js) : « la table ne change qu'à la publication ou au réétiquetage » ;
+   - `n1` (py, js) : « écarter les jetons d'une lettre ne coûte rien » ;
+   - `n1` (py, js) : « sans lissage, un terme présent partout diviserait par zéro » ;
+   - `n1.test.js` : « un zéro est l'absence de tout mot commun » ;
+   - `n2` (py, js) : « le modèle reste chargé entre deux constructions ».
+
+   Ce qu'il faut faire : pour chacun, vérifier que la phrase a bien disparu
+   (fiche, docstrings, `doc.fr.yaml`, essai) ; si oui, réécrire le test pour
+   démontrer la formulation actuelle, ou le supprimer si elle ne dit plus rien
+   de testable ; si non, corriger la phrase. C'est fait quand
+   `grep -rn "xfail\|INFIRMÉ\|DÉFAUT"` ne rend plus rien dans le dossier.
 
 ### Remarques non bloquantes
 

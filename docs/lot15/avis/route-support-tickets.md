@@ -1,8 +1,36 @@
 # route-support-tickets — avis du relecteur
 
-## Tour 1 — ACCEPTÉE
+## Tour 1 — REFUSÉE
 
 `node scripts/test-snippets.mjs route-support-tickets` : vert, 4 py, 4 js.
+
+### Raisons du refus
+
+Le fond de la fiche est bon, et le verdict tiendra. Le refus porte sur les
+preuves, et il se lève sans toucher au texte.
+
+1. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0` (py, js), `INFIRMÉ` : « facture déclenche aussi facturation ». **Périmé** : le commentaire dit désormais que « facturation » a sa propre entrée.
+   - `n1` (py, js), `INFIRMÉ` : « Votre entrepôt accepte-t-il les visites scolaires le mercredi » ne recoupe aucun mot de l'archive. **Périmé** : le `breaking_point` dit désormais qu'il ne partage que « le ».
+   - `n1.test.py`, `INFIRMÉ` : avec le `C` par défaut « no ticket ever clears a useful floor ». **Périmé** : le commentaire dit désormais « two of the three unseen tickets stay under the 0.5 floor ».
+   - `n2` (py, js), `INFIRMÉ` : « the neighbours are shown to the agent as the reason for the routing ». **Périmé** : la phrase n'est plus dans `n2.py`.
+
+   Ce qu'il faut faire : réécrire chacun de ces tests pour démontrer la phrase
+   **actuelle**, sans marquage (le `breaking_point` de N1 cite « le » : le test
+   doit affirmer que c'est le seul mot partagé). C'est fait quand
+   `grep -rn "xfail\|INFIRMÉ\|DÉFAUT"` ne rend plus rien dans le dossier de la
+   fiche.
+
+2. **[preuves]** N3 : **aucun test ne fait tourner l'adaptateur**
+   `ProviderClient` / `providerClient`. Tous injectent un client qui a déjà une
+   méthode `complete`. C'est exactement l'angle mort qui a laissé les
+   trente-deux extraits N3 appeler une méthode inexistante avant ce lot.
+   Ce qu'il faut faire : un test par langage qui construit l'adaptateur sur
+   `_harness/fake_sdk.py` / `fake-sdk.mjs`, vérifie `model`, `messages`,
+   `temperature` envoyés, la lecture de `choices[0].message.content`, et le
+   cas `content` nul, comme le font déjà `detect-language-of-text` ou
+   `mask-personal-data-in-chat`.
 
 ### Remarques non bloquantes
 

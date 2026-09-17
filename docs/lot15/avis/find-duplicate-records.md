@@ -71,6 +71,12 @@
    partagée n'existe. Le `breaking_point` reste vrai pour une clé unique ; il
    doit le dire (« avec une seule clé »).
 
+4. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0.test.py` / `n0.test.js`, `INFIRMÉ` : « la docstring dit que ce niveau ne compare jamais toutes les paires ». **Périmé** : la docstring dit désormais « all of them when every record lands in the same group ». Le test prouve la fausseté d'une phrase qui n'existe plus.
+
+   Ce qu'il faut faire : réécrire le test pour démontrer la phrase actuelle (un seul bloc : toutes les paires sont comparées), sans marquage.
+
 ### Remarques non bloquantes
 
 - `blocking_key` prend le dernier mot comme nom de famille : « Dupont Jean »

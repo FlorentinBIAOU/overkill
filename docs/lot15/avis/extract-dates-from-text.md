@@ -96,6 +96,13 @@
    référence lève, ou la docstring dit explicitement le risque, et un test
    vérifie que la référence passée est celle envoyée dans le prompt.
 
+4. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0.test.py` / `n0.test.js`, `DÉFAUT` : une longue suite de marques combinantes est lue une fois par marque (10 000 marques : 1,1 s). **Vivant** : défaut de performance sur entrée hostile, dans l'extrait recommandé.
+   - `n3.test.py` / `n3.test.js`, `DÉFAUT` : une réponse entièrement enveloppée dans une seule clôture ```` ```json ```` est passée telle quelle à `json.loads`, redemandée, puis levée. **Vivant**, et contraire à la décision 12 du lot reprise par la charte des tests : `n3.py` appelle `json.loads(answer)` sans aucun traitement de clôture. En production, chaque réponse clôturée coûte trois appels facturés puis une erreur.
+
+   Ce qu'il faut faire : corriger les deux défauts (regard arrière qui exclut aussi les marques combinantes ; décodage de la clôture unique, en recopiant la forme déjà corrigée dans `detect-spam-in-contact-form/n3`), puis démarquer. Même critère de fin : plus aucun marquage dans le dossier de la fiche.
+
 ### Remarques non bloquantes
 
 - N3, `MAX_CHARACTERS = 8000` : trois pages. Un contrat, qui est exactement le

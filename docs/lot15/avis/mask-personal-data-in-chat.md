@@ -65,6 +65,13 @@
    N0 »). Si l'intention est que N1 s'ajoute à N0 et non qu'il le remplace, le
    dire aussi.
 
+4. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0.test.py` / `n0.test.js`, `DÉFAUT` : une date en minuscules dont la clé tombe juste est masquée comme un IBAN (« rendez-vous [iban] la signature »). **Vivant**, et c'est un faux positif sur du texte ordinaire que le `breaking_point` ne dit pas (il ne cite que la référence de commande en majuscules).
+   - `n3.test.py` / `n3.test.js`, `DÉFAUT` : une réponse entièrement dans une seule clôture ```` ```json ```` n'est pas décodée. **Vivant** : `n3.py` fait `json.loads(answer)` sans traitement de clôture, contrairement à la décision 12 de la charte des tests.
+
+   Ce qu'il faut faire : exiger que l'IBAN candidat commence par un code pays en majuscules, ou compte au moins une lettre dans le BBAN, et l'écrire ; décoder la clôture unique comme les extraits déjà corrigés ; démarquer les tests.
+
 ### Remarques non bloquantes
 
 - Faux positifs de N0, attendus mais à dire : `Commande n° 0612345678` et

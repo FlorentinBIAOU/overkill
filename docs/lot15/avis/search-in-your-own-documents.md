@@ -1,8 +1,30 @@
 # search-in-your-own-documents — avis du relecteur
 
-## Tour 1 — ACCEPTÉE
+## Tour 1 — REFUSÉE
 
 `node scripts/test-snippets.mjs search-in-your-own-documents` : vert, 4 py, 4 js.
+
+### Raisons du refus
+
+1. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n3.test.py` / `n3.test.js`, `DÉFAUT` : du texte après la clôture, ou une
+     clôture non refermée, est décodé. **Vivant**, et vérifié : `_decode`
+     rend l'objet pour « ```json {…} ``` suivi de prose », et pour une clôture
+     jamais refermée. C'est contraire à la décision 12 du lot reprise par la
+     charte des tests (« tout autre écart […] lève »). Le compte rendu du tri
+     l'avait signalé comme « à trancher au tour suivant » : c'est ce tour.
+   - `n2.test.js`, `DÉFAUT` : un vecteur refusé empoisonne le cache d'un
+     encodeur déjà servi. **Vivant**, et c'est un vrai défaut d'exploitation :
+     `vectorRanking` écrit le vecteur dans la `Map` avant de le vérifier ; un
+     seul `NaN` passager rend la page définitivement introuvable et fait lever
+     **toutes** les recherches qui la contiennent, jusqu'au redémarrage du
+     processus. Python n'a pas le défaut : les deux langages divergent.
+
+   Ce qu'il faut faire : `_decode` en N3 recopie la forme stricte des extraits
+   corrigés (une seule clôture qui enveloppe toute la réponse, sinon lever) ;
+   `n2.js` ne met en cache un vecteur qu'après l'avoir validé. Démarquer les
+   trois tests. C'est fait quand le dossier ne contient plus aucun marquage.
 
 ### Remarques non bloquantes
 

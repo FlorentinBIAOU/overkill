@@ -45,6 +45,15 @@
    exception. Le refus explicite peut rester pour les poids, qui viennent du
    code et pas des données.
 
+3. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0.test.py` / `n0.test.js`, `DÉFAUT` : un poids `NaN` ou infini passe le refus des poids négatifs, et le score sort de l'échelle sans erreur. **Vivant**.
+   - `n0.test.js`, `DÉFAUT` : une marge `null` ou écrite en chaîne passe le contrôle d'échelle (Python lève `TypeError`). **Vivant**, et c'est une divergence entre les deux langages sur une donnée sale — le cas du point 2.
+   - `n0.test.js`, `DÉFAUT` : des poids incomplets rendent un score nul pour tous les produits, sans erreur (Python lève `KeyError`). **Vivant**.
+   - `n1.test.js`, `DÉFAUT` : un signal `null` ou en chaîne passe le contrôle. **Vivant**.
+
+   Ce qu'il faut faire : `Number.isFinite` / `math.isfinite` sur poids et signaux, contrôle de la présence des quatre poids, même comportement dans les deux langages ; démarquer. À traiter avec le point 2, qui décide de la politique pour une donnée invalide.
+
 ### Remarques non bloquantes
 
 - `text_match` compte la part des termes de la requête trouvés en début de mot.

@@ -55,6 +55,14 @@
    OCR) et une pour là où l'extrait casse vraiment (texte illisible rendu comme
    lu) ; déplacer le reste dans la docstring. Même travail en anglais.
 
+3. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n2` (py, js), `INFIRMÉ` : « relever le seuil n'y change rien ». **Périmé** : le `breaking_point` dit désormais qu'un seuil relevé lève le drapeau, mais aussi sur les lectures justes.
+   - `n2` (py, js), `INFIRMÉ` : « started once and kept for the process ». **Périmé** : la docstring dit désormais « pytesseract starts the tesseract binary for every call ».
+   - Et `n3` : **aucun test ne fait tourner l'adaptateur** `ProviderClient` de cette fiche, dont la méthode `complete` a une signature propre (`image=`).
+
+   Ce qu'il faut faire : réécrire les deux tests sur les phrases actuelles, sans marquage ; ajouter le test de l'adaptateur avec `_harness/fake_sdk.py` / `fake-sdk.mjs`, en vérifiant la forme du message image envoyée au kit.
+
 ### Remarques non bloquantes
 
 - `breaking_point` de N2 : même défaut de longueur, moindre ; l'argument (un

@@ -50,6 +50,12 @@
    parce qu'elles sont en haut, et le compteur renforce l'ordre qu'il devait
    corriger). Écrire celui que le code corrigé exhibe, avec son test.
 
+3. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0.test.py` / `n0.test.js` : « la docstring dit « Fold case », or « ẞ » majuscule reste « ß » ». **Vivant** : `n0.py` dit toujours « Fold case », et `normalise("STRAẞE") != normalise("Straße")`.
+
+   Ce qu'il faut faire : replier « ẞ » (U+1E9E) comme « ß » dans `normalise`, aux deux niveaux et dans les deux langages (une entrée dans la table de repli suffit), puis démarquer le test ; ou écrire la limite dans la docstring et transformer le test en démonstration non marquée. C'est fait quand `grep -rn "xfail\|INFIRMÉ\|DÉFAUT"` ne rend plus rien dans `content/snippets/add-autocomplete-to-a-search-bar/`.
+
 ### Remarques non bloquantes
 
 - `breaking_point` N0 : « la faute de frappe sur le premier caractère » est vraie

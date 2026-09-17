@@ -53,6 +53,15 @@
    Dans les deux cas, vérifier la page du fournisseur au moment de la
    rédaction et la citer en `sources`.
 
+3. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0` (py, js), `INFIRMÉ` : l'ordre casefold / NFKD, et le commentaire de `n0.js` qui dit que « ß » et « ς » sont les deux seules lettres où les deux replis divergent. **Vivant** : parité Python / JavaScript non tenue sur les formes de compatibilité, donc une insulte écrite en lettres mathématiques est trouvée dans un langage et pas dans l'autre.
+   - `n0` (py, js), `DÉFAUT` : une voyelle dépendante du devanagari coupe le mot. **Vivant**.
+   - `n1.test.js`, `DÉFAUT` : un commentaire fait de trois espaces note 0,71, au-dessus du seuil. **Vivant** : un formulaire vide envoyé en modération.
+   - `n3` (py, js), `DÉFAUT` : une réponse dans une seule clôture ```` ```json ```` n'est pas décodée ; trois appels puis `ModerationUnavailable`. **Vivant**, contraire à la décision 12.
+
+   Ce qu'il faut faire : NFKD avant le repli de casse dans les deux langages ; ne retirer que les diacritiques latins ; rendre « allow » sans appel pour un commentaire blanc ; décoder la clôture unique ; démarquer.
+
 ### Remarques non bloquantes
 
 - `verdict_rationale` : « le premier niveau qui arrive déjà entraîné sur les

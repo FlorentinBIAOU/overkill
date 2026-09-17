@@ -74,6 +74,13 @@
    façon déterministe (point 2). Dans les deux cas, `escalate_when` de N1 ne
    doit plus promettre ce qui n'est pas démontré.
 
+4. **[preuves]** Marquages `INFIRMÉ` / `DÉFAUT` encore actifs (`xfail(strict=True)` en Python, `assert.rejects` en JavaScript). La charte des tests et la mission sont nettes : une fiche publiée n'en garde aucun à la fin du lot. Un marquage strict passe dès que le corps du test lève, **pour n'importe quelle raison** : un marquage oublié ne prouve plus rien et peut masquer une régression.
+
+   - `n0` (py, js), `DÉFAUT` : toutes les marques de catégorie M sont retirées, voyelles du devanagari et du thaï comprises ; « कमल उद्योग » et « कोमल उद्योग » obtiennent 1,0. **Vivant**.
+   - `n0` (py, js), `DÉFAUT` : une forme juridique est retirée où qu'elle soit ; « Sa Nostra » et « Nostra », « NV Energy » et « Energy Ltd » obtiennent 1,0. **Vivant**, et c'est un faux rapprochement parfait, le pire cas pour un outil de fusion.
+
+   Ce qu'il faut faire : ne retirer que les diacritiques latins (U+0300–U+036F, comme `rank-products-by-relevance` le fait déjà) ; ne retirer la forme juridique qu'en fin de nom (ou en tête pour les formes qui s'y placent, liste explicite) ; démarquer.
+
 ### Remarques non bloquantes
 
 - `unavailable_reason` N3 : « cinquante millions d'appels » suppose qu'on ne
