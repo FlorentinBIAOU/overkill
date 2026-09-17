@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
-import { DEFAULT_WEIGHTS, SIGNALS, fold, rank, score, signals, terms, textMatch } from './n0.js';
+import { DEFAULT_WEIGHTS, outOfScale, SIGNALS, fold, rank, score, signals, terms, textMatch } from './n0.js';
 import essai from '../../tryouts/live/rank-products-by-relevance.js';
 
 // An autumn catalogue, small enough to reason about by hand. Margin and
@@ -186,34 +186,50 @@ test('le texte et la disponibilité sont entre zéro et un par construction', ()
   }
 });
 
-test('une marge ou une popularité hors de l’échelle est refusée', () => {
-  assert.throws(() => signals({ ...CATALOGUE[0], margin: 35 }, 'chaussures'), { name: 'RangeError', message: /margin must lie between 0 and 1/ });
-  assert.throws(() => signals({ ...CATALOGUE[0], popularity: 80 }, 'chaussures'), { name: 'RangeError', message: /popularity must lie between 0 and 1/ });
-  for (const hors of [-0.0001, 1.0000001, NaN, Infinity]) {
-    assert.throws(() => signals({ ...CATALOGUE[0], margin: hors }, 'chaussures'), RangeError, String(hors));
-    assert.throws(() => rank([CATALOGUE[1], { ...CATALOGUE[0], popularity: hors }], 'chaussures'), RangeError, String(hors));
+test('une marge ou une popularité hors de l’échelle est ramenée et signalée', () => {
+  // « margin and popularity because a value outside is brought back onto it
+  // […] Brought back, and not refused ».
+  assert.equal(signals({ ...CATALOGUE[0], margin: 35 }, 'chaussures').margin, 1);
+  assert.equal(signals({ ...CATALOGUE[0], margin: -0.05 }, 'chaussures').margin, 0);
+  assert.equal(signals({ ...CATALOGUE[0], popularity: 80 }, 'chaussures').popularity, 1);
+  for (const hors of [-0.0001, 1.0000001, NaN, Infinity, null, '0.5']) {
+    assert.deepEqual(outOfScale({ ...CATALOGUE[0], margin: hors }), ['margin'], String(hors));
+    const mesure = signals({ ...CATALOGUE[0], margin: hors }, 'chaussures');
+    assert.ok(mesure.margin >= 0 && mesure.margin <= 1, String(hors));
   }
   for (const limite of [0, 1]) {
-    const mesure = signals({ ...CATALOGUE[0], margin: limite, popularity: limite }, 'chaussures');
-    assert.deepEqual([mesure.margin, mesure.popularity], [limite, limite]);
+    const produit = { ...CATALOGUE[0], margin: limite, popularity: limite };
+    assert.deepEqual([signals(produit, 'chaussures').margin, signals(produit, 'chaussures').popularity], [limite, limite]);
+    assert.deepEqual(outOfScale(produit), []);
   }
+});
+
+test('un seul produit mal renseigné ne fait pas tomber la page', () => {
+  // « One badly filled product must not take the whole category page down with
+  // it. The products whose signals had to be moved come back named ».
+  const produits = [CATALOGUE[0], { ...CATALOGUE[1], margin: -0.05 }, CATALOGUE[2]];
+  const classement = rank(produits, 'chaussures');
+  assert.equal(classement.length, 3);
+  const fautif = classement.find((row) => row.product.title === CATALOGUE[1].title);
+  assert.deepEqual(fautif.outOfScale, ['margin']);
+  assert.equal(fautif.signals.margin, 0);
+  assert.deepEqual(classement.filter((row) => row !== fautif).map((row) => row.outOfScale), [[], []]);
 });
 
 test('un poids négatif est refusé', () => {
   const mesure = { text: 1, availability: 0, margin: 0, popularity: 0 };
-  assert.throws(() => score(mesure, { text: 2, availability: 0, margin: -1, popularity: 0 }), { name: 'RangeError', message: /cannot be negative/ });
+  assert.throws(() => score(mesure, { text: 2, availability: 0, margin: -1, popularity: 0 }), { name: 'RangeError', message: /nought or above/ });
   assert.throws(() => rank(CATALOGUE, 'chaussures', { ...DEFAULT_WEIGHTS, popularity: -1e-9 }), RangeError);
   assert.equal(score(mesure, { text: 2, availability: 0, margin: 0, popularity: 0 }), 1);
 });
 
-test('DÉFAUT : un poids NaN ou infini passe le refus des poids négatifs, et le score sort de l’échelle ou tombe à zéro sans erreur', async () => {
-  // text NaN : total NaN, `total ? … : 0` rend 0 pour tous ; text Infinity : score NaN.
-  await assert.rejects(async () => {
-    const mesure = { text: 1, availability: 0, margin: 0.5, popularity: 0.2 };
-    for (const poids of [NaN, Infinity]) {
-      assert.throws(() => score(mesure, { ...DEFAULT_WEIGHTS, text: poids }), RangeError, String(poids));
-    }
-  }, assert.AssertionError);
+test('un poids qui n’est pas un nombre fini est refusé', () => {
+  // « a weight that is not a finite number, zero or above, is refused ».
+  const mesure = { text: 1, availability: 0, margin: 0.5, popularity: 0.2 };
+  for (const poids of [NaN, Infinity, -Infinity, null, '2', true]) {
+    assert.throws(() => score(mesure, { ...DEFAULT_WEIGHTS, text: poids }), { message: /finite number/ }, String(poids));
+  }
+  assert.throws(() => score(mesure, { text: 1, availability: 1 }), { message: /every signal needs a weight/ });
 });
 
 test('le score reste entre zéro et un pour des poids positifs et des signaux dans l’échelle', () => {
@@ -344,29 +360,15 @@ test('production : un mot en devanagari ou en arabe voyellé ne trouve pas un au
   assert.deepEqual(terms('مَكْتَبَة'), ['مَكْتَبَة']);
 });
 
-test('production : un produit sans popularité ou sans marge est refusé', () => {
-  // Commentaire de signals : « Also catches a missing field: undefined is not between 0 and 1. »
-  assert.throws(() => rank([{ ...CATALOGUE[0], popularity: undefined }, ...CATALOGUE.slice(1)], 'montre'), RangeError);
+test('production : un champ manquant lève, un champ sali est signalé', () => {
+  // « A field the catalogue does not have at all is a schema fault, not a dirty
+  // value: it is refused, as it is in Python ».
+  assert.throws(() => rank([{ title: 'Sans stock', margin: 0.1, popularity: 0.1 }], 'x'), RangeError);
   assert.throws(() => rank([{ title: 'Sans marge', inStock: true, popularity: 0.1 }], 'x'), RangeError);
-});
-
-test('DÉFAUT : une marge null ou écrite en chaîne passe le contrôle d’échelle (Python lève TypeError)', async () => {
-  // `null >= 0 && null <= 1` est vrai : la marge compte pour zéro et `signals.margin` vaut null ;
-  // « 0.5 » est converti en nombre pour la comparaison et rendu tel quel dans les signaux.
-  await assert.rejects(async () => {
-    for (const margin of [null, '0.5']) {
-      assert.throws(() => signals({ ...CATALOGUE[0], margin }, 'chaussures'), RangeError, String(margin));
-    }
-  }, assert.AssertionError);
-});
-
-test('DÉFAUT : des poids incomplets rendent un score nul pour tous les produits, sans erreur (Python lève KeyError)', async () => {
-  // Poids manquants : total NaN, que `total ? … : 0` change en zéro partout.
-  await assert.rejects(async () => {
-    assert.throws(() => rank(CATALOGUE, 'x', { text: 1 }));
-  }, assert.AssertionError);
-});
-
-test('production : un produit sans champ inStock est compté hors stock', () => {
-  assert.equal(rank([{ title: 'Sans stock', margin: 0.1, popularity: 0.1 }], 'x')[0].signals.availability, 0);
+  for (const popularity of [null, '0.5', undefined]) {
+    const classement = rank([{ ...CATALOGUE[0], popularity }], 'x');
+    assert.equal(classement[0].signals.popularity, 0, String(popularity));
+    assert.deepEqual(classement[0].outOfScale, ['popularity'], String(popularity));
+  }
+  assert.throws(() => rank(CATALOGUE, 'x', { text: 1 }), { message: /every signal needs a weight/ });
 });

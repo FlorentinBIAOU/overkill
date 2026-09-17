@@ -38,10 +38,20 @@ AGAINST_THE_SHOP = [
 
 
 def page(rows):
+    """
+    Une page, dans l'ordre où elle a été affichée.
+
+    Les lignes des journaux ci-dessus écrivent le produit cliqué en premier,
+    par commodité de lecture. L'ordre d'affichage est l'inverse : les produits
+    ignorés au-dessus, le clic en dessous — c'est la seule forme dont N1
+    apprenne quelque chose, puisqu'il n'apparie un clic qu'aux produits montrés
+    au-dessus de lui.
+    """
+    ordre = sorted(rows, key=lambda row: bool(row[4]))
     return [
         {"signals": dict(zip(("text", "availability", "margin", "popularity"), row[:4])),
          "clicked": row[4]}
-        for row in rows
+        for row in ordre
     ]
 
 
@@ -66,6 +76,7 @@ def synthetique(pages, vrais=(0.5, 0.3, 0.0, 0.2), graine=1):
                 valeurs.append(etat % 101 / 100)
             items.append(tuple(valeurs))
         meilleur = max(range(4), key=lambda j: sum(v * s for v, s in zip(vrais, items[j])))
+        # `page` remettra le clic en dernier : les trois autres sont au-dessus.
         log.append([items[j] + (j == meilleur,) for j in range(4)])
     return log
 
@@ -243,7 +254,7 @@ def test_le_score_de_n1_est_une_somme_entre_moins_un_et_un_la_ou_n0_est_une_moye
     for item in [c for p in impressions(synthetique(100)) for c in p]:
         assert -1.0 <= rank([item], weights)[0]["score"] <= 1.0
     # N0, lui, refuse ces poids : sa moyenne n'accepte pas de poids négatif.
-    with pytest.raises(ValueError, match="cannot be negative"):
+    with pytest.raises(ValueError, match="nought or above"):
         n0.score(candidat[0]["signals"], weights)
 
 
@@ -280,7 +291,7 @@ def test_n0_refuse_les_poids_appris_negatifs_il_faut_servir_avec_la_fonction_de_
         {"title": "pertinent et rentable", "tags": [], "in_stock": True, "margin": 0.9, "popularity": 0.5},
         {"title": "hors sujet et sans marge", "tags": [], "in_stock": True, "margin": 0.1, "popularity": 0.5},
     ]
-    with pytest.raises(ValueError, match="cannot be negative"):
+    with pytest.raises(ValueError, match="nought or above"):
         n0.rank(produits, "pertinent", weights)
     candidates = [{"title": p["title"], "signals": n0.signals(p, "pertinent")} for p in produits]
     ranked = rank(candidates, weights)
@@ -367,14 +378,11 @@ def test_production_un_journal_sans_aucune_difference_leve_lerreur_nommee():
         learn_weights(impressions(identiques))
 
 
-def test_production_un_signal_manquant_leve_une_erreur():
-    """Python lève TypeError sur None et sur une chaîne, ValueError sur NaN."""
-    with pytest.raises(TypeError):
-        learn_weights([page([(0.5, 1.0, 0.3, None, True), (0.4, 1.0, 0.3, 0.2, False)])])
-    with pytest.raises(ValueError):
-        learn_weights([page([(0.5, 1.0, 0.3, float("nan"), True), (0.4, 1.0, 0.3, 0.2, False)])])
-    with pytest.raises(TypeError):
-        learn_weights([page([(0.5, 1.0, 0.3, "0.9", True), (0.4, 1.0, 0.3, 0.2, False)])])
+def test_production_un_signal_nul_en_chaine_ou_nan_est_refuse_comme_en_javascript():
+    """Commentaire : « The type is checked, not only the range: a signal logged as None or as a string is a broken log »."""
+    for sale in (None, "0.9", float("nan"), float("inf"), True):
+        with pytest.raises(ValueError, match="between 0 and 1"):
+            learn_weights([page([(0.5, 1.0, 0.3, sale, True), (0.4, 1.0, 0.3, 0.2, False)])])
 
 
 def test_production_des_signaux_hors_echelle_sont_refuses():

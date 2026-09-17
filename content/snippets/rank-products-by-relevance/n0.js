@@ -11,9 +11,17 @@
  *
  * Every signal sits on the same nought-to-one scale before the weights touch
  * it: text and availability by construction, margin and popularity because a
- * value outside is refused rather than left to swamp the others. A weight of
- * two really does mean twice as much, and the score, a mean over weights that
- * cannot be negative, stays inside the same scale.
+ * value outside is brought back onto it rather than left to swamp the others. A
+ * weight of two really does mean twice as much, and the score, a mean over
+ * weights that cannot be negative, stays inside the same scale.
+ *
+ * Brought back, and not refused: a margin of -0.05 is a real thing —
+ * end-of-season stock sold at a loss — and this function is called on every page
+ * of results. One badly filled product must not take the whole category page
+ * down with it. The products whose signals had to be moved come back named, so
+ * that the fault is visible rather than silent. The weights are another matter:
+ * they come from the code, and a weight that is not a finite number, zero or
+ * above, is refused.
  *
  * The sort is stable, so two products the score cannot separate stay in the
  * order the catalogue gave them. An unstable sort would reshuffle equal
@@ -50,6 +58,13 @@ export function terms(text) {
  * Prefix matching, not equality: a shopper who types "chauss" is looking for
  * "chaussures", and "sandale" finds "sandales". Not the other way round:
  * "sandales" does not find "sandale".
+ *
+ * It is a share, not a relevance score. On a one-word query every product that
+ * holds the word scores 1.0, and the ranking is then decided entirely by stock,
+ * margin and popularity. If you already run a search engine — BM25 in
+ * PostgreSQL, Elasticsearch, Meilisearch — put its score here instead,
+ * normalised to nought-to-one. The value of this rung is the arbitration
+ * between the four weights, not this signal.
  */
 export function textMatch(query, product) {
   const wanted = terms(query);
@@ -59,26 +74,56 @@ export function textMatch(query, product) {
   return found.length / wanted.length;
 }
 
+// The signals that come from the catalogue rather than from the query, and can
+// therefore arrive out of scale.
+export const FROM_DATA = ['margin', 'popularity'];
+
+/**
+ * Bring a value onto the nought-to-one scale, and say whether it had to move.
+ *
+ * Anything that is not a finite number reads as nought: a margin arriving as
+ * null, as a string or as NaN is a data fault, not a ranking signal, and it is
+ * reported rather than trusted.
+ */
+export function onScale(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return [0, true];
+  const bounded = Math.min(Math.max(value, 0), 1);
+  return [bounded, bounded !== value];
+}
+
+/** The catalogue signals `signals` had to move, named for the caller. */
+export function outOfScale(product) {
+  return FROM_DATA.filter((name) => onScale(product[name])[1]);
+}
+
 /** The four signals, each on the same nought-to-one scale. */
 export function signals(product, query) {
-  for (const name of ['margin', 'popularity']) {
-    // Also catches a missing field: undefined is not between 0 and 1.
-    if (!(product[name] >= 0 && product[name] <= 1)) {
-      throw new RangeError(`${name} must lie between 0 and 1, not ${product[name]}`);
-    }
+  // A field the catalogue does not have at all is a schema fault, not a dirty
+  // value: it is refused, as it is in Python.
+  for (const name of [...FROM_DATA, 'inStock']) {
+    if (!(name in product)) throw new RangeError(`the catalogue gives no ${name} for this product`);
   }
   return {
     text: textMatch(query, product),
     availability: product.inStock ? 1 : 0,
-    margin: product.margin,
-    popularity: product.popularity,
+    margin: onScale(product.margin)[0],
+    popularity: onScale(product.popularity)[0],
   };
 }
 
 /** Weighted mean of the signals, so the score stays on the same scale. */
 export function score(measured, weights) {
-  if (SIGNALS.some((name) => weights[name] < 0)) {
-    throw new RangeError('a weight cannot be negative: the score is a weighted mean');
+  const missing = SIGNALS.filter((name) => !(name in weights));
+  if (missing.length > 0) {
+    throw new RangeError(`every signal needs a weight, and these have none: ${missing.join(', ')}`);
+  }
+  for (const name of SIGNALS) {
+    const weight = weights[name];
+    // Unlike a signal, a weight comes from the code, not from the catalogue:
+    // it is refused rather than brought back into line.
+    if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0) {
+      throw new RangeError(`a weight must be a finite number, nought or above: ${name} is ${weight}`);
+    }
   }
   let total = 0;
   let weighted = 0;
@@ -94,12 +139,19 @@ export function score(measured, weights) {
  *
  * Returning the signals alongside the score costs nothing and settles most
  * arguments before they start: whoever asks why a product came third can see
- * which signal held it back.
+ * which signal held it back. `outOfScale` names the catalogue signals that had
+ * to be brought back onto the scale, so that a margin of -0.05 shows up in the
+ * output instead of taking the page down.
  */
 export function rank(products, query, weights = DEFAULT_WEIGHTS) {
   const scored = products.map((product) => {
     const measured = signals(product, query);
-    return { product, score: score(measured, weights), signals: measured };
+    return {
+      product,
+      score: score(measured, weights),
+      signals: measured,
+      outOfScale: outOfScale(product),
+    };
   });
   // Array.prototype.sort is stable: products the score cannot separate keep
   // their catalogue order.

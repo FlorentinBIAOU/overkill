@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from n0 import DEFAULT_WEIGHTS, SIGNALS, fold, rank, score, signals, terms, text_match
+from n0 import DEFAULT_WEIGHTS, SIGNALS, fold, out_of_scale, rank, score, signals, terms, text_match
 
 ICI = Path(__file__).parent
 
@@ -221,29 +221,46 @@ def test_le_texte_et_la_disponibilite_sont_entre_zero_et_un_par_construction():
             assert 0.0 <= mesure["text"] <= 1.0 and mesure["availability"] in (0.0, 1.0)
 
 
-def test_une_marge_ou_une_popularite_hors_de_l_echelle_est_refusee():
+def test_une_marge_ou_une_popularite_hors_de_l_echelle_est_ramenee_et_signalee():
     """
-    Docstring : « margin and popularity because a value outside is refused rather than left to
-    swamp the others ». Une marge saisie en pourcentage (35) lève ; limites 0 et 1 acceptées.
+    Docstring : « margin and popularity because a value outside is brought back
+    onto it […] Brought back, and not refused: a margin of -0.05 is a real thing
+    […] and one badly filled product must not take the whole category page down
+    with it ».
     """
-    with pytest.raises(ValueError, match="margin must lie between 0 and 1"):
-        signals(dict(CATALOGUE[0], margin=35), "chaussures")
-    with pytest.raises(ValueError, match="popularity must lie between 0 and 1"):
-        signals(dict(CATALOGUE[0], popularity=80), "chaussures")
-    for hors in (-0.0001, 1.0000001, float("nan"), float("inf")):
-        with pytest.raises(ValueError):
-            signals(dict(CATALOGUE[0], margin=hors), "chaussures")
-        with pytest.raises(ValueError):
-            rank([CATALOGUE[1], dict(CATALOGUE[0], popularity=hors)], "chaussures")
+    # Une marge saisie en pourcentage, une marge négative de déstockage.
+    assert signals(dict(CATALOGUE[0], margin=35), "chaussures")["margin"] == 1.0
+    assert signals(dict(CATALOGUE[0], margin=-0.05), "chaussures")["margin"] == 0.0
+    assert signals(dict(CATALOGUE[0], popularity=80), "chaussures")["popularity"] == 1.0
+    for hors in (-0.0001, 1.0000001, float("nan"), float("inf"), None, "0.5"):
+        assert out_of_scale(dict(CATALOGUE[0], margin=hors)) == ["margin"]
+        assert 0.0 <= signals(dict(CATALOGUE[0], margin=hors), "chaussures")["margin"] <= 1.0
     for limite in (0.0, 1.0):
-        mesure = signals(dict(CATALOGUE[0], margin=limite, popularity=limite), "chaussures")
+        produit = dict(CATALOGUE[0], margin=limite, popularity=limite)
+        mesure = signals(produit, "chaussures")
         assert (mesure["margin"], mesure["popularity"]) == (limite, limite)
+        assert out_of_scale(produit) == []
+
+
+def test_un_seul_produit_mal_renseigne_ne_fait_pas_tomber_la_page():
+    """
+    Docstring : « One badly filled product must not take the whole category
+    page down with it. The products whose signals had to be moved come back
+    named ».
+    """
+    produits = [CATALOGUE[0], dict(CATALOGUE[1], margin=-0.05), CATALOGUE[2]]
+    classement = rank(produits, "chaussures")
+    assert len(classement) == 3
+    fautif = next(row for row in classement if row["product"]["title"] == CATALOGUE[1]["title"])
+    assert fautif["out_of_scale"] == ["margin"] and fautif["signals"]["margin"] == 0.0
+    # Témoin : les deux autres produits sortent sans rien de signalé.
+    assert [row["out_of_scale"] for row in classement if row is not fautif] == [[], []]
 
 
 def test_un_poids_negatif_est_refuse():
     """Docstring : « a mean over weights that cannot be negative » ; texte 2, marge -1 lève."""
     mesure = {"text": 1.0, "availability": 0.0, "margin": 0.0, "popularity": 0.0}
-    with pytest.raises(ValueError, match="cannot be negative"):
+    with pytest.raises(ValueError, match="nought or above"):
         score(mesure, {"text": 2.0, "availability": 0.0, "margin": -1.0, "popularity": 0.0})
     with pytest.raises(ValueError):
         rank(CATALOGUE, "chaussures", dict(DEFAULT_WEIGHTS, popularity=-1e-9))
@@ -251,18 +268,15 @@ def test_un_poids_negatif_est_refuse():
     assert score(mesure, {"text": 2.0, "availability": 0.0, "margin": 0.0, "popularity": 0.0}) == 1.0
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "DÉFAUT : un poids NaN ou infini passe le refus des poids négatifs (nan < 0 et inf < 0 sont faux), et le "
-    "score sort de l'échelle sans erreur : score(…, text=nan) et score(…, text=inf) valent nan"
-))
-def test_defaut_un_poids_nan_ou_infini_est_refuse_ou_garde_le_score_dans_l_echelle():
+def test_un_poids_qui_n_est_pas_un_nombre_fini_est_refuse():
+    """Docstring : « a weight that is not a finite number, zero or above, is refused »."""
     mesure = {"text": 1.0, "availability": 0.0, "margin": 0.5, "popularity": 0.2}
-    for poids in (float("nan"), float("inf")):
-        try:
-            valeur = score(mesure, dict(DEFAULT_WEIGHTS, text=poids))
-        except ValueError:
-            continue
-        assert 0.0 <= valeur <= 1.0, poids
+    for poids in (float("nan"), float("inf"), float("-inf"), None, "2", True):
+        with pytest.raises(ValueError, match="finite number"):
+            score(mesure, dict(DEFAULT_WEIGHTS, text=poids))
+    # Et les quatre poids doivent être là.
+    with pytest.raises(ValueError, match="every signal needs a weight"):
+        score(mesure, {"text": 1.0, "availability": 1.0})
 
 
 def test_le_score_reste_entre_zero_et_un_pour_des_poids_positifs_et_des_signaux_dans_lechelle():
@@ -394,15 +408,19 @@ def test_production_un_mot_en_devanagari_ou_en_arabe_voyelle_ne_trouve_pas_un_au
     assert terms("مَكْتَبَة") == ["مَكْتَبَة"]
 
 
-def test_production_un_champ_manquant_leve_une_erreur():
-    """Python lève : KeyError sans `in_stock`, TypeError sur une popularité à None ou en chaîne, KeyError sur des poids incomplets."""
+def test_production_un_champ_manquant_leve_et_un_champ_sali_est_signale():
+    """
+    Un champ absent du produit lève — le catalogue n'a pas la colonne —, mais
+    une valeur du mauvais type y est ramenée à zéro et signalée, dans les deux
+    langages.
+    """
     with pytest.raises(KeyError):
         rank([{"title": "Sans stock", "margin": 0.1, "popularity": 0.1}], "x")
-    with pytest.raises(TypeError):
-        rank([dict(CATALOGUE[0], popularity=None)], "x")
-    with pytest.raises(TypeError):
-        rank([dict(CATALOGUE[0], margin="0.5")], "x")
     with pytest.raises(KeyError):
         rank([{"title": "Sans marge", "in_stock": True, "popularity": 0.1}], "x")
-    with pytest.raises(KeyError):
+    for sale in (None, "0.5"):
+        classement = rank([dict(CATALOGUE[0], popularity=sale)], "x")
+        assert classement[0]["signals"]["popularity"] == 0.0
+        assert classement[0]["out_of_scale"] == ["popularity"]
+    with pytest.raises(ValueError, match="every signal needs a weight"):
         rank(CATALOGUE, "x", {"text": 1.0})

@@ -30,10 +30,20 @@ const AGAINST_THE_SHOP = [
   [[0.5, 1.0, 0.20, 0.50, true], [0.5, 1.0, 0.80, 0.50, false]],
 ];
 
-const page = (rows) => rows.map((row) => ({
-  signals: Object.fromEntries(SIGNALS.map((name, i) => [name, row[i]])),
-  clicked: row[4],
-}));
+/**
+ * Une page, dans l'ordre où elle a été affichée.
+ *
+ * Les lignes des journaux ci-dessus écrivent le produit cliqué en premier, par
+ * commodité de lecture. L'ordre d'affichage est l'inverse : les produits ignorés
+ * au-dessus, le clic en dessous — c'est la seule forme dont N1 apprenne quelque
+ * chose, puisqu'il n'apparie un clic qu'aux produits montrés au-dessus de lui.
+ */
+const page = (rows) => [...rows]
+  .sort((a, b) => Number(Boolean(a[4])) - Number(Boolean(b[4])))
+  .map((row) => ({
+    signals: Object.fromEntries(SIGNALS.map((name, i) => [name, row[i]])),
+    clicked: row[4],
+  }));
 
 const impressions = (log = LOG) => log.map(page);
 
@@ -227,7 +237,7 @@ test('le score de N1 est une somme entre moins un et un, là où N0 est une moye
     const s = rank([item], weights)[0].score;
     assert.ok(s >= -1 && s <= 1);
   }
-  assert.throws(() => n0.score(candidat[0].signals, weights), { name: 'RangeError', message: /cannot be negative/ });
+  assert.throws(() => n0.score(candidat[0].signals, weights), { name: 'RangeError', message: /nought or above/ });
 });
 
 test('diviser par le total signé inverserait l’ordre ou l’effacerait', () => {
@@ -256,7 +266,7 @@ test('N0 refuse les poids appris négatifs : il faut servir avec la fonction de 
     { title: 'pertinent et rentable', tags: [], inStock: true, margin: 0.9, popularity: 0.5 },
     { title: 'hors sujet et sans marge', tags: [], inStock: true, margin: 0.1, popularity: 0.5 },
   ];
-  assert.throws(() => n0.rank(produits, 'pertinent', weights), { name: 'RangeError', message: /cannot be negative/ });
+  assert.throws(() => n0.rank(produits, 'pertinent', weights), { name: 'RangeError', message: /nought or above/ });
   const candidates = produits.map((p) => ({ title: p.title, signals: n0.signals(p, 'pertinent') }));
   const ranked = rank(candidates, weights);
   assert.deepEqual(ranked.map((r) => r.candidate.title), ['hors sujet et sans marge', 'pertinent et rentable']);
@@ -335,13 +345,12 @@ test('production : un signal manquant est refusé', () => {
   assert.throws(() => learnWeights([page([[0.5, 1, 0.3, NaN, true], [0.4, 1, 0.3, 0.2, false]])]), RangeError);
 });
 
-test('DÉFAUT : un signal null ou écrit en chaîne passe le contrôle d’échelle (Python lève TypeError)', async () => {
-  // `null >= 0 && null <= 1` est vrai : null compte pour zéro dans la différence ; « 0.9 » est converti.
-  await assert.rejects(async () => {
-    for (const valeur of [null, '0.9']) {
-      assert.throws(() => pairs([page([[0.5, 1, 0.3, valeur, true], [0.4, 1, 0.3, 0.2, false]])]), RangeError, String(valeur));
-    }
-  }, assert.AssertionError);
+test('un signal null ou écrit en chaîne est refusé, comme en Python', () => {
+  // « The type is checked, not only the comparison: `null >= 0` is true in
+  // JavaScript ».
+  for (const valeur of [null, '0.9', undefined, NaN]) {
+    assert.throws(() => pairs([page([[0.5, 1, 0.3, valeur, true], [0.4, 1, 0.3, 0.2, false]])]), RangeError, String(valeur));
+  }
 });
 
 test('production : des signaux hors échelle sont refusés', () => {

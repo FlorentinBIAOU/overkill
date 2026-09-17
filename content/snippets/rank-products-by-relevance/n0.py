@@ -11,15 +11,23 @@ Two decisions make it usable.
 
 Every signal sits on the same nought-to-one scale before the weights touch it:
 text and availability by construction, margin and popularity because a value
-outside is refused rather than left to swamp the others. A weight of two
-really does mean twice as much, and the score, a mean over weights that cannot
-be negative, stays inside the same scale.
+outside is brought back onto it rather than left to swamp the others. A weight
+of two really does mean twice as much, and the score, a mean over weights that
+cannot be negative, stays inside the same scale.
+
+Brought back, and not refused: a margin of -0.05 is a real thing — end-of-season
+stock sold at a loss — and this function is called on every page of results. One
+badly filled product must not take the whole category page down with it. The
+products whose signals had to be moved come back named, so that the fault is
+visible rather than silent. The weights are another matter: they come from the
+code, and a weight that is not a finite number, zero or above, is refused.
 
 The sort is stable, so two products the score cannot separate stay in the
 order the catalogue gave them. An unstable sort would reshuffle equal results
 between two page loads, and nobody would be able to reproduce a complaint.
 """
 
+import math
 import unicodedata
 
 # The order the weights are applied in. Fixing it keeps the arithmetic
@@ -55,6 +63,13 @@ def text_match(query: str, product: dict) -> float:
     Prefix matching, not equality: a shopper who types "chauss" is looking
     for "chaussures", and "sandale" finds "sandales". Not the other way round:
     "sandales" does not find "sandale".
+
+    It is a share, not a relevance score. On a one-word query every product
+    that holds the word scores 1.0, and the ranking is then decided entirely by
+    stock, margin and popularity. If you already run a search engine — BM25 in
+    PostgreSQL, Elasticsearch, Meilisearch — put its score here instead,
+    normalised to nought-to-one. The value of this rung is the arbitration
+    between the four weights, not this signal.
     """
     wanted = terms(query)
     if not wanted:
@@ -64,23 +79,54 @@ def text_match(query: str, product: dict) -> float:
     return found / len(wanted)
 
 
+# The signals that come from the catalogue rather than from the query, and can
+# therefore arrive out of scale.
+FROM_DATA = ("margin", "popularity")
+
+
+def on_scale(value) -> tuple[float, bool]:
+    """
+    Bring a value onto the nought-to-one scale, and say whether it had to move.
+
+    Anything that is not a finite number reads as nought: a margin arriving as
+    None, as a string or as NaN is a data fault, not a ranking signal, and it
+    is reported rather than trusted.
+    """
+    number = value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+    if number is None or not math.isfinite(number):
+        return 0.0, True
+    bounded = min(max(float(number), 0.0), 1.0)
+    return bounded, bounded != float(number)
+
+
+def out_of_scale(product: dict) -> list[str]:
+    """The catalogue signals `signals` had to move, named for the caller."""
+    return [name for name in FROM_DATA if on_scale(product[name])[1]]
+
+
 def signals(product: dict, query: str) -> dict[str, float]:
     """The four signals, each on the same nought-to-one scale."""
-    for name in ("margin", "popularity"):
-        if not 0.0 <= product[name] <= 1.0:
-            raise ValueError(f"{name} must lie between 0 and 1, not {product[name]!r}")
-    return {
+    measured = {
         "text": text_match(query, product),
         "availability": 1.0 if product["in_stock"] else 0.0,
-        "margin": product["margin"],
-        "popularity": product["popularity"],
     }
+    for name in FROM_DATA:
+        measured[name] = on_scale(product[name])[0]
+    return measured
 
 
 def score(measured: dict[str, float], weights: dict[str, float]) -> float:
     """Weighted mean of the signals, so the score stays on the same scale."""
-    if any(weights[name] < 0 for name in SIGNALS):
-        raise ValueError("a weight cannot be negative: the score is a weighted mean")
+    missing = [name for name in SIGNALS if name not in weights]
+    if missing:
+        raise ValueError(f"every signal needs a weight, and these have none: {', '.join(missing)}")
+    for name in SIGNALS:
+        weight = weights[name]
+        ok = isinstance(weight, (int, float)) and not isinstance(weight, bool) and math.isfinite(weight)
+        if not ok or weight < 0:
+            # Unlike a signal, a weight comes from the code, not from the
+            # catalogue: it is refused rather than brought back into line.
+            raise ValueError(f"a weight must be a finite number, nought or above: {name} is {weight!r}")
     total = 0.0
     weighted = 0.0
     for name in SIGNALS:
@@ -95,12 +141,19 @@ def rank(products: list[dict], query: str, weights: dict = DEFAULT_WEIGHTS) -> l
 
     Returning the signals alongside the score costs nothing and settles most
     arguments before they start: whoever asks why a product came third can see
-    which signal held it back.
+    which signal held it back. `out_of_scale` names the catalogue signals that
+    had to be brought back onto the scale, so that a margin of -0.05 shows up
+    in the output instead of taking the page down.
     """
     scored = []
     for product in products:
         measured = signals(product, query)
-        scored.append({"product": product, "score": score(measured, weights), "signals": measured})
+        scored.append({
+            "product": product,
+            "score": score(measured, weights),
+            "signals": measured,
+            "out_of_scale": out_of_scale(product),
+        })
     # Stable: products the score cannot separate keep their catalogue order.
     scored.sort(key=lambda row: -row["score"])
     return scored

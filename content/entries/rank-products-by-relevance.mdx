@@ -3,7 +3,7 @@ id: rank-products-by-relevance
 family: recommend
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
@@ -77,11 +77,11 @@ rungs:
       javascript: snippets/rank-products-by-relevance/n1.js
       verification: executed
     breaking_point:
-      fr: "Le journal n’enseigne que ce que le classement précédent a fait varier. Le test donne la même marge à tous les produits de toutes les pages : la colonne correspondante ne contient plus que des zéros, le poids appris vaut exactement zéro, et une page où la marge est la seule différence entre deux produits ressort avec deux scores identiques. Le modèle n’est pas faux, il est aveugle, et aucun surcroît de trafic n’y changera rien : seul un changement de ce qu’on montre le peut."
-      en: "The log only teaches what the previous ranking varied. The test gives every product on every page the same margin: that column holds nothing but zeroes, the learned weight comes out exactly nought, and a page where margin is the only difference between two products comes back with two identical scores. The model is not wrong, it is blind, and no amount of extra traffic will change that: only a change in what gets shown will."
+      fr: "Le journal n’enseigne que ce que le classement précédent a fait varier. Le test donne la même marge à tous les produits de toutes les pages : la colonne correspondante ne contient plus que des zéros, le poids appris vaut exactement zéro, et une page où la marge est la seule différence entre deux produits ressort avec deux scores identiques. Même aveuglement à l’autre bout : un journal où l’acheteur prend toujours le premier résultat ne forme aucune paire, puisque ce niveau n’apparie un clic qu’aux produits montrés au-dessus de lui, et `learn_weights` le dit au lieu d’inventer des poids. Aucun surcroît de trafic n’y change rien : seul un changement de ce qu’on montre le peut — exploration, entrelacement, ou une petite part du trafic servie dans un ordre perturbé."
+      en: "The log only teaches what the previous ranking varied. The test gives every product on every page the same margin: that column holds nothing but zeroes, the learned weight comes out exactly nought, and a page where margin is the only difference between two products comes back with two identical scores. Same blindness at the other end: a log where the shopper always takes the first result forms no pair at all, since this level only pairs a click with the products shown above it, and `learn_weights` says so rather than inventing weights. No amount of extra traffic changes that: only a change in what gets shown will — exploration, interleaving, or a small share of traffic served in a shuffled order."
     escalate_when:
-      fr: "Il n’y a pas de niveau au-dessus dans cette fiche : au-delà, on ne change plus de modèle, on change ce qu’on montre, pour que le journal enseigne autre chose que le classement de la veille."
-      en: "There is no level above this one here: past it you do not change model, you change what you show, so that the log teaches something other than yesterday’s ranking."
+      fr: "Il n’y a pas de niveau au-dessus dans cette fiche : au-delà, on ne change plus de modèle, on change ce qu’on montre — exploration, entrelacement, une part du trafic servie dans un ordre perturbé — pour que le journal enseigne autre chose que le classement de la veille."
+      en: "There is no level above this one here: past it you do not change model, you change what you show — exploration, interleaving, a share of traffic served in a shuffled order — so that the log teaches something other than yesterday’s ranking."
 
   - level: N2
     available: false
@@ -111,7 +111,9 @@ further_reading:
 
 sources:
   - label: "Règlement (UE) 2019/1150 (P2B), article 5 — les principaux paramètres de classement"
-    url: "https://www.legislation.gov.uk/eur/2019/1150/article/5"
+    url: "https://eur-lex.europa.eu/legal-content/FR/TXT/?uri=CELEX%3A32019R1150"
+  - label: "Joachims et al., Accurately Interpreting Clickthrough Data as Implicit Feedback — le biais de position et la stratégie « Click > Skip Above », dont N1 tire sa règle d’appariement"
+    url: "https://www.cs.cornell.edu/people/tj/publications/joachims_etal_05a.pdf"
   - label: "CNIL — Donnée personnelle, définition"
     url: "https://www.cnil.fr/fr/definition/donnee-personnelle"
   - label: "CNIL — Le registre des activités de traitement"

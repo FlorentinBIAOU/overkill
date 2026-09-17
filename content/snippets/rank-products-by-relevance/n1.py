@@ -5,9 +5,16 @@ Rung N1. The score is built on the same four signals as N0, each between
 nought and one. What changes is where the four weights come from: a
 merchandiser's judgement on N0, the click log here.
 
-The method is pairwise. What a log really says is never "this product
-deserves 0.8", it is "shown these two side by side, a shopper took that
-one". Each such pair becomes one training row, the difference between the two
+The method is pairwise, and only one kind of pair counts: a clicked product
+against a product that was shown **above** it and passed over. That is the
+"Click > Skip Above" strategy of Joachims et al., and the reason for it is the
+position bias they measured: a product shown below the click may never have
+been looked at, so pairing it with the click teaches nothing about the
+products and everything about the order the previous ranking already produced.
+The model would learn to reproduce N0, which is the opposite of why one climbs
+here.
+
+Each surviving pair becomes one training row, the difference between the two
 signal vectors, and a logistic regression on those differences gives back the
 weights of the original score. The signals shown to the shop stay the same;
 the score does not. Learned weights can be negative, so the score is a plain
@@ -20,31 +27,51 @@ intercept: a constant would shift both directions of the same pair the same
 way, which is meaningless when comparing two products of one result page.
 """
 
+import math
+
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 SIGNALS = ("text", "availability", "margin", "popularity")
 
 
+def _in_scale(value) -> bool:
+    """A finite number between 0 and 1, the scale N0 serves the signals on."""
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    return math.isfinite(value) and 0.0 <= value <= 1.0
+
+
 def pairs(impressions: list[list[dict]]) -> tuple[np.ndarray, np.ndarray]:
     """
     Turn result pages into training rows.
 
-    `impressions` is one entry per result page shown to a shopper, each item
-    holding the signals logged at serving time and whether it was clicked.
-    Logging the signals rather than recomputing them later matters: a product
-    that has since gone out of stock must be trained on the availability it
-    had on the day, not on today's.
+    `impressions` is one entry per result page shown to a shopper, **in the
+    order the page displayed them**, each item holding the signals logged at
+    serving time and whether it was clicked. That order is the whole point:
+    only the products above a click are paired with it.
+
+    Logging the signals rather than recomputing them later matters too: a
+    product that has since gone out of stock must be trained on the
+    availability it had on the day, not on today's.
+
+    A log where the first result is always clicked produces no pair at all,
+    and `learn_weights` says so rather than inventing weights.
     """
     rows, labels = [], []
     for page in impressions:
-        if not all(0.0 <= item["signals"][name] <= 1.0 for item in page for name in SIGNALS):
+        # The type is checked, not only the range: a signal logged as None or
+        # as a string is a broken log, not a value to be cleaned up here.
+        if not all(_in_scale(item["signals"][name]) for item in page for name in SIGNALS):
             raise ValueError("every logged signal must lie between 0 and 1")
-        clicked = [item["signals"] for item in page if item["clicked"]]
-        ignored = [item["signals"] for item in page if not item["clicked"]]
-        for winner in clicked:
-            for loser in ignored:
-                difference = [winner[name] - loser[name] for name in SIGNALS]
+        for position, item in enumerate(page):
+            if not item["clicked"]:
+                continue
+            winner = item["signals"]
+            for above in page[:position]:
+                if above["clicked"]:
+                    continue  # two clicks say nothing about each other
+                difference = [winner[name] - above["signals"][name] for name in SIGNALS]
                 rows.append(difference)
                 labels.append(1)
                 rows.append([-value for value in difference])
@@ -62,7 +89,9 @@ def learn_weights(impressions: list[list[dict]], regularisation: float = 1.0) ->
     """
     rows, labels = pairs(impressions)
     if len(rows) == 0:
-        raise ValueError("no clicked and ignored pair in the log: nothing to learn from")
+        raise ValueError(
+            "no click with an ignored product above it in the log: nothing to learn from"
+        )
     model = LogisticRegression(C=regularisation, fit_intercept=False, max_iter=1000)
     model.fit(rows, labels)
     learnt = model.coef_[0]

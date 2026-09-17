@@ -37,3 +37,8 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
 - **add-autocomplete-to-a-search-bar** — préfixe vide retiré du comptage des
   clics, point de rupture de N1 réécrit sur le clic isolé et le biais de
   position, « ẞ » replié, un marquage retiré. Reste : rien.
+- **rank-products-by-relevance** — N1 n'apparie plus qu'un clic aux produits
+  montrés au-dessus (Click > Skip Above), une donnée de gestion hors échelle est
+  ramenée et signalée au lieu de faire tomber la page, pondérations et signaux
+  contrôlés à l'identique dans les deux langages, quatre marquages retirés.
+  Reste : rien.

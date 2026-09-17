@@ -17,10 +17,18 @@ n0: |
 
   Chaque signal est sur la même échelle de zéro à un avant que les pondérations
   ne le touchent : le texte et la disponibilité par construction, la marge et
-  la popularité parce qu'une valeur hors de l'échelle est refusée plutôt que
+  la popularité parce qu'une valeur hors de l'échelle y est ramenée plutôt que
   laissée écraser les autres. Un poids de deux compte vraiment deux fois plus,
   et le score, moyenne sur des pondérations qui ne peuvent pas être négatives,
   reste dans cette échelle.
+
+  Ramenée, et non refusée : une marge de -0,05 existe pour de bon — un
+  déstockage vendu à perte — et cette fonction est appelée sur chaque page de
+  résultats. Un seul produit mal renseigné ne doit pas faire tomber toute la
+  page de catégorie. Les produits dont un signal a dû être déplacé ressortent
+  nommés, pour que le défaut se voie au lieu de se taire. Les pondérations sont
+  une autre affaire : elles viennent du code, et une pondération qui n'est pas
+  un nombre fini, nul ou positif, est refusée.
 
   Le tri est stable : deux produits que le score ne sait pas séparer restent
   dans l'ordre où le catalogue les a donnés. Un tri instable rebattrait les
@@ -35,9 +43,16 @@ n1.py: |
   entre zéro et un. Ce qui change, c'est l'origine des quatre pondérations : le
   jugement d'un responsable de rayon en N0, le journal de clics ici.
 
-  La méthode est par paires. Ce qu'un journal dit réellement n'est jamais
-  « ce produit mérite 0,8 », c'est « montrés côte à côte, un acheteur a pris
-  celui-là ». Chaque paire devient une ligne d'entraînement, la différence
+  La méthode est par paires, et une seule sorte de paire compte : un produit
+  cliqué contre un produit montré **au-dessus de lui** et laissé de côté. C'est
+  la stratégie « Click > Skip Above » de Joachims et de ses coauteurs, et sa
+  raison d'être est le biais de position qu'ils ont mesuré : un produit montré
+  sous le clic n'a peut-être jamais été regardé, si bien que l'apparier au clic
+  n'enseigne rien sur les produits et tout sur l'ordre que le classement
+  précédent produisait déjà. Le modèle apprendrait à reproduire N0, ce qui est
+  l'inverse de ce pour quoi on monte.
+
+  Chaque paire retenue devient une ligne d'entraînement, la différence
   entre les deux vecteurs de signaux, et une régression logistique sur ces
   différences redonne les pondérations du score d'origine. Les signaux montrés
   au rayon restent les mêmes ; le score, non. Des pondérations apprises peuvent
@@ -59,9 +74,16 @@ n1.js: |
   entre zéro et un. Ce qui change, c'est l'origine des quatre pondérations : le
   jugement d'un responsable de rayon en N0, le journal de clics ici.
 
-  La méthode est par paires. Ce qu'un journal dit réellement n'est jamais
-  « ce produit mérite 0,8 », c'est « montrés côte à côte, un acheteur a pris
-  celui-là ». Chaque paire devient une ligne d'entraînement, la différence
+  La méthode est par paires, et une seule sorte de paire compte : un produit
+  cliqué contre un produit montré **au-dessus de lui** et laissé de côté. C'est
+  la stratégie « Click > Skip Above » de Joachims et de ses coauteurs, et sa
+  raison d'être est le biais de position qu'ils ont mesuré : un produit montré
+  sous le clic n'a peut-être jamais été regardé, si bien que l'apparier au clic
+  n'enseigne rien sur les produits et tout sur l'ordre que le classement
+  précédent produisait déjà. Le modèle apprendrait à reproduire N0, ce qui est
+  l'inverse de ce pour quoi on monte.
+
+  Chaque paire retenue devient une ligne d'entraînement, la différence
   entre les deux vecteurs de signaux, et une régression logistique sur ces
   différences redonne les pondérations du score d'origine. Les signaux montrés
   au rayon restent les mêmes ; le score, non. Des pondérations apprises peuvent

@@ -5,9 +5,16 @@
  * nought and one. What changes is where the four weights come from: a
  * merchandiser's judgement on N0, the click log here.
  *
- * The method is pairwise. What a log really says is never "this product
- * deserves 0.8", it is "shown these two side by side, a shopper took that
- * one". Each such pair becomes one training row, the difference between the
+ * The method is pairwise, and only one kind of pair counts: a clicked product
+ * against a product that was shown **above** it and passed over. That is the
+ * "Click > Skip Above" strategy of Joachims et al., and the reason for it is the
+ * position bias they measured: a product shown below the click may never have
+ * been looked at, so pairing it with the click teaches nothing about the
+ * products and everything about the order the previous ranking already
+ * produced. The model would learn to reproduce N0, which is the opposite of why
+ * one climbs here.
+ *
+ * Each surviving pair becomes one training row, the difference between the
  * two signal vectors, and a logistic regression on those differences gives
  * back the weights of the original score. The signals shown to the shop stay
  * the same; the score does not. Learned weights can be negative, so the score
@@ -25,34 +32,49 @@
 
 export const SIGNALS = ['text', 'availability', 'margin', 'popularity'];
 
-/** Every signal between 0 and 1, the scale N0 serves them on; undefined fails too. */
-const inScale = (signals) => SIGNALS.every((name) => signals[name] >= 0 && signals[name] <= 1);
+/**
+ * Every signal a finite number between 0 and 1, the scale N0 serves them on.
+ *
+ * The type is checked, not only the comparison: `null >= 0` is true in
+ * JavaScript, and a signal logged as null or as the string "0.9" would slip
+ * through and count as something. A logged signal is not a catalogue field to
+ * be cleaned up here — it is what the serving pipeline wrote down, and if it is
+ * not a number the log is broken.
+ */
+const inScale = (signals) => SIGNALS.every((name) => typeof signals[name] === 'number'
+  && Number.isFinite(signals[name]) && signals[name] >= 0 && signals[name] <= 1);
 
 /**
  * Turn result pages into training rows.
  *
- * `impressions` is one entry per result page shown to a shopper, each item
- * holding the signals logged at serving time and whether it was clicked.
- * Logging the signals rather than recomputing them later matters: a product
+ * `impressions` is one entry per result page shown to a shopper, **in the order
+ * the page displayed them**, each item holding the signals logged at serving
+ * time and whether it was clicked. That order is the whole point: only the
+ * products above a click are paired with it.
+ *
+ * Logging the signals rather than recomputing them later matters too: a product
  * that has since gone out of stock must be trained on the availability it had
  * on the day, not on today's.
+ *
+ * A log where the first result is always clicked produces no pair at all, and
+ * `learnWeights` says so rather than inventing weights.
  */
 export function pairs(impressions) {
   const rows = [];
   const labels = [];
   for (const page of impressions) {
     if (!page.every((item) => inScale(item.signals))) throw new RangeError('every logged signal must lie between 0 and 1');
-    const clicked = page.filter((item) => item.clicked).map((item) => item.signals);
-    const ignored = page.filter((item) => !item.clicked).map((item) => item.signals);
-    for (const winner of clicked) {
-      for (const loser of ignored) {
-        const difference = SIGNALS.map((name) => winner[name] - loser[name]);
+    page.forEach((item, position) => {
+      if (!item.clicked) return;
+      for (const above of page.slice(0, position)) {
+        if (above.clicked) continue; // two clicks say nothing about each other
+        const difference = SIGNALS.map((name) => item.signals[name] - above.signals[name]);
         rows.push(difference);
         labels.push(1);
         rows.push(difference.map((value) => -value));
         labels.push(0);
       }
-    }
+    });
   }
   return { rows, labels };
 }
@@ -67,7 +89,7 @@ export function pairs(impressions) {
 export function learnWeights(impressions, { regularisation = 1, epochs = 600, rate = 0.5 } = {}) {
   const { rows, labels } = pairs(impressions);
   if (rows.length === 0) {
-    throw new Error('no clicked and ignored pair in the log: nothing to learn from');
+    throw new Error('no click with an ignored product above it in the log: nothing to learn from');
   }
   const learnt = new Array(SIGNALS.length).fill(0);
   for (let epoch = 0; epoch < epochs; epoch += 1) {
