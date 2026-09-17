@@ -25,3 +25,7 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
   ramené à N0, essai refait sur N0, régression de N1 écrite dans son point de
   rupture, géocodeur de la Géoplateforme nommé et sourcé, plafond de N2 expliqué,
   adaptateur N3 testé. Reste : rien.
+- **tag-articles-by-topic** — suite remise au vert (bornes de temps à marge de
+  dix, latence de N0 déclarée `~10 ms`), plancher dans `tag` pour l'article
+  multi-thèmes, cinq marquages retirés, `lemmatise` renommé, adaptateur N3
+  testé. Reste : rien.

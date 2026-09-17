@@ -12,30 +12,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { MAX_CHARACTERS, TaggingUnavailable, tag } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import { MAX_CHARACTERS, MODEL, TaggingUnavailable, providerClient, tag } from './n3.js';
 
 const TOPICS = ['cybersécurité', 'fiscalité', 'recrutement', 'télétravail'];
 
 const ARTICLE = "Les indemnités de télétravail versées aux salariés sont soumises à l'impôt.";
 
-/**
- * Imite la surface du kit `openai` publié (7.x) : `client.chat.completions.create({ model, messages })`,
- * réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
- */
-function realShapedClient(content) {
-  const requests = [];
-  return {
-    requests,
-    chat: {
-      completions: {
-        async create(body) {
-          requests.push(body);
-          return { choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] };
-        },
-      },
-    },
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Point de rupture
@@ -150,17 +133,28 @@ test('le client est injecté pour tester sans réseau', async () => {
   });
 });
 
-test('DÉFAUT : le client par défaut a la forme du vrai kit ; `client.complete` n’existe pas', async () => {
-  const client = realShapedClient('["fiscalité"]');
-  await assert.rejects(async () => {
-    let out;
-    try {
-      out = await tag(ARTICLE, TOPICS, { client });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.deepEqual(out, ['fiscalité']);
-  }, assert.AssertionError);
+test('l’adaptateur parle au kit du fournisseur', async () => {
+  // `providerClient` : la seule requête que l'extrait envoie, sur le kit.
+  const sdk = new FakeSDK({ content: '["fiscalité"]' });
+  assert.deepEqual(await tag(ARTICLE, TOPICS, { client: await providerClient(sdk) }), ['fiscalité']);
+  assert.equal(sdk.lastRequest.endpoint, 'chat.completions');
+  assert.equal(sdk.lastRequest.model, MODEL);
+  assert.equal(sdk.lastRequest.temperature, 0);
+  assert.equal(sdk.lastRequest.messages.length, 1);
+  assert.equal(sdk.lastRequest.messages[0].role, 'user');
+  assert.ok(sdk.lastRequest.messages[0].content.includes(ARTICLE));
+});
+
+test('l’adaptateur rend un refus du modèle comme une réponse inutilisable', async () => {
+  // `content` nul n'est jamais passé au décodeur JSON.
+  const sdk = new FakeSDK({ content: null });
+  await assert.rejects(async () => tag(ARTICLE, TOPICS, { client: await providerClient(sdk) }), TaggingUnavailable);
+});
+
+test('l’adaptateur retente une panne du kit', async () => {
+  const sdk = new FakeSDK({ content: '["fiscalité"]', failTimes: 2 });
+  assert.deepEqual(await tag(ARTICLE, TOPICS, { client: await providerClient(sdk), attempts: 3 }), ['fiscalité']);
+  assert.equal(sdk.requests.length, 3);
 });
 
 // ---------------------------------------------------------------------------

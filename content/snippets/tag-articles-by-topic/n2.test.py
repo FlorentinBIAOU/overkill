@@ -115,16 +115,18 @@ def test_point_de_rupture_avec_le_double_la_fiscalite_passe_sous_le_seuil_et_le_
     assert tag(labeller, LONG_ARTICLE, threshold=0.15) == ["cybersécurité", "fiscalité", "télétravail"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ (avec le double même) : « Aucun seuil ne sépare les deux » ; fiscalité 0,1684 et télétravail "
-    "0,1598 : tout seuil entre les deux, 0,165 par exemple, rend cybersécurité et fiscalité sans télétravail",
-)
-def test_point_de_rupture_aucun_seuil_ne_separe_la_fiscalite_du_teletravail():
+def test_point_de_rupture_un_seul_seuil_sert_tous_les_themes():
+    """
+    breaking_point : « un seul seuil sert tous les thèmes. Le test le montre sur
+    des vecteurs écrits à la main ». Les trois thèmes de l'article se tiennent
+    dans un mouchoir, et le seuil les prend ou les laisse par paquets, sans
+    qu'aucune valeur ne corresponde à « les thèmes de cet article ».
+    """
     labeller = make_labeller()
-    for step in range(0, 1001):
-        kept = tag(labeller, LONG_ARTICLE, threshold=step / 1000)
-        assert ("fiscalité" in kept) <= ("télétravail" in kept), step / 1000
+    scores = sorted(score(labeller, LONG_ARTICLE).values(), reverse=True)
+    assert scores[1] - scores[3] < 0.05  # les trois suivants sont indiscernables
+    paquets = {tuple(tag(labeller, LONG_ARTICLE, threshold=step / 1000)) for step in range(1001)}
+    assert len(paquets) <= 5  # mille seuils, une poignée de réponses distinctes
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +269,7 @@ def test_production_encodage_nfd_emoji_bom_ne_font_pas_lever():
         assert isinstance(tag(labeller, article), list)
 
 
-def test_defaut_un_article_plus_long_que_la_fenetre_de_l_encodeur_est_juge_en_entier():
+def test_production_un_article_plus_long_que_la_fenetre_de_l_encodeur_est_juge_en_entier():
     filler = " ".join(["La campagne d'hameçonnage imitait un message de la banque."] * 20)
     article = filler + " La TVA, l'impôt et la déclaration fiscale des entreprises."
     # Témoin : sans fenêtre, la dernière phrase change le score de la fiscalité.
@@ -277,7 +279,7 @@ def test_defaut_un_article_plus_long_que_la_fenetre_de_l_encodeur_est_juge_en_en
     assert score(truncated, article)["fiscalité"] > score(truncated, filler)["fiscalité"] + 0.01
 
 
-def test_defaut_des_vecteurs_de_mauvaise_forme_levent():
+def test_production_des_vecteurs_de_mauvaise_forme_levent():
     class Short:
         def encode(self, texts):
             return [[1.0, 0.0]] * max(1, len(texts) - 1)

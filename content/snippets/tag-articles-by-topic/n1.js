@@ -10,10 +10,13 @@
  * One classifier per topic, each answering its own yes-or-no question. That is
  * what one-versus-rest means, and it is what keeps the tagging multi-label:
  * the topics do not compete for a single winner, so an article can come back
- * with two tags, or with none. The article's TF-IDF vector has length one,
- * though: the more topics it covers, the less weight each gets. In the test,
- * an article made of the training articles of three topics comes back with no
- * tag at all.
+ * with two tags, or with none.
+ *
+ * The article's TF-IDF vector has length one, though: the more topics it
+ * covers, the less weight each gets. An article made of the training articles
+ * of three topics reaches the threshold on none of them, and the most thorough
+ * article of the week would come back untagged. That is what the floor is for,
+ * in `tag`.
  *
  * Written out in full rather than pulled from a library, with sparse vectors
  * so that training grows with the words each article holds rather than with
@@ -117,13 +120,26 @@ export function score(model, article) {
 /**
  * The topics above the threshold, best first.
  *
- * The threshold is yours to set, and it is the only dial here. Move it towards
- * 1 when a wrong tag is worse than a missing one, towards 0 when an editor
+ * The threshold is yours to set, and it is the first dial. Move it towards 1
+ * when a wrong tag is worse than a missing one, towards 0 when an editor
  * reviews the list anyway and would rather see one topic too many.
+ *
+ * `floor` is the second, and it exists for the article that covers several
+ * topics at once. Its vector has length one, so the more topics it covers the
+ * less weight each one gets, and the most thorough article of the week can
+ * reach the threshold on none of them.
+ *
+ * When nothing reaches the threshold, two things are possible: the article is
+ * about none of the topics, or it is about several and they shared its weight.
+ * Two topics above the floor tell the second case from the first, and then both
+ * come back. One alone does not, because that is what an article about nothing
+ * looks like. Set `floor` equal to `threshold` to turn the whole thing off.
  */
-export function tag(model, article, threshold = 0.5) {
+export function tag(model, article, threshold = 0.5, floor = 0.3) {
   const scored = score(model, article);
-  return model.topics
-    .filter((topic) => scored[topic] >= threshold)
-    .sort((a, b) => scored[b] - scored[a] || (a < b ? -1 : a > b ? 1 : 0));
+  const order = (a, b) => scored[b] - scored[a] || (a < b ? -1 : a > b ? 1 : 0);
+  const above = model.topics.filter((topic) => scored[topic] >= threshold).sort(order);
+  if (above.length > 0) return above;
+  const near = model.topics.filter((topic) => scored[topic] >= floor).sort(order);
+  return near.length > 1 ? near : [];
 }

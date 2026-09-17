@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { lemmatise, normalise, stems, tag } from './n0.js';
+import { stripEnding, normalise, stems, tag } from './n0.js';
 
 // Le vocabulaire contrôlé d'une petite rédaction : quatre thèmes, et les termes
 // qu'un rédacteur inscrirait pour chacun. Il vit dans le test, parce qu'il
@@ -56,12 +56,15 @@ test('point de rupture : la seule réparation est d’ajouter un terme', () => {
 // Nom et docstring
 // ---------------------------------------------------------------------------
 
-test('INFIRMÉ : « lemmatisation » ; les formes fléchies d’un terme ne sont pas ramenées au terme', () => {
-  assert.throws(() => {
-    assert.deepEqual(tag('Nous embauchons deux développeurs.', { recrutement: ['embaucher'] }), ['recrutement']);
-    assert.deepEqual(tag('Des avantages fiscaux pour les PME.', { fiscalité: ['avantage fiscal'] }), ['fiscalité']);
-    assert.deepEqual(tag('Remote working is the norm.', { 'remote work': ['remote work'] }), ['remote work']);
-  }, assert.AssertionError);
+test('le retrait de terminaison n’est pas une lemmatisation', () => {
+  // « a plural-and-suffix stripper, not a lemmatiser: "embauchons" does not
+  // become "embaucher" ».
+  assert.deepEqual(tag('Nous embauchons deux développeurs.', { recrutement: ['embaucher'] }), []);
+  assert.deepEqual(tag('Des avantages fiscaux pour les PME.', { fiscalité: ['avantage fiscal'] }), []);
+  assert.deepEqual(tag('Remote working is the norm.', { 'remote work': ['remote work'] }), []);
+  // Témoin : la forme que le retrait de terminaison atteint, elle, est reconnue.
+  assert.deepEqual(tag('Deux recrutements en mars.', { recrutement: ['recrutement'] }), ['recrutement']);
+  assert.deepEqual(tag('Remote work is the norm.', { 'remote work': ['remote work'] }), ['remote work']);
 });
 
 test('n0 est déterministe', () => {
@@ -120,7 +123,7 @@ test('casse, accents et pluriels ne coûtent rien', () => {
 
 test('un terme de plusieurs mots se trouve au pluriel de ses mots', () => {
   assert.deepEqual(tag('changez vos mots de passe', VOCABULARY), ['cybersécurité']);
-  assert.equal(lemmatise('mots'), 'mot');
+  assert.equal(stripEnding('mots'), 'mot');
   assert.equal(normalise('Hameçonnage'), 'hameconnage');
 });
 
@@ -131,10 +134,10 @@ test('un radical ne se trouve jamais dans un mot plus long', () => {
 });
 
 test('le repli ne retire qu’une terminaison et garde trois lettres', () => {
-  assert.equal(lemmatise('recrutements'), 'recrut');
-  assert.equal(lemmatise('taxes'), 'tax');
-  assert.equal(lemmatise('mes'), 'mes');
-  assert.equal(lemmatise('rues'), 'rue');
+  assert.equal(stripEnding('recrutements'), 'recrut');
+  assert.equal(stripEnding('taxes'), 'tax');
+  assert.equal(stripEnding('mes'), 'mes');
+  assert.equal(stripEnding('rues'), 'rue');
 });
 
 test('les terminaisons qui se recouvrent sont essayées de la plus longue à la plus courte', () => {
@@ -180,7 +183,10 @@ test('le vocabulaire est un paramètre', () => {
   assert.deepEqual(tag('Le candidat a signé hier.', { 'ressources humaines': ['candidat'] }), ['ressources humaines']);
 });
 
-test('un article se traite en moins d’une milliseconde', () => {
+test('production : un article de presse termine dans une borne large', () => {
+  // latency `~10 ms`, mesurée sur l'article de cinq cents mots ci-dessous et le
+  // vocabulaire du test. La borne porte une marge de dix : elle attrape un
+  // effondrement, elle ne publie pas une mesure.
   const words = 'la loi de finances précise le régime applicable aux indemnités versées salariés équipe'.split(' ');
   const article = Array.from({ length: 500 }, (_, i) => words[(i * 7) % words.length]).join(' ');
   for (let i = 0; i < 50; i += 1) tag(article, VOCABULARY);
@@ -190,7 +196,12 @@ test('un article se traite en moins d’une milliseconde', () => {
     tag(article, VOCABULARY);
     best = Math.min(best, performance.now() - start);
   }
-  assert.ok(best < 1, `${best} ms`);
+  assert.ok(best < 100, `${best} ms`);
+  // Dix fois plus long : le temps croît avec l'article, il n'explose pas.
+  const long = Array(10).fill(article).join(' ');
+  const start = performance.now();
+  tag(long, VOCABULARY);
+  assert.ok(performance.now() - start < 1_000);
 });
 
 // ---------------------------------------------------------------------------

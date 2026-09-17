@@ -9,9 +9,12 @@ work topic, although no editor would ever have written them in a term list.
 One classifier per topic, each answering its own yes-or-no question. That is
 what one-versus-rest means, and it is what keeps the tagging multi-label: the
 topics do not compete for a single winner, so an article can come back with
-two tags, or with none. The article's TF-IDF vector has length one, though:
-the more topics it covers, the less weight each gets. In the test, an article
-made of the training articles of three topics comes back with no tag at all.
+two tags, or with none.
+
+The article's TF-IDF vector has length one, though: the more topics it covers,
+the less weight each gets. An article made of the training articles of three
+topics reaches the threshold on none of them, and the most thorough article of
+the week would come back untagged. That is what the floor is for, in `tag`.
 
 The cost of this rung is not the code, which is below. It is the labelled
 corpus: articles someone has to tag by hand, and tag again every time the
@@ -51,14 +54,30 @@ def score(model: dict, article: str) -> dict[str, float]:
     return {topic: float(p) for topic, p in zip(model["topics"], probabilities)}
 
 
-def tag(model: dict, article: str, threshold: float = 0.5) -> list[str]:
+def tag(model: dict, article: str, threshold: float = 0.5, floor: float = 0.3) -> list[str]:
     """
     The topics above the threshold, best first.
 
-    The threshold is yours to set, and it is the only dial here. Move it
-    towards 1 when a wrong tag is worse than a missing one, towards 0 when an
-    editor reviews the list anyway and would rather see one topic too many.
+    The threshold is yours to set, and it is the first dial. Move it towards 1
+    when a wrong tag is worse than a missing one, towards 0 when an editor
+    reviews the list anyway and would rather see one topic too many.
+
+    `floor` is the second, and it exists for the article that covers several
+    topics at once. Its vector has length one, so the more topics it covers the
+    less weight each one gets, and the most thorough article of the week can
+    reach the threshold on none of them.
+
+    When nothing reaches the threshold, two things are possible: the article is
+    about none of the topics, or it is about several and they shared its
+    weight. Two topics above the floor tell the second case from the first, and
+    then both come back. One alone does not, because that is what an article
+    about nothing looks like. Set `floor` equal to `threshold` to turn the
+    whole thing off.
     """
     scored = score(model, article)
-    kept = [topic for topic, value in scored.items() if value >= threshold]
-    return sorted(kept, key=lambda topic: (-scored[topic], topic))
+    order = lambda topic: (-scored[topic], topic)  # noqa: E731 - read once, used twice
+    above = sorted((t for t, value in scored.items() if value >= threshold), key=order)
+    if above:
+        return above
+    near = sorted((t for t, value in scored.items() if value >= floor), key=order)
+    return near if len(near) > 1 else []

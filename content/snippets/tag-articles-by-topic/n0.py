@@ -39,7 +39,7 @@ def normalise(text: str) -> str:
     )
 
 
-def lemmatise(word: str) -> str:
+def strip_ending(word: str) -> str:
     """Strip one ending, and only when a stem of three letters is left."""
     for suffix in SUFFIXES:
         if word.endswith(suffix) and len(word) - len(suffix) >= 3:
@@ -54,7 +54,7 @@ def stems(text: str) -> str:
     The padding is what lets a multi-word term be found with a plain substring
     search: "impot" can then never match inside "impotent".
     """
-    return " " + " ".join(lemmatise(w) for w in WORD.findall(normalise(text))) + " "
+    return " " + " ".join(strip_ending(w) for w in WORD.findall(normalise(text))) + " "
 
 
 def tag(article: str, vocabulary: dict[str, list[str]], min_terms: int = 1) -> list[str]:

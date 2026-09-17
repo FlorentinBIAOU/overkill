@@ -34,7 +34,7 @@ export function normalise(text) {
 }
 
 /** Strip one ending, and only when a stem of three letters is left. */
-export function lemmatise(word) {
+export function stripEnding(word) {
   for (const suffix of SUFFIXES) {
     if (word.endsWith(suffix) && word.length - suffix.length >= 3) {
       return word.slice(0, -suffix.length);
@@ -51,7 +51,7 @@ export function lemmatise(word) {
  */
 export function stems(text) {
   const found = normalise(text).match(WORD) ?? [];
-  return ` ${found.map(lemmatise).join(' ')} `;
+  return ` ${found.map(stripEnding).join(' ')} `;
 }
 
 /**

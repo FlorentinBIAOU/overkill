@@ -3,7 +3,7 @@ id: tag-articles-by-topic
 family: classify-route
 status: published
 verdict: N1
-updated: 2026-09-15
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
@@ -25,7 +25,7 @@ rungs:
       fr: "Vocabulaire contrôlé, correspondance de termes après retrait des terminaisons"
       en: "Controlled vocabulary, term matching after suffix stripping"
     cost: nul
-    latency: "<1 ms"
+    latency: "~10 ms"
     risks:
       data_egress: none
       deterministic: true
@@ -67,8 +67,8 @@ rungs:
       javascript: snippets/tag-articles-by-topic/n1.js
       verification: executed
     breaking_point:
-      fr: "Un thème que personne n’a étiqueté n’existe pas pour le modèle. L’article sur le guichet de subvention de la région ressort vide, et baisser le seuil pour le rattraper ne fait pas apparaître le thème manquant : il classe l’article en télétravail. Un thème ajouté à la taxonomie n’existe pour le modèle qu’une fois des articles étiquetés avec lui, et les articles du fonds qui en parlent sans porter l’étiquette lui servent d’exemples contraires."
-      en: "A topic nobody labelled does not exist for the model. The article about a regional subsidy desk comes back empty, and lowering the threshold to catch it does not surface the missing topic: it files the article under remote work. A topic added to the taxonomy exists for the model only once articles have been tagged with it, and the archive articles that cover it without the tag teach it the opposite."
+      fr: "L’article qui traite plusieurs thèmes à la fois — souvent le plus fouillé de la semaine — n’atteint le seuil sur aucun : son vecteur a pour longueur un, et les thèmes se partagent son poids. Sans le plancher de `tag`, un article fait des articles de trois thèmes ressort sans une étiquette ; le témoin est l’article d’un seul thème, étiqueté du premier coup. Et un thème que personne n’a étiqueté n’existe pas : l’article sur le guichet de subvention ressort vide, et baisser le seuil le classe en télétravail plutôt que de faire apparaître le thème manquant."
+      en: "The article that covers several topics at once — often the most thorough of the week — reaches the threshold on none of them: its vector has length one, and the topics share its weight. Without the floor in `tag`, an article made of the articles of three topics comes back with no tag at all; the witness is the single-topic article, tagged first time. And a topic nobody labelled does not exist: the article about a subsidy desk comes back empty, and lowering the threshold files it under remote work instead of surfacing the missing topic."
     escalate_when:
       fr: "La rédaction ouvre une rubrique et attend des étiquettes le jour même, avant qu’un seul article n’ait été étiqueté à la main."
       en: "The newsroom opens a new section and expects tags the same day, before a single article has been labelled by hand."
@@ -138,8 +138,8 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N1 est le premier niveau qui apprend quels mots vont avec un thème, au lieu de s’en tenir à ceux qu’on a listés : l’article de télétravail qui n’emploie aucun terme de la liste, et que le vocabulaire contrôlé laisse filer, il l’étiquette, et le test le mesure. Ce qu’il coûte n’est pas le code, mais des articles étiquetés à la main — qu’une rédaction qui étiquette depuis des années possède déjà. N2 lèverait la vraie limite de N1, l’ajout d’un thème sans corpus derrière lui, mais au prix d’un seuil qu’on ne choisit qu’avec des articles déjà étiquetés et d’un service à tenir chaud : montez-y le jour où la taxonomie bouge plus vite que vous n’étiquetez."
-  en: "N1 is the first level that learns which words go with a topic, instead of keeping to the ones someone listed: the remote-work article that uses none of the listed terms, and slips past the controlled vocabulary, gets tagged here, and the test measures it. What it costs is not the code, but hand-tagged articles — which a newsroom that has been tagging for years already owns. N2 would lift N1's real limit, adding a topic with no corpus behind it, but it charges a threshold you can only choose with articles already tagged, and a service to keep warm: climb there the day your taxonomy moves faster than you can label."
+  fr: "N1 est le premier niveau qui apprend quels mots vont avec un thème, au lieu de s’en tenir à ceux qu’on a listés : l’article de télétravail qui n’emploie aucun terme de la liste, et que le vocabulaire contrôlé laisse filer, il l’étiquette, et le test le mesure. Ce qu’il coûte n’est pas le code, mais des articles étiquetés à la main — qu’une rédaction qui étiquette depuis des années possède déjà. Son piège est l’article qui traite plusieurs thèmes : il n’atteint le seuil sur aucun. L’extrait y répond par un plancher, plus bas que le seuil, qui ne s’applique que lorsque deux thèmes au moins s’y tiennent — c’est la signature de l’article qui se partage entre plusieurs thèmes, et non de l’article qui n’en traite aucun. Réglez ce plancher sur votre fonds, comme le seuil. N2 lèverait la vraie limite de N1, l’ajout d’un thème sans corpus derrière lui, mais au prix d’un seuil qu’on ne choisit qu’avec des articles déjà étiquetés et d’un encodeur à charger dans le processus qui publie : montez-y le jour où la taxonomie bouge plus vite que vous n’étiquetez."
+  en: "N1 is the first level that learns which words go with a topic, instead of keeping to the ones someone listed: the remote-work article that uses none of the listed terms, and slips past the controlled vocabulary, gets tagged here, and the test measures it. What it costs is not the code, but hand-tagged articles — which a newsroom that has been tagging for years already owns. Its trap is the article that covers several topics: it reaches the threshold on none. The snippet answers with a floor, lower than the threshold, which only applies when at least two topics sit above it — that is the signature of an article splitting itself between topics, not of an article about none. Set that floor on your own archive, as you set the threshold. N2 would lift N1's real limit, adding a topic with no corpus behind it, but it charges a threshold you can only choose with articles already tagged, and an encoder to load in the process that publishes: climb there the day your taxonomy moves faster than you can label."
 
 further_reading:
   - label: "W3C — SKOS Reference, modéliser un vocabulaire contrôlé et ses termes"

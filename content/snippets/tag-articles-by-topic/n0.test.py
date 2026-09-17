@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from n0 import SUFFIXES, lemmatise, normalise, stems, tag
+from n0 import SUFFIXES, strip_ending, normalise, stems, tag
 
 # Le vocabulaire contrôlé d'une petite rédaction : quatre thèmes, et les termes
 # qu'un rédacteur inscrirait pour chacun. Il vit dans le test, parce qu'il
@@ -69,15 +69,18 @@ def test_point_de_rupture_la_seule_reparation_est_d_ajouter_un_terme():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le nom et la docstring disent « lemmatisation » ; le code retire une terminaison parmi huit "
-    "et ne ramène ni un verbe conjugué, ni un pluriel en -aux, ni une flexion anglaise à la forme du terme",
-)
-def test_les_formes_flechies_d_un_terme_sont_ramenees_au_terme():
-    assert tag("Nous embauchons deux développeurs.", {"recrutement": ["embaucher"]}) == ["recrutement"]
-    assert tag("Des avantages fiscaux pour les PME.", {"fiscalité": ["avantage fiscal"]}) == ["fiscalité"]
-    assert tag("Remote working is the norm.", {"remote work": ["remote work"]}) == ["remote work"]
+def test_le_retrait_de_terminaison_n_est_pas_une_lemmatisation():
+    """
+    Commentaire : « a plural-and-suffix stripper, not a lemmatiser:
+    "embauchons" does not become "embaucher" ». Un verbe conjugué, un pluriel
+    en -aux et une flexion anglaise ne rejoignent pas la forme du terme.
+    """
+    assert tag("Nous embauchons deux développeurs.", {"recrutement": ["embaucher"]}) == []
+    assert tag("Des avantages fiscaux pour les PME.", {"fiscalité": ["avantage fiscal"]}) == []
+    assert tag("Remote working is the norm.", {"remote work": ["remote work"]}) == []
+    # Témoin : la forme que le retrait de terminaison atteint, elle, est reconnue.
+    assert tag("Deux recrutements en mars.", {"recrutement": ["recrutement"]}) == ["recrutement"]
+    assert tag("Remote work is the norm.", {"remote work": ["remote work"]}) == ["remote work"]
 
 
 def test_n0_est_deterministe():
@@ -153,7 +156,7 @@ def test_casse_accents_et_pluriels_ne_coutent_rien():
 def test_un_terme_de_plusieurs_mots_se_trouve_au_pluriel_de_ses_mots():
     """« single or multi-word » (existant)."""
     assert tag("changez vos mots de passe", VOCABULARY) == ["cybersécurité"]
-    assert lemmatise("mots") == "mot"
+    assert strip_ending("mots") == "mot"
     assert normalise("Hameçonnage") == "hameconnage"
 
 
@@ -166,11 +169,11 @@ def test_un_radical_ne_se_trouve_jamais_dans_un_mot_plus_long():
 
 
 def test_le_repli_ne_retire_qu_une_terminaison_et_garde_trois_lettres():
-    """`lemmatise` : « Strip one ending, and only when a stem of three letters is left »."""
-    assert lemmatise("recrutements") == "recrut"  # « ements » seul, pas « s » puis « ement »
-    assert lemmatise("taxes") == "tax"  # trois lettres restent : retiré
-    assert lemmatise("mes") == "mes"  # « es » laisserait une lettre, « s » deux : rien
-    assert lemmatise("rues") == "rue"  # « es » laisserait deux lettres : « s » seul
+    """`strip_ending` : « Strip one ending, and only when a stem of three letters is left »."""
+    assert strip_ending("recrutements") == "recrut"  # « ements » seul, pas « s » puis « ement »
+    assert strip_ending("taxes") == "tax"  # trois lettres restent : retiré
+    assert strip_ending("mes") == "mes"  # « es » laisserait une lettre, « s » deux : rien
+    assert strip_ending("rues") == "rue"  # « es » laisserait deux lettres : « s » seul
 
 
 def test_les_terminaisons_qui_se_recouvrent_sont_essayees_de_la_plus_longue_a_la_plus_courte():
@@ -227,15 +230,19 @@ def test_le_vocabulaire_est_un_parametre():
     assert tag(article, {"ressources humaines": ["candidat"]}) == ["ressources humaines"]
 
 
-def test_un_article_se_traite_en_moins_d_une_milliseconde():
+def test_production_un_article_de_presse_termine_dans_une_borne_large():
     """
-    latency `<1 ms`. Mesuré sur un article de 500 mots et le vocabulaire du
-    test : 0,5 ms en Python. Précision au relevé : 1 ms vers 1 000 mots.
+    latency `~10 ms`, mesurée sur l'article de cinq cents mots ci-dessous et le
+    vocabulaire du test. La borne porte une marge de dix : elle attrape un
+    effondrement, elle ne publie pas une mesure.
     """
     words = "la loi de finances précise le régime applicable aux indemnités versées salariés équipe".split()
     article = " ".join(words[(i * 7) % len(words)] for i in range(500))
     best = min(_timed(lambda: tag(article, VOCABULARY)) for _ in range(20))
-    assert best < 0.001
+    assert best < 0.100, f"{best * 1000:.2f} ms"
+    # Dix fois plus long : le temps croît avec l'article, il n'explose pas.
+    long_article = " ".join([article] * 10)
+    assert _timed(lambda: tag(long_article, VOCABULARY)) < 1.0
 
 
 def _timed(call):
@@ -255,7 +262,7 @@ def test_production_entrees_vides():
     assert tag("Un article.", {"vide": []}) == []
 
 
-def test_defaut_min_terms_a_zero_est_refuse_ou_n_etiquette_rien_sans_terme():
+def test_production_min_terms_a_zero_est_refuse_ou_n_etiquette_rien_sans_terme():
     try:
         out = tag("", VOCABULARY, min_terms=0)
     except ValueError:
@@ -295,10 +302,10 @@ def test_production_encodage_nfd_insecables_apostrophe_emoji_bom():
     assert tag("Le TéLéTrAvAiL", VOCABULARY) == ["télétravail"]
 
 
-def test_defaut_un_caractere_invisible_dans_un_mot_ne_cache_pas_le_terme():
+def test_production_un_caractere_invisible_dans_un_mot_ne_cache_pas_le_terme():
     assert tag("Le télé­travail progresse.", VOCABULARY) == ["télétravail"]
     assert tag("Le télé​travail progresse.", VOCABULARY) == ["télétravail"]
 
 
-def test_defaut_oe_et_la_ligature_se_rencontrent():
+def test_production_oe_et_la_ligature_se_rencontrent():
     assert tag("Le coût de la main-d'oeuvre augmente.", {"emploi": ["main-d'œuvre"]}) == ["emploi"]

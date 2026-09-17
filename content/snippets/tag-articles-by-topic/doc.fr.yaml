@@ -33,10 +33,13 @@ n1.js: |
   Un classifieur par thème, chacun répondant à sa propre question par oui ou par
   non. C'est ce que veut dire un contre tous, et c'est ce qui garde l'étiquetage
   multi-étiquette : les thèmes ne se disputent pas un vainqueur unique, si bien
-  qu'un article peut ressortir avec deux étiquettes, ou avec aucune. Le vecteur
-  TF-IDF de l'article est de longueur un, cependant : plus il traite de thèmes,
-  moins chacun pèse. Dans le test, un article fait des articles d'entraînement
-  de trois thèmes ressort sans aucune étiquette.
+  qu'un article peut ressortir avec deux étiquettes, ou avec aucune.
+
+  Le vecteur TF-IDF de l'article est de longueur un, cependant : plus il traite
+  de thèmes, moins chacun pèse. Un article fait des articles d'entraînement de
+  trois thèmes n'atteint le seuil sur aucun d'eux, et l'article le plus fouillé
+  de la semaine ressortirait sans étiquette. C'est à cela que sert le plancher,
+  dans `tag`.
 
   Écrit à la main plutôt que tiré d'une bibliothèque, avec des vecteurs creux,
   pour que l'entraînement croisse avec les mots de chaque article plutôt
@@ -58,10 +61,13 @@ n1.py: |
   Un classifieur par thème, chacun répondant à sa propre question par oui ou par
   non. C'est ce que veut dire un contre tous, et c'est ce qui garde l'étiquetage
   multi-étiquette : les thèmes ne se disputent pas un vainqueur unique, si bien
-  qu'un article peut ressortir avec deux étiquettes, ou avec aucune. Le vecteur
-  TF-IDF de l'article est de longueur un, cependant : plus il traite de thèmes,
-  moins chacun pèse. Dans le test, un article fait des articles d'entraînement
-  de trois thèmes ressort sans aucune étiquette.
+  qu'un article peut ressortir avec deux étiquettes, ou avec aucune.
+
+  Le vecteur TF-IDF de l'article est de longueur un, cependant : plus il traite
+  de thèmes, moins chacun pèse. Un article fait des articles d'entraînement de
+  trois thèmes n'atteint le seuil sur aucun d'eux, et l'article le plus fouillé
+  de la semaine ressortirait sans étiquette. C'est à cela que sert le plancher,
+  dans `tag`.
 
   Ce que coûte ce niveau n'est pas le code, qui est ci-dessous. C'est le corpus
   étiqueté : des articles que quelqu'un doit étiqueter à la main, et étiqueter

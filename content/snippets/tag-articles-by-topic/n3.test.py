@@ -13,35 +13,18 @@ l'extrait est déclaré `verification: stubbed` sur la fiche.
 import json
 import time
 import unicodedata
-from types import SimpleNamespace
 
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_CHARACTERS, PROMPT, TaggingUnavailable, tag
+from _harness.fake_sdk import FakeSDK
+from n3 import MAX_CHARACTERS, MODEL, PROMPT, ProviderClient, TaggingUnavailable, tag
 
 # Le même vocabulaire contrôlé qu'en N0 : ici, seulement la liste des noms que
 # le modèle a le droit de rendre.
 TOPICS = ["cybersécurité", "fiscalité", "recrutement", "télétravail"]
 
 ARTICLE = "Les indemnités de télétravail versées aux salariés sont soumises à l'impôt."
-
-
-class RealShapedClient:
-    """
-    Imite la surface du kit `openai` publié (3.x) : `client.chat.completions.create(model=..., messages=[...])`,
-    réponse lue dans `choices[0].message.content`. Il n'a pas de méthode `complete`.
-    """
-
-    def __init__(self, content: str):
-        self.content = content
-        self.requests = []
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-    def _create(self, **kwargs):
-        self.requests.append(kwargs)
-        message = SimpleNamespace(role="assistant", content=self.content)
-        return SimpleNamespace(choices=[SimpleNamespace(index=0, message=message, finish_reason="stop")])
 
 
 # ---------------------------------------------------------------------------
@@ -161,15 +144,31 @@ def test_le_client_est_injecte_pour_tester_sans_reseau():
         tag(ARTICLE, TOPICS)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : le client par défaut est `OpenAI()`, et l'extrait appelle `client.complete(prompt=…, "
-    "temperature=0)`, qui n'existe pas dans le kit `openai` ; l'AttributeError est avalée et retentée, et sort en "
-    "TaggingUnavailable comme une panne du fournisseur",
-)
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
-    client = RealShapedClient('["fiscalité"]')
-    assert tag(ARTICLE, TOPICS, client=client) == ["fiscalité"]
+def test_l_adaptateur_parle_au_kit_du_fournisseur():
+    """`ProviderClient` : « The one call this snippet makes, on top of the provider's SDK »."""
+    sdk = FakeSDK(content='["fiscalité"]')
+    assert tag(ARTICLE, TOPICS, client=ProviderClient(sdk=sdk)) == ["fiscalité"]
+    assert sdk.last_request["endpoint"] == "chat.completions"
+    assert sdk.last_request["model"] == MODEL
+    assert sdk.last_request["temperature"] == 0
+    assert sdk.last_request["messages"] == [
+        {"role": "user", "content": sdk.last_request["messages"][0]["content"]}
+    ]
+    assert ARTICLE in sdk.last_request["messages"][0]["content"]
+
+
+def test_l_adaptateur_rend_un_refus_du_modele_comme_une_reponse_inutilisable():
+    """`content` nul n'est jamais passé au décodeur JSON."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(TaggingUnavailable):
+        tag(ARTICLE, TOPICS, client=ProviderClient(sdk=sdk))
+
+
+def test_l_adaptateur_retente_une_panne_du_kit():
+    """Une panne du kit est une panne de fournisseur : retentée, pas une de plus."""
+    sdk = FakeSDK(content='["fiscalité"]', fail_times=2)
+    assert tag(ARTICLE, TOPICS, client=ProviderClient(sdk=sdk), attempts=3) == ["fiscalité"]
+    assert len(sdk.requests) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -216,11 +215,11 @@ def test_production_le_plafond_compte_des_caracteres():
     assert tag("🙂" * MAX_CHARACTERS, TOPICS, client=client) == []
 
 
-def test_defaut_un_theme_ecrit_dans_une_autre_forme_unicode_est_reconnu():
+def test_production_un_theme_ecrit_dans_une_autre_forme_unicode_est_reconnu():
     topics = [unicodedata.normalize("NFD", t) for t in TOPICS]
     assert tag(ARTICLE, topics, client=FakeLLM(response='["fiscalité"]')) == [topics[1]]
 
 
-def test_defaut_une_reponse_entierement_hors_taxonomie_leve():
+def test_production_une_reponse_entierement_hors_taxonomie_leve():
     with pytest.raises(TaggingUnavailable):
         tag(ARTICLE, TOPICS, client=FakeLLM(response='["tax", "remote work"]'))
