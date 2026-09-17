@@ -114,24 +114,15 @@ test('les paires de mots sont apprises avec les mots seuls', () => {
 
 test('une archive déséquilibrée pondérée ne répond pas l’équipe la plus chargée', () => {
   // Docstring : « Each example is weighted by the rarity of its team: […] an
-  // unweighted model learns to answer the busiest team ». Ici la pondération
-  // écarte bien facturation, mais le ticket part chez technique, pas chez
-  // livraison (Python, lui, trouve livraison).
+  // unweighted model learns to answer the busiest team ». Trente-cinq tickets de
+  // facturation contre deux de livraison, et le ticket part quand même chez
+  // livraison — la même équipe que Python, qui vérifie en plus, sur un modèle
+  // non pondéré, que la réponse serait « billing ».
   const archive = [...Array(5).fill(BILLING).flat(), ...SHIPPING.slice(0, 2), ...TECHNICAL];
   const equipes = [...Array(35).fill('billing'), 'shipping', 'shipping', ...Array(7).fill('technical')];
   const premier = rank(train(archive, equipes), 'La livraison du colis est en retard')[0][0];
   assert.notEqual(premier, 'billing');
-  assert.equal(premier, 'technical');
-});
-
-test('INFIRMÉ : TF-IDF et la régression softmax font soixante lignes', () => {
-  // De `function tokens` à `train` compris : 65 lignes de code, hors commentaires et lignes vides.
-  const code = readFileSync(new URL('./n1.js', import.meta.url), 'utf8')
-    .split('\n').filter((l) => l.trim() && !/^\s*(\/\/|\*|\/\*\*)/.test(l));
-  const debut = code.findIndex((l) => l.includes('function tokens'));
-  const fin = code.findIndex((l) => l.includes('export function rank'));
-  assert.equal(fin - debut, 65);
-  assert.throws(() => assert.ok(fin - debut <= 60));
+  assert.equal(premier, 'shipping');
 });
 
 test('réentraîné le temps de lire la phrase : 21 tickets en moins d’une seconde', () => {
@@ -181,11 +172,13 @@ test('l’essai rend ce que ses cas annoncent', () => {
   assert.ok(Math.max(...scoresFr) - Math.min(...scoresFr) < 10);
 });
 
-test('INFIRMÉ : l’essai anglais, les trois équipes ressortent presque à égalité', () => {
-  // « the three teams come out nearly tied » : 48 %, 39 %, 13 %.
+test('essai : en anglais aussi, aucune équipe ne se détache assez', () => {
+  // « the archive only knows “does” and “on”: no team stands out, the best one
+  // stays under the floor » : 40 %, 37 %, 23 %, et le meilleur sous le plancher.
   const scores = essai.run(essai.cases[3].input.en, 'en').rows.rows.map((r) => Number.parseInt(r[1], 10));
-  assert.deepEqual(scores, [48, 39, 13]);
-  assert.throws(() => assert.ok(Math.max(...scores) - Math.min(...scores) < 10));
+  assert.deepEqual(scores, [40, 37, 23]);
+  assert.ok(Math.max(...scores) < 50);
+  assert.equal(essai.run(essai.cases[3].input.en, 'en').verdict.label, 'The ticket returns to the default queue');
 });
 
 // ---------------------------------------------------------------------------
@@ -197,14 +190,19 @@ test('production : un ticket vide part dans la file par défaut', () => {
 });
 
 test('une archive d’une seule équipe est refusée', () => {
-  // Elle route tout, même un ticket sans aucun mot connu, avec une confiance de 1. Python lève ValueError.
-  const unique = train(BILLING, BILLING.map(() => 'billing'));
-  assert.deepEqual(rank(unique, 'zzz'), [['billing', 1]]);
-  assert.throws(() => train(BILLING, BILLING.map(() => 'billing')));
+  // Elle routerait tout, même un ticket sans aucun mot connu, avec une confiance
+  // de 1 : le refus vient à l'entraînement, pas à la première question. Python
+  // lève de même.
+  assert.throws(
+    () => train(BILLING, BILLING.map(() => 'billing')),
+    { name: 'RangeError', message: /one team per ticket, and at least two teams/ },
+  );
 });
 
-test('production : une archive vide lève à la première question', () => {
-  assert.throws(() => route(train([], []), UNKNOWN), TypeError);
+test('production : une archive vide lève à l’entraînement', () => {
+  assert.throws(() => train([], []), { name: 'RangeError', message: /at least two teams/ });
+  // Une étiquette par ticket, aussi : les longueurs doivent coïncider.
+  assert.throws(() => train(BILLING, ['billing']), { name: 'RangeError' });
 });
 
 test('une archive de 630 tickets au vocabulaire varié s’entraîne vite', () => {

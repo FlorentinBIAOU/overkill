@@ -47,15 +47,16 @@ const makeIndex = (encoder, tickets = TICKETS, teams = TEAMS) =>
 const vecteursDonnes = (vecteurs) => ({ encode: async (texts) => texts.map((t) => vecteurs[t]) });
 
 /*
- * Un faux module `@xenova/transformers` à la forme publiée : `pipeline(task,
- * model)` rend une fonction `extract(texts, { pooling })` dont le résultat a
- * `.tolist()`. Servi par un crochet de résolution, le paquet n'étant pas installé.
+ * Un faux module `@huggingface/transformers` à la forme publiée :
+ * `pipeline(task, model, options)` rend une fonction `extract(texts, { pooling })`
+ * dont le résultat a `.tolist()`. Servi par un crochet de résolution, le paquet
+ * n'étant pas installé.
  */
 const FAUX_TRANSFORMERS = `
 const words = (t) => t.toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, ' ').split(' ').filter(Boolean);
 const hash = (w) => { let h = 2166136261; for (const c of w) h = Math.imul(h ^ c.codePointAt(0), 16777619) >>> 0; return h; };
-export async function pipeline(task, model) {
-  globalThis.__transformers.loads.push([task, model]);
+export async function pipeline(task, model, options) {
+  globalThis.__transformers.loads.push([task, model, options]);
   return async (texts, options) => {
     globalThis.__transformers.calls.push(options);
     return { tolist: () => texts.map((t) => { const v = new Array(384).fill(0); for (const w of words(t)) v[hash(w) % 384] += 1; return v; }) };
@@ -64,7 +65,7 @@ export async function pipeline(task, model) {
 globalThis.__transformers = { loads: [], calls: [] };
 register(`data:text/javascript,${encodeURIComponent(`
 export async function resolve(specifier, context, next) {
-  if (specifier === '@xenova/transformers') {
+  if (specifier === '@huggingface/transformers') {
     return { url: 'data:text/javascript,' + ${JSON.stringify(encodeURIComponent(FAUX_TRANSFORMERS))}, shortCircuit: true };
   }
   return next(specifier, context);
@@ -179,13 +180,14 @@ test('ce que le double ne peut pas prouver', async () => {
   assert.equal(await route(index, ticket), DEFAULT_TEAM);
 });
 
-test('l’encodeur par défaut a la forme de transformers.js', async () => {
-  // `pipeline('feature-extraction', name)` puis `extract(texts, { pooling: 'mean' }).tolist()`.
+test('l’encodeur par défaut a la forme de @huggingface/transformers', async () => {
+  // `pipeline('feature-extraction', name, { dtype })` puis
+  // `extract(texts, { pooling: 'mean' }).tolist()`.
   globalThis.__transformers = { loads: [], calls: [] };
   const index = await buildIndex(TICKETS, TEAMS);
   assert.equal(await route(index, 'Ma facture de février est trop élevée'), 'billing');
   await route(index, 'Mon colis est perdu');
-  assert.deepEqual(globalThis.__transformers.loads, [['feature-extraction', MODEL_NAME]]);
+  assert.deepEqual(globalThis.__transformers.loads, [['feature-extraction', MODEL_NAME, { dtype: 'fp32' }]]);
   assert.deepEqual(globalThis.__transformers.calls[0], { pooling: 'mean' });
 });
 
@@ -223,14 +225,14 @@ test('production : une archive de 900 tickets répond vite', async () => {
 });
 
 test('un index encodé par un autre modèle est refusé', async () => {
-  // Rien ne vérifie la dimension. Encodeur plus large (768 contre 384) : le
-  // produit scalaire est tronqué et le ticket routé sur un score faux (facturation).
-  // Encodeur plus étroit : NaN, et tout part en file par défaut.
+  // La largeur du vecteur est vérifiée, dans les deux sens : un encodeur plus
+  // large que l'index (768 contre 384) comme un encodeur plus étroit rendraient
+  // un score faux, l'un tronqué, l'autre plein de NaN.
+  const refus = { name: 'RangeError', message: /encoded by another model/ };
   let index = await makeIndex();
   index.encoder = new FakeEncoder(768);
-  assert.equal(await route(index, 'Ma facture de janvier'), 'billing');
+  await assert.rejects(() => route(index, 'Ma facture de janvier'), refus);
   index = await makeIndex(new FakeEncoder(768));
   index.encoder = new FakeEncoder(DIMENSIONS);
-  assert.equal(await route(index, 'Ma facture de janvier'), DEFAULT_TEAM);
-  await assert.rejects(() => route(index, 'Ma facture de janvier'));
+  await assert.rejects(() => route(index, 'Ma facture de janvier'), refus);
 });

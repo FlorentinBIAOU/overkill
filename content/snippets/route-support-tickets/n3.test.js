@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { performance } from 'node:perf_hooks';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { DEFAULT_TEAM, MAX_CHARACTERS, TEAMS, RoutingUnavailable, route } from './n3.js';
+import { DEFAULT_TEAM, MAX_CHARACTERS, MODEL, TEAMS, RoutingUnavailable, route } from './n3.js';
 
 const BILLING = "Le prélèvement de mars est passé deux fois, merci de m'en rembourser un.";
 
@@ -70,11 +70,16 @@ test('point de rupture : sans la liste fermée, le ticket part dans une équipe 
 // ---------------------------------------------------------------------------
 
 test('le client par défaut a la forme du vrai kit', async () => {
-  // `new OpenAI()` puis `client.complete(...)` : la méthode n'existe pas.
+  // `new OpenAI()` puis `chat.completions.create` : la seule surface que le kit
+  // publié offre, et celle que l'adaptateur appelle.
   globalThis.__openai = { requests: [] };
   assert.equal(await route(BILLING), 'billing');
-  assert.equal(globalThis.__openai.requests.length, 0);
-  await assert.rejects(() => route(BILLING), /client\.complete is not a function/);
+  assert.equal(globalThis.__openai.requests.length, 1);
+  const [{ model, messages, temperature }] = globalThis.__openai.requests;
+  assert.deepEqual([model, temperature], [MODEL, 0]);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].role, 'user');
+  assert.ok(messages[0].content.endsWith(`Ticket:\n${BILLING}`));
 });
 
 // ---------------------------------------------------------------------------
@@ -183,9 +188,12 @@ test('production : ticket vide, NFD, emoji, BOM et insécables', async () => {
   }
 });
 
-test('production : la limite compte des unités UTF-16 en JavaScript', async () => {
-  // 2 001 emoji : 4 002 unités ici, refusés ; 2 001 caractères en Python, acceptés.
-  await assert.rejects(() => route('📦'.repeat(2001), { client: new FakeLLM({ response: '{"team": "shipping"}' }) }), RangeError);
+test('production : la limite compte des points de code, comme en Python', async () => {
+  // Un emoji fait deux unités UTF-16 et un seul point de code : c'est la seconde
+  // mesure qui compte, des deux côtés.
+  const client = new FakeLLM({ response: '{"team": "shipping"}' });
+  assert.equal(await route('📦'.repeat(MAX_CHARACTERS), { client }), 'shipping');
+  await assert.rejects(() => route('📦'.repeat(MAX_CHARACTERS + 1), { client }), RangeError);
 });
 
 test('production : une très longue réponse du modèle se décode vite', async () => {
