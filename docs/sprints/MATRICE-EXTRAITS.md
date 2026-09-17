@@ -89,17 +89,17 @@ citations et le second degré.
 
 **Point de rupture N0** : les dates relatives, « jeudi prochain », « dans quinze jours ».
 
-### 6. `extract-fields-from-invoice` — verdict attendu **N2**
+### 6. `extract-fields-from-invoice` — verdict attendu **N0**
 
 | Niveau | Approche | Preuve |
 |---|---|---|
-| N0 | Ancrage par mots-clés et expressions régulières sur le texte déjà extrait | **E** |
+| N0 | Lecture du fichier structuré (UBL, CII, Factur-X) avec le contrôle BR-CO-15, puis ancrage par mots-clés sur le texte pour ce qui reste | **E** |
 | N1 | Traits de position et de mise en forme, puis classifieur de lignes | **E** |
-| N2 | Modèle de compréhension de document auto-hébergé, tenant compte de la mise en page | **S** |
+| N2 | — Aucun point de contrôle de compréhension de document affiné sur des factures, sous licence commerciale et lisible dans les deux langages | — |
 | N3 | Extraction structurée par modèle généraliste multimodal | **S** |
 
-**Point de rupture N0** : chaque fournisseur a sa mise en page ; la règle écrite pour l'un
-échoue sur le suivant.
+**Point de rupture N0** : la porte structurée n'en a pas ; l'autre casse sur le fournisseur
+suivant, chacun ayant sa mise en page.
 
 ### 7. `parse-address-into-fields` — verdict attendu **N1**
 

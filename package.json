@@ -62,6 +62,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "chrono-node": "2.9.0",
+    "fast-xml-parser": "5.2.5",
     "gray-matter": "^4.0.3",
     "pagefind": "1.5.2",
     "playwright": "^1.63.0",

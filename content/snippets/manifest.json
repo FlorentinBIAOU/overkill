@@ -169,12 +169,12 @@
     },
     {
       "id": "extract-fields-from-invoice",
-      "expected_verdict": "N2",
+      "expected_verdict": "N0",
       "rungs": [
         {
           "level": "N0",
           "available": true,
-          "approach": "Ancrage par mots-clés et expressions régulières sur le texte déjà extrait",
+          "approach": "Lecture du fichier structuré (UBL, CII, Factur-X) avec le contrôle BR-CO-15, puis ancrage par mots-clés sur le texte pour ce qui reste",
           "verification": "executed"
         },
         {
@@ -185,9 +185,8 @@
         },
         {
           "level": "N2",
-          "available": true,
-          "approach": "Modèle de compréhension de document auto-hébergé, tenant compte de la mise en page",
-          "verification": "stubbed"
+          "available": false,
+          "unavailable_reason": "Aucun point de contrôle de compréhension de document affiné sur des factures, sous licence commerciale et lisible dans les deux langages"
         },
         {
           "level": "N3",
@@ -198,7 +197,7 @@
       ],
       "breaking_point_note": {
         "level": "N0",
-        "text": "chaque fournisseur a sa mise en page ; la règle écrite pour l'un échoue sur le suivant."
+        "text": "la porte structurée n'en a pas ; l'autre casse sur le fournisseur suivant, chacun ayant sa mise en page."
       }
     },
     {
@@ -828,9 +827,9 @@
   ],
   "totals": {
     "entries": 25,
-    "available_rungs": 74,
+    "available_rungs": 73,
     "executed": 45,
-    "stubbed": 29,
-    "files": 296
+    "stubbed": 28,
+    "files": 292
   }
 }

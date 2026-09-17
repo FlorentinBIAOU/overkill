@@ -100,3 +100,15 @@ régénéré.
   gardées dans les mots, commentaire d'espaces qui notait 0,71 en JavaScript,
   clôture ```json décodée. Reste : le couple multilingue perd le détail des
   nuisances, et c'est dit dans le point de rupture.
+- **extract-fields-from-invoice** — fiche réécrite autour de la réforme :
+  N0 lit le fichier structuré (UBL, CII, Factur-X) avec la règle BR-CO-15 de la
+  norme, et ne tombe dans l'extraction par libellés que pour le résidu, en disant
+  par quelle porte la réponse est passée ; dates, obligations et formats vérifiés
+  mot pour mot sur impots.gouv.fr et cités ; N2 fermé (point de contrôle non
+  affiné, licence non commerciale, rien d'équivalent en JavaScript) et ses quatre
+  fichiers supprimés ; verdict passé de N2 à N0 et la fiche sort du brouillon ;
+  N3 demande les trois montants et recalcule la même règle sur ce que le modèle
+  écrit ; cinq marquages levés et l'adaptateur N3 exercé. `fast-xml-parser`
+  5.2.5 entre en dépendance de développement, Node n'ayant pas d'analyseur XML.
+  Reste : l'exemple de l'indemnité forfaitaire n'a pas été vérifié sur des
+  gabarits réels, faute de factures réelles.

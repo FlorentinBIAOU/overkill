@@ -108,11 +108,14 @@ test('point de rupture : l’indemnité a les traits d’un total, montant seul 
   assert.equal(features[8], 1);
 });
 
-test('INFIRMÉ : la fiche laisse entendre qu’annoter cette facture corrigerait la lecture, entraîné dessus il rend encore 40,00', async () => {
-  await assert.rejects(async () => {
-    const retrained = makeModel([[VERRERIE, { 'Facture V': 'invoice_number', 'Total TTC': 'total' }]]);
-    assert.equal(extractFields(retrained, VERRERIE).total, 360);
-  });
+test('point de rupture : annoter la facture ne corrige pas la lecture', () => {
+  // breaking_point : « Et l'annoter ne suffit pas : entraîné sur cette facture
+  // même, l'indemnité étiquetée comme une ligne sans champ, il la retient
+  // encore, parce que ses traits ne la distinguent pas du total. »
+  const retrained = makeModel([[VERRERIE, { 'Facture V': 'invoice_number', 'Total TTC': 'total' }]]);
+  assert.equal(extractFields(retrained, VERRERIE).total, 40);
+  // Témoin : sur une facture sans indemnité, le même modèle lit le bon total.
+  assert.equal(extractFields(retrained, LAMBERT).total, 82.8);
 });
 
 // ---------------------------------------------------------------------------

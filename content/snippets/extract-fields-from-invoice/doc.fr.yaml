@@ -3,18 +3,27 @@
 # fichier — « n1.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
 
 n0: |
-  Lire les champs d'en-tête d'une facture dans un texte déjà extrait : ancrage
-  sur des mots-clés, puis expressions régulières.
+  Lire une facture : le fichier structuré d'abord, la page seulement s'il n'y
+  en a pas.
 
-  Niveau N0. Aucun modèle, aucun jeu d'entraînement, aucun service. Il lit les
-  factures du fournisseur dont il connaît les libellés.
+  Niveau N0. Aucun modèle, aucun jeu d'entraînement, aucun service.
 
-  La méthode est celle que tout le monde trouve : repérer la ligne qui porte le
-  libellé, puis lire la valeur qui le suit sur cette ligne. Les libellés sont
-  rangés du plus précis au moins précis, parce que « Total TTC » et « Total HT »
-  ne diffèrent que d'un mot et que le mauvais donne un nombre plausible.
+  Depuis le 1er septembre 2026, toute entreprise en France doit pouvoir
+  recevoir ses factures sous format électronique structuré, par l'intermédiaire
+  d'une plateforme agréée, et le socle minimum de formats est UBL, CII et
+  Factur-X, tous trois porteurs de la norme sémantique européenne EN 16931.
+  Cela change l'ordre des opérations : quand la facture arrive structurée, ses
+  champs ne sont pas extraits, ils sont lus, et la réponse est exacte.
+  L'extraction est pour ce qui reste — un fournisseur hors de France, un ticket
+  de caisse, une facture d'avant la réforme, l'arriéré.
 
-  Ce rangement est aussi là où l'approche s'arrête. Voir le test.
+  Ce fichier a donc deux portes et une règle : dire par quelle porte la réponse
+  est passée. Un nombre lu dans du XML et un nombre lu sur une ligne de texte
+  ne valent pas la même chose, et l'appelant doit pouvoir les distinguer.
+
+  Sortir le XML d'un PDF Factur-X n'est pas le travail de ce fichier : c'est une
+  pièce jointe dans le PDF, et n'importe quelle bibliothèque PDF la liste. Ce
+  qui arrive ici, c'est le XML lui-même, ou le texte d'une page.
 
 n1.js: |
   Étiqueter chaque ligne de la facture, puis lire la valeur dans la ligne.
@@ -41,20 +50,6 @@ n1.py: |
   ne font justement pas. L'entraînement tient en quelques dizaines de lignes
   étiquetées, le modèle pèse quelques kilooctets, et rien ne se télécharge.
 
-n2: |
-  Étiqueter les lignes de la facture avec un modèle de document auto-hébergé.
-
-  Niveau N2. Même idée qu'au niveau N1 — étiqueter les lignes, puis y lire la
-  valeur — sauf que les traits ne sont plus les vôtres. Un encodeur de document
-  affiné sur des factures lit d'un coup la ligne, ses voisines et sa place dans
-  la page, et il continue de les lire quand un fournisseur déplace son bloc de
-  totaux.
-
-  Ce qui vous appartient à ce niveau n'est pas le modèle, c'est tout ce qui
-  l'entoure : la géométrie de page que vous lui donnez, le seuil sous lequel un
-  champ part à une personne, et la réponse à « que fait le code quand le modèle
-  ne dit rien d'utilisable ». Les poids restent sur votre machine, et c'est
-  pourquoi une facture n'en sort jamais.
 
 n3: |
   Demander à un modèle généraliste multimodal de lire la facture.
@@ -68,3 +63,10 @@ n3: |
   probablement du JSON, et vérifier la forme de ce qui revient. Cette plomberie
   est le vrai coût de ce niveau, et c'est la part que vos tests doivent couvrir,
   parce que le modèle lui-même n'est pas testable.
+
+  Une vérification, ici, ne porte pas sur la forme. Les trois montants sont
+  demandés, et pas seulement celui qui est dû, pour que la somme dont la norme
+  EN 16931 fait une règle — total TTC = total HT + TVA — puisse être recalculée
+  sur ce que le modèle a écrit. Elle n'attrape rien de ce que le modèle se
+  trompe systématiquement à faire, et elle attrape le chiffre lu sur la mauvaise
+  ligne, qui est l'échec dont parle cette fiche.

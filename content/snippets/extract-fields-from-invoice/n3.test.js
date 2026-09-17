@@ -14,7 +14,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { ExtractionUnavailable, MAX_IMAGE_BYTES, extractFields } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import { ExtractionUnavailable, MAX_IMAGE_BYTES, MODEL, extractFields, providerClient } from './n3.js';
 
 const TEXT = `
 NORD FOURNITURES SAS
@@ -29,44 +30,40 @@ Cartouche encre noire                2    38,50      77,00
 // opens a file.
 const PAGE = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
 
-const ANSWER = { invoice_number: '2024-000431', date: '2024-04-03', total: 92.4 };
+// Ce que le modèle répond, et ce que l'extrait en rend : les trois montants
+// sont demandés pour que la règle BR-CO-15 puisse être recalculée dessus.
+const ANSWER = {
+  invoice_number: '2024-000431', date: '2024-04-03', total_excluding_vat: 77, vat: 15.4, total: 92.4,
+};
+const READ = { ...ANSWER, totals_agree: true };
 const llm = (response, failTimes = 0) => new FakeLLM({ response, failTimes });
-
-/**
- * A double with the surface of the published `openai` kit (7.x):
- * `client.chat.completions.create({ model, messages })`, the image passed as
- * an `image_url` content part, the answer read from
- * `choices[0].message.content`. It has no `complete` method.
- */
-class RealShapedClient {
-  constructor(content) {
-    this.calls = [];
-    this.chat = {
-      completions: {
-        create: async (request) => {
-          this.calls.push(request);
-          return { choices: [{ message: { content } }] };
-        },
-      },
-    };
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Point de rupture
 // ---------------------------------------------------------------------------
 
 test('point de rupture : un objet valide dont le montant n’apparaît nulle part passe', async () => {
-  const invented = { invoice_number: '2024-000431', date: '2024-04-03', total: 942 };
-  assert.deepEqual(await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(invented)) }), invented);
+  const invented = { ...ANSWER, total_excluding_vat: 785, vat: 157, total: 942 };
+  assert.deepEqual(
+    await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(invented)) }),
+    { ...invented, totals_agree: true },
+  );
   assert.ok(!TEXT.includes('942'));
+  // La règle BR-CO-15 ne dit rien ici : trois montants inventés qui tombent
+  // juste tombent juste. Elle attrape le chiffre lu sur la mauvaise ligne.
   // Witness: an answer of the wrong shape does throw.
   await assert.rejects(() => extractFields(TEXT, PAGE, { client: llm('{"total": "942,00"}') }), ExtractionUnavailable);
 });
 
 test('point de rupture : toutes les vérifications portent sur la forme', async () => {
-  const lie = { invoice_number: 'INVENTÉ-0001', date: '1999-12-31', total: 0.01 };
-  assert.deepEqual(await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(lie)) }), lie);
+  const lie = {
+    invoice_number: 'INVENTÉ-0001', date: '1999-12-31',
+    total_excluding_vat: null, vat: null, total: 0.01,
+  };
+  assert.deepEqual(
+    await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(lie)) }),
+    { ...lie, totals_agree: null },
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -74,7 +71,7 @@ test('point de rupture : toutes les vérifications portent sur la forme', async 
 // ---------------------------------------------------------------------------
 
 test('lit ce que le modèle répond', async () => {
-  assert.deepEqual(await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(ANSWER)) }), ANSWER);
+  assert.deepEqual(await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(ANSWER)) }), READ);
 });
 
 test('envoie le texte et la page, à température zéro', async () => {
@@ -82,7 +79,7 @@ test('envoie le texte et la page, à température zéro', async () => {
   await extractFields(TEXT, PAGE, { client });
   const request = client.lastRequest;
   assert.ok(request.prompt.includes('NET A PAYER'));
-  assert.ok(request.prompt.includes('`total` is the amount due, taxes included, as a number'));
+  assert.ok(request.prompt.includes('`total` is the amount due, taxes'));
   assert.ok(request.imageUrl.startsWith('data:image/png;base64,'));
   assert.deepEqual(new Uint8Array(Buffer.from(request.imageUrl.split(',')[1], 'base64')), PAGE);
   assert.equal(request.temperature, 0);
@@ -103,7 +100,25 @@ test('accepte la clôture de code que les modèles ajoutent, sans nouvel appel',
 
 test('un champ absent de la page revient vide', async () => {
   const fields = await extractFields(TEXT, PAGE, { client: llm('{"invoice_number": "2024-000431", "date": null}') });
-  assert.deepEqual(fields, { invoice_number: '2024-000431', date: null, total: null });
+  assert.deepEqual(fields, {
+    invoice_number: '2024-000431', date: null,
+    total_excluding_vat: null, vat: null, total: null, totals_agree: null,
+  });
+});
+
+test('la règle BR-CO-15 est recalculée sur ce que le modèle a écrit', async () => {
+  // « the sum EN 16931 makes a rule of […] can be recomputed on what the model
+  // wrote. It catches […] a digit read off the wrong line ».
+  assert.equal((await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(ANSWER)) })).totals_agree, true);
+  // Un chiffre lu sur la mauvaise ligne : la TVA de la ligne au-dessus.
+  const faux = { ...ANSWER, vat: 15 };
+  const lu = await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(faux)) });
+  assert.equal(lu.totals_agree, false);
+  // La réponse est rendue quand même, avec son drapeau : à l'appelant de voir.
+  assert.equal(lu.total, 92.4);
+  // Et sans les trois montants, la règle ne dit rien plutôt que faux.
+  const muet = { invoice_number: '2024-000431', date: '2024-04-03', total: 92.4 };
+  assert.equal((await extractFields(TEXT, PAGE, { client: llm(JSON.stringify(muet)) })).totals_agree, null);
 });
 
 test('refuse une image trop lourde avant de dépenser quoi que ce soit', async () => {
@@ -146,18 +161,45 @@ test('la facture et son image partent chez le fournisseur', async () => {
   assert.ok(client.lastRequest.imageUrl.endsWith(Buffer.from(PAGE).toString('base64')));
 });
 
-test('DÉFAUT : le client par défaut n’a pas la forme du vrai kit, « complete » n’existe pas', async () => {
-  await assert.rejects(async () => {
-    const client = new RealShapedClient(JSON.stringify(ANSWER));
-    assert.deepEqual(await extractFields(TEXT, PAGE, { client }), ANSWER);
-  });
+test('production : l’adaptateur appelle la surface du vrai kit', async () => {
+  // L'adaptateur sur le double du harnais, à la forme du kit `openai` publié,
+  // sans méthode `complete` : `chat.completions.create({ model, messages,
+  // temperature })`, la page voyageant dans le message comme URL de données.
+  const sdk = new FakeSDK({ content: JSON.stringify(ANSWER) });
+  assert.equal(sdk.complete, undefined);
+  const client = await providerClient(sdk);
+  assert.deepEqual(await extractFields(TEXT, PAGE, { client }), READ);
+  const { endpoint, model, messages, temperature } = sdk.lastRequest;
+  assert.deepEqual([endpoint, model, temperature], ['chat.completions', MODEL, 0]);
+  const parts = messages[0].content;
+  assert.equal(parts[0].type, 'text');
+  assert.ok(parts[0].text.includes(TEXT));
+  assert.ok(parts[1].image_url.url.startsWith('data:image/png;base64,'));
+  assert.ok(parts[1].image_url.url.endsWith(Buffer.from(PAGE).toString('base64')));
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('production : l’adaptateur, une réponse sans contenu lève après les essais', async () => {
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  await assert.rejects(() => extractFields(TEXT, PAGE, { client }), ExtractionUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  const sdk = new FakeSDK({ content: JSON.stringify(ANSWER), failTimes: 2 });
+  const client = await providerClient(sdk);
+  assert.deepEqual(await extractFields(TEXT, PAGE, { client }), READ);
+  assert.equal(sdk.requests.length, 3);
 });
 
 // ---------------------------------------------------------------------------
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('la docstring dit que la taille de ce qui part est bornée, un texte d’un million de caractères part', async () => {
+test('production : le texte aussi est borné avant l’appel', async () => {
+  // « the text is capped before the call, in characters (code points, as in
+  // Python), not tokens ».
   const client = llm(JSON.stringify(ANSWER));
   await assert.rejects(() => extractFields('x'.repeat(1_000_000), PAGE, { client }), RangeError);
   assert.equal(client.callCount, 0);

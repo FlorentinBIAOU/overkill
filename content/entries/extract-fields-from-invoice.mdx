@@ -1,14 +1,9 @@
 ---
 id: extract-fields-from-invoice
 family: extract
-# Brouillon (lot 15, rédacteur, tour 1) : le niveau recommandé ne tourne pas.
-# Le modèle par défaut de N2 appelle un pipeline sous une forme qui n'existe pas,
-# @huggingface/transformers ne connaît aucune architecture LayoutLM, et le point
-# de contrôle nommé est la base non affinée, sous licence non commerciale.
-# Détail dans le compte rendu de corrections du lot 15 pour cette fiche.
-status: draft
-verdict: N2
-updated: 2026-09-15
+status: published
+verdict: N0
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -20,15 +15,15 @@ need:
   en: "Pull the number, the date and the amount due out of an invoice, whatever the supplier’s layout."
 
 scenario:
-  fr: "On voit régulièrement chaque page de facture partir en image chez un modèle multimodal, alors que le PDF a déjà rendu son texte et que trois champs suffisent : le numéro, la date, le montant dû. Ce qui rend le besoin difficile n’est pourtant pas la lecture, c’est que chaque fournisseur range sa page à sa façon et rebaptise ses libellés sans prévenir. La question à trancher est donc celle du rattrapage : qu’est-ce qui se passe quand la lecture revient fausse, et surtout, comment le voyez-vous ?"
-  en: "A common reflex is to ship every invoice page off to a multimodal model as an image, when the PDF has already given up its text and only three fields are wanted: the number, the date, the amount due. What makes the job hard is not the reading, it is that every supplier arranges the page its own way and renames its labels without warning. So the question to settle is recovery: what happens when a reading comes back wrong, and above all, how do you find out?"
+  fr: "On voit régulièrement chaque page de facture partir en image chez un modèle multimodal, alors que trois champs suffisent : le numéro, la date, le montant dû. Depuis le 1er septembre 2026, la question a changé de forme : toute entreprise en France doit pouvoir recevoir ses factures sous format électronique structuré par une plateforme agréée, et une facture qui arrive en UBL, en CII ou en Factur-X n’est plus à extraire, elle est à lire. Ce qui reste à extraire est un résidu — fournisseurs hors de France, tickets, arriéré — et c’est là que la vieille question se pose encore : qu’est-ce qui se passe quand la lecture revient fausse, et surtout, comment le voyez-vous ?"
+  en: "A common reflex is to ship every invoice page off to a multimodal model as an image, when only three fields are wanted: the number, the date, the amount due. Since 1 September 2026 the question has changed shape: every business in France has to be able to receive its invoices in a structured electronic format through an approved platform, and an invoice that arrives as UBL, CII or Factur-X is no longer something to extract, it is something to read. What is left to extract is a remainder — suppliers outside France, till receipts, the backlog — and that is where the old question still bites: what happens when a reading comes back wrong, and above all, how do you find out?"
 
 rungs:
   - level: N0
     available: true
     name:
-      fr: "Ancrage sur les libellés, puis expressions régulières"
-      en: "Label anchors, then regular expressions"
+      fr: "Lecture du fichier structuré, puis ancrage sur les libellés pour ce qui reste"
+      en: "Read the structured file, then label anchors for what is left"
     cost: nul
     latency: "<1 ms"
     risks:
@@ -49,11 +44,11 @@ rungs:
       javascript: snippets/extract-fields-from-invoice/n0.js
       verification: executed
     breaking_point:
-      fr: "Le fournisseur suivant ne range pas sa page comme celui pour lequel les règles ont été écrites. Il écrit « N° » là où le premier écrivait « Facture n° », date en toutes lettres, et appelle le montant dû « NET A PAYER » : les trois champs tombent. Deux tombent à vide, et cela se voit. Le troisième est le pire : le total revient bien formé et faux, parce que « Sous-total » contient « total »."
-      en: "The next supplier does not lay its page out like the one the rules were written for. It writes « N° » where the first wrote « Facture n° », spells the date out in words, and calls the amount due « NET A PAYER »: all three fields fall over. Two come back empty, and that shows. The third is the bad one: the total comes back well-formed and wrong, because « Sous-total » contains « total »."
+      fr: "La porte structurée n’a pas de point de rupture : ce qui est écrit dans le XML est lu tel quel, et la règle BR-CO-15 de la norme — total TTC = total HT + TVA — vérifie le tout pour rien. C’est l’autre porte qui casse, et elle casse sur le fournisseur suivant. Il ne range pas sa page comme celui pour lequel les règles ont été écrites. Il écrit « N° » là où le premier écrivait « Facture n° », date en toutes lettres, et appelle le montant dû « NET A PAYER » : les trois champs tombent. Deux tombent à vide, et cela se voit. Le troisième est le pire : le total revient bien formé et faux, parce que « Sous-total » contient « total »."
+      en: "The structured door has no breaking point: what the XML says is what is read, and the standard’s BR-CO-15 rule — total with VAT = total without VAT + VAT — checks the whole thing for nothing. It is the other door that breaks, and it breaks on the next supplier. It does not lay its page out like the one the rules were written for. It writes « N° » where the first wrote « Facture n° », spells the date out in words, and calls the amount due « NET A PAYER »: all three fields fall over. Two come back empty, and that shows. The third is the bad one: the total comes back well-formed and wrong, because « Sous-total » contains « total »."
     escalate_when:
-      fr: "Une facture arrive d’un fournisseur que vous n’aviez pas prévu, et vous rouvrez la liste des libellés pour lui."
-      en: "An invoice arrives from a supplier you had not planned for, and you open the label list back up for it."
+      fr: "Votre résidu ne se réduit pas : des factures sans fichier structuré arrivent de fournisseurs que vous n’aviez pas prévus, et vous rouvrez la liste des libellés pour chacun."
+      en: "Your remainder is not shrinking: invoices with no structured file keep arriving from suppliers you had not planned for, and you open the label list back up for each of them."
 
   - level: N1
     available: true
@@ -83,41 +78,14 @@ rungs:
       fr: "L’indemnité forfaitaire de recouvrement, que toute facture entre professionnels porte en bas de page. C’est un montant, seul sur sa ligne, en bas et à droite : au regard des traits, elle ressemble davantage à un total que le total lui-même, et le classifieur la retient. Et l’annoter ne suffit pas : entraîné sur cette facture même, l’indemnité étiquetée comme une ligne sans champ, il la retient encore, parce que ses traits ne la distinguent pas du total."
       en: "The fixed recovery indemnity that every business-to-business invoice carries in its footer. It is an amount, alone on its line, at the bottom and on the right: to the features, it looks more like a total than the total does, and the classifier keeps it. Labelling it does not help: trained on that very invoice, with the indemnity labelled as a line carrying no field, it still keeps it, because its features do not tell it apart from the total."
     escalate_when:
-      fr: "Un montant de bas de page passe pour le montant dû, et l’ajouter annoté au jeu d’entraînement ne change pas la lecture."
-      en: "A footer amount passes for the amount due, and adding it, labelled, to the training set does not change the reading."
+      fr: "Un montant de bas de page passe pour le montant dû, l’ajouter annoté au jeu d’entraînement ne change pas la lecture, et le volume de ce résidu justifie de payer un appel par facture."
+      en: "A footer amount passes for the amount due, adding it, labelled, to the training set does not change the reading, and the volume of that remainder justifies paying for a call per invoice."
 
   - level: N2
-    available: true
-    name:
-      fr: "Modèle de compréhension de document auto-hébergé, avec seuil de relecture"
-      en: "Self-hosted document model, with a review threshold"
-    cost: modéré
-    latency: "~100 ms"
-    risks:
-      data_egress: own-infra
-      deterministic: true
-      testability: statistical
-      vendor_lock: library
-      footprint: moderate
-      regulatory:
-        fr:
-          - "Traitement de factures sur votre infrastructure, poids du modèle compris"
-          - "Le corpus d’affinage contient des factures réelles : il entre dans votre registre des traitements si vous en tenez un"
-          - "Licence et provenance du point de contrôle à établir avant mise en production : microsoft/layoutlmv3-base, nommé par l’extrait, est publié sous Creative Commons BY-NC-SA, une licence d’usage non commercial"
-        en:
-          - "Processing of invoices on your own infrastructure, model weights included"
-          - "The fine-tuning corpus holds real invoices: it belongs in your record of processing activities, where you keep one"
-          - "Licence and provenance of the checkpoint to be established before production use: microsoft/layoutlmv3-base, named by the snippet, is published under Creative Commons BY-NC-SA, a non-commercial licence"
-    code:
-      python: snippets/extract-fields-from-invoice/n2.py
-      javascript: snippets/extract-fields-from-invoice/n2.js
-      verification: stubbed
-    breaking_point:
-      fr: "Un score haut sur la mauvaise ligne passe le seuil. Si, sur une facture portant un acompte, le modèle désigne la ligne de l’acompte comme montant dû avec un score de 0,96, le champ revient avec 120,00, ce score, et aucun drapeau de relecture. Relever le seuil au-dessus de 0,96 envoie ce champ en relecture, et avec lui tous les champs notés plus bas ; la valeur lue, elle, ne change pas."
-      en: "A high score on the wrong line clears the threshold. If, on an invoice carrying a deposit, the model points at the deposit line as the amount due with a score of 0.96, the field comes back with 120.00, that score, and no review flag. Raising the threshold above 0.96 sends that field to review, and every field scored lower along with it; the value read does not change."
-    escalate_when:
-      fr: "Vos factures arrivent en image, sans couche de texte exploitable : il ne reste plus de géométrie à donner au modèle."
-      en: "Your invoices arrive as images with no usable text layer: there is no geometry left to hand the model."
+    available: false
+    unavailable_reason:
+      fr: "Un modèle de compréhension de document — LayoutLM et ses cousins — lit la ligne, ses voisines et leur place dans la page, et c’est bien le signal qui manque à N1. Mais il n’y a rien à publier ici : le point de contrôle de référence, `microsoft/layoutlmv3-base`, est un encodeur non affiné, sans étiquette de facture, et sa fiche le donne sous licence Creative Commons BY-NC-SA, c’est-à-dire hors usage commercial ; aucun point de contrôle affiné sur des factures, sous licence commerciale, ne s’impose ; et rien n’en lit l’équivalent en JavaScript. Un extrait qui ne tourne pas n’a pas sa place sur cette échelle. Ce que ce niveau apporterait vaut surtout pour le résidu que la réforme laisse — et ce résidu se réduit."
+      en: "A document-understanding model — LayoutLM and its cousins — reads the line, its neighbours and their place on the page, which is exactly the signal N1 lacks. But there is nothing to publish here: the reference checkpoint, `microsoft/layoutlmv3-base`, is an unfine-tuned encoder with no invoice labels, and its card releases it under Creative Commons BY-NC-SA, that is, outside commercial use; no checkpoint fine-tuned on invoices under a commercial licence stands out; and nothing reads their equivalent in JavaScript. A snippet that does not run has no place on this ladder. What this level would buy applies mostly to the remainder the reform leaves — and that remainder is shrinking."
 
   - level: N3
     available: true
@@ -153,18 +121,22 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2, parce que la mise en page est le signal, et qu’un modèle de document affiné la reçoit avec le texte au lieu de traits écrits à la main : N0 tient pour un fournisseur et tombe au suivant, N1 prend pour le montant dû une mention légale que toute facture entre professionnels porte en bas de page, et N3 rend une réponse dont la forme se vérifie mais pas la véracité. Le prix est réel, un corpus de factures annotées et un service d’inférence à exploiter, et ce niveau ne vous met pas à l’abri d’une erreur sûre d’elle ; ce qu’il vous donne, c’est un score par champ, donc une file de relecture. Si vous recevez de trois fournisseurs qui ne changent jamais de gabarit, N0 reste la réponse honnête, et vous le saurez le jour où la liste des libellés s’allonge."
-  en: "N2, because layout is the signal, and a fine-tuned document model takes it in along with the text instead of hand-written features: N0 holds for one supplier and falls over on the next, N1 mistakes a legal footer that every business-to-business invoice carries for the amount due, and N3 returns an answer whose shape you can check but whose truth you cannot. The price is real — an annotated corpus of invoices, and an inference service to run — and the level does not save you from a confident mistake; what it gives you is a score per field, and therefore a review queue. If you receive from three suppliers who never change their template, N0 stays the honest answer, and you will know it the day the label list starts growing."
+  fr: "N0, et la réforme y est pour beaucoup. Depuis le 1er septembre 2026, une facture entre entreprises françaises arrive en UBL, en CII ou en Factur-X par une plateforme agréée : le numéro, la date et les montants sont dans le fichier, nommés par la norme EN 16931, et les lire coûte vingt lignes. Sur cette moitié-là du courrier, aucun modèle n’a rien à apporter, et la norme offre même le contrôle que les autres niveaux n’ont pas : total TTC = total HT + TVA, sa règle BR-CO-15, qui attrape pour rien la lecture bien formée et fausse. Reste le résidu — fournisseurs hors de France, tickets, arriéré, factures d’avant la réforme —, et c’est là que l’extraction sert encore : l’ancrage sur les libellés tient pour un fournisseur et tombe au suivant, ce que l’extrait montre et ce que la même fonction signale en disant par quelle porte la réponse est passée. N1 rattrape le changement de gabarit, mais prend pour le montant dû une mention légale que toute facture entre professionnels porte en bas de page, et l’annoter n’y change rien. N3 lit ce que N1 rate, au prix de vos factures chez un tiers et d’une réponse dont la forme se vérifie mais pas la véracité. Montez-y pour le résidu si son volume le justifie, en sachant qu’il se réduit à mesure que la réforme s’applique."
+  en: "N0, and the reform is most of the reason. Since 1 September 2026 an invoice between French businesses arrives as UBL, CII or Factur-X through an approved platform: the number, the date and the amounts are in the file, named by the EN 16931 standard, and reading them takes twenty lines. On that half of the mail no model has anything to add, and the standard even hands you the check the other levels lack: total with VAT = total without VAT + VAT, its BR-CO-15 rule, which catches the well-formed wrong reading for nothing. What is left is the remainder — suppliers outside France, till receipts, the backlog, invoices from before the reform — and that is where extraction still earns its keep: label anchors hold for one supplier and fall over on the next, which the snippet shows and which the same function flags by saying which door the answer came through. N1 survives a change of template, but mistakes a legal footer that every business-to-business invoice carries for the amount due, and labelling it does not help. N3 reads what N1 misses, at the price of your invoices in a third party's hands and of an answer whose shape you can check but whose truth you cannot. Go there for the remainder if its volume justifies it, knowing that it shrinks as the reform takes hold."
 
 further_reading:
   - label: "Service-Public Entreprendre — Mentions obligatoires sur une facture"
     url: "https://entreprendre.service-public.gouv.fr/vosdroits/F31808"
   - label: "LayoutLMv3 — Pre-training for Document AI with Unified Text and Image Masking"
     url: "https://arxiv.org/abs/2204.08387"
-  - label: "microsoft/layoutlmv3-base — le point de contrôle nommé par l’extrait N2"
+  - label: "microsoft/layoutlmv3-base — le point de contrôle qui fermerait le niveau N2 si sa licence le permettait"
     url: "https://huggingface.co/microsoft/layoutlmv3-base"
-  - label: "Factur-X — la facture hybride PDF et XML, quand il n’y a plus rien à extraire"
+  - label: "Factur-X — la facture hybride PDF et XML, un des trois formats du socle"
     url: "https://fnfe-mpe.org/factur-x/"
+  - label: "impots.gouv.fr — à partir de quand suis-je concerné par la réforme de la facturation électronique ?"
+    url: "https://www.impots.gouv.fr/professionnel/questions/partir-de-quand-suis-je-concerne-par-la-reforme-de-la-facturation"
+  - label: "impots.gouv.fr — spécifications externes et normes de la facturation électronique"
+    url: "https://www.impots.gouv.fr/specifications-externes-b2b"
 
 sources:
   - label: "Service-Public Entreprendre — mention obligatoire de l’indemnité forfaitaire pour frais de recouvrement, réclamable à un client professionnel"
@@ -177,4 +149,12 @@ sources:
     url: "https://github.com/huggingface/transformers.js"
   - label: "OpenAI — Images and vision : image en URL de données, facturation par dimensions, formats acceptés"
     url: "https://developers.openai.com/api/docs/guides/images-vision"
+  - label: "impots.gouv.fr, foire aux questions « Je découvre la facturation électronique », version du 01/09/2026, question 5.1 : « Depuis le 1er septembre 2026, toutes les entreprises, quelles que soient leur taille et leur forme juridique, ont l’obligation de recevoir des factures sous format électronique, par l’intermédiaire d’une plateforme agréée » ; les grandes entreprises et les ETI doivent aussi les émettre, les petites, moyennes et micro-entreprises « au plus tard le 1er septembre 2027 »"
+    url: "https://www.impots.gouv.fr/professionnel/je-decouvre-la-facturation-electronique"
+  - label: "impots.gouv.fr, dossier de spécifications externes de la facturation électronique v3.2 (30/04/2026), section 2 : « le respect du socle minimum de formats reposant sur des standards sémantiques et syntaxiques respectant la norme européenne EN16931 pour faciliter les échanges : UBL, CII et Factur-X »"
+    url: "https://www.impots.gouv.fr/specifications-externes-b2b"
+  - label: "Même dossier, annexe 1 « Format sémantique FE e-invoicing », chemins CII lus par l’extrait N0 : `/rsm:CrossIndustryInvoice/rsm:ExchangedDocument/ram:ID` (BT-1), `…/ram:IssueDateTime/udt:DateTimeString` (BT-2), `…/ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:TaxBasisTotalAmount` (BT-109) et `…/ram:TaxTotalAmount` (BT-110)"
+    url: "https://www.impots.gouv.fr/specifications-externes-b2b"
+  - label: "Même dossier, annexe 7 « Règles de gestion » v1.9, règle BR-CO-15 : « Montant total de la facture TVA comprise (BT-112) = Montant total de la facture hors TVA (BT-109) + Montant total de TVA de la facture (BT-110) » ; la même annexe note qu’« en profil extended, la règle BR-CO-15 ne s’applique pas »"
+    url: "https://www.impots.gouv.fr/specifications-externes-b2b"
 ---

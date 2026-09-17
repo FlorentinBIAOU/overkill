@@ -9,6 +9,12 @@ Note what the code has to do that N0 did not: cap the size of what it sends,
 retry on failure, parse an answer that is only probably JSON, and check the
 shape of what came back. That plumbing is the real cost of this rung, and it is
 the part your tests have to cover, because the model itself is not testable.
+
+One check here is not about shape. The three amounts are asked for, not just
+the one that is due, so that the sum EN 16931 makes a rule of — total with VAT
+= total without VAT + VAT — can be recomputed on what the model wrote. It
+catches nothing the model gets consistently wrong, and it catches a digit read
+off the wrong line, which is the failure this entry is about.
 """
 
 from __future__ import annotations
@@ -19,8 +25,9 @@ import math
 
 PROMPT = (
     "Read the invoice below and return its header fields.\n"
-    "Answer with JSON only: an object with the keys `invoice_number`, `date`\n"
-    "and `total`. `total` is the amount due, taxes included, as a number.\n"
+    "Answer with JSON only: an object with the keys `invoice_number`, `date`,\n"
+    "`total_excluding_vat`, `vat` and `total`. `total` is the amount due, taxes\n"
+    "included, as a number.\n"
     "Use null for a field the page does not carry.\n\n"
     "Extracted text:\n{text}"
 )
@@ -31,7 +38,8 @@ PROMPT = (
 MAX_CHARACTERS = 8000
 MAX_IMAGE_BYTES = 4_000_000
 
-FIELDS = ("invoice_number", "date", "total")
+FIELDS = ("invoice_number", "date", "total_excluding_vat", "vat", "total")
+AMOUNTS = ("total_excluding_vat", "vat", "total")
 
 # The provider named here is an example, not a recommendation: the reasoning
 # holds for any general-purpose model API, and the client is swappable. Pass
@@ -104,7 +112,7 @@ def _ask(client, text: str, image_url: str, attempts: int) -> str:
 
 def _decode(answer: str) -> dict:
     """
-    Turn the answer into the three fields, or refuse it.
+    Turn the answer into the five fields, or refuse it.
 
     Models like to wrap JSON in a code fence. That is noise, not an error, and
     stripping it is cheaper than another call.
@@ -123,9 +131,25 @@ def _decode(answer: str) -> dict:
     for field in ("invoice_number", "date"):
         if fields[field] is not None and not isinstance(fields[field], str):
             raise ExtractionUnavailable(f"the model answered a {field} that is not text: {fields[field]!r}")
-    total = fields["total"]
-    # A total nobody can compute with is worse than no total at all: it would
-    # travel down the pipeline looking like a number.
-    if total is not None and (isinstance(total, bool) or not isinstance(total, (int, float)) or not math.isfinite(total)):
-        raise ExtractionUnavailable(f"the model answered a total that is not a number: {total!r}")
-    return fields
+    for field in AMOUNTS:
+        value = fields[field]
+        # An amount nobody can compute with is worse than none at all: it would
+        # travel down the pipeline looking like a number.
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))
+                                  or not math.isfinite(value)):
+            raise ExtractionUnavailable(f"the model answered a {field} that is not a number: {value!r}")
+    return {**fields, "totals_agree": _totals_agree(fields)}
+
+
+def _totals_agree(fields: dict) -> bool | None:
+    """
+    BR-CO-15 recomputed on what the model wrote, or None if it wrote too little.
+
+    False is not a reason to throw the answer away: it is the one reason the
+    caller has to look at this invoice rather than the other four hundred.
+    """
+    amounts = [fields[field] for field in AMOUNTS]
+    if any(value is None for value in amounts):
+        return None
+    without, vat, total = amounts
+    return abs(without + vat - total) < 0.005

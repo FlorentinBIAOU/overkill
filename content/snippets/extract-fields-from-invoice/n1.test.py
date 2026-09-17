@@ -137,18 +137,16 @@ def test_point_de_rupture_l_indemnite_a_les_traits_d_un_total_montant_seul_en_ba
     assert features[8] == 1.0   # hanging on the right
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la fiche dit « Rien dans le jeu d'entraînement ne disait le "
-        "contraire », et le test d'origine que la correction est d'annoter davantage ; "
-        "entraîné sur cette facture même, l'indemnité étiquetée « other », le "
-        "classifieur rend encore 40,00 : les traits ne séparent pas les deux lignes"
-    ),
-)
-def test_infirme_annoter_la_facture_a_indemnite_suffit_a_corriger_la_lecture():
+def test_point_de_rupture_annoter_la_facture_ne_corrige_pas_la_lecture():
+    """
+    breaking_point : « Et l'annoter ne suffit pas : entraîné sur cette facture
+    même, l'indemnité étiquetée comme une ligne sans champ, il la retient
+    encore, parce que ses traits ne la distinguent pas du total. »
+    """
     model = make_model(extra=[(VERRERIE, {"Facture V": "invoice_number", "Total TTC": "total"})])
-    assert extract_fields(model, VERRERIE)["total"] == 360.00
+    assert extract_fields(model, VERRERIE)["total"] == 40.00
+    # Témoin : sur une facture sans indemnité, le même modèle lit le bon total.
+    assert extract_fields(model, LAMBERT)["total"] == 82.80
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +234,8 @@ def test_production_dix_mille_lignes_dans_une_borne_large():
     assert time.perf_counter() - debut < 20
 
 
-def test_defaut_une_date_en_lettres_avec_majuscule_ou_sans_accent_n_est_pas_lue():
+def test_production_une_date_en_lettres_avec_majuscule_ou_sans_accent_est_lue_telle_quelle():
+    """Le classifieur note la ligne, pas la date : la valeur est rendue comme elle est écrite."""
     assert extract_fields(MODEL, NORD.replace("3 avril 2024", "3 Avril 2024"))["date"] == "3 Avril 2024"
     assert extract_fields(MODEL, NORD.replace("3 avril 2024", "1 fevrier 2024"))["date"] == "1 fevrier 2024"
 
