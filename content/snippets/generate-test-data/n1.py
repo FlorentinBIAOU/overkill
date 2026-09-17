@@ -24,7 +24,8 @@ FNV_OFFSET = 2166136261
 FNV_PRIME = 16777619
 MASK32 = 0xFFFFFFFF
 
-UNIT = "\x1f"
+UNIT = "\x1f"  # separates the parts of a cell key, and appears in none of them
+ESCAPE = "\x1e"  # stands in for UNIT inside a part, and is escaped itself
 
 
 def stable_hash(text: str) -> int:
@@ -35,9 +36,29 @@ def stable_hash(text: str) -> int:
     return digest
 
 
+def finalise(digest: int) -> int:
+    """
+    Scramble the low bits of a hash, the `fmix32` of MurmurHash3.
+
+    Same reason as in rung N0: without it, the low bits of a cell follow the
+    last digit of its row number, and two columns drawn from the same seed are
+    not independent at all.
+    """
+    digest ^= digest >> 16
+    digest = (digest * 0x85EBCA6B) & MASK32
+    digest ^= digest >> 13
+    digest = (digest * 0xC2B2AE35) & MASK32
+    return digest ^ (digest >> 16)
+
+
+def _part(text: str) -> str:
+    """Keep UNIT out of a part, so that two different cells never share a key."""
+    return str(text).replace(ESCAPE, ESCAPE + "0").replace(UNIT, ESCAPE + "1")
+
+
 def draw(seed: str, field: str, row: int) -> int:
     """One 32-bit integer per cell, independent of the other cells."""
-    return stable_hash(f"{seed}{UNIT}{field}{UNIT}{row}")
+    return finalise(stable_hash(f"{_part(seed)}{UNIT}{_part(field)}{UNIT}{row}"))
 
 
 def pick(counts: list[int], number: int) -> int:

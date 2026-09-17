@@ -12,7 +12,9 @@
  * Which is why the generator is written out here instead of being taken from
  * the platform. Python's `random` takes a seed, JavaScript's `Math.random` does
  * not, so a data set built on them cannot be handed from one language to the
- * other, nor compared between a back end and a front end.
+ * other, nor compared between a back end and a front end. A library like Faker
+ * would not settle it either: its own documentation says the values a given
+ * seed produces may change from one version to the next.
  *
  * Each cell is drawn from a hash of (seed, field, row) rather than from a
  * running stream. Adding a field to the schema therefore leaves every other
@@ -50,9 +52,31 @@ function part(text) {
   return String(text).replaceAll(ESCAPE, `${ESCAPE}0`).replaceAll(UNIT, `${ESCAPE}1`);
 }
 
+
+/**
+ * Scramble the low bits of a hash, the `fmix32` of MurmurHash3.
+ *
+ * FNV-1a leaves its last byte close to the last byte it was fed. Here the last
+ * byte fed is the last digit of the row number, and everything before it is the
+ * same for a whole column: without this step, `draw(…, row) % 2` is just the
+ * parity of the row, one column alternates strictly, and two columns that
+ * should be independent come out perfectly anticorrelated.
+ *
+ * Three shifts and two multiplications on 32 bits, written the same way in both
+ * languages so that a seed gives the same data in each.
+ */
+export function finalise(digest) {
+  let h = digest >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
 /** The single source of randomness: one 32-bit integer per cell. */
 export function draw(seed, field, row) {
-  return stableHash(`${part(seed)}${UNIT}${part(field)}${UNIT}${row}`);
+  return finalise(stableHash(`${part(seed)}${UNIT}${part(field)}${UNIT}${row}`));
 }
 
 /** Turn one drawn integer into one value that satisfies the field spec. */

@@ -13,7 +13,9 @@ next to a failure is enough to rebuild the data that caused it.
 Which is why the generator is written out here instead of being taken from the
 platform. Python's `random` takes a seed, JavaScript's `Math.random` does not,
 so a data set built on them cannot be handed from one language to the other,
-nor compared between a back end and a front end.
+nor compared between a back end and a front end. A library like Faker would
+not settle it either: its own documentation says the values a given seed
+produces may change from one version to the next.
 
 Each cell is drawn from a hash of (seed, field, row) rather than from a running
 stream. Adding a field to the schema therefore leaves every other column
@@ -50,9 +52,29 @@ def _part(text: str) -> str:
     return str(text).replace(ESCAPE, ESCAPE + "0").replace(UNIT, ESCAPE + "1")
 
 
+def finalise(digest: int) -> int:
+    """
+    Scramble the low bits of a hash, the `fmix32` of MurmurHash3.
+
+    FNV-1a leaves its last byte close to the last byte it was fed. Here the
+    last byte fed is the last digit of the row number, and everything before it
+    is the same for a whole column: without this step, `draw(…, row) % 2` is
+    just the parity of the row, one column alternates strictly, and two columns
+    that should be independent come out perfectly anticorrelated.
+
+    Three shifts and two multiplications on 32 bits, written the same way in
+    both languages so that a seed gives the same data in each.
+    """
+    digest ^= digest >> 16
+    digest = (digest * 0x85EBCA6B) & MASK32
+    digest ^= digest >> 13
+    digest = (digest * 0xC2B2AE35) & MASK32
+    return digest ^ (digest >> 16)
+
+
 def draw(seed: str, field: str, row: int) -> int:
     """The single source of randomness: one 32-bit integer per cell."""
-    return stable_hash(f"{_part(seed)}{UNIT}{_part(field)}{UNIT}{row}")
+    return finalise(stable_hash(f"{_part(seed)}{UNIT}{_part(field)}{UNIT}{row}"))
 
 
 def _value(spec: dict, number: int, row: int):

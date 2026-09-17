@@ -27,9 +27,9 @@ const SESSIONS = {
 // The exact rows expected for one seed. The same literal appears in
 // n1.test.py, which is what pins the two implementations to each other.
 const GOLDEN = [
-  { city: 'Lyon', postcode: '69003', items: 2, delay_days: 4 },
-  { city: 'Paris', postcode: '75011', items: 2, delay_days: 0 },
-  { city: 'Nantes', postcode: '75011', items: 1, delay_days: 0 },
+  { city: 'Lyon', postcode: '44000', items: 2, delay_days: 0 },
+  { city: 'Lyon', postcode: '75011', items: 1, delay_days: 1 },
+  { city: 'Nantes', postcode: '44000', items: 1, delay_days: 4 },
 ];
 
 const SEED = 'sessions-week-24';
@@ -70,7 +70,7 @@ test('point de rupture : les parts par ville sont justes', () => {
 test('point de rupture : près d’une ligne sur deux associe une ville à un autre code postal', () => {
   const rows = sampleRows(SESSIONS, 2000, SEED);
   const impossible = compter(rows, (row) => POSTCODE_OF[row.city] !== row.postcode);
-  assert.equal(impossible, 908); // 45,4 %
+  assert.equal(impossible, 858); // 42,9 %
   // Ce qu'annonce l'indépendance des deux colonnes : 1 - somme des parts au carré.
   const parts = Object.values(SESSIONS.city.counts).map((c) => c / 5700);
   assert.ok(Math.abs(impossible / 2000 - (1 - parts.reduce((s, p) => s + p * p, 0))) < 0.02);
@@ -78,7 +78,27 @@ test('point de rupture : près d’une ligne sur deux associe une ville à un au
 
 test('point de rupture : une ligne sur vingt annonce Nantes avec un code postal parisien', () => {
   const rows = sampleRows(SESSIONS, 2000, SEED);
-  assert.equal(compter(rows, (row) => row.city === 'Nantes' && row.postcode === '75011'), 100);
+  assert.equal(compter(rows, (row) => row.city === 'Nantes' && row.postcode === '75011'), 95); // 4,75 %
+  // Ce qu'annonce l'indépendance des deux colonnes : le produit des deux parts.
+  const attendu = (410 / 5700) * (4120 / 5700);
+  assert.ok(Math.abs(95 / 2000 - attendu) < 0.01);
+});
+
+test('deux colonnes tirées séparément sont indépendantes', () => {
+  // Le tirage cellule par cellule de N0 vaut ici : deux colonnes à deux
+  // modalités produisent les quatre combinaisons, chacune entre 20 % et 30 %.
+  // Sans la finalisation du haché, deux d'entre elles n'existaient jamais.
+  const deux = {
+    a: { type: 'categorical', counts: { x: 1, y: 1 } },
+    b: { type: 'categorical', counts: { x: 1, y: 1 } },
+  };
+  const table = new Map();
+  for (const row of sampleRows(deux, 10_000, 's')) {
+    const key = `${row.a}${row.b}`;
+    table.set(key, (table.get(key) ?? 0) + 1);
+  }
+  assert.deepEqual([...table.keys()].sort(), ['xx', 'xy', 'yx', 'yy']);
+  for (const [key, count] of table) assert.ok(count >= 2000 && count <= 3000, `${key}: ${count}`);
 });
 
 test('point de rupture : témoin, une colonne conjointe ne produit aucune ligne impossible', () => {

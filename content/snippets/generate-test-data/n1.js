@@ -24,8 +24,10 @@
 const FNV_OFFSET = 2166136261;
 const FNV_PRIME = 16777619;
 
-// Unit separator: it joins the parts of a cell key.
+// Unit separator: it joins the parts of a cell key, and appears in none of them.
 const UNIT = '\u001f';
+// Stands in for UNIT inside a part, and is escaped itself.
+const ESCAPE = '\u001e';
 
 /** FNV-1a on 32 bits, identical to the Python version of this file. */
 export function stableHash(text) {
@@ -36,9 +38,30 @@ export function stableHash(text) {
   return digest;
 }
 
+/**
+ * Scramble the low bits of a hash, the `fmix32` of MurmurHash3.
+ *
+ * Same reason as in rung N0: without it, the low bits of a cell follow the last
+ * digit of its row number, and two columns drawn from the same seed are not
+ * independent at all.
+ */
+export function finalise(digest) {
+  let h = digest >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+/** Keep UNIT out of a part, so that two different cells never share a key. */
+function part(text) {
+  return String(text).replaceAll(ESCAPE, `${ESCAPE}0`).replaceAll(UNIT, `${ESCAPE}1`);
+}
+
 /** One 32-bit integer per cell, independent of the other cells. */
 export function draw(seed, field, row) {
-  return stableHash(`${seed}${UNIT}${field}${UNIT}${row}`);
+  return finalise(stableHash(`${part(seed)}${UNIT}${part(field)}${UNIT}${row}`));
 }
 
 /**

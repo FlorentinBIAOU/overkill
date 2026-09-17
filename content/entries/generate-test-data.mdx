@@ -3,7 +3,7 @@ id: generate-test-data
 family: generate
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
@@ -43,8 +43,8 @@ rungs:
       fr: "Les lignes restent visiblement synthétiques. Le générateur n’émet que les formes que le schéma a prévues. Le test le montre sur une fonction de production qui oublie l’étiquette après un plus dans une adresse : le schéma décrit l’adresse comme une séquence `user-0001@example.test`, sans plus, sans majuscule et sans apostrophe, donc la suite reste verte quelle que soit la graine et quel que soit le nombre de lignes, et le doublon de compte n’apparaît qu’en production."
       en: "The rows stay visibly synthetic. The generator only emits the shapes the schema thought of. The test shows it on a production function that forgets the plus tag in an address: the schema describes the address as a sequence, `user-0001@example.test`, with no plus tag, no capital and no apostrophe, so the suite stays green whatever the seed and whatever the row count, and the duplicate account only shows up in production."
     escalate_when:
-      fr: "Un bug atteint la production alors que votre suite le couvrait en apparence, parce que la donnée réelle avait une forme que le générateur ne produit jamais."
-      en: "A bug reaches production while your suite appeared to cover it, because the real data took a shape the generator never produces."
+      fr: "Un bug atteint la production alors que votre suite le couvrait en apparence, parce que la donnée réelle avait une forme que le générateur ne produit jamais. La réponse n’est pas N1, qui ne tire que des valeurs d’une table fournie : c’est la génération par propriétés, qui cherche justement les formes qu’on n’a pas prévues."
+      en: "A bug reaches production while your suite appeared to cover it, because the real data took a shape the generator never produces. The answer is not N1, which only draws values from a table you hand it: it is property-based generation, which goes looking for the shapes nobody thought of."
 
   - level: N1
     available: true

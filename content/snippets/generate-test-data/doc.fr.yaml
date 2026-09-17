@@ -18,7 +18,10 @@ n0.py: |
   C'est pourquoi le générateur est écrit ici au lieu d'être pris à la
   plateforme. Le `random` de Python accepte une graine, le `Math.random` de
   JavaScript non : un jeu de données bâti sur eux ne peut donc pas être passé
-  d'un langage à l'autre, ni comparé entre un serveur et une interface.
+  d'un langage à l'autre, ni comparé entre un serveur et une interface. Une
+  bibliothèque comme Faker ne trancherait pas non plus : sa propre
+  documentation prévient que les valeurs produites par une graine donnée
+  peuvent changer d'une version à l'autre.
 
   Chaque cellule est tirée d'un hachage de (graine, champ, ligne) plutôt que
   d'un flux qui se déroule. Ajouter un champ au schéma laisse par conséquent
@@ -40,7 +43,10 @@ n0.js: |
   C'est pourquoi le générateur est écrit ici au lieu d'être pris à la
   plateforme. Le `random` de Python accepte une graine, le `Math.random` de
   JavaScript non : un jeu de données bâti sur eux ne peut donc pas être passé
-  d'un langage à l'autre, ni comparé entre un serveur et une interface.
+  d'un langage à l'autre, ni comparé entre un serveur et une interface. Une
+  bibliothèque comme Faker ne trancherait pas non plus : sa propre
+  documentation prévient que les valeurs produites par une graine donnée
+  peuvent changer d'une version à l'autre.
 
   Chaque cellule est tirée d'un hachage de (graine, champ, ligne) plutôt que
   d'un flux qui se déroule. Ajouter un champ au schéma laisse par conséquent

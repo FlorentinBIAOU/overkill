@@ -33,9 +33,9 @@ SESSIONS = {
 # The exact rows expected for one seed. The same literal appears in n1.test.js,
 # which is what pins the two implementations to each other.
 GOLDEN = [
-    {"city": "Lyon", "postcode": "69003", "items": 2, "delay_days": 4},
-    {"city": "Paris", "postcode": "75011", "items": 2, "delay_days": 0},
-    {"city": "Nantes", "postcode": "75011", "items": 1, "delay_days": 0},
+    {"city": "Lyon", "postcode": "44000", "items": 2, "delay_days": 0},
+    {"city": "Lyon", "postcode": "75011", "items": 1, "delay_days": 1},
+    {"city": "Nantes", "postcode": "44000", "items": 1, "delay_days": 4},
 ]
 
 SEED = "sessions-week-24"
@@ -76,7 +76,7 @@ def test_point_de_rupture_pres_dune_ligne_sur_deux_associe_une_ville_a_un_autre_
     """« près d'une ligne sur deux associe une ville à un code postal qui n'est pas le sien »."""
     rows = sample_rows(SESSIONS, 2000, SEED)
     impossible = [row for row in rows if POSTCODE_OF[row["city"]] != row["postcode"]]
-    assert len(impossible) == 908  # 45,4 %
+    assert len(impossible) == 858  # 42,9 %
     # Ce qu'annonce l'indépendance des deux colonnes : 1 - somme des parts au carré.
     parts = [c / 5700 for c in SESSIONS["city"]["counts"].values()]
     assert abs(len(impossible) / 2000 - (1 - sum(p * p for p in parts))) < 0.02
@@ -86,7 +86,26 @@ def test_point_de_rupture_une_ligne_sur_vingt_annonce_nantes_avec_un_code_postal
     """« une sur vingt annonce Nantes avec un code postal parisien »."""
     rows = sample_rows(SESSIONS, 2000, SEED)
     nantes_paris = [row for row in rows if row["city"] == "Nantes" and row["postcode"] == "75011"]
-    assert len(nantes_paris) == 100  # exactement 1 sur 20
+    assert len(nantes_paris) == 95  # 4,75 %, soit une sur vingt
+    # Ce qu'annonce l'indépendance des deux colonnes : le produit des deux parts.
+    attendu = (410 / 5700) * (4120 / 5700)
+    assert abs(len(nantes_paris) / 2000 - attendu) < 0.01
+
+
+def test_deux_colonnes_tirees_separement_sont_independantes():
+    """
+    Le tirage cellule par cellule de N0 vaut ici : deux colonnes à deux
+    modalités produisent les quatre combinaisons, chacune entre 20 % et 30 %.
+    Sans la finalisation du haché, deux d'entre elles n'existaient jamais.
+    """
+    deux = {
+        "a": {"type": "categorical", "counts": {"x": 1, "y": 1}},
+        "b": {"type": "categorical", "counts": {"x": 1, "y": 1}},
+    }
+    table = Counter((row["a"], row["b"]) for row in sample_rows(deux, 10_000, "s"))
+    assert set(table) == {("x", "x"), ("x", "y"), ("y", "x"), ("y", "y")}
+    for combinaison, compte in table.items():
+        assert 2000 <= compte <= 3000, (combinaison, compte)
 
 
 def test_point_de_rupture_temoin_une_colonne_conjointe_ne_produit_aucune_ligne_impossible():

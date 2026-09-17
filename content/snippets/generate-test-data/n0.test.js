@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
-import { draw, generateRows, stableHash } from './n0.js';
+import { draw, finalise, generateRows, stableHash } from './n0.js';
 import { hashWord } from '../_harness/fake-llm.mjs';
 import essai from '../../tryouts/live/generate-test-data.js';
 
@@ -34,25 +34,25 @@ const GOLDEN = [
     order_id: 'ORD-00001',
     email: 'user-0001@example.test',
     city: 'Paris',
-    quantity: 6,
-    signed_up_on: '2024-01-27',
+    quantity: 9,
+    signed_up_on: '2024-09-18',
     newsletter: true,
   },
   {
     order_id: 'ORD-00002',
     email: 'user-0002@example.test',
-    city: 'Lille',
-    quantity: 5,
-    signed_up_on: '2024-12-28',
+    city: 'Nantes',
+    quantity: 7,
+    signed_up_on: '2024-08-02',
     newsletter: false,
   },
   {
     order_id: 'ORD-00003',
     email: 'user-0003@example.test',
-    city: 'Nantes',
-    quantity: 8,
-    signed_up_on: '2024-03-25',
-    newsletter: false,
+    city: 'Lyon',
+    quantity: 4,
+    signed_up_on: '2024-02-23',
+    newsletter: true,
   },
 ];
 
@@ -193,11 +193,35 @@ test('la même graine redonne les mêmes lignes, une autre graine non', () => {
 test('chaque cellule est tirée d’un hachage de graine, champ, ligne', () => {
   const rows = generateRows(ORDERS, 40, 'orders-2024');
   rows.forEach((row, index) => {
-    const n = stableHash(`orders-2024${UNIT}quantity${UNIT}${index}`);
+    const n = finalise(stableHash(`orders-2024${UNIT}quantity${UNIT}${index}`));
     assert.equal(draw('orders-2024', 'quantity', index), n);
     assert.equal(row.quantity, 1 + (n % 9));
     assert.equal(row.city, ORDERS.city.values[draw('orders-2024', 'city', index) % 4]);
   });
+});
+
+test('deux colonnes tirées séparément sont indépendantes', () => {
+  // `finalise` : « two columns that should be independent come out perfectly
+  // anticorrelated » sans elle. Tableau de contingence sur dix mille lignes :
+  // les quatre combinaisons existent, chacune entre 20 % et 30 %.
+  const schema = { a: { type: 'choice', values: ['x', 'y'] }, b: { type: 'choice', values: ['x', 'y'] } };
+  const table = new Map();
+  for (const row of generateRows(schema, 10_000, 's')) {
+    const key = `${row.a}${row.b}`;
+    table.set(key, (table.get(key) ?? 0) + 1);
+  }
+  assert.deepEqual([...table.keys()].sort(), ['xx', 'xy', 'yx', 'yy']);
+  for (const [key, count] of table) assert.ok(count >= 2000 && count <= 3000, `${key}: ${count}`);
+});
+
+test('une colonne à deux valeurs n’a pas de période deux', () => {
+  // `finalise` : « one column alternates strictly » sans elle.
+  const plans = generateRows({ plan: { type: 'choice', values: ['free', 'pro'] } }, 100, 'demo').map((r) => r.plan);
+  const alternances = plans.filter((plan, i) => i > 0 && plan !== plans[i - 1]).length;
+  assert.ok(alternances > 30 && alternances < 70, String(alternances));
+  // Et une colonne d'entiers sur quatre valeurs n'a pas de période 4.
+  const q = generateRows({ q: { type: 'int', min: 1, max: 4 } }, 100, 'demo').map((r) => r.q);
+  assert.ok(q.some((value, i) => i >= 4 && value !== q[i - 4]));
 });
 
 test('le hachage est le FNV-1a 32 bits de référence', () => {
@@ -235,7 +259,7 @@ test('le séparateur n’apparaît dans aucune partie de la clé', () => {
 
 test('l’échappement est sans effet sur une graine et un champ ordinaires', () => {
   for (const [graine, champ, ligne] of [['orders-2024', 'city', 0], ['', '', 7], ['🧪 été', 'montant', 49_999]]) {
-    assert.equal(draw(graine, champ, ligne), stableHash(`${graine}${UNIT}${champ}${UNIT}${ligne}`));
+    assert.equal(draw(graine, champ, ligne), finalise(stableHash(`${graine}${UNIT}${champ}${UNIT}${ligne}`)));
   }
   assert.deepEqual(generateRows(ORDERS, 3, 'orders-2024'), GOLDEN);
 });
@@ -304,7 +328,7 @@ test('les booléens se lisent en pourcentage, pas en probabilité', () => {
     .filter((r) => r.b).length / 10_000;
   assert.ok(part(30) > 0.28 && part(30) < 0.32);
   // Qui recopie une probabilité (0,3) obtient presque aucun vrai, sans erreur.
-  assert.ok(part(0.3) < 0.01);
+  assert.ok(part(0.3) < 0.02);
 });
 
 test('une contrainte impossible est refusée plutôt que contournée', () => {

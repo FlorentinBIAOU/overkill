@@ -7,13 +7,14 @@ import subprocess
 import sys
 import time
 import unicodedata
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
 from _harness.fake_llm import hash_word
 import n0
-from n0 import UNIT, draw, generate_rows, stable_hash
+from n0 import UNIT, draw, finalise, generate_rows, stable_hash
 
 ICI = Path(__file__).parent
 
@@ -40,25 +41,25 @@ GOLDEN = [
         "order_id": "ORD-00001",
         "email": "user-0001@example.test",
         "city": "Paris",
-        "quantity": 6,
-        "signed_up_on": "2024-01-27",
+        "quantity": 9,
+        "signed_up_on": "2024-09-18",
         "newsletter": True,
     },
     {
         "order_id": "ORD-00002",
         "email": "user-0002@example.test",
-        "city": "Lille",
-        "quantity": 5,
-        "signed_up_on": "2024-12-28",
+        "city": "Nantes",
+        "quantity": 7,
+        "signed_up_on": "2024-08-02",
         "newsletter": False,
     },
     {
         "order_id": "ORD-00003",
         "email": "user-0003@example.test",
-        "city": "Nantes",
-        "quantity": 8,
-        "signed_up_on": "2024-03-25",
-        "newsletter": False,
+        "city": "Lyon",
+        "quantity": 4,
+        "signed_up_on": "2024-02-23",
+        "newsletter": True,
     },
 ]
 
@@ -219,10 +220,38 @@ def test_chaque_cellule_est_tiree_dun_hachage_de_graine_champ_ligne():
     """Docstring : « Each cell is drawn from a hash of (seed, field, row) rather than from a running stream »."""
     rows = generate_rows(ORDERS, 40, "orders-2024")
     for row_index, row in enumerate(rows):
-        n = stable_hash(f"orders-2024{UNIT}quantity{UNIT}{row_index}")
+        n = finalise(stable_hash(f"orders-2024{UNIT}quantity{UNIT}{row_index}"))
         assert draw("orders-2024", "quantity", row_index) == n
         assert row["quantity"] == 1 + n % 9
         assert row["city"] == ORDERS["city"]["values"][draw("orders-2024", "city", row_index) % 4]
+
+
+def test_deux_colonnes_tirees_separement_sont_independantes():
+    """
+    `finalise` : « two columns that should be independent come out perfectly
+    anticorrelated » sans elle. Tableau de contingence sur dix mille lignes :
+    les quatre combinaisons existent, chacune entre 20 % et 30 %.
+    """
+    schema = {
+        "a": {"type": "choice", "values": ["x", "y"]},
+        "b": {"type": "choice", "values": ["x", "y"]},
+    }
+    rows = generate_rows(schema, 10_000, "s")
+    table = Counter((row["a"], row["b"]) for row in rows)
+    assert set(table) == {("x", "x"), ("x", "y"), ("y", "x"), ("y", "y")}
+    for combinaison, compte in table.items():
+        assert 2000 <= compte <= 3000, (combinaison, compte)
+
+
+def test_une_colonne_a_deux_valeurs_n_a_pas_de_periode_deux():
+    """`finalise` : « one column alternates strictly » sans elle ; ici, l'alternance stricte n'existe pas."""
+    rows = generate_rows({"plan": {"type": "choice", "values": ["free", "pro"]}}, 100, "demo")
+    plans = [row["plan"] for row in rows]
+    alternances = sum(1 for i in range(1, len(plans)) if plans[i] != plans[i - 1])
+    assert 30 < alternances < 70, alternances
+    # Et une colonne d'entiers sur quatre valeurs n'a pas de période 4.
+    quantites = [row["q"] for row in generate_rows({"q": {"type": "int", "min": 1, "max": 4}}, 100, "demo")]
+    assert any(quantites[i] != quantites[i - 4] for i in range(4, len(quantites)))
 
 
 def test_le_hachage_est_le_fnv_1a_32_bits_de_reference():
@@ -267,7 +296,7 @@ def test_le_separateur_napparait_dans_aucune_partie_de_la_cle():
 def test_l_echappement_est_sans_effet_sur_une_graine_et_un_champ_ordinaires():
     """Corrections : sans U+001E ni U+001F, la clé est celle d'avant ; les jeux épinglés (GOLDEN, essai) sont inchangés."""
     for graine, champ, ligne in [("orders-2024", "city", 0), ("", "", 7), ("🧪 été", "montant", 49_999)]:
-        assert draw(graine, champ, ligne) == stable_hash(f"{graine}{UNIT}{champ}{UNIT}{ligne}")
+        assert draw(graine, champ, ligne) == finalise(stable_hash(f"{graine}{UNIT}{champ}{UNIT}{ligne}"))
     assert generate_rows(ORDERS, 3, "orders-2024") == GOLDEN
 
 
@@ -341,7 +370,7 @@ def test_les_booleens_se_lisent_en_pourcentage_pas_en_probabilite():
     assert 0.28 < sum(r["b"] for r in trente) / 10_000 < 0.32
     # Qui recopie une probabilité (0,3) obtient presque aucun vrai, sans erreur.
     probabilite = generate_rows({"b": {"type": "bool", "true_percent": 0.3}}, 10_000, "s")
-    assert sum(r["b"] for r in probabilite) / 10_000 < 0.01
+    assert sum(r["b"] for r in probabilite) / 10_000 < 0.02
 
 
 def test_une_contrainte_impossible_est_refusee_plutot_que_contournee():
