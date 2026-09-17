@@ -364,7 +364,8 @@ test('le tirage donne le même texte qu’en Python', () => {
     'Brise 🙂, une lampe en verre. Points forts : a et b. Disponible en c. Garantie un an.',
   );
   assert.equal(describe(zoe), 'Zoé : un sac en cuir, pensé pour tous. Côté équipement : x. Existe en r et v. Livré avec deux ans de garantie.');
-  assert.ok(describe({ ...zoe, name: 'Zoé'.normalize('NFD') }).endsWith('Garanti deux ans.'));
+  const nfd = 'Zoé'.normalize('NFD');
+  assert.equal(describe({ ...zoe, name: nfd }), describe(zoe).replace('Zoé', nfd));
 });
 
 test('INFIRMÉ : « le vingt-et-unième gabarit s’écrit à la main par quelqu’un qui en a déjà écrit vingt » ; seize formulations', () => {
@@ -394,8 +395,14 @@ test('production : dix mille fiches terminent vite', () => {
 });
 
 test('production : encodage NFD, emoji, insécables et listes limites', () => {
+  // Le nom est composé avant le tirage : « Écume » en NFD tire la même
+  // formulation que le même nom en NFC, et ressort tel qu'il a été fourni.
+  // L'espace insécable d'une couleur traverse de même.
   const name = 'Écume'.normalize('NFD');
-  assert.equal(describe({ name, category: 'serviette', gender: 'f', colours: ['ivoire\u00a0clair'] }), `${name} : une serviette. À choisir en ivoire\u00a0clair.`);
+  assert.equal(
+    describe({ name, category: 'serviette', gender: 'f', colours: ['ivoire\u00a0clair'] }),
+    `${name}, une serviette. Disponible en ivoire\u00a0clair.`,
+  );
   assert.equal(describe({ name: 'X', category: 'sac', colours: [] }), 'X : un sac.');
   assert.equal(describe({ name: 'X', category: 'sac', colours: Array(1000).fill('un') }).split(', ').length - 1, 998);
 });

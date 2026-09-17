@@ -97,10 +97,11 @@ test('ne garde que les phrases que le modèle a finies', async () => {
   assert.equal(await describe(PRODUCT, model), 'Aurore 500 accompagne les randonneurs à la journée.');
 });
 
-test('DÉFAUT : un point décimal est pris pour une fin de phrase', async () => {
+test('un point décimal ne fait pas publier une copie tronquée', async () => {
+  // La copie s'arrête au dernier point, ici celui de « 1.2 » : la découpe donne
+  // un fragment, et un fragment est refusé plutôt que publié. Python de même.
   const model = new FakeSeq2Seq({}, 'Aurore 500 accompagne les randonneurs à la journée et pèse 1.2 kg avec sa toile recy');
-  const published = await describe(PRODUCT, model);
-  assert.throws(() => assert.ok(!published.endsWith('1.')), assert.AssertionError);
+  await assert.rejects(() => describe(PRODUCT, model), DescriptionUnavailable);
 });
 
 test('un fragment est refusé plutôt que publié', async () => {
@@ -176,13 +177,14 @@ test('le même contrôle qu’au niveau N3', async () => {
 // ---------------------------------------------------------------------------
 
 test('production : dossier vide, zéro essai et attribut nul', async () => {
-  let model = recordingModel(COPY);
-  assert.equal(await describe({}, model), COPY);
-  assert.equal(model.calls[0][0], '');
+  // Un dossier sans un attribut ne peut rien donner : il est refusé avant de
+  // faire tourner le modèle. Un attribut à null n'est pas un attribut.
+  for (const product of [{}, { name: null }]) {
+    const model = recordingModel(COPY);
+    await assert.rejects(() => describe(product, model), { name: 'RangeError', message: /empty product record/ });
+    assert.deepEqual(model.calls, []);
+  }
   await assert.rejects(() => describe(PRODUCT, recordingModel(COPY), { attempts: 0 }), DescriptionUnavailable);
-  model = recordingModel(COPY);
-  await describe({ name: null }, model);
-  assert.equal(model.calls[0][0], 'name: null');
 });
 
 test('production : une longue réponse et des espaces en désordre', async () => {

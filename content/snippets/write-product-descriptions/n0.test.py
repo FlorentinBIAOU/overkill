@@ -407,15 +407,17 @@ def test_le_tirage_donne_le_meme_texte_qu_en_javascript():
     """
     `_variant` : « give the same answer as the JavaScript version of this
     snippet, so a catalogue rendered by either reads identically » ; mêmes
-    chaînes attendues dans n0.test.js. Précision : un nom en NFD tire une autre
-    formulation que le même nom en NFC.
+    chaînes attendues dans n0.test.js. Le nom est composé avant le tirage : en
+    NFD ou en NFC il donne la même formulation, dans les deux langages, et il
+    est rendu tel qu'il a été fourni.
     """
     zoe = {"name": "Zoé", "category": "sac", "material": "cuir", "audience": "tous", "features": ["x"], "colours": ["r", "v"], "warranty": "deux ans"}
     assert describe({"name": "Brise 🙂", "category": "lampe", "gender": "f", "material": "verre", "features": ["a", "b"], "colours": ["c"], "warranty": "un an"}) == (
         "Brise 🙂, une lampe en verre. Points forts : a et b. Disponible en c. Garantie un an."
     )
     assert describe(zoe) == "Zoé : un sac en cuir, pensé pour tous. Côté équipement : x. Existe en r et v. Livré avec deux ans de garantie."
-    assert describe({**zoe, "name": unicodedata.normalize("NFD", "Zoé")}).endswith("Garanti deux ans.")
+    nfd = unicodedata.normalize("NFD", "Zoé")
+    assert describe({**zoe, "name": nfd}) == describe(zoe).replace("Zoé", nfd, 1)
 
 
 @pytest.mark.xfail(
@@ -450,9 +452,12 @@ def test_production_dix_mille_fiches_terminent_vite():
 
 
 def test_production_encodage_nfd_emoji_insecables_et_listes_limites():
+    # Le nom est composé avant le tirage : « Écume » en NFD tire la même
+    # formulation que le même nom en NFC, et ressort tel qu'il a été fourni.
+    # L'espace insécable d'une couleur traverse de même.
     name = unicodedata.normalize("NFD", "Écume")
     assert describe({"name": name, "category": "serviette", "gender": "f", "colours": ["ivoire\u00a0clair"]}) == (
-        name + " : une serviette. À choisir en ivoire\u00a0clair."
+        name + ", une serviette. Disponible en ivoire\u00a0clair."
     )
     assert describe({"name": "X", "category": "sac", "colours": []}) == "X : un sac."
     assert describe({"name": "X", "category": "sac", "colours": ["un"] * 1000}).count(", ") == 998

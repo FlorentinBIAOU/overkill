@@ -132,13 +132,11 @@ def test_ne_garde_que_les_phrases_que_le_modele_a_finies():
     assert describe(PRODUCT, model) == "Aurore 500 accompagne les randonneurs à la journée."
 
 
-def test_defaut_un_point_decimal_n_est_pas_une_fin_de_phrase():
+def test_un_point_decimal_ne_fait_pas_publier_une_copie_tronquee():
+    """La copie s'arrête au dernier point, ici celui de « 1.2 » : c'est un fragment, refusé plutôt que publié."""
     model = FakeSeq2Seq({}, "Aurore 500 accompagne les randonneurs à la journée et pèse 1.2 kg avec sa toile recy")
-    try:
-        published = describe(PRODUCT, model)
-    except DescriptionUnavailable:
-        return
-    assert not published.endswith("1.")
+    with pytest.raises(DescriptionUnavailable):
+        describe(PRODUCT, model)
 
 
 def test_un_fragment_est_refuse_plutot_que_publie():
@@ -236,15 +234,18 @@ def test_le_meme_controle_qu_au_niveau_n3():
 
 
 def test_production_dossier_vide_zero_essai_et_attribut_nul():
-    """Précision : un dossier vide part quand même au modèle ; un attribut à None s'écrit « None » dans la source."""
+    """Un dossier sans un attribut ne peut rien donner : il est refusé avant de faire tourner le modèle."""
     model = RecordingModel(COPY)
-    assert describe({}, model) == COPY
-    assert model.calls[0][0] == ""
+    with pytest.raises(ValueError, match="empty product record"):
+        describe({}, model)
+    assert model.calls == []
+    # Un attribut à None n'est pas un attribut : le dossier reste vide.
+    model = RecordingModel(COPY)
+    with pytest.raises(ValueError, match="empty product record"):
+        describe({"name": None}, model)
+    assert model.calls == []
     with pytest.raises(DescriptionUnavailable):
         describe(PRODUCT, RecordingModel(COPY), attempts=0)
-    model = RecordingModel(COPY)
-    describe({"name": None}, model)
-    assert model.calls[0][0] == "name: None"
 
 
 def test_production_une_longue_reponse_et_des_espaces_en_desordre():

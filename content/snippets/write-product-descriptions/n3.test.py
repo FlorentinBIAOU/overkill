@@ -194,14 +194,15 @@ def test_une_reponse_qui_n_est_pas_du_json_leve_plutot_que_d_etre_publiee():
 
 
 def test_une_reponse_d_une_autre_forme_leve():
-    """JSON sans description, description vide, nombre, liste, `null`, JSON entre balises."""
+    """JSON sans description, description vide, nombre, liste, `null`, clôture non refermée, prose autour d'une clôture."""
     for response in (
         json.dumps({"titre": "Aurore 500"}),
         answer(""),
         answer(42),
         answer(["Aurore 500 tient la journée de marche.", "Sa toile recyclée encaisse les ronces."]),
         "null",
-        "```json\n" + answer(COPY) + "\n```",
+        "```json\n" + answer(COPY),
+        "Voici la description :\n```json\n" + answer(COPY) + "\n```",
     ):
         with pytest.raises(DescriptionUnavailable):
             describe(PRODUCT, FakeLLM(response=response), attempts=1)
@@ -245,11 +246,12 @@ def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit():
 # ---------------------------------------------------------------------------
 
 
-def test_production_un_dossier_vide_part_quand_meme_chez_le_fournisseur():
-    """Précision : un dossier vide coûte un appel ; l'invite finit sur « Caractéristiques : » et rien."""
+def test_production_un_dossier_vide_ne_part_pas_chez_le_fournisseur():
+    """Un dossier sans un attribut ne peut rien donner : il est refusé avant de coûter un appel."""
     client = FakeLLM(response=answer(COPY))
-    assert describe({}, client) == COPY
-    assert client.call_count == 1 and client.last_request["prompt"] == PROMPT + "\n"
+    with pytest.raises(ValueError, match="empty product record"):
+        describe({}, client)
+    assert client.call_count == 0
 
 
 def test_production_zero_essai_leve_sans_appel():

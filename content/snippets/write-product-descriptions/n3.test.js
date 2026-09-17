@@ -185,7 +185,17 @@ test('une réponse qui n’est pas du JSON lève plutôt que d’être publiée'
 });
 
 test('une réponse d’une autre forme lève', async () => {
-  for (const response of [JSON.stringify({ titre: 'Aurore 500' }), answer(''), answer(42), 'null', `\`\`\`json\n${answer(COPY)}\n\`\`\``]) {
+  // JSON sans description, description vide, nombre, `null`, clôture non
+  // refermée, prose autour d'une clôture.
+  const responses = [
+    JSON.stringify({ titre: 'Aurore 500' }),
+    answer(''),
+    answer(42),
+    'null',
+    `\`\`\`json\n${answer(COPY)}`,
+    `Voici la description :\n\`\`\`json\n${answer(COPY)}\n\`\`\``,
+  ];
+  for (const response of responses) {
     await assert.rejects(() => describe(PRODUCT, new FakeLLM({ response }), { attempts: 1 }), DescriptionUnavailable);
   }
 });
@@ -258,11 +268,12 @@ test('l’essai compte bien 702 caractères d’attributs dans la fiche encombr�
 // Cas de production
 // ---------------------------------------------------------------------------
 
-test('production : un dossier vide part quand même chez le fournisseur', async () => {
+test('production : un dossier vide ne part pas chez le fournisseur', async () => {
+  // Un dossier sans un attribut ne peut rien donner : il est refusé avant de
+  // coûter un appel.
   const client = new FakeLLM({ response: answer(COPY) });
-  assert.equal(await describe({}, client), COPY);
-  assert.equal(client.callCount, 1);
-  assert.equal(client.lastRequest.prompt, `${PROMPT}\n`);
+  await assert.rejects(() => describe({}, client), { name: 'RangeError', message: /empty product record/ });
+  assert.equal(client.callCount, 0);
 });
 
 test('production : zéro essai lève sans appel', async () => {
