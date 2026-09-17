@@ -7,6 +7,7 @@ le test JavaScript déclare exactement le même, champ pour champ.
 
 import ast
 import json
+import sys
 import time
 import unicodedata
 from pathlib import Path
@@ -148,7 +149,10 @@ def test_n0_est_deterministe_et_n_emploie_que_la_bibliotheque_standard():
     bad = {"email": "x", "display_name": "", "age": 3}
     assert all(validate(bad, SCHEMA) == validate(bad, SCHEMA) for _ in range(20))
     source = ast.parse(Path(__file__).with_name("n0.py").read_text(encoding="utf-8"))
-    assert {a.name for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names} == {"re"}
+    imported = {a.name.split(".")[0] for n in ast.walk(source) if isinstance(n, ast.Import) for a in n.names}
+    imported |= {(n.module or "").split(".")[0] for n in ast.walk(source) if isinstance(n, ast.ImportFrom)}
+    # Le nom des modules n'est pas l'affirmation : « standard library only » l'est.
+    assert imported and imported <= sys.stdlib_module_names
 
 
 def test_un_validateur_tient_en_quarante_lignes():
@@ -179,7 +183,9 @@ def test_une_validation_prend_moins_d_une_milliseconde():
 
 
 def test_production_schema_vide_et_valeurs_d_un_autre_type():
-    assert validate(VALID, {}) == {}
+    # « A field the schema does not declare is refused, not ignored » : un schéma
+    # vide ne déclare rien, donc il refuse tout, champ par champ.
+    assert validate(VALID, {}) == {field: "is not a field of this form" for field in VALID}
     for value in (["ada@example.com"], {"a": 1}, 42, False):
         assert validate({**VALID, "email": value}, SCHEMA) == {"email": "must be of type string"}
     assert validate({**VALID, "display_name": []}, SCHEMA) == {"display_name": "must be of type string"}
@@ -226,7 +232,7 @@ def test_defaut_un_champ_hors_schema_est_signale():
     assert validate({**VALID, "is_admin": True}, SCHEMA) != {}
 
 
-def test_production_un_motif_sur_un_entier_fait_lever_en_python():
-    """Précision : `re.fullmatch` sur un entier lève TypeError ; JavaScript convertit l'entier en texte."""
-    with pytest.raises(TypeError):
-        check(36, {"type": "integer", "pattern": r"\d+"})
+def test_production_un_motif_sur_un_entier_lit_l_entier_comme_du_texte():
+    """`check` compose le texte avant de l'apparier : « 36 » correspond à `[0-9]+`, comme en JavaScript."""
+    assert check(36, {"type": "integer", "pattern": r"[0-9]+"}) is None
+    assert check(36, {"type": "integer", "pattern": r"[0-9]{3}"}) == "is not in the expected format"

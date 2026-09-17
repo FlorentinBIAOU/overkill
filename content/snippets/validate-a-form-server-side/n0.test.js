@@ -175,7 +175,12 @@ test('l’essai rend ses trois premiers cas comme il les annonce', () => {
 // ---------------------------------------------------------------------------
 
 test('production : schéma vide et valeurs d’un autre type', () => {
-  assert.deepEqual(validate(VALID, {}), {});
+  // « A field the schema does not declare is refused, not ignored » : un schéma
+  // vide ne déclare rien, donc il refuse tout, champ par champ.
+  assert.deepEqual(
+    validate(VALID, {}),
+    Object.fromEntries(Object.keys(VALID).map((field) => [field, 'is not a field of this form'])),
+  );
   for (const value of [['ada@example.com'], { a: 1 }, 42, false]) {
     assert.deepEqual(validate({ ...VALID, email: value }, SCHEMA), { email: 'must be of type string' });
   }
@@ -202,11 +207,13 @@ test('production : encodage, espaces insécables et casse', () => {
   assert.deepEqual(validate({ ...VALID, display_name: '﻿Ada 🙂' }, SCHEMA), {});
 });
 
-test('les bornes ne comptent pas des caractères perçus', () => {
-  // JavaScript compte des unités UTF-16 : « 🙂 » en vaut deux et passe le minimum de 2.
+test('les bornes comptent des points de code, pas des caractères perçus', () => {
+  // Composé (NFC) puis compté en points de code, comme la version Python : « é »
+  // compte un quelle que soit sa saisie, un emoji d'un seul point de code compte
+  // un, et un drapeau, qui en porte deux, compte deux.
   assert.deepEqual(validate({ ...VALID, display_name: 'é'.repeat(16).normalize('NFD') }, SCHEMA), {});
   assert.deepEqual(validate({ ...VALID, display_name: '🙂' }, SCHEMA), { display_name: 'must be at least 2 characters' });
-  assert.deepEqual(validate({ ...VALID, display_name: '🙂' }, SCHEMA), {});
+  assert.deepEqual(validate({ ...VALID, display_name: '🇫🇷' }, SCHEMA), {});
 });
 
 test('DÉFAUT : un même motif n’a pas le même sens côté navigateur et côté serveur', () => {
