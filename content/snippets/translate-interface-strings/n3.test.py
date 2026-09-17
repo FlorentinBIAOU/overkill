@@ -79,11 +79,15 @@ def test_point_de_rupture_demander_les_variables_n_est_pas_les_garder():
 
 
 def test_point_de_rupture_une_reponse_d_une_autre_forme_leve():
-    """Réponse mal formée, vide, tronquée ou d'un autre type : erreur nommée après les trois essais."""
+    """Réponse mal formée, vide, tronquée, d'un autre type, ou mal enclose : erreur nommée après les trois essais."""
+    # Une réponse enveloppée tout entière dans une seule clôture de code est
+    # décodée (voir le test suivant) ; une clôture non refermée, ou de la prose
+    # autour d'elle, ne l'est pas.
     answers = [
         {"note": "I am not sure what you mean"}, {"translation": 42}, {"translation": ["Enregistrer"]},
         {"translation": "   "}, '["Enregistrer"]', '"Enregistrer"', "null", '{"translation": "Enreg',
-        '```json\n{"translation": "Enregistrer"}\n```', "",
+        '```json\n{"translation": "Enregistrer"}',
+        'Voici :\n```json\n{"translation": "Enregistrer"}\n```', "",
     ]
     for answer in answers:
         client = FakeLLM(response=answer)
@@ -247,11 +251,15 @@ def test_production_zero_essai_leve_sans_appel():
     assert client.call_count == 0
 
 
-def test_production_le_contexte_n_est_pas_plafonne():
-    """Précision : le plafond ne porte que sur la chaîne ; un contexte de 100 Ko part tel quel."""
+def test_production_un_contexte_trop_long_est_refuse_avant_l_appel():
+    """« string or context longer than 2000 characters » : le plafond porte sur les deux."""
     client = FakeLLM(response={"translation": "Enregistrer"})
-    translate("Save", "French", context="x" * 100_000, client=client)
-    assert len(client.last_request["prompt"]) > 100_000
+    with pytest.raises(ValueError, match="string or context longer"):
+        translate("Save", "French", context="x" * (MAX_CHARACTERS + 1), client=client)
+    assert client.call_count == 0
+    # Au plafond exact, la traduction part.
+    translate("Save", "French", context="x" * MAX_CHARACTERS, client=client)
+    assert client.call_count == 1
 
 
 def test_defaut_une_variable_icu_est_listee_et_verifiee():

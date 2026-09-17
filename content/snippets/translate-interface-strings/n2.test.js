@@ -20,7 +20,11 @@ import { translate as translateN3 } from './n3.js';
 
 // Les deux caractères du marqueur, absents du vocabulaire de opus-mt-en-fr
 // (vocab.json, 59 514 entrées, vérifié) : le modèle les reçoit en <unk>.
-const ABSENT_FROM_VOCABULARY = '⟦⟧';
+// Les deux caractères d'encadrement du marqueur. Le commentaire de `MARK` dit
+// que ses pièces sont dans le vocabulaire du modèle nommé, et qu'un marqueur
+// fait de caractères qui n'y sont pas serait perdu : voici de quoi le montrer,
+// en imitant un vocabulaire qui ignorerait ces deux-là.
+const MARKER_BRACKETS = '[]';
 
 /** Un modèle qui meurt à ses premiers appels, comme un vrai processus. */
 class FlakySeq2Seq extends FakeSeq2Seq {
@@ -58,15 +62,15 @@ function echoTranslator(replacements = [], drop = '') {
 // ---------------------------------------------------------------------------
 
 test('point de rupture : le modèle reçoit un marqueur, jamais la variable', async () => {
-  const model = new FakeSeq2Seq({ '⟦0⟧ items selected': '⟦0⟧ éléments sélectionnés' });
+  const model = new FakeSeq2Seq({ '[0] items selected': '[0] éléments sélectionnés' });
   const result = await translate('{count} items selected', { model });
-  assert.deepEqual(model.calls, ['⟦0⟧ items selected']);
+  assert.deepEqual(model.calls, ['[0] items selected']);
   assert.ok(!model.calls[0].includes('count'));
   assert.deepEqual(result, { target: '{count} éléments sélectionnés', review: false, warnings: [] });
 });
 
 test('point de rupture : une variable perdue est attrapée, pas livrée', async () => {
-  const model = new FakeSeq2Seq({ '⟦0⟧ items selected': 'Des éléments sélectionnés' });
+  const model = new FakeSeq2Seq({ '[0] items selected': 'Des éléments sélectionnés' });
   const result = await translate('{count} items selected', { model });
   assert.equal(result.target, 'Des éléments sélectionnés');
   assert.equal(result.review, true);
@@ -74,18 +78,24 @@ test('point de rupture : une variable perdue est attrapée, pas livrée', async 
 });
 
 test('point de rupture : une accolade inventée est attrapée aussi', async () => {
-  const model = new FakeSeq2Seq({ '⟦0⟧ items selected': '{compte} éléments sélectionnés' });
+  const model = new FakeSeq2Seq({ '[0] items selected': '{compte} éléments sélectionnés' });
   const result = await translate('{count} items selected', { model });
   assert.equal(result.review, true);
   assert.deepEqual(result.warnings, ['variables differ from the source: expected {count}, got {compte}']);
 });
 
-test('sur le vocabulaire du vrai modèle, le marqueur ne revient jamais', async () => {
+test('un marqueur hors du vocabulaire du modèle est perdu, et signalé', async () => {
+  // Commentaire de `MARK` : « a marker made of characters the vocabulary lacks
+  // is dropped ». Témoin : les pièces du marqueur retenu sont dans le
+  // vocabulaire du modèle nommé, il les réécrit, et rien n'est signalé.
   const perfect = [['items selected', 'éléments sélectionnés']];
-  // Témoin : un modèle qui sait lire le marqueur le rend, et rien n'est signalé.
   assert.equal((await translate('{count} items selected', { model: echoTranslator(perfect) })).review, false);
-  const realVocabulary = echoTranslator(perfect, ABSENT_FROM_VOCABULARY);
-  assert.equal((await translate('{count} items selected', { model: realVocabulary })).review, false);
+  // Un modèle dont le vocabulaire ignorerait ces caractères les laisserait
+  // tomber, et la variable perdue serait attrapée plutôt que livrée.
+  const sansCrochets = echoTranslator(perfect, MARKER_BRACKETS);
+  const result = await translate('{count} items selected', { model: sansCrochets });
+  assert.equal(result.review, true);
+  assert.deepEqual(result.warnings, ['variables differ from the source: expected {count}, got none']);
 });
 
 test('point de rupture : l’essai montre la variable perdue en relecture', async () => {
@@ -94,7 +104,7 @@ test('point de rupture : l’essai montre la variable perdue en relecture', asyn
   const fr = await essai.run(cas.input, 'fr', cas);
   assert.equal(fr.verdict.label, 'Renvoyée en relecture');
   assert.equal(fr.output, 'Des éléments sélectionnés');
-  assert.equal(fr.note, 'Le modèle a reçu « ⟦0⟧ items selected » — 1 appel.');
+  assert.equal(fr.note, 'Le modèle a reçu « [0] items selected » — 1 appel.');
 });
 
 test('INFIRMÉ : le `why` de l’essai parle d’une « variable traduite, « {compte} » » ; le modèle ne reçoit jamais « count »', async () => {
@@ -120,14 +130,14 @@ test('une paire de langues à la fois', () => {
 });
 
 test('une variable déplacée est l’affaire du modèle', async () => {
-  const model = new FakeSeq2Seq({ 'Delete ⟦0⟧ of ⟦1⟧': 'Sur ⟦1⟧, supprimer ⟦0⟧' });
+  const model = new FakeSeq2Seq({ 'Delete [0] of [1]': 'Sur [1], supprimer [0]' });
   assert.deepEqual(await translate('Delete {count} of {total}', { model }), {
     target: 'Sur {total}, supprimer {count}', review: false, warnings: [],
   });
 });
 
 test('une variable répétée ou inventée par le modèle est signalée', async () => {
-  const model = new FakeSeq2Seq({ '⟦0⟧ items selected': '⟦0⟧ éléments ⟦0⟧ sélectionnés' });
+  const model = new FakeSeq2Seq({ '[0] items selected': '[0] éléments [0] sélectionnés' });
   const result = await translate('{count} items selected', { model });
   assert.equal(result.target, '{count} éléments {count} sélectionnés');
   assert.deepEqual(result.warnings, ['variables differ from the source: expected {count}, got {count} {count}']);
@@ -137,7 +147,7 @@ test('les variables sont cachées, remises et comptées sous toutes leurs formes
   const source = '{} %s %d %(name)s %1$s %2$d {count} {count}';
   const model = echoTranslator();
   const result = await translate(source, { model });
-  assert.deepEqual(model.calls, ['⟦0⟧ ⟦1⟧ ⟦2⟧ ⟦3⟧ ⟦4⟧ ⟦5⟧ ⟦6⟧ ⟦7⟧']);
+  assert.deepEqual(model.calls, ['[0] [1] [2] [3] [4] [5] [6] [7]']);
   assert.deepEqual(result, { target: source, review: false, warnings: [] });
 });
 
@@ -145,7 +155,7 @@ test('onze variables ne confondent pas les marqueurs un et dix', async () => {
   const source = Array.from({ length: 11 }, (_, i) => `{v${i}}`).join(' ');
   const model = echoTranslator();
   assert.equal((await translate(source, { model })).target, source);
-  assert.ok(model.calls[0].includes('⟦10⟧') && model.calls[0].includes('⟦1⟧'));
+  assert.ok(model.calls[0].includes('[10]') && model.calls[0].includes('[1]'));
 });
 
 test('un modèle qui échoue est retenté', async () => {
@@ -176,14 +186,15 @@ test('une source vide ne vaut pas un appel', async () => {
 });
 
 test('le modèle est injecté, et par défaut c’est le vrai', async () => {
-  for (const source of ['Save', '']) {
-    // Précision : le vrai modèle serait chargé avant de voir que la source est vide.
-    await assert.rejects(() => translate(source), (error) => {
-      assert.equal(error.code, 'ERR_MODULE_NOT_FOUND');
-      assert.match(error.message, /@xenova\/transformers/);
-      return true;
-    });
-  }
+  await assert.rejects(() => translate('Save'), (error) => {
+    assert.equal(error.code, 'ERR_MODULE_NOT_FOUND');
+    assert.match(error.message, /@huggingface\/transformers/);
+    return true;
+  });
+  // Une source vide ou blanche est rendue telle quelle : rien n'est chargé pour
+  // l'apprendre.
+  assert.deepEqual(await translate(''), { target: '', review: false, warnings: [] });
+  assert.equal((await translate('   ')).target, '   ');
 });
 
 test('un modèle à la forme du pipeline de traduction est accepté', async () => {
@@ -193,13 +204,13 @@ test('un modèle à la forme du pipeline de traduction est accepté', async () =
 });
 
 test('la plomberie est déterministe', async () => {
-  const model = new FakeSeq2Seq({ 'Delete ⟦0⟧ of ⟦1⟧': 'Sur ⟦1⟧, supprimer ⟦0⟧' });
+  const model = new FakeSeq2Seq({ 'Delete [0] of [1]': 'Sur [1], supprimer [0]' });
   const first = await translate('Delete {count} of {total}', { model });
   for (let i = 0; i < 5; i += 1) assert.deepEqual(await translate('Delete {count} of {total}', { model }), first);
 });
 
 test('verdict : N2 masque la variable que N3 montre dans l’invite', async () => {
-  const seq2seq = new FakeSeq2Seq({ '⟦0⟧ items selected': '⟦0⟧ éléments sélectionnés' });
+  const seq2seq = new FakeSeq2Seq({ '[0] items selected': '[0] éléments sélectionnés' });
   await translate('{count} items selected', { model: seq2seq });
   const llm = new FakeLLM({ response: { translation: '{count} éléments sélectionnés' } });
   await translateN3('{count} items selected', 'French', { client: llm });
@@ -210,11 +221,11 @@ test('verdict : N2 masque la variable que N3 montre dans l’invite', async () =
 test('l’essai rend ses six cas comme il les annonce', async () => {
   const expected = [
     ['Traduction acceptée', 'Enregistrer les modifications', 'Le modèle a reçu « Save changes » — 1 appel.'],
-    ['Traduction acceptée', '{count} éléments sélectionnés', 'Le modèle a reçu « ⟦0⟧ items selected » — 1 appel.'],
-    ['Traduction acceptée', 'Sur {total}, supprimer {count}', 'Le modèle a reçu « Delete ⟦0⟧ of ⟦1⟧ » — 1 appel.'],
+    ['Traduction acceptée', '{count} éléments sélectionnés', 'Le modèle a reçu « [0] items selected » — 1 appel.'],
+    ['Traduction acceptée', 'Sur {total}, supprimer {count}', 'Le modèle a reçu « Delete [0] of [1] » — 1 appel.'],
     ['Traduction acceptée', 'Enregistrer', 'Le modèle a reçu « Save » — 2 appels.'],
     ['Traduction refusée', undefined, 'Le modèle a reçu « Save » — 2 appels.'],
-    ['Renvoyée en relecture', 'Des éléments sélectionnés', 'Le modèle a reçu « ⟦0⟧ items selected » — 1 appel.'],
+    ['Renvoyée en relecture', 'Des éléments sélectionnés', 'Le modèle a reçu « [0] items selected » — 1 appel.'],
   ];
   assert.equal(essai.cases.length, 6);
   for (const [i, [label, output, note]] of expected.entries()) {
@@ -261,14 +272,21 @@ test('une réponse d’un autre type ne lève pas l’erreur nommée', async () 
   await assert.rejects(() => translate('Save', { model }), TranslationUnavailable);
 });
 
-test('DÉFAUT : les variables ICU et i18next ne sont pas protégées', async () => {
+test('les variables ICU et i18next sont protégées', async () => {
+  // docstring : « An ICU plural or select message always goes to review ».
   const icu = '{count, plural, one {# item} other {# items}}';
   const translated = echoTranslator([['count, plural, one', 'compte, pluriel, un'], ['other', 'autre']]);
-  await assert.rejects(async () => {
-    assert.equal((await translate(icu, { model: translated })).review, true);
-    const dropped = new FakeSeq2Seq({ '{⟦0⟧} items': '⟦0⟧ éléments' });
-    assert.equal((await translate('{{count}} items', { model: dropped })).review, true);
-  }, assert.AssertionError);
+  const result = await translate(icu, { model: translated });
+  // La tête de l'argument est masquée, donc jamais traduite. Les branches, elles,
+  // partent en clair : c'est pour ça que le message entier est renvoyé en relecture.
+  assert.deepEqual(translated.calls, ['[0], one {# item} other {# items}}']);
+  assert.equal(result.review, true);
+  assert.deepEqual(result.warnings, ['ICU message: check its branches by hand']);
+  // La variable d'i18next, elle, est masquée entière : elle revient intacte.
+  const i18next = new FakeSeq2Seq({ '[0] items': '[0] éléments' });
+  assert.deepEqual(await translate('{{count}} items', { model: i18next }), {
+    target: '{{count}} éléments', review: false, warnings: [],
+  });
 });
 
 test('production : placeholders rend les variables dans l’ordre', () => {

@@ -73,10 +73,14 @@ test('point de rupture : demander les variables n’est pas les garder', async (
 });
 
 test('point de rupture : une réponse d’une autre forme lève', async () => {
+  // Une réponse enveloppée tout entière dans une seule clôture de code est
+  // décodée (voir le test suivant) ; une clôture non refermée, ou de la prose
+  // autour d'elle, ne l'est pas.
   const answers = [
     { note: 'I am not sure what you mean' }, { translation: 42 }, { translation: ['Enregistrer'] },
     { translation: '   ' }, '["Enregistrer"]', '"Enregistrer"', 'null', '{"translation": "Enreg',
-    '```json\n{"translation": "Enregistrer"}\n```', '',
+    '```json\n{"translation": "Enregistrer"}',
+    'Voici :\n```json\n{"translation": "Enregistrer"}\n```', '',
   ];
   for (const answer of answers) {
     const client = new FakeLLM({ response: answer });
@@ -245,10 +249,18 @@ test('production : zéro essai lève sans appel', async () => {
   assert.equal(client.callCount, 0);
 });
 
-test('production : le contexte n’est pas plafonné', async () => {
+test('production : un contexte trop long est refusé avant l’appel', async () => {
+  // « string or context longer than 2000 characters » : le plafond porte sur
+  // les deux.
   const client = new FakeLLM({ response: { translation: 'Enregistrer' } });
-  await translate('Save', 'French', { context: 'x'.repeat(100_000), client });
-  assert.ok(client.lastRequest.prompt.length > 100_000);
+  await assert.rejects(
+    () => translate('Save', 'French', { context: 'x'.repeat(MAX_CHARACTERS + 1), client }),
+    RangeError,
+  );
+  assert.equal(client.callCount, 0);
+  // Au plafond exact, la traduction part.
+  await translate('Save', 'French', { context: 'x'.repeat(MAX_CHARACTERS), client });
+  assert.equal(client.callCount, 1);
 });
 
 test('une variable ICU n’est ni listée ni vérifiée', async () => {

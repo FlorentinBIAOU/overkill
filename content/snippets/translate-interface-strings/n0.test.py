@@ -58,9 +58,16 @@ def test_une_correspondance_exacte_part_telle_quelle():
     }
 
 
-def test_une_majuscule_corrigee_ou_une_double_espace_restent_la_meme_chaine():
-    """« a capital is fixed » ; commentaire « a fixed capital or a stray double space is not a new string » (existant)."""
-    assert lookup("save   changes", MEMORY)["status"] == "exact"
+def test_une_majuscule_corrigee_ou_une_double_espace_donnent_une_approchee_a_relire():
+    """docstring : « an approximate match — a word added, a capital or an accent changed — […] because "Polish" and "polish" are not the same word »."""
+    # Le repli du rapprochement ignore casse, accents et espaces multiples : la
+    # chaîne est retrouvée, à 1,0. Mais elle n'est pas la même que celle du
+    # souvenir, donc c'est une approchée, renvoyée en relecture, pas une exacte.
+    for source in ("save   changes", "SAVE CHANGES"):
+        result = lookup(source, MEMORY)
+        assert result["status"] == "fuzzy", source
+        assert result["score"] == 1.0 and result["review"] is True
+        assert result["matched"] == "Save changes"
     assert normalise("Élément  SUPPRIMÉ") == "element supprime"
 
 
@@ -204,17 +211,21 @@ def _label(words, i):
 
 
 def test_production_encodage_nfd_insecable_emoji_casse():
+    # `exact_key` compose la chaîne et retire les caractères de format : une
+    # chaîne en NFD est la même chaîne. La casse, elle, en fait une autre.
     nfd = unicodedata.normalize("NFD", "Delete this item?")
     assert lookup(nfd, MEMORY)["status"] == "exact"
     assert lookup("Save changes", MEMORY)["status"] == "exact"
-    assert lookup("SAVE CHANGES", MEMORY)["status"] == "exact"
+    assert lookup("SAVE CHANGES", MEMORY)["status"] == "fuzzy"
     assert round(lookup("Save 🙂 changes", {"Save changes 🙂": "x"})["score"], 3) == 0.857
 
 
-def test_production_une_marque_d_ordre_des_octets_divise_les_deux_langages():
-    """Python : « \\ufeffSave changes » est approchée (relue) ; JavaScript la rend exacte (`\\s` couvre U+FEFF)."""
+def test_production_une_marque_d_ordre_des_octets_ne_fait_pas_une_autre_chaine():
+    """`exact_key` : « Fold only what cannot change the words: composition, format characters, spacing »."""
+    # U+FEFF est un caractère de format : il est retiré avant la comparaison,
+    # ici comme en JavaScript.
     result = lookup("﻿Save changes", MEMORY)
-    assert result["status"] == "fuzzy" and result["review"] is True
+    assert result["status"] == "exact" and result["review"] is False
 
 
 def test_production_un_caractere_de_largeur_nulle_envoie_en_relecture():

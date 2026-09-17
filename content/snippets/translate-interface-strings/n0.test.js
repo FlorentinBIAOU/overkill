@@ -52,8 +52,15 @@ test('une correspondance exacte part telle quelle', () => {
   });
 });
 
-test('une majuscule corrigée ou une double espace restent la même chaîne', () => {
-  assert.equal(lookup('save   changes', MEMORY).status, 'exact');
+test('une majuscule corrigée ou une double espace donnent une approchée à relire', () => {
+  // Le repli du rapprochement ignore casse, accents et espaces multiples : la
+  // chaîne est retrouvée, à 1,0. Mais elle n'est pas la même que celle du
+  // souvenir, donc c'est une approchée, renvoyée en relecture, pas une exacte.
+  for (const source of ['save   changes', 'SAVE CHANGES']) {
+    const result = lookup(source, MEMORY);
+    assert.equal(result.status, 'fuzzy', source);
+    assert.deepEqual([result.score, result.review, result.matched], [1, true, 'Save changes']);
+  }
   assert.equal(normalise('Élément  SUPPRIMÉ'), 'element supprime');
 });
 
@@ -172,13 +179,19 @@ test('une recherche prend de l’ordre de dix millisecondes dans une mémoire r�
 test('production : encodage NFD, insécable, emoji, casse', () => {
   assert.equal(lookup('Delete this item?'.normalize('NFD'), MEMORY).status, 'exact');
   assert.equal(lookup('Save changes', MEMORY).status, 'exact');
-  assert.equal(lookup('SAVE CHANGES', MEMORY).status, 'exact');
+  // `exactKey` compose la chaîne et retire les caractères de format : une chaîne
+  // en NFD est la même chaîne. La casse, elle, en fait une autre.
+  assert.equal(lookup('SAVE CHANGES', MEMORY).status, 'fuzzy');
   assert.equal(round3(lookup('Save 🙂 changes', { 'Save changes 🙂': 'x' }).score), 0.857);
 });
 
-test('production : une marque d’ordre des octets divise les deux langages', () => {
-  // JavaScript : `\s` couvre U+FEFF, la correspondance est exacte ; Python la rend approchée.
-  assert.equal(lookup('﻿Save changes', MEMORY).status, 'exact');
+test('production : une marque d’ordre des octets ne fait pas une autre chaîne', () => {
+  // `exactKey` : « Fold only what cannot change the words: composition, format
+  // characters, spacing ». U+FEFF est un caractère de format, retiré avant la
+  // comparaison, ici comme en Python.
+  const result = lookup('﻿Save changes', MEMORY);
+  assert.equal(result.status, 'exact');
+  assert.equal(result.review, false);
 });
 
 test('production : un caractère de largeur nulle envoie en relecture', () => {
