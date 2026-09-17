@@ -295,8 +295,15 @@ def test_les_fichiers_pour_lesquels_personne_n_ecrit_de_test():
 
 def test_production_fins_de_ligne_cr_seules_et_guillemet_au_milieu_d_un_champ():
     assert clean_csv(b"id;name\r1;Alice\r2;Bob\r", {})["rows"] == [{"id": "1", "name": "Alice"}, {"id": "2", "name": "Bob"}]
-    rows = clean_csv(b'id,name\n1,Eve "the boss"\n2,"a"b\n', {})["rows"]
-    assert [row["name"] for row in rows] == ['Eve "the boss"', "ab"]
+    # Un guillemet qui n'ouvre pas un champ reste tel qu'il a été tapé ; un
+    # guillemet fermant suivi de texte rend l'enregistrement illisible, et il
+    # part au journal avec sa ligne brute plutôt que d'être deviné.
+    result = clean_csv(b'id,name\n1,Eve "the boss"\n2,"a"b\n', {})
+    assert [row["name"] for row in result["rows"]] == ['Eve "the boss"']
+    assert result["rejects"] == [
+        {"line": 3, "column": "", "reason": "text after a closing quote", "fields": ['2,"a"b']}
+    ]
+    assert len(result["rows"]) + len(result["rejects"]) == 2
 
 
 def test_production_cent_mille_lignes_terminent_vite():
@@ -321,9 +328,11 @@ def test_production_un_grand_entier_reste_exact():
     assert [row["id"] for row in result["rows"]] == [123456789012345678901, 9007199254740993]
 
 
-def test_production_des_chiffres_non_ascii_divisent_les_deux_langages():
-    """Précision : `\\d` Python accepte « ١٢ » (chiffres arabes) comme l'entier 12 ; JavaScript le refuse."""
-    assert clean_csv("a\n١٢\n".encode(), {"a": "integer"})["rows"] == [{"a": 12}]
+def test_production_des_chiffres_non_ascii_sont_refuses_dans_les_deux_langages():
+    """Les motifs de typage n'acceptent que les chiffres ASCII : « ١٢ » n'est pas un entier, ici comme en JavaScript."""
+    result = clean_csv("a\n١٢\n".encode(), {"a": "integer"})
+    assert result["rows"] == []
+    assert result["rejects"] == [{"line": 2, "column": "a", "reason": "not an integer", "fields": ["١٢"]}]
 
 
 def test_production_une_cle_de_schema_a_la_mauvaise_casse_laisse_la_colonne_en_texte():

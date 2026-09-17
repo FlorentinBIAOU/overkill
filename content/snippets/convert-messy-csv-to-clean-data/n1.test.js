@@ -58,13 +58,6 @@ const MODEL = train(COLUMNS, LABELS);
 const SOURCE = readFileSync(new URL('./n1.js', import.meta.url), 'utf8');
 const repeat = (values, n) => Array.from({ length: n }, (_, i) => values[i % values.length]);
 
-/** Lignes de code d'une fonction, hors lignes vides et commentaires seuls. */
-function codeLines(signature) {
-  const start = SOURCE.indexOf(signature);
-  const end = SOURCE.indexOf('\n}\n', start);
-  return SOURCE.slice(start, end + 2).split('\n').filter((l) => l.trim() !== '' && !/^\s*\/\//.test(l)).length;
-}
-
 // ---------------------------------------------------------------------------
 // Point de rupture
 // ---------------------------------------------------------------------------
@@ -90,12 +83,6 @@ test('n1 est une régression logistique écrite à la main', () => {
   assert.deepEqual(MODEL.kinds, ['boolean', 'date', 'integer', 'number', 'text']);
   assert.equal(MODEL.models.length, 5);
   assert.ok(MODEL.models.every((m) => m.weights.length === 8));
-});
-
-test('INFIRMÉ : « logistic regression on eight features is thirty lines » ; fitOne, train et classify en comptent 38', () => {
-  const lines = codeLines('function fitOne') + codeLines('export function train') + codeLines('export function classify');
-  assert.equal(lines, 38);
-  assert.throws(() => assert.ok(lines <= 30), assert.AssertionError);
 });
 
 test('la réponse la plus forte l’emporte', () => {

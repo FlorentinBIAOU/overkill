@@ -16,13 +16,6 @@ const bytes = (text, encoding = 'utf8') => Buffer.from(text, encoding);
 const journal = (result) => result.rejects.map((r) => [r.line, r.column, r.reason]);
 const SOURCE = readFileSync(new URL('./n0.js', import.meta.url), 'utf8');
 
-/** Lignes de code d'une fonction, hors lignes vides et commentaires seuls. */
-function codeLines(source, signature) {
-  const start = source.indexOf(signature);
-  const end = source.indexOf('\n}\n', start);
-  return source.slice(start, end + 2).split('\n').filter((l) => l.trim() !== '' && !/^\s*(\/\/|\*|\/\*\*)/.test(l)).length;
-}
-
 const NOMINAL = bytes(
   'id,name,joined,amount,active\n' +
     '1,Alice,2023-04-12,12.50,yes\n' +
@@ -243,11 +236,6 @@ test('le découpeur garde a"b tel qu’il a été tapé', () => {
   assert.deepEqual(parseRecords('x,a"b\n', ',', '"'), [[1, ['x', 'a"b']]]);
 });
 
-test('INFIRMÉ : « a CSV parser is a thirty-line state machine » ; parseRecords compte 47 lignes de code', () => {
-  assert.throws(() => assert.ok(codeLines(SOURCE, 'export function parseRecords') <= 30), assert.AssertionError);
-  assert.equal(codeLines(SOURCE, 'export function parseRecords'), 47);
-});
-
 test('les fichiers pour lesquels personne n’écrit de test', () => {
   assert.deepEqual(cleanCsv(bytes(''), {}), { columns: [], delimiter: ',', quote: '"', rows: [], rejects: [] });
   const headerOnly = cleanCsv(bytes('id,name\n'), SCHEMA);
@@ -278,7 +266,15 @@ test('l’essai lit ses trois premiers cas comme il les annonce', () => {
 
 test('production : fins de ligne CR seules et guillemet au milieu d’un champ', () => {
   assert.deepEqual(cleanCsv(bytes('id;name\r1;Alice\r2;Bob\r'), {}).rows, [{ id: '1', name: 'Alice' }, { id: '2', name: 'Bob' }]);
-  assert.deepEqual(cleanCsv(bytes('id,name\n1,Eve "the boss"\n2,"a"b\n'), {}).rows.map((row) => row.name), ['Eve "the boss"', 'ab']);
+  // Un guillemet qui n'ouvre pas un champ reste tel qu'il a été tapé ; un
+  // guillemet fermant suivi de texte rend l'enregistrement illisible, et il part
+  // au journal avec sa ligne brute plutôt que d'être deviné.
+  const result = cleanCsv(bytes('id,name\n1,Eve "the boss"\n2,"a"b\n'), {});
+  assert.deepEqual(result.rows.map((row) => row.name), ['Eve "the boss"']);
+  assert.deepEqual(result.rejects, [
+    { line: 3, column: '', reason: 'text after a closing quote', fields: ['2,"a"b'] },
+  ]);
+  assert.equal(result.rows.length + result.rejects.length, 2);
 });
 
 test('production : cent mille lignes terminent vite', () => {
@@ -324,8 +320,13 @@ test('deux colonnes du même nom perdent une valeur', () => {
   assert.ok(result.rejects.length > 0 || Object.values(result.rows[0]).includes('1'));
 });
 
-test('production : un champ très long est lu', () => {
-  // Python lève csv.Error au-delà de 131 072 caractères (DÉFAUT, n0.test.py).
+test('production : un champ très long est refusé, et la suite du fichier est lue', () => {
+  // La même limite qu'en Python, celle de csv.field_size_limit() : au-delà,
+  // l'enregistrement part au journal, et la lecture reprend à la ligne suivante.
   const data = Buffer.concat([bytes('id,note\n1,'), Buffer.alloc(200_000, 0x78), bytes('\n2,ok\n')]);
-  assert.equal(cleanCsv(data, {}).rows.length, 2);
+  const result = cleanCsv(data, {});
+  assert.deepEqual(result.rows, [{ id: '2', note: 'ok' }]);
+  assert.equal(result.rejects.length, 1);
+  assert.equal(result.rejects[0].reason, 'field longer than 131072 characters');
+  assert.equal(result.rejects[0].line, 2);
 });
