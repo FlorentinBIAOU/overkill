@@ -89,21 +89,43 @@ test('plus le préfixe commun est long, plus le clic pèse', () => {
   ]);
 });
 
-test('un clic renseigne tous les préfixes de ce qui a été frappé', () => {
+test('un clic renseigne tous les préfixes de ce qui a été frappé, sauf le vide', () => {
+  // « every prefix of what was typed, from the first letter on […] The empty
+  // prefix is left out on purpose ».
   const m = learn([['chau', 'chaussettes de sport']]);
-  for (const prefix of ['', 'c', 'ch', 'cha', 'chau']) {
+  for (const prefix of ['c', 'ch', 'cha', 'chau']) {
     assert.equal(m.get(`${prefix}\tchaussettes de sport`), 1);
   }
+  assert.equal(m.has('\tchaussettes de sport'), false);
   assert.equal(m.has('chaus\tchaussettes de sport'), false);
 });
 
-test('un préfixe vide classe sur tout le journal', () => {
+test('point de rupture : un clic sous une saisie sans rapport ne déplace rien', () => {
+  // « counted, one click made under any query at all would move its term to the
+  // top of every other query ». Témoin : le même clic fait sous « cha » déplace.
+  const catalogue = ['chaussettes', 'chemise', 'chapeau'];
+  assert.deepEqual(rerank(learn([['zzz', 'chapeau']]), 'ch', catalogue), catalogue);
+  assert.equal(rerank(learn([['cha', 'chapeau']]), 'ch', catalogue)[0], 'chapeau');
+});
+
+test('point de rupture : un seul clic sous une lettre commande tous ses préfixes', () => {
+  // « one click recorded under "c" puts its term at the top of every query that
+  // starts with a "c", ahead of terms drawn from thousands of searches ».
+  const catalogue = ['chaussettes', 'chemise', 'chapeau']; // ordre des fréquences
+  const unClic = learn([['c', 'chapeau']]);
+  for (const prefix of ['c', 'ch', 'cha', 'chap']) {
+    assert.equal(rerank(unClic, prefix, catalogue)[0], 'chapeau', prefix);
+  }
+  // Et le biais de position : le terme que ce classement met en tête reçoit les
+  // clics suivants, qui durcissent l'ordre qu'il devait corriger.
+  const boucle = learn([['c', 'chapeau'], ...Array(20).fill(['ch', 'chapeau'])]);
+  assert.equal(rerank(boucle, 'ch', catalogue)[0], 'chapeau');
+});
+
+test('un préfixe vide ne classe rien', () => {
+  // Le préfixe vide n'est pas compté : sans saisie, l'ordre des fréquences tient.
   const candidates = ['chaussures de running', 'chemise en lin', 'chaussettes de sport'];
-  assert.deepEqual(rerank(model, '', candidates), [
-    'chaussettes de sport',
-    'chemise en lin',
-    'chaussures de running',
-  ]);
+  assert.deepEqual(rerank(model, '', candidates), candidates);
 });
 
 test('accents et casse sont ignorés comme dans l’arbre de préfixes', () => {
@@ -181,8 +203,8 @@ test('production : une requête collée de 10 000 caractères ne compte que ses 
   let total = 0;
   for (const k of m.keys()) total += k.length;
   assert.ok(total <= 100 * 10_000, `${total} caractères de clés`);
-  assert.equal(total, (MAX_TYPED * (MAX_TYPED + 1)) / 2 + (MAX_TYPED + 1) * '\tchemise en lin'.length);
-  assert.equal(m.size, MAX_TYPED + 1);
+  assert.equal(total, (MAX_TYPED * (MAX_TYPED + 1)) / 2 + MAX_TYPED * '\tchemise en lin'.length);
+  assert.equal(m.size, MAX_TYPED);
 });
 
 test('production : une saisie en accents décomposés retrouve les clics du terme composé', () => {
@@ -254,7 +276,7 @@ test('au plus une lecture par longueur de préfixe pour chaque candidat', () => 
   const m = new LecturesComptees(learn(CLICKS));
   const candidats = ['x', 'y', 'z'];
   rerank(m, 'q'.repeat(10_000), candidats);
-  assert.equal(m.lectures, (MAX_TYPED + 1) * candidats.length);
+  assert.equal(m.lectures, MAX_TYPED * candidats.length);
   m.lectures = 0;
   rerank(m, 'cha', ['chaussettes de sport']);
   assert.equal(m.lectures, 1);

@@ -3,7 +3,7 @@ id: add-autocomplete-to-a-search-bar
 family: search
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-17
 contributors: [florentin-biaou]
 
 title:
@@ -40,8 +40,8 @@ rungs:
       javascript: snippets/add-autocomplete-to-a-search-bar/n0.js
       verification: executed
     breaking_point:
-      fr: "La faute de frappe sur le premier caractère. L’arbre ne descend que les caractères qu’on lui donne : le préfixe « echarpe » remonte « écharpe en laine », le préfixe « rcharpe » ne remonte rien, et la bonne orthographe est pourtant dans l’index."
-      en: "A typo on the first character. The tree only walks down the characters it is given: the prefix echarpe brings back écharpe en laine, the prefix rcharpe brings back nothing, and the correct spelling was in the index all along."
+      fr: "La faute de frappe, à n’importe quelle position : l’arbre ne descend que les caractères qu’on lui donne, et la liste se vide à partir de la touche fautive. « echarpe » remonte « écharpe en laine », « rcharpe » et « echarpz » ne remontent rien, et la bonne orthographe est pourtant dans l’index — la faute sur le premier caractère est le pire cas, parce que rien n’a jamais été montré. Second manque, plus fréquent sur un catalogue à termes composés : la saisie du deuxième mot. « laine » ne remonte pas « écharpe en laine », faute d’indexer aussi les suffixes de mot."
+      en: "A typo, at any position: the tree only walks down the characters it is given, and the list empties from the offending key on. « echarpe » brings back « écharpe en laine », « rcharpe » and « echarpz » bring back nothing, and the correct spelling was in the index all along — a typo on the first character is the worst case, because nothing was ever shown. Second gap, more common on a catalogue of compound terms: typing the second word. « laine » does not bring back « écharpe en laine », because word suffixes are not indexed too."
     escalate_when:
       fr: "Votre journal de clics montre que le terme choisi n’est pas celui du haut de la liste : la fréquence de recherche classe mal ce que les gens finissent par prendre."
       en: "Your click log shows that the term people pick is not the one at the top of the list: search frequency ranks badly what they end up taking."
@@ -71,11 +71,11 @@ rungs:
       javascript: snippets/add-autocomplete-to-a-search-bar/n1.js
       verification: executed
     breaking_point:
-      fr: "Ce niveau réordonne une liste, il ne l’allonge pas. Son test le montre sur la faute de frappe qui vide déjà l’arbre : « écharpe en laine » a un clic à son actif sous le préfixe « echa », et « rcharpe » ne lui donne toujours rien à classer."
-      en: "This level reorders a list, it does not lengthen one. Its own test shows it on the typo that already empties the tree: écharpe en laine has a click on record under the prefix echa, and rcharpe still hands it nothing to rank."
+      fr: "Les clics sont comptés, pas pesés. Un seul clic enregistré sous « c » met son terme en tête de toutes les requêtes qui commencent par un « c », devant des termes tirés de milliers de recherches : sur un journal mince, un clic de robot ou un clic de recette renverse le classement. Et les clics viennent de la liste que ce classement a produite — les suggestions du haut reçoivent les clics parce qu’elles sont en haut, et le compteur durcit l’ordre qu’il devait corriger. Témoin : un clic fait sous une saisie sans rapport, « zzz », ne déplace rien."
+      en: "Clicks are counted, not weighed. One single click recorded under « c » puts its term at the top of every query starting with a « c », ahead of terms drawn from thousands of searches: on a thin log, one robot click or one click made while testing overturns the ranking. And the clicks come from the list this very ranking produced — the top suggestions get clicked because they are at the top, and the count then hardens the order it was meant to correct. Witness: a click made under an unrelated query, « zzz », moves nothing."
     escalate_when:
-      fr: "Il n’y a pas de niveau au-dessus. Ce qui manque encore, la tolérance à la faute de frappe, se corrige dans la récupération et non dans le classement."
-      en: "There is no level above this one. What is still missing, tolerance to typos, is fixed in retrieval rather than in ranking."
+      fr: "Il n’y a pas de niveau au-dessus. Ce qui manque encore, la tolérance à la faute de frappe, se corrige dans la récupération et non dans le classement : une distance d’édition bornée sur le préfixe, ce que les moteurs d’index offrent déjà — l’option `fuzzy` du suggesteur `completion` d’Elasticsearch, par exemple."
+      en: "There is no level above this one. What is still missing, tolerance to typos, is fixed in retrieval rather than in ranking: a bounded edit distance on the prefix, which index engines already offer — the `fuzzy` option of Elasticsearch’s `completion` suggester, for one."
 
   - level: N2
     available: false
@@ -86,12 +86,12 @@ rungs:
   - level: N3
     available: false
     unavailable_reason:
-      fr: "Un appel réseau par caractère frappé, pour proposer des termes que l’index contient déjà. La facture se multiplie par la longueur de la requête : la même recherche est payée autant de fois qu’elle compte de lettres."
-      en: "One network call per character typed, to propose terms the index already holds. The bill multiplies by the length of the query: the same search is paid for as many times as it has letters."
+      fr: "Un appel réseau facturé à chaque pause de frappe, pour proposer des termes que l’index contient déjà et qui forment un ensemble fermé. Rien de ce qu’un modèle apporterait ne se trouve dans cet ensemble."
+      en: "A billed network call on every typing pause, to propose terms the index already holds and which form a closed set. Nothing a model would add is in that set."
 
 verdict_rationale:
-  fr: "N0 répond, N1 ne fait que remettre en ordre ce que N0 a trouvé, et les deux niveaux échouent sur la même faute de frappe : le test de N1 le démontre. Prenez N0, et ajoutez N1 le jour où votre journal de clics est assez fourni pour montrer que le terme choisi n’est plus celui du haut de la liste. Le réordonnancement ne fait que lire des compteurs en mémoire, sans appel, mais vous prenez en charge un journal de comportement à conserver."
-  en: "N0 answers, N1 only puts back in order what N0 found, and both levels fail on the same typo, as N1's own test demonstrates. Take N0, and add N1 the day your click log is thick enough to show that the term people pick is no longer the one at the top. The reranking only reads counters held in memory, with no call, but you take on a behavioural log to keep."
+  fr: "N0 répond, N1 ne fait que remettre en ordre ce que N0 a trouvé, et les deux niveaux échouent sur la même faute de frappe : le test de N1 le démontre. Prenez N0, et ajoutez N1 le jour où votre journal de clics est assez fourni pour montrer que le terme choisi n’est plus celui du haut de la liste — assez fourni, et pas avant : un seul clic y commande le classement de tous les préfixes qu’il partage. Le réordonnancement ne fait que lire des compteurs en mémoire, sans appel, mais vous prenez en charge un journal de comportement à conserver, et un compteur qui renforce sa propre sortie."
+  en: "N0 answers, N1 only puts back in order what N0 found, and both levels fail on the same typo, as N1's own test demonstrates. Take N0, and add N1 the day your click log is thick enough to show that the term people pick is no longer the one at the top — thick enough, and not before: one single click there commands the ranking of every prefix it shares. The reranking only reads counters held in memory, with no call, but you take on a behavioural log to keep, and a counter that reinforces its own output."
 
 further_reading:
   - label: "Introduction to Information Retrieval, chapitre 3 — Dictionnaires et récupération tolérante aux fautes"

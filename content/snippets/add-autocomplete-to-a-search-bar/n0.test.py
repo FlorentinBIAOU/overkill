@@ -364,15 +364,7 @@ def test_production_a_compte_egal_et_meme_orthographe_normalisee_le_terme_d_orig
     assert suggest(build([("ÉCHARPE", 1), ("Écharpe", 1), ("echarpe", 1)]), "") == attendu
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring dit « Fold case » (« casse abandonnée »), or majuscule "
-        "puis minuscule laisse « ẞ » (U+1E9E) en « ß » quand « ß » devient « ss » : "
-        "« strasse » ne trouve pas « STRAẞE », et « STRAẞE » ne trouve pas « Straße »"
-    ),
-)
-def test_infirme_le_eszett_majuscule_se_replie_comme_le_eszett_minuscule():
-    """Témoin hors marquage : test_production_strasse_retrouve_strasse_avec_eszett_dans_les_deux_langages."""
-    assert normalise("STRA\u1e9eE") == normalise("Straße")
+def test_le_eszett_majuscule_se_replie_comme_le_eszett_minuscule():
+    """Commentaire : « "ẞ" is the capital of "ß" and upper-casing leaves it alone; written as "ß" first, the pair folds to "ss" on both sides »."""
+    assert normalise("STRA\u1e9eE") == normalise("Straße") == "strasse"
     assert suggest(build([("STRA\u1e9eE", 1)]), "strasse") == ["STRA\u1e9eE"]

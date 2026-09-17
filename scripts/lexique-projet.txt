@@ -510,3 +510,7 @@ canéda
 sarlat
 géoplateforme
 sirene
+echarpz
+zzz
+suggesteur
+elasticsearch

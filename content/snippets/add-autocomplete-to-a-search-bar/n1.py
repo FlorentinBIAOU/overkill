@@ -31,7 +31,9 @@ MAX_TYPED = 64
 def normalise(text: str) -> str:
     """Same folding as the prefix tree, so both rungs agree on what was typed."""
     # Upper then lower case folds "ß" into "ss", the same way in both languages.
-    folded = unicodedata.normalize("NFKD", text).upper().lower().translate(FOLD)
+    # "ẞ" is the capital of "ß" and upper-casing leaves it alone; written as
+    # "ß" first, the pair folds to "ss" on both sides.
+    folded = unicodedata.normalize("NFKD", text.replace("\u1e9e", "ß")).upper().lower().translate(FOLD)
     kept = "".join(c for c in folded if unicodedata.category(c) not in DROPPED)
     return " ".join(word for word in kept.split(" ") if word)
 
@@ -40,14 +42,19 @@ def learn(clicks) -> dict:
     """
     Count clicks from pairs of (what was typed, which suggestion was clicked).
 
-    One click teaches something about every prefix of what was typed: whoever
-    chose "chaussettes de sport" after typing "chau" also tells us what to
-    show at "c" and at "cha".
+    One click teaches something about every prefix of what was typed, from the
+    first letter on: whoever chose "chaussettes de sport" after typing "chau"
+    also tells us what to show at "c" and at "cha". The empty prefix is left
+    out on purpose: counted, one click made under any query at all would move
+    its term to the top of every other query.
+
+    Nothing here decays and nothing is windowed: a term that was clicked a lot
+    two years ago keeps its lead for good.
     """
     model: dict = {}
     for typed, term in clicks:
         typed = normalise(typed)[:MAX_TYPED]
-        for length in range(len(typed) + 1):
+        for length in range(1, len(typed) + 1):
             key = (typed[:length], term)
             model[key] = model.get(key, 0) + 1
     return model
@@ -61,7 +68,7 @@ def _evidence(model: dict, prefix: str, term: str) -> int:
     shares its first letters with past queries that do. The longer
     the matching prefix, the more specific the evidence, hence the weight.
     """
-    for length in range(len(prefix), -1, -1):
+    for length in range(len(prefix), 0, -1):
         clicked = model.get((prefix[:length], term), 0)
         if clicked:
             return clicked * (length + 1)
@@ -73,9 +80,14 @@ def rerank(model: dict, prefix: str, candidates, limit: int = 5) -> list[str]:
     Sort candidates by past clicks, keeping their incoming order as tie-break.
 
     Candidates arrive ordered by search frequency, as the previous rung left
-    them. A term nobody ever clicked keeps that order: the model only moves
-    what it has evidence about, which is what makes it safe to ship on a log
-    that is still thin.
+    them. A term nobody ever clicked keeps that order.
+
+    What that does not make it is safe on a thin log. Clicks are counted, not
+    weighed: one click recorded under "c" puts its term at the top of every
+    query that starts with a "c", ahead of terms drawn from thousands of
+    searches. And the clicks come from the list this very ranking produced —
+    the top suggestions get clicked because they are at the top, and the count
+    then hardens the order it was meant to correct.
     """
     prefix = normalise(prefix)[:MAX_TYPED]
     ranked = sorted(

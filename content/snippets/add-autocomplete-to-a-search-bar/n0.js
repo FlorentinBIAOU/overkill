@@ -35,7 +35,9 @@ export function normalise(text) {
   // and the final sigma is folded by hand. \p{M} holds the accents NFKD
   // detaches, \p{Cf} the invisible characters; NFKD has already turned
   // non-breaking spaces into plain ones.
-  const folded = text.normalize('NFKD').toUpperCase().toLowerCase().replace(/ς/g, 'σ');
+  // "ẞ" is the capital of "ß" and upper-casing leaves it alone; written as
+  // "ß" first, the pair folds to "ss" on both sides.
+  const folded = text.replace(/\u1e9e/g, 'ß').normalize('NFKD').toUpperCase().toLowerCase().replace(/ς/g, 'σ');
   const kept = folded.replace(/[\p{M}\p{Cf}]/gu, '').replace(/[\t\n\v\f\r]/g, ' ');
   return kept.split(' ').filter(Boolean).join(' ');
 }

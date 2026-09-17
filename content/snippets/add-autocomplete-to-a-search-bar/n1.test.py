@@ -109,21 +109,46 @@ def test_plus_le_prefixe_commun_est_long_plus_le_clic_pese():
     ]
 
 
-def test_un_clic_renseigne_tous_les_prefixes_de_ce_qui_a_ete_frappe():
-    """docstring de learn : « One click teaches something about every prefix of what was typed »."""
+def test_un_clic_renseigne_tous_les_prefixes_de_ce_qui_a_ete_frappe_sauf_le_vide():
+    """docstring de learn : « every prefix of what was typed, from the first letter on […] The empty prefix is left out on purpose »."""
     model = learn([("chau", "chaussettes de sport")])
-    for prefix in ("", "c", "ch", "cha", "chau"):
+    for prefix in ("c", "ch", "cha", "chau"):
         assert model[(prefix, "chaussettes de sport")] == 1
+    assert ("", "chaussettes de sport") not in model
     assert ("chaus", "chaussettes de sport") not in model
 
 
-def test_un_prefixe_vide_classe_sur_tout_le_journal():
+def test_point_de_rupture_un_clic_sous_une_saisie_sans_rapport_ne_deplace_rien():
+    """
+    docstring de learn : « counted, one click made under any query at all would
+    move its term to the top of every other query ». Témoin : le même clic fait
+    sous « cha », lui, déplace bien le terme.
+    """
+    catalogue = ["chaussettes", "chemise", "chapeau"]
+    assert rerank(learn([("zzz", "chapeau")]), "ch", catalogue) == catalogue
+    assert rerank(learn([("cha", "chapeau")]), "ch", catalogue)[0] == "chapeau"
+
+
+def test_point_de_rupture_un_seul_clic_sous_une_lettre_commande_tous_ses_prefixes():
+    """
+    docstring de rerank : « one click recorded under "c" puts its term at the
+    top of every query that starts with a "c", ahead of terms drawn from
+    thousands of searches ».
+    """
+    catalogue = ["chaussettes", "chemise", "chapeau"]  # ordre des fréquences de recherche
+    un_clic = learn([("c", "chapeau")])
+    for prefix in ("c", "ch", "cha", "chap"):
+        assert rerank(un_clic, prefix, catalogue)[0] == "chapeau", prefix
+    # Et le biais de position : le terme que ce classement met en tête reçoit
+    # les clics suivants, qui durcissent l'ordre qu'il devait corriger.
+    boucle = learn([("c", "chapeau")] + [("ch", "chapeau")] * 20)
+    assert rerank(boucle, "ch", catalogue)[0] == "chapeau"
+
+
+def test_un_prefixe_vide_ne_classe_rien():
+    """Le préfixe vide n'est pas compté : sans saisie, l'ordre des fréquences de recherche tient."""
     candidates = ["chaussures de running", "chemise en lin", "chaussettes de sport"]
-    assert rerank(make_model(), "", candidates) == [
-        "chaussettes de sport",
-        "chemise en lin",
-        "chaussures de running",
-    ]
+    assert rerank(make_model(), "", candidates) == candidates
 
 
 def test_accents_et_casse_sont_ignores_comme_dans_l_arbre_de_prefixes():
@@ -150,7 +175,7 @@ def test_les_termes_que_personne_n_a_cliques_gardent_leur_ordre_d_arrivee():
 
 
 def test_un_journal_vide_ne_change_rien():
-    """docstring de rerank : « safe to ship on a log that is still thin »."""
+    """docstring de rerank : « A term nobody ever clicked keeps that order » — journal vide compris."""
     assert rerank(learn([]), "cha", BY_FREQUENCY) == BY_FREQUENCY
 
 
@@ -204,7 +229,7 @@ def test_production_une_requete_collee_de_10000_caracteres_ne_compte_que_ses_64_
     model = learn([("q" * 10_000, "chemise en lin")])
     assert sum(len(prefix) for prefix, _ in model) <= 100 * 10_000
     assert sum(len(prefix) for prefix, _ in model) == MAX_TYPED * (MAX_TYPED + 1) // 2
-    assert len(model) == MAX_TYPED + 1
+    assert len(model) == MAX_TYPED
 
 
 def test_production_une_saisie_en_accents_decomposes_retrouve_les_clics_du_terme_compose():
@@ -283,7 +308,7 @@ def test_au_plus_une_lecture_par_longueur_de_prefixe_pour_chaque_candidat():
     model = LecturesComptees(learn(CLICKS))
     candidats = ["x", "y", "z"]
     rerank(model, "q" * 10_000, candidats)
-    assert model.lectures == (MAX_TYPED + 1) * len(candidats)
+    assert model.lectures == MAX_TYPED * len(candidats)
     model.lectures = 0
     rerank(model, "cha", ["chaussettes de sport"])
     assert model.lectures == 1

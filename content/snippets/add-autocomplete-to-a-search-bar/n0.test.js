@@ -307,12 +307,12 @@ test('production : à compte égal et même orthographe normalisée, le terme d�
   assert.deepEqual(suggest(build([['ÉCHARPE', 1], ['Écharpe', 1], ['echarpe', 1]]), ''), attendu);
 });
 
-test('INFIRMÉ : la docstring dit « Fold case », or « ẞ » majuscule reste « ß » quand « ß » devient « ss »', async () => {
-  // Témoin hors marquage : « strasse » retrouve « Straße » plus haut.
-  await assert.rejects(async () => {
-    assert.equal(normalise('STRA\u1e9eE'), normalise('Straße'));
-    assert.deepEqual(suggest(build([['STRA\u1e9eE', 1]]), 'strasse'), ['STRA\u1e9eE']);
-  });
+test('le « ẞ » majuscule se replie comme le « ß » minuscule', () => {
+  // « "ẞ" is the capital of "ß" and upper-casing leaves it alone; written as
+  // "ß" first, the pair folds to "ss" on both sides ».
+  assert.equal(normalise('STRA\u1e9eE'), 'strasse');
+  assert.equal(normalise('Straße'), 'strasse');
+  assert.deepEqual(suggest(build([['STRA\u1e9eE', 1]]), 'strasse'), ['STRA\u1e9eE']);
 });
 
 // ---------------------------------------------------------------------------

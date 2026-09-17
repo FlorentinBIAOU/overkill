@@ -34,3 +34,6 @@ Une ligne par fiche terminée : fiche, motifs levés, ce qui reste.
   juridique retirée aux seules places où elle s'écrit, SIREN et répertoire Sirene
   entrés dans le scénario et le verdict, N2 passé en indisponible faute de
   preuve, deux marquages retirés. Reste : rien.
+- **add-autocomplete-to-a-search-bar** — préfixe vide retiré du comptage des
+  clics, point de rupture de N1 réécrit sur le clic isolé et le biais de
+  position, « ẞ » replié, un marquage retiré. Reste : rien.

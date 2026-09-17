@@ -42,7 +42,9 @@ def normalise(text: str) -> str:
     either end: what gets pasted into a search bar carries all of these.
     """
     # Upper then lower case folds "ß" into "ss", the same way in both languages.
-    folded = unicodedata.normalize("NFKD", text).upper().lower().translate(FOLD)
+    # "ẞ" is the capital of "ß" and upper-casing leaves it alone; written as
+    # "ß" first, the pair folds to "ss" on both sides.
+    folded = unicodedata.normalize("NFKD", text.replace("\u1e9e", "ß")).upper().lower().translate(FOLD)
     kept = "".join(c for c in folded if unicodedata.category(c) not in DROPPED)
     return " ".join(word for word in kept.split(" ") if word)
 

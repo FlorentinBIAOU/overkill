@@ -26,7 +26,9 @@ export function normalise(text) {
   // and the final sigma is folded by hand. \p{M} holds the accents NFKD
   // detaches, \p{Cf} the invisible characters; NFKD has already turned
   // non-breaking spaces into plain ones.
-  const folded = text.normalize('NFKD').toUpperCase().toLowerCase().replace(/ς/g, 'σ');
+  // "ẞ" is the capital of "ß" and upper-casing leaves it alone; written as
+  // "ß" first, the pair folds to "ss" on both sides.
+  const folded = text.replace(/\u1e9e/g, 'ß').normalize('NFKD').toUpperCase().toLowerCase().replace(/ς/g, 'σ');
   const kept = folded.replace(/[\p{M}\p{Cf}]/gu, '').replace(/[\t\n\v\f\r]/g, ' ');
   return kept.split(' ').filter(Boolean).join(' ');
 }
@@ -38,15 +40,20 @@ const key = (prefix, term) => `${prefix}\t${term}`;
 /**
  * Count clicks from pairs of [what was typed, which suggestion was clicked].
  *
- * One click teaches something about every prefix of what was typed: whoever
- * chose "chaussettes de sport" after typing "chau" also tells us what to show
- * at "c" and at "cha".
+ * One click teaches something about every prefix of what was typed, from the
+ * first letter on: whoever chose "chaussettes de sport" after typing "chau"
+ * also tells us what to show at "c" and at "cha". The empty prefix is left out
+ * on purpose: counted, one click made under any query at all would move its
+ * term to the top of every other query.
+ *
+ * Nothing here decays and nothing is windowed: a term that was clicked a lot two
+ * years ago keeps its lead for good.
  */
 export function learn(clicks) {
   const model = new Map();
   for (const [typed, term] of clicks) {
     const prefix = normalise(typed).slice(0, MAX_TYPED);
-    for (let length = 0; length <= prefix.length; length += 1) {
+    for (let length = 1; length <= prefix.length; length += 1) {
       const at = key(prefix.slice(0, length), term);
       model.set(at, (model.get(at) ?? 0) + 1);
     }
@@ -62,7 +69,7 @@ export function learn(clicks) {
  * the matching prefix, the more specific the evidence, hence the weight.
  */
 function evidence(model, prefix, term) {
-  for (let length = prefix.length; length >= 0; length -= 1) {
+  for (let length = prefix.length; length >= 1; length -= 1) {
     const clicked = model.get(key(prefix.slice(0, length), term)) ?? 0;
     if (clicked) return clicked * (length + 1);
   }
@@ -73,9 +80,14 @@ function evidence(model, prefix, term) {
  * Sort candidates by past clicks, keeping their incoming order as tie-break.
  *
  * Candidates arrive ordered by search frequency, as the previous rung left
- * them. A term nobody ever clicked keeps that order: the model only moves what
- * it has evidence about, which is what makes it safe to ship on a log that is
- * still thin.
+ * them. A term nobody ever clicked keeps that order.
+ *
+ * What that does not make it is safe on a thin log. Clicks are counted, not
+ * weighed: one click recorded under "c" puts its term at the top of every query
+ * that starts with a "c", ahead of terms drawn from thousands of searches. And
+ * the clicks come from the list this very ranking produced — the top
+ * suggestions get clicked because they are at the top, and the count then
+ * hardens the order it was meant to correct.
  */
 export function rerank(model, prefix, candidates, limit = 5) {
   const typed = normalise(prefix).slice(0, MAX_TYPED);
