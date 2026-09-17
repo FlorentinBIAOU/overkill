@@ -9,7 +9,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { FakeClassifier } from '../_harness/fake-model.mjs';
-import { DEFAULT_THRESHOLDS, HARM_LABELS, MODEL_NAME, ModerationUnavailable, ToxicityModel, moderate } from './n2.js';
+import {
+  DEFAULT_THRESHOLDS,
+  ENGLISH,
+  HARM_LABELS,
+  MODEL_NAME,
+  MULTILINGUAL,
+  ModerationUnavailable,
+  ToxicityModel,
+  moderate,
+} from './n2.js';
 import essai from '../../tryouts/frozen/moderate-user-comments.js';
 
 const ATTACK = 'get off this forum you blorptard';
@@ -55,6 +64,27 @@ test("point de rupture : sur des notes simulées basses, l'adresse part en publi
 // ---------------------------------------------------------------------------
 // Autres affirmations du niveau
 // ---------------------------------------------------------------------------
+
+test('point de rupture : le couple multilingue ne rend qu’une étiquette', async () => {
+  // breaking_point : « le couple de cette page ne note que l'anglais […] et
+  // celui qui lit le français ne rend qu'une étiquette, « toxic » : le relecteur
+  // reçoit un nombre, plus une raison. » Les deux couples sont publiés dans
+  // l'extrait ; c'est la ligne du bas qui choisit.
+  assert.deepEqual([MODEL_NAME, HARM_LABELS], [ENGLISH[0], ENGLISH[1]]);
+  assert.equal(MULTILINGUAL[0], 'onnx-community/distilbert-multilingual-toxicity-classifier-ONNX');
+  assert.deepEqual(MULTILINGUAL[1], ['toxic']);
+  // Le même commentaire, les deux couples : l'anglais nomme la nuisance…
+  const anglais = new FakeClassifier({ [ATTACK]: { toxicity: 0.91, insult: 0.96, threat: 0.04 } });
+  assert.deepEqual((await moderate([ATTACK], anglais))[0], { action: 'block', label: 'insult', score: 0.96 });
+  // …le multilingue rend une note et rien d'autre.
+  const francais = new FakeClassifier({ [ATTACK]: { toxic: 0.96, 'not-toxic': 0.04 } });
+  const decision = (await moderate([ATTACK], francais, DEFAULT_THRESHOLDS, MULTILINGUAL[1]))[0];
+  assert.deepEqual(decision, { action: 'block', label: 'toxic', score: 0.96 });
+  // Et brancher le couple anglais sur des notes multilingues ne lève pas :
+  // aucune étiquette connue, donc relecture humaine, sans une erreur.
+  const melange = new FakeClassifier({ [ATTACK]: { toxic: 0.96 } });
+  assert.equal((await moderate([ATTACK], melange))[0].action, 'review');
+});
 
 test('oriente chaque commentaire vers sa décision', async () => {
   const decisions = await moderate([ATTACK, BORDERLINE, CALM], new FakeClassifier(SCORES));

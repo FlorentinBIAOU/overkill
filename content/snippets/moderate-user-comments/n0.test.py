@@ -100,23 +100,25 @@ def test_les_formes_de_compatibilite_sont_repliees_pas_les_sosies():
     assert not review("you bl\u043erptard", TERMS)["flagged"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : casefold est appliqué avant NFKD ; une forme de compatibilité en capitale (lettres "
-    "mathématiques, capitales en exposant) devient une capitale ordinaire, jamais repliée : « 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃 » "
-    "donne « BLORPTARD » et n'est pas signalé (JavaScript le signale)",
-)
 def test_les_formes_de_compatibilite_en_capitales_sont_repliees_comme_les_autres():
+    """
+    Commentaire de `normalise` : « Decomposed before folding, and again after:
+    𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃 has to become BLORPTARD before the case fold can see it. » Replier
+    avant de décomposer laissait passer les capitales de compatibilité.
+    """
     assert review("you 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃", TERMS)["flagged"]
     assert review("you ᴮᴸᴼᴿᴾᵀᴬᴿᴰ", TERMS)["flagged"]
+    # Et la parité avec JavaScript, qui les signalait déjà.
+    assert normalise("𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃") == "blorptard"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le commentaire de n0.js dit que « ß » et « ς » sont les deux lettres dont casefold diffère "
-    "des minuscules une fois NFKD appliqué ; il y en a 254 (ypogegrammeni, sigma lunaire, cherokee…)",
-)
-def test_ss_et_sigma_final_sont_les_seules_lettres_ou_casefold_differe_des_minuscules_apres_nfkd():
+def test_le_repli_a_la_main_de_javascript_ne_couvre_que_deux_lettres_sur_deux_cent_cinquante_quatre():
+    """
+    Commentaire de `normalise` en JavaScript : « the two letters a Latin term
+    list meets, ß and the final ς, are done by hand; there are two hundred and
+    fifty-two others, in Cherokee, Greek and Cyrillic, that this line does not
+    cover ». Compté ici, sur la table Unicode elle-même.
+    """
     differ = set()
     for code in range(0x110000):
         char = chr(code)
@@ -124,7 +126,9 @@ def test_ss_et_sigma_final_sont_les_seules_lettres_ou_casefold_differe_des_minus
             folded = unicodedata.normalize("NFKD", char)
             if folded.casefold() != folded.lower():
                 differ.add(char)
-    assert differ == {"ß", "ς"}
+    assert len(differ) == 254
+    assert {"ß", "ς"} <= differ
+    assert {"\u037a", "\u13a0", "\u1c80"} <= differ  # ypogegrammeni, cherokee, cyrillique
 
 
 def test_les_lettres_et_chiffres_de_toute_ecriture_la_ponctuation_et_le_souligne_separent():
@@ -231,11 +235,10 @@ def test_production_un_terme_vide_ou_de_ponctuation_dans_la_liste_est_sans_effet
         {"term": "blorptard", "position": 5, "context": "this forum you blorptard"}]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : une voyelle dépendante du devanagari est une marque, pas une lettre : elle coupe le mot. "
-    "« मल » est trouvé dans « कोमल », et la fenêtre de « तुम कमीने हो » montre « त म कम न ह »",
-)
-def test_defaut_un_mot_devanagari_n_est_pas_coupe_a_ses_voyelles():
+def test_production_un_mot_devanagari_n_est_pas_coupe_a_ses_voyelles():
+    """
+    docstring de `_words` : « a Devanagari vowel sign would cut a word in two ».
+    Découpé aux lettres seules, « मल » se trouvait dans « कोमल ».
+    """
     assert not review("यह कोमल है", ["मल"])["flagged"]
     assert review("तुम कमीने हो", ["कमीने"])["matches"][0]["context"] == "तुम कमीने हो"

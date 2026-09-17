@@ -5,11 +5,19 @@
  * calibration, the right to appeal, and the text of your users' comments,
  * which leaves your premises on every call.
  *
- * You name the categories below; the model decides what they mean. Everything
- * else here — capping the input, retrying, refusing to act on an answer that
- * is not the shape you asked for — is plumbing you own, and it is where the
- * bugs of this rung live. It is also all your tests can reach, because the
- * judgement itself is not testable.
+ * Before writing this, look at whether your provider publishes a moderation
+ * endpoint. The one taken as an example here does, it is not metered, and it
+ * scores thirteen fixed categories. If the harms you care about are on that
+ * list, this file is the expensive way to get them. What it buys, and the only
+ * thing it buys, is a category that is yours: the last one below names giving
+ * out where somebody lives, which no fixed taxonomy on this page carries — not
+ * the provider's thirteen, and not the labels of the model at N2.
+ *
+ * You name the categories; the model decides what they mean. Everything else
+ * here — capping the input, retrying, refusing to act on an answer that is not
+ * the shape you asked for — is plumbing you own, and it is where the bugs of
+ * this rung live. It is also all your tests can reach, because the judgement
+ * itself is not testable.
  */
 
 // The provider named here is an example, not a recommendation: the reasoning
@@ -34,12 +42,16 @@ export async function providerClient(sdk, model = MODEL) {
   };
 }
 
-export const CATEGORIES = ['harassment', 'hate', 'violence', 'self_harm'];
+// The first four are on the provider's own moderation endpoint too. The last
+// one is not, and it is the reason this file exists.
+export const CATEGORIES = ['harassment', 'hate', 'violence', 'self_harm', 'personal_information'];
 
 const PROMPT = [
   'Rate the comment below on each moderation category. Answer with JSON',
   'only: an object mapping each category to a score between 0 and 1.',
   `Categories: ${CATEGORIES.join(', ')}`,
+  'personal_information means giving out where somebody lives, works, or how',
+  'to reach them, without their consent.',
   '',
   'Comment:',
 ].join('\n');
@@ -62,7 +74,9 @@ export class ModerationUnavailable extends Error {}
 export async function moderate(comment, { client, thresholds = DEFAULT_THRESHOLDS, attempts = 3 } = {}) {
   // The provider bills every token of the prompt. The cap counts characters
   // (code points, as Python does), not tokens, and is checked before any call:
-  // the caller decides where a longer comment goes instead.
+  // the caller decides where a longer comment goes instead. On a forum that is
+  // the review queue, not the bin — a comment of four thousand and one
+  // characters is not an anomaly.
   if ([...comment].length > MAX_CHARACTERS) {
     throw new RangeError(`comment longer than ${MAX_CHARACTERS} characters`);
   }
@@ -94,7 +108,7 @@ async function ask(client, comment, attempts) {
         temperature: 0,
       });
       // No content (a refusal) and anything but a JSON object are unusable.
-      const parsed = typeof answer === 'string' ? JSON.parse(answer) : null;
+      const parsed = typeof answer === 'string' ? JSON.parse(unfenced(answer)) : null;
       if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
         lastError = new Error('the answer is not a JSON object');
         continue;
@@ -110,6 +124,22 @@ async function ask(client, comment, attempts) {
 }
 
 /** A number the caller can act on, rather than whatever came back. */
+/**
+ * A JSON answer wrapped whole in one code fence is read; nothing else is.
+ *
+ * Prose around it, a second block, or a fence never closed is a failed answer,
+ * and it is asked for again rather than salvaged.
+ */
+function unfenced(answer) {
+  const text = answer.trim();
+  const fences = text.match(/```/g)?.length ?? 0;
+  if (text.startsWith('```') && text.endsWith('```') && fences === 2) {
+    const inner = text.slice(3, -3);
+    return inner.startsWith('json') ? inner.slice(4) : inner;
+  }
+  return text;
+}
+
 function isScore(value) {
   return typeof value === 'number' && value >= 0 && value <= 1;
 }

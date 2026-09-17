@@ -15,6 +15,8 @@ import { CATEGORIES, DEFAULT_THRESHOLDS, MAX_CHARACTERS, MODEL, ModerationUnavai
 
 const ATTACK = 'get off this forum you blorptard';
 const CALM = 'the diagram is much clearer than the text';
+// Le commentaire que le niveau N2 n'a nulle part où ranger (son point de rupture).
+const ADDRESS = 'he lives at the corner of rue des Lilas by the way, go and say hello';
 
 const scored = (values = {}) => JSON.stringify(Object.fromEntries(CATEGORIES.map((n) => [n, values[n] ?? 0])));
 
@@ -27,7 +29,7 @@ test('point de rupture : un commentaire anodin noté harcèlement est bloqué, s
   const decision = await moderate(CALM, { client: new FakeLLM({ response: scored({ harassment: 0.95 }) }) });
   assert.deepEqual(decision, {
     action: 'block', category: 'harassment', score: 0.95,
-    scores: { harassment: 0.95, hate: 0, violence: 0, self_harm: 0 },
+    scores: Object.fromEntries(CATEGORIES.map((n) => [n, n === 'harassment' ? 0.95 : 0])),
   });
   assert.equal((await moderate(CALM, { client: new FakeLLM({ response: scored() }) })).action, 'allow');
 });
@@ -43,6 +45,23 @@ test("envoie le commentaire et les catégories, à température zéro", async ()
   assert.ok(prompt.endsWith(`Comment:\n${ATTACK}`));
   for (const name of CATEGORIES) assert.ok(prompt.includes(name), name);
   assert.equal(temperature, 0);
+});
+
+test('la catégorie que N2 n’a pas est demandée, et elle peut décider', async () => {
+  // « What it buys, and the only thing it buys, is a category that is yours:
+  // the last one below names giving out where somebody lives ». C'est le
+  // commentaire que le point de rupture de N2 n'a nulle part où ranger.
+  assert.equal(CATEGORIES.at(-1), 'personal_information');
+  const client = new FakeLLM({ response: scored({ personal_information: 0.95 }) });
+  const decision = await moderate(ADDRESS, { client });
+  assert.equal(decision.action, 'block');
+  assert.equal(decision.category, 'personal_information');
+  const { prompt } = client.lastRequest;
+  assert.ok(prompt.includes('personal_information'));
+  assert.ok(prompt.includes('where somebody lives, works, or how'));
+  // Témoin : les quatre autres catégories ne l'attrapent pas.
+  const muet = new FakeLLM({ response: scored() });
+  assert.equal((await moderate(ADDRESS, { client: muet })).action, 'allow');
 });
 
 test("les seuils sont à l'appelant, et valeurs aux limites", async () => {
@@ -89,18 +108,15 @@ test('une panne est retentée le nombre de fois annoncé, pas une de plus', asyn
 
 const FENCED = `\`\`\`json\n${scored({ harassment: 0.95 })}\n\`\`\``;
 
-test('DÉFAUT : une réponse entièrement dans une clôture json n’est pas décodée ; trois appels, puis ModerationUnavailable', async () => {
-  await assert.rejects(async () => {
-    const client = new FakeLLM({ response: FENCED });
-    let decision;
-    try {
-      decision = await moderate(CALM, { client });
-    } catch (error) {
-      assert.fail(`${error.name}: ${error.message}`);
-    }
-    assert.equal(decision.action, 'block');
-    assert.equal(client.callCount, 1);
-  }, assert.AssertionError);
+test('une réponse entièrement dans une clôture json est décodée', async () => {
+  // « A JSON answer wrapped whole in one code fence is read ».
+  const client = new FakeLLM({ response: FENCED });
+  assert.equal((await moderate(CALM, { client })).action, 'block');
+  assert.equal(client.callCount, 1);
+  // Sans le mot « json » après la clôture, de même.
+  const nue = new FakeLLM({ response: FENCED.replace('```json', '```') });
+  assert.equal((await moderate(CALM, { client: nue })).action, 'block');
+  assert.equal(nue.callCount, 1);
 });
 
 test('production : tout autre écart autour du JSON lève', async () => {

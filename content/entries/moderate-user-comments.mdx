@@ -3,7 +3,7 @@ id: moderate-user-comments
 family: detect-filter
 status: published
 verdict: N2
-updated: 2026-09-14
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -80,8 +80,8 @@ rungs:
   - level: N2
     available: true
     name:
-      fr: "Classifieur de toxicité auto-hébergé, avec bande de relecture humaine"
-      en: "Self-hosted toxicity classifier, with a human review band"
+      fr: "Classifieur de toxicité auto-hébergé (anglais, ou multilingue à une étiquette), avec bande de relecture humaine"
+      en: "Self-hosted toxicity classifier (English, or multilingual with a single label), with a human review band"
     cost: faible
     latency: "~100 ms"
     risks:
@@ -106,8 +106,8 @@ rungs:
       javascript: snippets/moderate-user-comments/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Vous héritez de la taxonomie et des biais de quelqu’un d’autre. Le modèle note sept nuisances — toxicité, toxicité sévère, obscénité, attaque identitaire, insulte, menace, contenu sexuel explicite — et aucune ne nomme la divulgation d’un domicile : « he lives at the corner of rue des Lilas by the way, go and say hello » n’a pas d’étiquette où tomber. Et la fiche du modèle prévient qu’un commentaire contenant des mots d’insulte sera probablement noté toxique, quels que soient le ton et l’intention : le signalement d’une insulte n’y échappe pas. Le test ne vérifie que la plomberie, sur des notes simulées."
-      en: "You inherit somebody else’s taxonomy, and its biases. The model scores seven harms — toxicity, severe toxicity, obscenity, identity attack, insult, threat, sexually explicit content — and none of them names giving out someone’s home: “he lives at the corner of rue des Lilas by the way, go and say hello” has no label to land in. And the model card warns that a comment containing insulting words is likely to be scored toxic whatever its tone or intent: the report of an insult does not escape that. The test checks the plumbing only, on simulated scores."
+      fr: "Vous héritez de la taxonomie, de la langue et des biais de quelqu’un d’autre. Le modèle de cet extrait est entraîné sur des commentaires anglais — sa fiche dit `language: en` et son corpus est Civil Comments —, et branché sur un forum français il rend des notes, pas des erreurs ; le couple multilingue que l’extrait publie à côté couvre le français, mais avec une seule étiquette, « toxic », si bien que le relecteur reçoit un nombre et plus une raison. Le modèle note sept nuisances — toxicité, toxicité sévère, obscénité, attaque identitaire, insulte, menace, contenu sexuel explicite — et aucune ne nomme la divulgation d’un domicile : « he lives at the corner of rue des Lilas by the way, go and say hello » n’a pas d’étiquette où tomber. Et la fiche du modèle prévient qu’un commentaire contenant des mots d’insulte sera probablement noté toxique, quels que soient le ton et l’intention : le signalement d’une insulte n’y échappe pas. Et le commentaire n’est noté que jusqu’à la longueur que le modèle lit : une insulte à la fin d’un long message passe. Le test ne vérifie que la plomberie, sur des notes simulées."
+      en: "You inherit somebody else’s taxonomy, language and biases. The model in this snippet is trained on English comments — its card says `language: en` and its corpus is Civil Comments — and plugged into a French forum it returns scores, not errors; the multilingual pair the snippet publishes next to it does cover French, but with a single label, toxic, so the reviewer gets a number and no longer a reason. The model scores seven harms — toxicity, severe toxicity, obscenity, identity attack, insult, threat, sexually explicit content — and none of them names giving out someone’s home: “he lives at the corner of rue des Lilas by the way, go and say hello” has no label to land in. And the model card warns that a comment containing insulting words is likely to be scored toxic whatever its tone or intent: the report of an insult does not escape that. And a comment is only scored as far as the model reads: an insult at the end of a long message goes through. The test checks the plumbing only, on simulated scores."
     escalate_when:
       fr: "Le préjudice qui vous occupe n’a d’étiquette dans aucun modèle disponible, et vous n’avez pas de corpus étiqueté pour la lui apprendre."
       en: "The harm you care about has no label in any available model, and you have no labelled corpus to teach it one."
@@ -115,8 +115,8 @@ rungs:
   - level: N3
     available: true
     name:
-      fr: "Notation du commentaire par un modèle généraliste"
-      en: "Scoring the comment with a general-purpose model"
+      fr: "Notation du commentaire par un modèle généraliste, pour la catégorie qui n’a d’étiquette nulle part"
+      en: "Scoring the comment with a general-purpose model, for the category that has a label nowhere else"
     cost: élevé
     latency: "~1 s"
     risks:
@@ -139,19 +139,23 @@ rungs:
       javascript: snippets/moderate-user-comments/n3.js
       verification: stubbed
     breaking_point:
-      fr: "Le score est l’avis du fournisseur, et le code n’a rien pour le confronter. Si « the diagram is much clearer than the text » revient noté en harcèlement au-delà du seuil de blocage — le test simule cette réponse —, la fonction bloque, correctement selon sa propre logique. Aucun trait à inspecter, aucun poids à imprimer, et rien à répondre à l’auteur du commentaire hormis ce nombre, que le fournisseur pris en exemple ne garantit pas identique d’un appel à l’autre, même à graine fixée."
-      en: "The score is the provider’s opinion, and the code has nothing to hold it against. If “the diagram is much clearer than the text” comes back scored for harassment past the blocking threshold — the test simulates that answer —, the function blocks it, correctly by its own logic. No feature to inspect, no weight to print, and nothing to tell the commenter but that number, which the provider taken as an example does not guarantee to repeat from one call to the next, even with a fixed seed."
+      fr: "Vous payez au jeton ce que le point d’accès de modération du même fournisseur rend sans compteur. Ce qui le justifie tient en une ligne de l’extrait : la cinquième catégorie, la divulgation d’un domicile, que ni les treize catégories de ce point d’accès ni les étiquettes du modèle de N2 ne portent. Pour les quatre autres, ce niveau est la façon chère d’obtenir ce qui est gratuit. Le score, lui, est l’avis du fournisseur, et le code n’a rien pour le confronter. Si « the diagram is much clearer than the text » revient noté en harcèlement au-delà du seuil de blocage — le test simule cette réponse —, la fonction bloque, correctement selon sa propre logique. Aucun trait à inspecter, aucun poids à imprimer, et rien à répondre à l’auteur du commentaire hormis ce nombre, que le fournisseur pris en exemple ne garantit pas identique d’un appel à l’autre, même à graine fixée."
+      en: "You pay by the token for what the same provider’s moderation endpoint returns with no meter running. What justifies that fits in one line of the snippet: the fifth category, giving out where somebody lives, which neither that endpoint’s thirteen categories nor the N2 model’s labels carry. For the other four, this level is the expensive way to get what is free. The score itself is the provider’s opinion, and the code has nothing to hold it against. If “the diagram is much clearer than the text” comes back scored for harassment past the blocking threshold — the test simulates that answer —, the function blocks it, correctly by its own logic. No feature to inspect, no weight to print, and nothing to tell the commenter but that number, which the provider taken as an example does not guarantee to repeat from one call to the next, even with a fixed seed."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus."
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N2, parce que c’est le premier niveau qui arrive déjà entraîné sur les commentaires étiquetés d’un défi public de détection de toxicité, là où N1 exige un corpus à vous, et qu’il garde chez vous des messages qui sont souvent le récit d’un préjudice subi. Il ne règle pas la difficulté du contexte : N0 et N1 marquent tous deux, dans leurs tests, le signalement d’une insulte comme l’insulte elle-même, et la fiche du modèle prévient qu’il note toxique un commentaire qui contient des mots d’insulte, quelle que soit l’intention. C’est pour cela que l’extrait tient deux seuils et envoie la bande du milieu à un humain au lieu de trancher. N3 rendrait au fournisseur le sens de chaque catégorie, l’étalonnage et la seule explication que vous pourriez donner à l’auteur d’un commentaire masqué ; l’échange ne se défend que si le préjudice qui vous occupe n’a d’étiquette nulle part."
-  en: "N2, because it is the first level that arrives already trained on labelled comments, the comments of a public toxicity challenge, where N1 needs a corpus of your own, and because it keeps on your premises messages that are often somebody’s account of what was done to them. It does not solve context: N0 and N1 both flag, in their tests, the report of an insult as the insult itself, and the model card warns that a comment containing insulting words is scored toxic whatever the intent. That is why the snippet keeps two thresholds and sends the middle band to a human instead of ruling on it. N3 would hand the provider the meaning of each category, the calibration, and the only explanation you could offer the author of a hidden comment; that trade only holds up when the harm you care about has a label nowhere else."
+  fr: "N2, parce que c’est le premier niveau qui arrive déjà entraîné sur les commentaires étiquetés d’un défi public de détection de toxicité, là où N1 exige un corpus à vous, et qu’il garde chez vous des messages qui sont souvent le récit d’un préjudice subi. Il ne règle pas la difficulté du contexte : N0 et N1 marquent tous deux, dans leurs tests, le signalement d’une insulte comme l’insulte elle-même, et la fiche du modèle prévient qu’il note toxique un commentaire qui contient des mots d’insulte, quelle que soit l’intention. C’est pour cela que l’extrait tient deux seuils et envoie la bande du milieu à un humain au lieu de trancher. Deux réserves, et elles sont dans la fiche : les deux seuils sont des valeurs d’exemple, à étalonner sur un échantillon de vos commentaires relus à la main, et le couple modèle-étiquettes se choisit avec la langue — celui de l’extrait ne note que l’anglais, et sur un forum français il faut prendre le couple multilingue, qui couvre le français mais ne rend qu’une seule étiquette, donc un nombre sans raison à donner au relecteur. N3 rendrait au fournisseur le sens de chaque catégorie, l’étalonnage et la seule explication que vous pourriez donner à l’auteur d’un commentaire masqué ; l’échange ne se défend que si le préjudice qui vous occupe n’a d’étiquette nulle part — et, s’il s’agit des nuisances usuelles, le fournisseur pris en exemple publie un point d’accès de modération dédié que sa documentation donne pour gratuit : personne ne paie un modèle de conversation pour ce qu’il rend sans compteur."
+  en: "N2, because it is the first level that arrives already trained on labelled comments, the comments of a public toxicity challenge, where N1 needs a corpus of your own, and because it keeps on your premises messages that are often somebody’s account of what was done to them. It does not solve context: N0 and N1 both flag, in their tests, the report of an insult as the insult itself, and the model card warns that a comment containing insulting words is scored toxic whatever the intent. That is why the snippet keeps two thresholds and sends the middle band to a human instead of ruling on it. Two caveats, and the entry carries both: the two thresholds are example values, to be calibrated against a sample of your own comments read by hand, and the model-and-labels pair is chosen with the language — the one in the snippet only scores English, and a French forum has to take the multilingual pair, which covers French but returns a single label, so a number with no reason to hand the reviewer. N3 would hand the provider the meaning of each category, the calibration, and the only explanation you could offer the author of a hidden comment; that trade only holds up when the harm you care about has a label nowhere else — and for the usual harms, the provider taken as an example publishes a dedicated moderation endpoint its documentation gives as free: nobody pays a chat model for what it returns with no meter running."
 
 further_reading:
-  - label: "unitary/unbiased-toxic-roberta — la fiche du modèle N2 et la liste de ses étiquettes"
+  - label: "unitary/unbiased-toxic-roberta — la fiche du modèle N2 anglais et la liste de ses étiquettes"
     url: "https://huggingface.co/unitary/unbiased-toxic-roberta"
+  - label: "gravitee-io/distilbert-multilingual-toxicity-classifier — le couple multilingue du niveau N2, français compris"
+    url: "https://huggingface.co/gravitee-io/distilbert-multilingual-toxicity-classifier"
+  - label: "OpenAI — Moderation, le point d’accès dédié et gratuit, à regarder avant d’écrire le niveau N3"
+    url: "https://developers.openai.com/api/docs/guides/moderation"
   - label: "Santa Clara Principles on Transparency and Accountability in Content Moderation"
     url: "https://santaclaraprinciples.org/"
   - label: "Règlement (UE) 2022/2065 sur les services numériques — texte officiel"
@@ -170,4 +174,10 @@ sources:
     url: "https://developers.openai.com/cookbook/examples/reproducible_outputs_with_the_seed_parameter"
   - label: "OpenAI — tarifs de l’API, prix par million de jetons"
     url: "https://developers.openai.com/api/docs/pricing"
+  - label: "unitary/unbiased-toxic-roberta — fiche du modèle : `language: en`, corpus Civil Comments et Wikipedia Comments, licence Apache 2.0"
+    url: "https://huggingface.co/unitary/unbiased-toxic-roberta"
+  - label: "gravitee-io/distilbert-multilingual-toxicity-classifier — fiche : quatorze langues dont le français, étiquettes « not-toxic » et « toxic », licence openrail++, F1 de validation français 0,9446 publié par les auteurs ; sa conversion ONNX pour Transformers.js est `onnx-community/distilbert-multilingual-toxicity-classifier-ONNX`"
+    url: "https://huggingface.co/gravitee-io/distilbert-multilingual-toxicity-classifier"
+  - label: "OpenAI — guide Moderation : « The moderation endpoint is free to use », modèle `omni-moderation-latest` et ses treize catégories, dont aucune ne nomme la divulgation d’informations personnelles"
+    url: "https://developers.openai.com/api/docs/guides/moderation"
 ---

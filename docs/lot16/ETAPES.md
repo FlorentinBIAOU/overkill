@@ -91,3 +91,12 @@ régénéré.
   température comprise. Reste : la taille du corpus de préentraînement publiée
   par le modèle n'est pas reprise, `check-figures` refusant une taille en octets
   sans mesure faite ici.
+- **moderate-user-comments** — N2 publie deux couples modèle-étiquettes et dit
+  que celui de la page ne note que l'anglais, le multilingue vérifié sur sa fiche
+  (quatorze langues, une seule étiquette, licence openrail++) ; N3 gagne la
+  catégorie que personne d'autre n'a — la divulgation d'un domicile — et dit
+  qu'ailleurs le point d'accès de modération du fournisseur est gratuit ; quatre
+  marquages vivants réparés : ordre NFKD/repli de casse, marques non latines
+  gardées dans les mots, commentaire d'espaces qui notait 0,71 en JavaScript,
+  clôture ```json décodée. Reste : le couple multilingue perd le détail des
+  nuisances, et c'est dit dans le point de rupture.

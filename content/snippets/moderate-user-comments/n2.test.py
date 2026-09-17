@@ -17,7 +17,16 @@ import pytest
 
 import n2
 from _harness.fake_model import FakeClassifier
-from n2 import DEFAULT_THRESHOLDS, HARM_LABELS, MODEL_NAME, ModerationUnavailable, ToxicityModel, moderate
+from n2 import (
+    DEFAULT_THRESHOLDS,
+    ENGLISH,
+    HARM_LABELS,
+    MODEL_NAME,
+    MULTILINGUAL,
+    ModerationUnavailable,
+    ToxicityModel,
+    moderate,
+)
 
 ATTACK = "get off this forum you blorptard"
 BORDERLINE = "that was a spectacularly bad take, honestly"
@@ -78,6 +87,28 @@ def test_point_de_rupture_sur_des_notes_simulees_basses_l_adresse_part_en_public
 # ---------------------------------------------------------------------------
 # Autres affirmations du niveau
 # ---------------------------------------------------------------------------
+
+
+def test_point_de_rupture_le_couple_multilingue_ne_rend_qu_une_etiquette():
+    """
+    breaking_point : « le couple de cette page ne note que l'anglais […] et
+    celui qui lit le français ne rend qu'une étiquette, « toxic » : le relecteur
+    reçoit un nombre, plus une raison. » Les deux couples sont publiés dans
+    l'extrait ; c'est la ligne du bas qui choisit.
+    """
+    assert (MODEL_NAME, HARM_LABELS) == ENGLISH
+    assert MULTILINGUAL[0] == "gravitee-io/distilbert-multilingual-toxicity-classifier"
+    assert MULTILINGUAL[1] == ("toxic",)
+    # Le même commentaire, les deux couples : l'anglais nomme la nuisance…
+    anglais = FakeClassifier({ATTACK: {"toxicity": 0.91, "insult": 0.96, "threat": 0.04}})
+    assert moderate([ATTACK], anglais)[0] == {"action": "block", "label": "insult", "score": 0.96}
+    # …le multilingue rend une note et rien d'autre.
+    francais = FakeClassifier({ATTACK: {"toxic": 0.96, "not-toxic": 0.04}})
+    decision = moderate([ATTACK], francais, labels=MULTILINGUAL[1])[0]
+    assert decision == {"action": "block", "label": "toxic", "score": 0.96}
+    # Et brancher le couple anglais sur des notes multilingues ne lève pas :
+    # aucune étiquette connue, donc relecture humaine, sans une erreur.
+    assert moderate([ATTACK], FakeClassifier({ATTACK: {"toxic": 0.96}}))[0]["action"] == "review"
 
 
 def test_oriente_chaque_commentaire_vers_sa_decision():

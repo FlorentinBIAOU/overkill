@@ -25,6 +25,11 @@ function features(text) {
   const vector = new Float64Array(BUCKETS);
   for (let n = 3; n <= 5; n += 1) {
     for (let i = 0; i + n <= padded.length; i += 1) {
+      // An n-gram of nothing but blanks is not evidence about a comment: a
+      // form submitted empty would otherwise be scored like any other text.
+      // Python never builds one, its analyser padding each word rather than
+      // the whole comment.
+      if (padded.slice(i, i + n).trim() === '') continue;
       let h = 2166136261;
       // Math.imul keeps the multiplication exact on 32 bits; a plain `*` goes
       // past 2^53, loses the low bits, and piles n-grams into fewer buckets.

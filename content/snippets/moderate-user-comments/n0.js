@@ -17,14 +17,24 @@
  * piece of evidence its reviewer needs.
  */
 
-// Letters and digits, in any script. Punctuation and underscores separate.
-const TOKEN = /[\p{L}\p{N}]+/gu;
+// Letters, digits, and the marks that spell them; anything else separates. A
+// Devanagari vowel sign is a mark, and leaving it out would cut a word in two.
+const TOKEN = /[\p{L}\p{N}\p{M}]+/gu;
 
-/** Fold case, compatibility forms and accents, so one entry matches its spellings. */
+/** Fold compatibility forms, then case, then Latin accents. */
 export function normalise(text) {
-  // JavaScript has no casefold. The two letters whose Python casefold differs
-  // from their lowercase once NFKD has run, ß and the final ς, are done by hand.
-  return text.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replaceAll('ß', 'ss').replaceAll('ς', 'σ');
+  // Decomposed before folding, and again after: 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃 has to become
+  // BLORPTARD before the case fold can see it. JavaScript has no casefold, so
+  // `toLowerCase` does the work and the two letters a Latin term list meets,
+  // ß and the final ς, are done by hand; there are two hundred and fifty-two
+  // others, in Cherokee, Greek and Cyrillic, that this line does not cover.
+  return text
+    .normalize('NFKD')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replaceAll('ß', 'ss')
+    .replaceAll('ς', 'σ')
+    .replace(/[\u0300-\u036f]/gu, '');
 }
 
 // Composed first, so an accent typed as a separate mark stays in its word.

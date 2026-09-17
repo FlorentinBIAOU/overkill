@@ -14,7 +14,11 @@ n0: |
   D'abord, la normalisation. La casse, les accents et les formes de
   compatibilité (lettres pleine largeur, ligatures, exposants) sont des
   graphies du même mot : ils sont réduits avant la comparaison. Les sosies ne
-  le sont pas : un 0 reste un 0, et c'est pourquoi bl0rptard passe.
+  le sont pas : un 0 reste un 0, et c'est pourquoi bl0rptard passe. La
+  décomposition vient avant le repli de casse, et de nouveau après : sinon une
+  capitale de compatibilité passe sans être repliée. Et seuls les accents
+  latins sont retirés : une voyelle du devanagari est une marque, elle aussi,
+  et la retirer changerait le mot.
 
   Ensuite, la fenêtre de contexte. Une liste de termes ne peut rien décider
   seule, donc la fonction renvoie les mots autour de chaque trouvaille. Un
@@ -58,12 +62,19 @@ n1.py: |
 n2: |
   Orienter les commentaires avec un classifieur de toxicité auto-hébergé.
 
-  Niveau N2. Un encodeur RoBERTa affiné sur le corpus Civil Comments d'un défi
-  public de détection de toxicité, qui tourne sur votre machine. Il arrive
-  entraîné sur des commentaires étiquetés, que N1 vous oblige à rassembler
-  vous-même, et il reste dans votre infrastructure, ce qui compte quand le
-  texte qu'on enverrait ailleurs est l'injure qu'un de vos utilisateurs vient
-  de recevoir.
+  Niveau N2. Un encodeur affiné sur les commentaires étiquetés d'un défi public
+  de détection de toxicité, qui tourne sur votre machine. Il arrive entraîné,
+  là où N1 vous oblige à rassembler un corpus, et il reste dans votre
+  infrastructure, ce qui compte quand le texte qu'on enverrait ailleurs est
+  l'injure qu'un de vos utilisateurs vient de recevoir.
+
+  Le modèle et les étiquettes qui ont le droit de décider vont ensemble, et
+  c'est la langue de vos commentaires qui choisit le couple. Celui d'anglais
+  note sept nuisances distinctes, ce qu'on montre à un relecteur ; le
+  multilingue, dont la fiche liste le français parmi quatorze langues, n'en
+  note qu'une. Brancher le modèle anglais sur un forum français rend des
+  nombres, pas des erreurs : c'est l'échec que ce niveau vous tendra le plus
+  volontiers.
 
   Ce qui vous appartient à ce niveau n'est pas le modèle, c'est tout ce qui
   l'entoure : le regroupement en lots, les seuils, les étiquettes qui ont le
@@ -79,7 +90,16 @@ n3: |
   l'étalonnage, le droit de contester, et le texte des commentaires de vos
   utilisateurs, qui sort de chez vous à chaque appel.
 
-  Vous nommez les catégories ci-dessous ; le modèle décide de ce qu'elles
+  Avant d'écrire ceci, regardez si votre fournisseur publie un point d'accès de
+  modération. Celui pris en exemple ici en publie un, sans compteur, qui note
+  treize catégories figées. Si les nuisances qui vous occupent sont dans cette
+  liste, ce fichier est la façon chère de les obtenir. Ce qu'il achète, et la
+  seule chose qu'il achète, c'est une catégorie qui est la vôtre : la dernière
+  ci-dessous nomme la divulgation du domicile de quelqu'un, qu'aucune taxonomie
+  figée de cette page ne porte — ni les treize du fournisseur, ni les
+  étiquettes du modèle de N2.
+
+  Vous nommez les catégories ; le modèle décide de ce qu'elles
   veulent dire. Tout le reste ici — plafonner l'entrée, réessayer, refuser
   d'agir sur une réponse qui n'a pas la forme demandée — est une plomberie
   qui vous appartient, et c'est là que vivent les bogues de ce niveau. C'est

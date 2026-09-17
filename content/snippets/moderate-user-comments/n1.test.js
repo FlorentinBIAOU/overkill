@@ -211,14 +211,17 @@ test("production : un commentaire vide n'est pas signalé", () => {
   assert.ok(!isAbusive(model, ''));
 });
 
-test("DÉFAUT : un commentaire d'espaces n'est pas signalé et vaut 0 ; trois espaces notent 0,71, au-dessus du seuil", async () => {
-  // Python : 0. Les n-grammes faits d'espaces sont hachés comme les autres.
-  await assert.rejects(async () => {
-    for (const blank of ['   ', '\n\t ']) {
-      assert.equal(score(model, blank), 0, JSON.stringify(blank));
-      assert.ok(!isAbusive(model, blank));
-    }
-  }, assert.AssertionError);
+test("un commentaire d'espaces vaut 0 et n'est pas signalé", () => {
+  // Commentaire de `features` : « An n-gram of nothing but blanks is not
+  // evidence about a comment: a form submitted empty would otherwise be scored
+  // like any other text. » Trois espaces notaient 0,71, au-dessus du seuil.
+  // Python : 0, son analyseur bordant chaque mot plutôt que le commentaire.
+  for (const blank of ['   ', '\n\t ', '\u00a0\u00a0']) {
+    assert.equal(score(model, blank), 0, JSON.stringify(blank));
+    assert.ok(!isAbusive(model, blank));
+  }
+  // Témoin : un commentaire ordinaire garde sa note.
+  assert.ok(score(model, ABUSIVE[0]) > 0);
 });
 
 test("production : un corpus vide, d'une seule classe ou mal étiqueté est refusé", () => {

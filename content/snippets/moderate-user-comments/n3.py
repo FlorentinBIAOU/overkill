@@ -5,9 +5,17 @@ Rung N3. The rung that hands the most away: what each category means, the
 calibration, the right to appeal, and the text of your users' comments, which
 leaves your premises on every call.
 
-You name the categories below; the model decides what they mean. Everything
-else here — capping the input, retrying, refusing to act on an answer that is
-not the shape you asked for — is plumbing you own, and it is where the bugs of
+Before writing this, look at whether your provider publishes a moderation
+endpoint. The one taken as an example here does, it is not metered, and it
+scores thirteen fixed categories. If the harms you care about are on that
+list, this file is the expensive way to get them. What it buys, and the only
+thing it buys, is a category that is yours: the last one below names giving
+out where somebody lives, which no fixed taxonomy on this page carries — not
+the provider's thirteen, and not the labels of the model at N2.
+
+You name the categories; the model decides what they mean. Everything else
+here — capping the input, retrying, refusing to act on an answer that is not
+the shape you asked for — is plumbing you own, and it is where the bugs of
 this rung live. It is also all your tests can reach, because the judgement
 itself is not testable.
 """
@@ -21,12 +29,16 @@ import json
 # any object with a `complete(prompt=..., temperature=...)` method.
 MODEL = "gpt-4.1-mini"  # an example id: check the parameters your model accepts
 
-CATEGORIES = ("harassment", "hate", "violence", "self_harm")
+# The first four are on the provider's own moderation endpoint too. The last
+# one is not, and it is the reason this file exists.
+CATEGORIES = ("harassment", "hate", "violence", "self_harm", "personal_information")
 
 PROMPT = (
     "Rate the comment below on each moderation category. Answer with JSON\n"
     "only: an object mapping each category to a score between 0 and 1.\n"
-    f"Categories: {', '.join(CATEGORIES)}\n\nComment:\n{{comment}}"
+    f"Categories: {', '.join(CATEGORIES)}\n"
+    "personal_information means giving out where somebody lives, works, or how\n"
+    "to reach them, without their consent.\n\nComment:\n{comment}"
 )
 
 MAX_CHARACTERS = 4000
@@ -65,7 +77,8 @@ def moderate(comment: str, client=None, *, thresholds=None, attempts: int = 3) -
     """
     # The provider bills every token of the prompt. The cap counts characters,
     # not tokens, and is checked before any call: the caller decides where a
-    # longer comment goes instead.
+    # longer comment goes instead. On a forum that is the review queue, not the
+    # bin — a comment of four thousand and one characters is not an anomaly.
     if len(comment) > MAX_CHARACTERS:
         raise ValueError(f"comment longer than {MAX_CHARACTERS} characters")
 
@@ -97,7 +110,7 @@ def _ask(client, comment: str, attempts: int) -> dict[str, float]:
             # two identical calls cannot be explained to the person it hit.
             answer = client.complete(prompt=PROMPT.format(comment=comment), temperature=0)
             # No content (a refusal) and anything but a JSON object are unusable.
-            parsed = json.loads(answer) if isinstance(answer, str) else None
+            parsed = json.loads(_unfenced(answer)) if isinstance(answer, str) else None
             if not isinstance(parsed, dict):
                 last_error = ValueError("the answer is not a JSON object")
                 continue
@@ -108,6 +121,19 @@ def _ask(client, comment: str, attempts: int) -> dict[str, float]:
         except Exception as error:  # noqa: BLE001 - any provider failure is retried
             last_error = error
     raise ModerationUnavailable(str(last_error))
+
+
+def _unfenced(answer: str) -> str:
+    """
+    A JSON answer wrapped whole in one code fence is read; nothing else is.
+
+    Prose around it, a second block, or a fence never closed is a failed
+    answer, and it is asked for again rather than salvaged.
+    """
+    text = answer.strip()
+    if text.startswith("```") and text.endswith("```") and text.count("```") == 2:
+        return text[3:-3].removeprefix("json")
+    return text
 
 
 def _is_score(value) -> bool:

@@ -86,12 +86,27 @@ test('les formes de compatibilité en capitales sont repliées comme les autres'
   assert.ok(review('you ᴮᴸᴼᴿᴾᵀᴬᴿᴰ', TERMS).flagged);
 });
 
-test('INFIRMÉ : « ß » et « ς » ne sont pas les deux seules lettres où casefold diffère des minuscules après NFKD ; le repli JavaScript diverge de Python ailleurs', async () => {
-  // Valeurs de normalise en Python : « ᾳ » → « αι », « Ꭰ » (cherokee) → « Ꭰ ».
-  await assert.rejects(async () => {
-    assert.equal(normalise('ᾳ'), 'αι');
-    assert.equal(normalise('Ꭰ'), 'Ꭰ');
-  }, assert.AssertionError);
+test('le repli à la main ne couvre que deux lettres, et la divergence avec Python est relevée', () => {
+  // Commentaire de `normalise` : « the two letters a Latin term list meets, ß
+  // and the final ς, are done by hand; there are two hundred and fifty-two
+  // others, in Cherokee, Greek and Cyrillic, that this line does not cover. »
+  assert.equal(normalise('ß'), 'ss');
+  assert.equal(normalise('ẞ'), 'ss');
+  assert.equal(normalise('ΟΣ'), 'οσ');
+  // Les deux divergences relevées avec Python, mesurées des deux côtés :
+  // `casefold` rend « αι » pour l'ypogegrammeni et laisse le cherokee en
+  // capitale, `toLowerCase` rend « α » et « ꭰ ». Une liste de termes dans ces
+  // écritures ne peut pas compter sur cette ligne.
+  assert.equal(normalise('ᾳ'), 'α'); // Python : « αι »
+  assert.equal(normalise('Ꭰ'), 'ꭰ'); // Python : « Ꭰ »
+});
+
+test('les formes de compatibilité en capitales sont repliées comme les autres', () => {
+  // « 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃 has to become BLORPTARD before the case fold can see it. »
+  // Python repliait avant de décomposer et les laissait passer ; parité tenue.
+  assert.ok(review('you 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃', TERMS).flagged);
+  assert.ok(review('you ᴮᴸᴼᴿᴾᵀᴬᴿᴰ', TERMS).flagged);
+  assert.equal(normalise('𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃'), 'blorptard');
 });
 
 test('les lettres et chiffres de toute écriture ; la ponctuation et le souligné séparent', () => {
@@ -181,11 +196,11 @@ test('production : un terme vide ou de ponctuation dans la liste est sans effet'
   ]);
 });
 
-test('DÉFAUT : une voyelle dépendante du devanagari coupe le mot ; « मल » est trouvé dans « कोमल »', async () => {
-  await assert.rejects(async () => {
-    assert.ok(!review('यह कोमल है', ['मल']).flagged);
-    assert.equal(review('तुम कमीने हो', ['कमीने']).matches[0].context, 'तुम कमीने हो');
-  }, assert.AssertionError);
+test('production : un mot devanagari n’est pas coupé à ses voyelles', () => {
+  // « a Devanagari vowel sign would cut a word in two » : découpé aux lettres
+  // seules, « मल » se trouvait dans « कोमल ».
+  assert.ok(!review('यह कोमल है', ['मल']).flagged);
+  assert.equal(review('तुम कमीने हो', ['कमीने']).matches[0].context, 'तुम कमीने हो');
 });
 
 test('production : un accent tapé en NFD reste dans son mot', () => {

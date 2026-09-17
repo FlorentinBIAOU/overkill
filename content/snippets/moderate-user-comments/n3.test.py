@@ -18,6 +18,8 @@ from n3 import (CATEGORIES, DEFAULT_THRESHOLDS, MAX_CHARACTERS, MODEL, PROMPT, M
 
 ATTACK = "get off this forum you blorptard"
 CALM = "the diagram is much clearer than the text"
+# Le commentaire que le niveau N2 n'a nulle part où ranger (son point de rupture).
+ADDRESS = "he lives at the corner of rue des Lilas by the way, go and say hello"
 
 
 def scored(**values):
@@ -37,7 +39,7 @@ def test_point_de_rupture_un_commentaire_anodin_note_harcelement_est_bloque_sans
     """
     decision = moderate(CALM, client=FakeLLM(response=scored(harassment=0.95)))
     assert decision == {"action": "block", "category": "harassment", "score": 0.95,
-                        "scores": {"harassment": 0.95, "hate": 0.0, "violence": 0.0, "self_harm": 0.0}}
+                        "scores": {name: 0.95 if name == "harassment" else 0.0 for name in CATEGORIES}}
     # Rien d'autre que les notes du fournisseur dans la décision.
     assert set(decision) == {"action", "category", "score", "scores"}
     # Témoin : le même commentaire noté bas est publié.
@@ -62,6 +64,27 @@ def test_envoie_le_commentaire_et_les_categories_a_temperature_zero():
     assert client.last_request["prompt"].endswith("Comment:\n" + ATTACK)
     assert all(name in client.last_request["prompt"] for name in CATEGORIES)
     assert client.last_request["temperature"] == 0
+
+
+def test_la_categorie_que_n2_n_a_pas_est_demandee_et_peut_decider():
+    """
+    docstring : « What it buys, and the only thing it buys, is a category that
+    is yours: the last one below names giving out where somebody lives, which no
+    fixed taxonomy on this page carries ». C'est le commentaire que le point de
+    rupture de N2 n'a nulle part où ranger.
+    """
+    assert CATEGORIES[-1] == "personal_information"
+    client = FakeLLM(response=scored(personal_information=0.95))
+    decision = moderate(ADDRESS, client=client)
+    assert decision["action"] == "block"
+    assert decision["category"] == "personal_information"
+    # La catégorie est demandée, et le prompt dit ce qu'elle veut dire.
+    prompt = client.last_request["prompt"]
+    assert "personal_information" in prompt
+    assert "where somebody lives, works, or how" in prompt
+    # Témoin : les quatre autres catégories ne l'attrapent pas.
+    muet = FakeLLM(response=scored())
+    assert moderate(ADDRESS, client=muet)["action"] == "allow"
 
 
 def test_les_seuils_sont_a_l_appelant_et_valeurs_aux_limites():
@@ -110,15 +133,15 @@ def test_une_panne_est_retentee_le_nombre_de_fois_annonce_pas_une_de_plus():
 FENCED = "```json\n" + scored(harassment=0.95) + "\n```"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT (charte, décision 12) : une réponse entièrement enveloppée dans une seule clôture ```json "
-    "n'est pas décodée ; json.loads échoue, trois appels facturés, puis ModerationUnavailable",
-)
-def test_defaut_une_reponse_entierement_dans_une_cloture_json_est_decodee():
+def test_une_reponse_entierement_dans_une_cloture_json_est_decodee():
+    """docstring de `_unfenced` : « A JSON answer wrapped whole in one code fence is read »."""
     client = FakeLLM(response=FENCED)
     assert moderate(CALM, client=client)["action"] == "block"
     assert client.call_count == 1
+    # Sans le mot « json » après la clôture, de même.
+    nue = FakeLLM(response=FENCED.replace("```json", "```"))
+    assert moderate(CALM, client=nue)["action"] == "block"
+    assert nue.call_count == 1
 
 
 def test_production_tout_autre_ecart_autour_du_json_leve():

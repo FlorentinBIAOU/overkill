@@ -17,22 +17,42 @@ decides. A moderation tool that returns a bare boolean hides the one piece of
 evidence its reviewer needs.
 """
 
-import re
 import unicodedata
 
-# Letters and digits, in any script. Punctuation and underscores separate.
-TOKEN = re.compile(r"[^\W_]+")
+# Latin combining accents. Only those are dropped when folding: a Devanagari
+# vowel sign is a mark too, and dropping it would turn one word into another.
+LATIN_MARKS = ("\u0300", "\u036f")
 
 
 def normalise(text: str) -> str:
-    """Fold case, compatibility forms and accents, so one entry matches its spellings."""
-    decomposed = unicodedata.normalize("NFKD", text.casefold())
-    return "".join(c for c in decomposed if not unicodedata.combining(c))
+    """Fold compatibility forms, then case, then Latin accents."""
+    # Decomposed before folding, and again after: 𝐁𝐋𝐎𝐑𝐏𝐓𝐀𝐑𝐃 has to become
+    # BLORPTARD before the case fold can see it, and folding can itself produce
+    # a compatibility form.
+    decomposed = unicodedata.normalize("NFKD", text)
+    folded = unicodedata.normalize("NFKD", decomposed.casefold())
+    return "".join(c for c in folded if not LATIN_MARKS[0] <= c <= LATIN_MARKS[1])
 
 
 def _words(text: str) -> list[str]:
-    # Composed first, so an accent typed as a separate mark stays in its word.
-    return TOKEN.findall(unicodedata.normalize("NFC", text))
+    """
+    Letters, digits, and the marks that spell them; anything else separates.
+
+    A regular expression does this in JavaScript, which has a class for marks;
+    Python's does not, and its word class leaves marks out, so a Devanagari
+    vowel sign would cut a word in two. Composed first, so an accent typed as a
+    separate mark stays in its word.
+    """
+    words, current = [], []
+    for char in unicodedata.normalize("NFC", text):
+        if char.isalnum() or unicodedata.category(char).startswith("M"):
+            current.append(char)
+        elif current:
+            words.append("".join(current))
+            current = []
+    if current:
+        words.append("".join(current))
+    return words
 
 
 def review(text: str, terms, window: int = 3) -> dict:
