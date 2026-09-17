@@ -254,6 +254,26 @@ def test_le_modele_nomme_est_distilbart_cnn():
     assert MODEL_NAME == "sshleifer/distilbart-cnn-12-6"
 
 
+def test_point_de_rupture_un_document_francais_part_au_modele_anglais_sans_un_mot():
+    """
+    breaking_point : « Le point de contrôle nommé ne résume que l'anglais […]
+    et rien dans cet extrait ne le refuse : un document français y entre, et
+    une réponse en sort. » Le double écrit la réponse ; ce que le test établit
+    est donc le silence de la plomberie, pas ce que le modèle écrirait.
+    """
+    french = (
+        "L'atelier de Rouen fournit toutes les cellules de la ligne de Lyon. "
+        "L'atelier de Rouen fermera fin mars."
+    )
+    model = FakeSeq2Seq({}, default=SUPPORTED)
+    assert summarise(french, model=model) == SUPPORTED
+    # Le texte français est parti tel quel, sans contrôle de langue.
+    assert model.calls == [french]
+    # Témoin : l'anglais suit exactement le même chemin.
+    autre = FakeSeq2Seq({}, default=SUPPORTED)
+    assert summarise(DOCUMENT, model=autre) == SUPPORTED
+
+
 def test_le_modele_par_defaut_a_la_surface_de_transformers(transformers):
     """docstring : « In production it defaults to the real model » ; `transformers` 5, classes Auto, plus de pipeline."""
     assert summarise(REPORT) == f"summary of {len(REPORT)} characters"
@@ -286,7 +306,8 @@ def test_le_chargement_par_defaut_n_appelle_aucun_pipeline():
     assert "from transformers import AutoModelForSeq2SeqLM, AutoTokenizer" in code
 
 
-def test_defaut_la_seconde_passe_depasse_la_fenetre():
+def test_production_les_passes_suivantes_tiennent_elles_aussi_dans_la_fenetre():
+    """Réparé : `pack` regroupe les notes à la taille de la fenêtre, passe après passe."""
     document = " ".join(f"Paragraph {i} describes another part of the warehouse." for i in range(3600))[:MAX_CHARACTERS]
     model = NoteTaker({})
     summarise(document, model=model)

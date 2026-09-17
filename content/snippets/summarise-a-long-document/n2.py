@@ -14,6 +14,13 @@ summary that is silently half a document is worse than no summary at all.
 
 What this file cannot do, at any price: check that what the model wrote is
 what the document said. Nothing in this plumbing can. See the test.
+
+Nor does it check the language. The checkpoint named below declares
+`language: en` on its card and was fine-tuned on English newswire; on a French
+note it will write something, and nothing here will stop it. A multilingual
+summariser exists — mT5 fine-tuned on XL-Sum, forty-five languages, French
+among them — under CC BY-SA-NC 4.0, which rules out commercial use. Read the
+card before you pick, and read it for the language first.
 """
 
 from __future__ import annotations
@@ -26,6 +33,8 @@ import re
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+|\s*\n\s*")
 
 # The same weights in both languages: JavaScript loads their ONNX conversion.
+# English only: its card says `language: en`, and it is distilled from a model
+# fine-tuned on CNN/DailyMail and XSum, which are English newswire.
 MODEL_NAME = "sshleifer/distilbart-cnn-12-6"
 
 # What one call to the model is given to read. The window is 1,024 tokens, and

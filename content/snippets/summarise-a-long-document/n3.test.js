@@ -13,7 +13,8 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { MAX_CHARACTERS, MODEL, SummaryUnavailable, summarise } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import { MAX_CHARACTERS, MODEL, SummaryUnavailable, providerClient, summarise } from './n3.js';
 import essai from '../../tryouts/frozen/summarise-a-long-document.js';
 
 const REPORT = [
@@ -110,12 +111,40 @@ test('un document vide ne coûte rien', async () => {
   assert.equal(client.callCount, 0);
 });
 
-test('refuse un document trop long avant toute dépense', async () => {
+test('le plafond est celui de l’appelant, et il est refusé avant toute dépense', async () => {
+  // « maxCharacters refused before the call, not after: the provider bills the
+  // input whether the answer is useful or not ».
+  const client = llm(ANSWER);
+  await assert.rejects(
+    () => summarise('x'.repeat(2001), { client, maxCharacters: 2000 }),
+    RangeError,
+  );
+  assert.equal(client.callCount, 0);
+  // Témoin : le même document passe sous le plafond que l'appelant s'est donné.
+  await summarise('x'.repeat(2000), { client, maxCharacters: 2000 });
+  assert.equal(client.callCount, 1);
+});
+
+test('un rapport de cinquante pages part en un seul appel', async () => {
+  // verdict_rationale : « sans […] une découpe en plusieurs passes ». Cent
+  // cinquante mille caractères, de l'ordre de cinquante pages, en un appel.
+  const client = llm(ANSWER);
+  const document = 'Le rapport décrit l’atelier de Rouen et ses fournisseurs. '
+    .repeat(2700)
+    .slice(0, 150_000);
+  assert.equal(document.length, 150_000);
+  assert.equal((await summarise(document, { client })).summary, JSON.parse(ANSWER).summary);
+  assert.equal(client.callCount, 1);
+  assert.ok(client.lastRequest.prompt.includes(document));
+});
+
+test('le plafond par défaut est celui de la fenêtre du modèle d’exemple', async () => {
+  // « that window is 1,047,576 tokens, and a token never stands for less than
+  // one character, so a million characters cannot overflow it ».
+  assert.equal(MAX_CHARACTERS, 1_000_000);
   const client = llm(ANSWER);
   await assert.rejects(() => summarise('x'.repeat(MAX_CHARACTERS + 1), { client }), RangeError);
   assert.equal(client.callCount, 0);
-  await summarise('x'.repeat(MAX_CHARACTERS), { client });
-  assert.equal(client.callCount, 1);
 });
 
 test('une panne est retentée trois fois, pas une de plus', async () => {
@@ -160,11 +189,11 @@ test('une réponse entièrement close est décodée, les autres non', async () =
   }
 });
 
-test('le client par défaut a la forme du vrai kit', async () => {
+test('production : sans client, le kit openai est construit et appelé', async () => {
   assert.equal((await summarise(REPORT)).summary, 'The ticketing system moved to a new platform in March.');
 });
 
-test('le client par défaut envoie la requête que le kit attend', async () => {
+test('production : sans client, la requête est celle que le kit attend', async () => {
   // L'adaptateur appelle `chat.completions.create`, la seule surface que le kit
   // publié offre ; il n'y a pas de méthode `complete` en face.
   globalThis.__openaiCalls.length = 0;
@@ -175,6 +204,39 @@ test('le client par défaut envoie la requête que le kit attend', async () => {
   assert.equal(messages.length, 1);
   assert.equal(messages[0].role, 'user');
   assert.ok(messages[0].content.includes(REPORT));
+});
+
+test('production : l’adaptateur appelle la surface du vrai kit', async () => {
+  // L'adaptateur sur un double à la forme du kit `openai` publié, sans méthode
+  // `complete` : `chat.completions.create({ model, messages, temperature })`,
+  // réponse lue dans `choices[0].message.content`.
+  const sdk = new FakeSDK({ content: ANSWER });
+  assert.equal(sdk.complete, undefined);
+  const client = await providerClient(sdk);
+  assert.equal((await summarise(REPORT, { client })).summary, JSON.parse(ANSWER).summary);
+  const { endpoint, model, messages, temperature } = sdk.lastRequest;
+  assert.deepEqual([endpoint, model, temperature], ['chat.completions', MODEL, 0]);
+  assert.deepEqual(messages, [{ role: 'user', content: sdk.lastRequest.messages[0].content }]);
+  assert.ok(messages[0].content.includes(REPORT));
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('production : l’adaptateur, une réponse sans contenu lève après trois essais', async () => {
+  // Le kit type `content` comme facultatif : `null` n'est pas un résumé.
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  await assert.rejects(() => summarise(REPORT, { client }), SummaryUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  const sdk = new FakeSDK({ content: ANSWER, failTimes: 2 });
+  assert.ok((await summarise(REPORT, { client: await providerClient(sdk) })).summary);
+  assert.equal(sdk.requests.length, 3);
+  const mort = new FakeSDK({ content: ANSWER, failTimes: 3 });
+  const client = await providerClient(mort);
+  await assert.rejects(() => summarise(REPORT, { client }), SummaryUnavailable);
+  assert.equal(mort.requests.length, 3);
 });
 
 // ---------------------------------------------------------------------------
@@ -196,11 +258,14 @@ test('production : une injection dans le document part telle quelle', async () =
 
 test('production : le plafond compte des points de code, comme en Python', async () => {
   // Un emoji fait deux unités UTF-16 et un seul point de code : c'est la seconde
-  // mesure qui compte, des deux côtés.
+  // mesure qui compte, des deux côtés. Mille emoji font mille caractères.
   const client = llm(ANSWER);
-  await assert.rejects(() => summarise('🧾'.repeat(MAX_CHARACTERS + 1), { client }), RangeError);
+  await assert.rejects(
+    () => summarise('🧾'.repeat(1001), { client, maxCharacters: 1000 }),
+    RangeError,
+  );
   assert.equal(client.callCount, 0);
-  assert.ok((await summarise('🧾'.repeat(MAX_CHARACTERS), { client })).summary);
+  assert.ok((await summarise('🧾'.repeat(1000), { client, maxCharacters: 1000 })).summary);
 });
 
 // ---------------------------------------------------------------------------
@@ -229,10 +294,12 @@ test('essai : un document vide, aucun appel', async () => {
   assert.deepEqual(await run(1, 'fr'), { verdict: { label: 'Aucun appel envoyé, donc rien dépensé.' } });
 });
 
-test('essai : un document de 40 001 caractères, refusé avant le premier appel', async () => {
-  assert.equal(essai.cases[2].input.length, 40001);
+test('essai : un document au-dessus du plafond fixé, refusé avant le premier appel', async () => {
+  // L'essai se donne un plafond de 2 000 caractères, qui tient sur la page ;
+  // l'extrait, lui, plafonne par défaut à la fenêtre du modèle.
+  assert.equal(essai.cases[2].input.length, 2001);
   assert.deepEqual(await run(2, 'fr'), {
-    verdict: { label: 'Refusé avant le premier appel', detail: 'document longer than 40000 characters' },
+    verdict: { label: 'Refusé avant le premier appel', detail: 'document longer than 2000 characters' },
     note: 'Rien n’est parti, rien n’est dû.',
   });
 });

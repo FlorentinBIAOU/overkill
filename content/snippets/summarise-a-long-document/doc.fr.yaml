@@ -83,6 +83,14 @@ n2: |
   modèle a écrit est ce que le document disait. Rien dans cette plomberie ne le
   peut. Voyez le test.
 
+  Il ne vérifie pas non plus la langue. Le point de contrôle nommé plus bas
+  déclare « language: en » sur sa fiche et a été affiné sur des dépêches
+  anglophones ; sur une note française, il écrira quelque chose, et rien ici ne
+  l'en empêchera. Il existe un modèle de résumé multilingue — mT5 affiné sur
+  XL-Sum, quarante-cinq langues dont le français — sous licence CC BY-SA-NC
+  4.0, qui exclut l'usage commercial. Lisez la fiche du modèle avant de
+  choisir, et lisez-y la langue d'abord.
+
 n3: |
   Résumer un document long en interrogeant un modèle généraliste.
 
@@ -94,10 +102,10 @@ n3: |
   une liste de points, ou les deux — plutôt qu'apprise dans les poids. Que la
   réponse respecte cette forme est vérifié plus bas, pas supposé.
 
-  Ce qu'elle coûte est dans ce fichier. Plafonner l'entrée, parce que le
-  fournisseur facture au jeton et qu'un document que personne ne voulait
-  envoyer est de l'argent perdu. Réessayer, parce que l'appel passe par le
-  réseau. Analyser une réponse qui n'est que probablement le JSON demandé.
+  Ce qu'elle coûte est dans ce fichier. Décider ce qu'un appel a le droit de
+  coûter, parce que le fournisseur facture au jeton et qu'un document que
+  personne ne voulait envoyer est de l'argent perdu. Réessayer, parce que
+  l'appel passe par le réseau. Analyser une réponse qui n'est que probablement le JSON demandé.
   Refuser une réponse de la mauvaise forme plutôt que d'en passer la moitié à
   l'appelant. Cette plomberie est ce que vos tests peuvent couvrir.
 

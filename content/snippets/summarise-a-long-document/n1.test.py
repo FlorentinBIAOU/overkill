@@ -184,21 +184,28 @@ def test_garde_l_ouverture_le_chiffre_et_la_conclusion_de_l_audit():
     assert summarise(MODEL, AUDIT, max_sentences=2) == f"{AUDIT_LEAD} {AUDIT_WRAP_UP}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring dit que si la conclusion en fin de document compte plus "
-        "que l'ouverture, « the model will find that out and N0 never will ». Le trait de "
-        "position est 1/(rang+1) : il ne peut pas dire « la dernière ». Ce que le modèle "
-        "apprend ici, c'est le mot-signal : la même conclusion sans « Overall » sort du "
-        "résumé. Et N0, lui, garde déjà cette conclusion (le test d'origine « keeps the "
-        "wrap-up a fixed lead bonus would drop » n'exécutait pas N0)"
-    ),
-)
-def test_infirme_le_modele_decouvre_que_la_conclusion_compte_et_n0_jamais():
-    without_cue = AUDIT.replace(AUDIT_WRAP_UP, "The audit recommends counting the spare parts aisle weekly.")
-    assert "The audit recommends counting" in summarise(MODEL, without_cue, max_sentences=3)
-    assert AUDIT_WRAP_UP not in summarise_n0(AUDIT, max_sentences=3)
+def test_une_conclusion_ne_gagne_que_par_ce_qu_elle_porte_jamais_par_sa_place():
+    """
+    docstring : « Position is coded as 1 / (rank + 1): the model can learn that
+    early sentences count for more or for less, never that the last one counts.
+    A closing sentence gains only through what it carries, a figure or a cue
+    word such as `overall`. »
+    """
+    plain = "The audit recommends counting the spare parts aisle weekly."
+    without_cue = AUDIT.replace(AUDIT_WRAP_UP, plain)
+    # La même conclusion, à la même place : avec « Overall » elle est retenue,
+    # sans l'indice elle sort du résumé.
+    assert AUDIT_WRAP_UP in summarise(MODEL, AUDIT, max_sentences=3)
+    assert plain not in summarise(MODEL, without_cue, max_sentences=3)
+    # Le trait de position ne sait pas dire « la dernière » : 1/(rang+1) décroît,
+    # et vaut la même chose pour la dernière phrase de tout document de même longueur.
+    sentences = split_sentences(AUDIT)
+    assert sentence_features(sentences, len(sentences) - 1)[0] == 1.0 / len(sentences)
+    assert sentence_features(sentences, 0)[0] == 1.0
+    # Témoin : N0, lui, garde cette conclusion dans les deux cas — son bonus
+    # d'ouverture n'est pas ce qui la retient.
+    assert AUDIT_WRAP_UP in summarise_n0(AUDIT, max_sentences=3)
+    assert plain in summarise_n0(without_cue, max_sentences=3)
 
 
 def test_le_resume_est_toujours_fait_des_phrases_du_document():
@@ -253,13 +260,13 @@ def test_production_cinq_mille_phrases():
     assert time.monotonic() - started < 10
 
 
-def test_defaut_un_document_sans_ponctuation_finale_est_rendu_entier():
+def test_production_une_transcription_sans_ponctuation_finale_est_decoupee_par_lignes():
+    """Réparé : un saut de ligne termine aussi une phrase."""
     transcript = "the meeting started late\nwe discussed the budget\n" * 500
     assert len(summarise(MODEL, transcript, max_sentences=3)) < len(transcript) / 2
 
 
-def test_defaut_un_nombre_de_phrases_negatif_n_est_pas_refuse():
-    try:
-        assert summarise(MODEL, AUDIT, max_sentences=-1) == ""
-    except ValueError:
-        pass
+def test_production_un_nombre_de_phrases_negatif_est_refuse_et_zero_rend_le_vide():
+    with pytest.raises(ValueError):
+        summarise(MODEL, AUDIT, max_sentences=-1)
+    assert summarise(MODEL, AUDIT, max_sentences=0) == ""

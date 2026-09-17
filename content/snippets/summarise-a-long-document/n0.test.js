@@ -175,23 +175,17 @@ test('production : espace insécable, emoji et casse', () => {
   assert.equal(summarise(text, 2), 'The PLATFORM migration 🚀 is done. The platform works.');
 });
 
-test('un document NFD coupe ses mots accentués', async () => {
+test('un document NFD est découpé comme sa forme composée', async () => {
   const text = 'La réunion a été reportée. La réunion aura lieu lundi. Le café est offert.';
   assert.deepEqual(scoreSentences(splitSentences(text.normalize('NFD'))), scoreSentences(splitSentences(text)));
 });
 
-test('un document sans ponctuation finale est rendu entier', async () => {
+test('une transcription sans ponctuation finale est découpée par lignes', async () => {
   const transcript = 'the meeting started late\nwe discussed the budget\n'.repeat(500);
   assert.ok(summarise(transcript, 3).length < transcript.length / 2);
 });
 
-test('un nombre de phrases négatif n’est pas refusé', async () => {
-  let result;
-  try {
-    result = summarise(REPORT, -1);
-  } catch (error) {
-    if (error instanceof RangeError) return;
-    throw error;
-  }
-  assert.equal(result, '');
+test('un nombre de phrases négatif est refusé, et zéro rend le vide', async () => {
+  assert.throws(() => summarise(REPORT, -1), RangeError);
+  assert.equal(summarise(REPORT, 0), '');
 });

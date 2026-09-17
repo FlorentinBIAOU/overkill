@@ -73,3 +73,12 @@ régénéré.
   seul l'extrait part ; réessai de N3 qui ne rattrape plus les erreurs de
   programmation. Reste : aucun test ne mesure la justesse de CLD3, et les deux
   fichiers le disent en tête.
+- **summarise-a-long-document** — plafond de N3 relevé à la fenêtre réelle du
+  modèle d'exemple (1 047 576 jetons, vérifiée chez le fournisseur) et devenu un
+  paramètre refusé avant l'appel, avec le test du rapport de cinquante pages en
+  un appel ; N2 dit enfin qu'il ne résume que l'anglais, fiche du modèle à
+  l'appui, et le verdict en tire la conséquence pour un lecteur francophone ;
+  trois marquages `INFIRMÉ` périmés remplacés par la démonstration de la
+  nouvelle docstring, adaptateur N3 exercé contre le double du harnais.
+  Reste : aucun modèle de résumé multilingue n'est proposé en N2 — celui qui
+  couvre le français est sous licence non commerciale, et c'est dit.

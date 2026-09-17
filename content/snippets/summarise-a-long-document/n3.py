@@ -9,11 +9,12 @@ an output shape set in the prompt — three sentences, a list of points, or both
 — instead of trained into the weights. Whether the answer respects that shape
 is checked below, not assumed.
 
-What it costs is in this file. Cap the input, because the provider charges by
-the token and a document nobody meant to send is money gone. Retry, because
-the call goes over a network. Parse an answer that is only probably the JSON
-you asked for. Refuse an answer of the wrong shape rather than passing half of
-one to the caller. That plumbing is what your tests can cover.
+What it costs is in this file. Decide what one call may cost, because the
+provider charges by the token and a document nobody meant to send is money
+gone. Retry, because the call goes over a network. Parse an answer that is
+only probably the JSON you asked for. Refuse an answer of the wrong shape
+rather than passing half of one to the caller. That plumbing is what your
+tests can cover.
 
 What no test here can cover: whether the summary is true of the document.
 Nothing below can tell a fluent sentence the document never supported from a
@@ -32,7 +33,13 @@ PROMPT = (
     "Document:\n{document}"
 )
 
-MAX_CHARACTERS = 40000
+# The default ceiling only guarantees that the document fits the window of the
+# example model below: that window is 1,047,576 tokens, and a token never
+# stands for less than one character, so a million characters cannot overflow
+# it. It is not a cost ceiling. Pass `max_characters` to set what one call may
+# cost you — the report of fifty pages this entry is about is a few hundred
+# thousand characters, and goes in one call either way.
+MAX_CHARACTERS = 1_000_000
 
 # The provider named here is an example, not a recommendation: the reasoning
 # holds for any general-purpose model API, and the client is swappable. Pass
@@ -63,17 +70,19 @@ class SummaryUnavailable(Exception):
     """The provider could not be reached, or answered something unusable."""
 
 
-def summarise(document: str, client=None, *, max_sentences: int = 3, attempts: int = 3) -> dict:
+def summarise(document: str, client=None, *, max_sentences: int = 3, attempts: int = 3,
+              max_characters: int = MAX_CHARACTERS) -> dict:
     """
     Return `{"summary": str, "key_points": list[str]}`.
 
     `client` is injected so this function can be tested without a network call.
     In production it defaults to a real provider client.
+
+    `max_characters` is refused before the call, not after: the provider bills
+    the input whether the answer is useful or not.
     """
-    # Refusing an oversized document is not an optimisation, it is a cost
-    # control: the provider bills the input whether the answer is useful or not.
-    if len(document) > MAX_CHARACTERS:
-        raise ValueError(f"document longer than {MAX_CHARACTERS} characters")
+    if len(document) > max_characters:
+        raise ValueError(f"document longer than {max_characters} characters")
     if max_sentences < 1:
         raise ValueError("max_sentences must be at least 1")
 

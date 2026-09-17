@@ -3,7 +3,7 @@ id: summarise-a-long-document
 family: transform
 status: published
 verdict: N3
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -80,8 +80,8 @@ rungs:
   - level: N2
     available: true
     name:
-      fr: "Modèle de résumé abstractif auto-hébergé, en deux passes"
-      en: "Self-hosted abstractive summariser, in two passes"
+      fr: "Modèle de résumé abstractif auto-hébergé (anglais), en autant de passes qu’il faut"
+      en: "Self-hosted abstractive summariser (English), in as many passes as it takes"
     cost: modéré
     latency: ">1 s"
     risks:
@@ -93,17 +93,17 @@ rungs:
       regulatory:
         fr:
           - "Traitement du document sur votre infrastructure, y compris les données personnelles et les secrets d’affaires qu’il contient"
-          - "La licence des poids du modèle encadre son usage, usage commercial compris"
+          - "La licence des poids du modèle encadre son usage, usage commercial compris : celle du point de contrôle nommé est Apache 2.0, celle du seul équivalent multilingue courant interdit l’usage commercial"
         en:
           - "Processing of the document on your own infrastructure, personal data and trade secrets included"
-          - "The licence attached to the model weights governs their use, commercial use included"
+          - "The licence attached to the model weights governs their use, commercial use included: the checkpoint named here is Apache 2.0, while the one common multilingual equivalent forbids commercial use"
     code:
       python: snippets/summarise-a-long-document/n2.py
       javascript: snippets/summarise-a-long-document/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le modèle écrit, donc il peut écrire ce que le document ne dit pas. Le test le montre sur le double local, à qui il fait rendre tour à tour deux résumés du même document : « la ligne de Lyon s’arrêtera quand Rouen fermera fin mars », qui en découle, et « la ligne de Lyon déménagera à Rouen en avril », qui n’y figure nulle part. La fonction rend les deux à l’identique, sans un avertissement, parce que la seule chose qu’elle sache vérifier d’une réponse est qu’elle n’est pas vide. Ce que le test établit, c’est donc ce que cette plomberie laisse passer, et non ce qu’un vrai modèle écrirait. La découpe s’y ajoute : dès qu’un document dépasse la fenêtre du modèle, les passes suivantes résument les notes que le modèle a écrites, et plus jamais le document."
-      en: "The model writes, so it can write what the document does not say. The test shows it on the local double, which it makes return, in turn, two summaries of the same document: « the Lyon assembly line will stop when Rouen closes at the end of March », which follows from it, and « the Lyon assembly line will move to Rouen in April », which appears nowhere in it. The function returns both identically and without a warning, because the only thing it can check about an answer is that it is not empty. What the test establishes is therefore what this plumbing lets through, not what a real model would write. Chunking adds to that: as soon as a document overflows the model’s window, the later passes summarise the notes the model itself wrote, and never the document again."
+      fr: "Le point de contrôle nommé ne résume que l’anglais : sa fiche déclare `language: en`, et il est distillé d’un modèle affiné sur CNN/DailyMail et XSum, des dépêches anglophones. Rien dans l’extrait ne le refuse : un document français y entre, et une réponse en sort — le test le montre. Ensuite seulement vient l’autre limite. Le modèle écrit, donc il peut écrire ce que le document ne dit pas. Le test le montre sur le double local, à qui il fait rendre tour à tour deux résumés du même document : « la ligne de Lyon s’arrêtera quand Rouen fermera fin mars », qui en découle, et « la ligne de Lyon déménagera à Rouen en avril », qui n’y figure nulle part. La fonction rend les deux à l’identique, sans un avertissement, parce que la seule chose qu’elle sache vérifier d’une réponse est qu’elle n’est pas vide. Ce que le test établit, c’est donc ce que cette plomberie laisse passer, et non ce qu’un vrai modèle écrirait. La découpe s’y ajoute : dès qu’un document dépasse la fenêtre du modèle, les passes suivantes résument les notes que le modèle a écrites, et plus jamais le document."
+      en: "The checkpoint named here only summarises English: its card declares `language: en`, and it is distilled from a model fine-tuned on CNN/DailyMail and XSum, English newswire. Nothing in the snippet refuses that: a French document goes in, and an answer comes out — the test shows it. Only then does the other limit come. The model writes, so it can write what the document does not say. The test shows it on the local double, which it makes return, in turn, two summaries of the same document: « the Lyon assembly line will stop when Rouen closes at the end of March », which follows from it, and « the Lyon assembly line will move to Rouen in April », which appears nowhere in it. The function returns both identically and without a warning, because the only thing it can check about an answer is that it is not empty. What the test establishes is therefore what this plumbing lets through, not what a real model would write. Chunking adds to that: as soon as a document overflows the model’s window, the later passes summarise the notes the model itself wrote, and never the document again."
     escalate_when:
       fr: "Vous voulez une autre forme de sortie — trois phrases, ou une liste de points — et vous découvrez qu’il faudrait réaffiner le modèle pour l’obtenir."
       en: "You want a different shape of answer — three sentences, or a list of points — and you find that getting it would mean fine-tuning the model again."
@@ -144,8 +144,8 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N3, parce que résumer c’est reformuler, et que c’est le seul niveau qui écrive une phrase que personne n’a écrite sans vous coûter un service d’inférence à exploiter ni une découpe en plusieurs passes, et dont la forme de sortie se demande dans l’invite au lieu d’être celle qu’a apprise le modèle. Le prix est à dire à voix haute : le document part chez un tiers, chaque appel se paie, deux appels sur le même document ne sont pas garantis de rendre le même résumé, et vos tests ne savent vérifier que la forme — celui de cette fiche laisse passer un résumé impeccable qui invente un conseil d’administration. Si votre document ne supporte pas ce risque, la réponse n’est pas un meilleur prompt : c’est quelqu’un qui relit la source à côté du résumé, ou N0, qui ne peut rien inventer parce qu’il ne sait que citer, au prix de ne jamais dire ce que le document démontre."
-  en: "N3, because summarising means rewriting, and this is the only level that writes a sentence nobody wrote without costing you an inference service to run or a chunking scheme over several passes, and whose output shape is asked for in the prompt instead of being whatever the model was trained to write. The price deserves saying out loud: the document goes to a third party, every call is billed, two calls on the same document are not guaranteed to return the same summary, and your tests can check the shape and nothing else — the one on this entry lets through a flawless summary that invents a board of directors. If your document cannot carry that risk, the answer is not a better prompt: it is a person reading the source next to the summary, or N0, which cannot invent anything because all it can do is quote, at the price of never stating what the document demonstrates."
+  fr: "N3, parce que résumer c’est reformuler, et que c’est le seul niveau qui écrive une phrase que personne n’a écrite sans vous coûter un service d’inférence à exploiter ni une découpe en plusieurs passes — la fenêtre du modèle d’exemple fait 1 047 576 jetons, de sorte qu’un rapport de cinquante pages part en un appel et en entier —, et dont la forme de sortie se demande dans l’invite au lieu d’être celle qu’a apprise le modèle. Pour un lecteur francophone, cela départage aussi N2 : le point de contrôle qu’il charge ne résume que l’anglais, et le seul équivalent multilingue courant, mT5 affiné sur XL-Sum, est sous licence interdisant l’usage commercial — tant que le modèle n’est pas changé, N2 n’est pas une option sur un document français. Le prix est à dire à voix haute : le document part chez un tiers, chaque appel se paie, deux appels sur le même document ne sont pas garantis de rendre le même résumé, et vos tests ne savent vérifier que la forme — celui de cette fiche laisse passer un résumé impeccable qui invente un conseil d’administration. Si votre document ne supporte pas ce risque, la réponse n’est pas un meilleur prompt : c’est quelqu’un qui relit la source à côté du résumé, ou N0, qui ne peut rien inventer parce qu’il ne sait que citer, au prix de ne jamais dire ce que le document démontre."
+  en: "N3, because summarising means rewriting, and this is the only level that writes a sentence nobody wrote without costing you an inference service to run or a chunking scheme over several passes — the example model's window is 1,047,576 tokens, so a fifty-page report goes in one call and whole — and whose output shape is asked for in the prompt instead of being whatever the model was trained to write. For a French reader that also settles N2: the checkpoint it loads only summarises English, and the one common multilingual equivalent, mT5 fine-tuned on XL-Sum, carries a licence that forbids commercial use — until the model changes, N2 is not an option on a French document. The price deserves saying out loud: the document goes to a third party, every call is billed, two calls on the same document are not guaranteed to return the same summary, and your tests can check the shape and nothing else — the one on this entry lets through a flawless summary that invents a board of directors. If your document cannot carry that risk, the answer is not a better prompt: it is a person reading the source next to the summary, or N0, which cannot invent anything because all it can do is quote, at the price of never stating what the document demonstrates."
 
 further_reading:
   - label: "Maynez et al., On Faithfulness and Factuality in Abstractive Summarization (ACL 2020)"
@@ -156,6 +156,16 @@ further_reading:
     url: "https://huggingface.co/sshleifer/distilbart-cnn-12-6"
   - label: "scikit-learn — LogisticRegression, le classifieur du niveau N1"
     url: "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html"
+  - label: "csebuetnlp/mT5_multilingual_XLSum — un modèle de résumé qui couvre le français, sous licence non commerciale"
+    url: "https://huggingface.co/csebuetnlp/mT5_multilingual_XLSum"
 
-sources: []
+sources:
+  - label: "OpenAI, fiche du modèle gpt-4.1-mini : « 1,047,576 context window », « 32,768 max output tokens » — un jeton ne vaut jamais moins d’un caractère, donc le plafond par défaut de l’extrait, un million de caractères, ne peut pas déborder cette fenêtre"
+    url: "https://developers.openai.com/api/docs/models/gpt-4.1-mini"
+  - label: "Fiche de sshleifer/distilbart-cnn-12-6 : `language: en`, jeux `cnn_dailymail` et `xsum`, licence Apache 2.0, 306 M paramètres"
+    url: "https://huggingface.co/sshleifer/distilbart-cnn-12-6"
+  - label: "Fiche de sshleifer/distilbart-cnn-12-6, tableau de l’auteur : 306 M de paramètres et 307 ms par inférence pour `distilbart-12-6-cnn` sur son banc — un document long demandant plusieurs appels par passe, `latency: >1 s` et `cost: modéré` se lisent de là"
+    url: "https://huggingface.co/sshleifer/distilbart-cnn-12-6"
+  - label: "Fiche de csebuetnlp/mT5_multilingual_XLSum : 45 langues dont le français, licence CC BY-NC-SA 4.0 (usage commercial exclu), ROUGE français 35,34 / 16,17 / 28,20 publiés par les auteurs"
+    url: "https://huggingface.co/csebuetnlp/mT5_multilingual_XLSum"
 ---

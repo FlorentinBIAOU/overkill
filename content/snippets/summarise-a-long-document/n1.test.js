@@ -144,27 +144,28 @@ test('la descente de gradient atterrit sur l’optimum de scikit-learn', () => {
   longer.weights.forEach((w, j) => assert.ok(Math.abs(w - model.weights[j]) < 1e-9));
 });
 
-test('INFIRMÉ : la régression logistique « is a dozen lines », train en compte 28', async () => {
-  const lines = readFileSync(new URL('./n1.js', import.meta.url), 'utf8').split('\n');
-  const start = lines.findIndex((l) => l.startsWith('export function train'));
-  const end = lines.indexOf('}', start);
-  const code = lines.slice(start, end + 1).filter((l) => l.trim() && !l.trim().startsWith('//'));
-  assert.equal(code.length, 28);
-  await assert.rejects(async () => assert.ok(code.length <= 12));
-});
-
 test('garde l’ouverture, le chiffre et la conclusion de l’audit', () => {
   const summary = summarise(model, AUDIT, 3);
   assert.ok(summary.includes(AUDIT_LEAD) && summary.includes(AUDIT_FIGURE) && summary.includes(AUDIT_WRAP_UP));
   assert.equal(summarise(model, AUDIT, 2), `${AUDIT_LEAD} ${AUDIT_WRAP_UP}`);
 });
 
-test('INFIRMÉ : le modèle découvre que la conclusion compte, et N0 jamais', async () => {
-  await assert.rejects(async () => {
-    const withoutCue = AUDIT.replace(AUDIT_WRAP_UP, 'The audit recommends counting the spare parts aisle weekly.');
-    assert.ok(summarise(model, withoutCue, 3).includes('The audit recommends counting'));
-    assert.ok(!summariseN0(AUDIT, 3).includes(AUDIT_WRAP_UP));
-  });
+test('une conclusion ne gagne que par ce qu’elle porte, jamais par sa place', () => {
+  // « Position is coded as 1 / (rank + 1): the model can learn that early
+  // sentences count for more or for less, never that the last one counts. A
+  // closing sentence gains only through what it carries, a figure or a cue word
+  // such as `overall`. »
+  const plain = 'The audit recommends counting the spare parts aisle weekly.';
+  const withoutCue = AUDIT.replace(AUDIT_WRAP_UP, plain);
+  assert.ok(summarise(model, AUDIT, 3).includes(AUDIT_WRAP_UP));
+  assert.ok(!summarise(model, withoutCue, 3).includes(plain));
+  // Le trait de position ne sait pas dire « la dernière » : 1/(rang+1) décroît.
+  const sentences = splitSentences(AUDIT);
+  assert.equal(sentenceFeatures(sentences, sentences.length - 1)[0], 1 / sentences.length);
+  assert.equal(sentenceFeatures(sentences, 0)[0], 1);
+  // Témoin : N0 garde cette conclusion dans les deux cas.
+  assert.ok(summariseN0(AUDIT, 3).includes(AUDIT_WRAP_UP));
+  assert.ok(summariseN0(withoutCue, 3).includes(plain));
 });
 
 test('le résumé est toujours fait des phrases du document', () => {
@@ -205,18 +206,12 @@ test('production : cinq mille phrases', () => {
   assert.ok(Date.now() - started < 10_000);
 });
 
-test('un document sans ponctuation finale est rendu entier', async () => {
+test('une transcription sans ponctuation finale est découpée par lignes', async () => {
   const transcript = 'the meeting started late\nwe discussed the budget\n'.repeat(500);
   assert.ok(summarise(model, transcript, 3).length < transcript.length / 2);
 });
 
-test('un nombre de phrases négatif n’est pas refusé', async () => {
-  let result;
-  try {
-    result = summarise(model, AUDIT, -1);
-  } catch (error) {
-    if (error instanceof RangeError) return;
-    throw error;
-  }
-  assert.equal(result, '');
+test('un nombre de phrases négatif est refusé, et zéro rend le vide', async () => {
+  assert.throws(() => summarise(model, AUDIT, -1), RangeError);
+  assert.equal(summarise(model, AUDIT, 0), '');
 });

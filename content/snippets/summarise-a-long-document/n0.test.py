@@ -249,18 +249,19 @@ def test_production_espace_insecable_emoji_et_casse():
     assert summarise(text, max_sentences=2) == "The PLATFORM migration 🚀 is done. The platform works."
 
 
-def test_defaut_un_document_nfd_coupe_ses_mots_accentues():
+def test_production_un_document_nfd_est_decoupe_comme_sa_forme_composee():
+    """Réparé : `words()` compose en NFC avant d'extraire les mots."""
     text = "La réunion a été reportée. La réunion aura lieu lundi. Le café est offert."
     assert score_sentences(split_sentences(unicodedata.normalize("NFD", text))) == score_sentences(split_sentences(text))
 
 
-def test_defaut_un_document_sans_ponctuation_finale_est_rendu_entier():
+def test_production_une_transcription_sans_ponctuation_finale_est_decoupee_par_lignes():
+    """Réparé : un saut de ligne termine aussi une phrase."""
     transcript = "the meeting started late\nwe discussed the budget\n" * 500
     assert len(summarise(transcript, max_sentences=3)) < len(transcript) / 2
 
 
-def test_defaut_un_nombre_de_phrases_negatif_n_est_pas_refuse():
-    try:
-        assert summarise(REPORT, max_sentences=-1) == ""
-    except ValueError:
-        pass
+def test_production_un_nombre_de_phrases_negatif_est_refuse_et_zero_rend_le_vide():
+    with pytest.raises(ValueError):
+        summarise(REPORT, max_sentences=-1)
+    assert summarise(REPORT, max_sentences=0) == ""

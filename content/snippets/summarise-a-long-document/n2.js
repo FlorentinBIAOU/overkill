@@ -15,13 +15,23 @@
  *
  * What this file cannot do, at any price: check that what the model wrote is
  * what the document said. Nothing in this plumbing can. See the test.
+ *
+ * Nor does it check the language. The checkpoint named below declares
+ * `language: en` on its card and was fine-tuned on English newswire; on a
+ * French note it will write something, and nothing here will stop it. A
+ * multilingual summariser exists — mT5 fine-tuned on XL-Sum, forty-five
+ * languages, French among them — under CC BY-SA-NC 4.0, which rules out
+ * commercial use. Read the card before you pick, and read it for the language
+ * first.
  */
 
 // A full stop, question or exclamation mark followed by whitespace, or a line
 // break: a transcript without final punctuation is still cut into lines.
 const SENTENCE_END = /(?<=[.!?])\s+|\s*\n\s*/;
 
-// The ONNX conversion of sshleifer/distilbart-cnn-12-6, the weights Python loads.
+// The ONNX conversion of sshleifer/distilbart-cnn-12-6, the weights Python
+// loads. English only: that card says `language: en`, and the model is
+// distilled from one fine-tuned on CNN/DailyMail and XSum, English newswire.
 export const MODEL_NAME = 'Xenova/distilbart-cnn-12-6';
 
 // What one call to the model is given to read. The window is 1,024 tokens, and

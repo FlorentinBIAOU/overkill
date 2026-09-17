@@ -18,7 +18,8 @@ from types import SimpleNamespace
 import pytest
 
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_CHARACTERS, MODEL, PROMPT, SummaryUnavailable, summarise
+from _harness.fake_sdk import FakeSDK
+from n3 import MAX_CHARACTERS, MODEL, PROMPT, ProviderClient, SummaryUnavailable, summarise
 
 REPORT = (
     "The support team migrated the ticketing system to a new platform in March. "
@@ -139,14 +140,46 @@ def test_un_document_vide_ne_coute_rien():
     assert client.call_count == 0
 
 
-def test_refuse_un_document_trop_long_avant_toute_depense():
-    """docstring : « Cap the input, because the provider charges by the token »."""
+def test_le_plafond_est_celui_de_l_appelant_et_il_est_refuse_avant_toute_depense():
+    """
+    docstring de summarise : « `max_characters` is refused before the call, not
+    after: the provider bills the input whether the answer is useful or not ».
+    """
+    client = llm(ANSWER)
+    with pytest.raises(ValueError):
+        summarise("x" * 2001, client=client, max_characters=2000)
+    assert client.call_count == 0
+    # Témoin : le même document passe sous le plafond que l'appelant s'est donné.
+    summarise("x" * 2000, client=client, max_characters=2000)
+    assert client.call_count == 1
+
+
+def test_un_rapport_de_cinquante_pages_part_en_un_seul_appel():
+    """
+    verdict_rationale : « le seul niveau qui […] sans vous coûter […] une
+    découpe en plusieurs passes ». Le besoin de la fiche est « un document trop
+    long pour être lu en entier » : cent cinquante mille caractères, de l'ordre
+    de cinquante pages, entrent en un appel et en entier.
+    """
+    client = llm(ANSWER)
+    document = ("Le rapport décrit l'atelier de Rouen et ses fournisseurs. " * 2700)[:150_000]
+    assert len(document) == 150_000
+    assert summarise(document, client=client)["summary"] == json.loads(ANSWER)["summary"]
+    assert client.call_count == 1
+    assert document in client.last_request["prompt"]
+
+
+def test_le_plafond_par_defaut_est_celui_de_la_fenetre_du_modele_d_exemple():
+    """
+    commentaire de MAX_CHARACTERS : « that window is 1,047,576 tokens, and a
+    token never stands for less than one character, so a million characters
+    cannot overflow it ».
+    """
+    assert MAX_CHARACTERS == 1_000_000
     client = llm(ANSWER)
     with pytest.raises(ValueError):
         summarise("x" * (MAX_CHARACTERS + 1), client=client)
     assert client.call_count == 0
-    summarise("x" * MAX_CHARACTERS, client=client)
-    assert client.call_count == 1
 
 
 def test_une_panne_est_retentee_trois_fois_pas_une_de_plus():
@@ -179,7 +212,7 @@ def test_le_resume_est_debarrasse_de_ses_espaces():
     assert summarise(REPORT, client=llm({"summary": "  One line.\n"}))["summary"] == "One line."
 
 
-def test_defaut_des_points_cles_qui_ne_sont_pas_des_chaines_sont_refuses():
+def test_des_points_cles_qui_ne_sont_pas_des_chaines_sont_refuses():
     with pytest.raises(SummaryUnavailable):
         summarise(REPORT, client=llm({"summary": "fine", "key_points": [{"a": 2}, 3]}), attempts=1)
 
@@ -195,7 +228,7 @@ def test_une_reponse_entierement_close_est_decodee_les_autres_non():
         assert client.call_count == 3
 
 
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
+def test_production_sans_client_le_kit_openai_est_construit_et_appele(openai_kit):
     assert summarise(REPORT)["summary"] == "The ticketing system moved to a new platform in March."
 
 
@@ -207,6 +240,44 @@ def test_le_client_par_defaut_envoie_la_requete_que_le_kit_attend(openai_kit):
     assert requete["model"] == MODEL == "gpt-4.1-mini"
     assert requete["temperature"] == 0
     assert requete["messages"] == [{"role": "user", "content": PROMPT.format(sentences=3, document=REPORT)}]
+
+
+def test_production_l_adaptateur_appelle_la_surface_du_vrai_kit():
+    """
+    docstring de `ProviderClient` : « The one call this snippet makes, on top of
+    the provider's SDK ». Sur un double à la forme du kit `openai` publié, sans
+    méthode `complete` : `chat.completions.create(model=..., messages=[...],
+    temperature=...)`, réponse lue dans `choices[0].message.content`.
+    """
+    sdk = FakeSDK(content=ANSWER)
+    assert not hasattr(sdk, "complete")
+    assert summarise(REPORT, client=ProviderClient(sdk=sdk))["summary"] == json.loads(ANSWER)["summary"]
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL == "gpt-4.1-mini"
+    assert request["messages"] == [
+        {"role": "user", "content": PROMPT.format(sentences=3, document=REPORT)}
+    ]
+    assert request["temperature"] == 0
+    assert len(sdk.requests) == 1
+
+
+def test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_trois_essais():
+    """Le kit type `content` comme facultatif : `None` n'est pas un résumé, et il est redemandé."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(SummaryUnavailable):
+        summarise(REPORT, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content=ANSWER, fail_times=2)
+    assert summarise(REPORT, client=ProviderClient(sdk=sdk))["summary"]
+    assert len(sdk.requests) == 3
+    sdk = FakeSDK(content=ANSWER, fail_times=3)
+    with pytest.raises(SummaryUnavailable):
+        summarise(REPORT, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
 
 
 def test_l_extrait_n_importe_que_json():
@@ -221,7 +292,7 @@ def test_l_extrait_n_importe_que_json():
 # ---------------------------------------------------------------------------
 
 
-def test_defaut_un_nombre_de_phrases_nul_ou_negatif_est_refuse_avant_l_appel():
+def test_production_un_nombre_de_phrases_nul_ou_negatif_est_refuse_avant_l_appel():
     client = llm(ANSWER)
     for count in (0, -1):
         try:

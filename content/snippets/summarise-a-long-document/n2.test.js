@@ -172,8 +172,24 @@ test('une réponse vide ou nulle lève plutôt que laisser un trou', async () =>
 });
 
 test('le modèle nommé est distilbart-cnn-12-6', () => {
-  // Constat : Python charge facebook/bart-large-cnn.
+  // Mêmes poids des deux côtés : JavaScript charge la conversion ONNX du point
+  // de contrôle que Python charge, `sshleifer/distilbart-cnn-12-6` (n2.py).
   assert.equal(MODEL_NAME, 'Xenova/distilbart-cnn-12-6');
+});
+
+test('point de rupture : un document français part au modèle anglais sans un mot', async () => {
+  // breaking_point : « Le point de contrôle nommé ne résume que l'anglais […]
+  // et rien dans cet extrait ne le refuse : un document français y entre, et
+  // une réponse en sort. » Le double écrit la réponse : ce que le test établit
+  // est le silence de la plomberie, pas ce que le modèle écrirait.
+  const french = 'L’atelier de Rouen fournit toutes les cellules de la ligne de Lyon. '
+    + 'L’atelier de Rouen fermera fin mars.';
+  const model = new FakeSeq2Seq({}, SUPPORTED);
+  assert.equal(await summarise(french, { model }), SUPPORTED);
+  assert.deepEqual(model.calls, [french]);
+  // Témoin : l'anglais suit exactement le même chemin.
+  const autre = new FakeSeq2Seq({}, SUPPORTED);
+  assert.equal(await summarise(DOCUMENT, { model: autre }), SUPPORTED);
 });
 
 test('le modèle par défaut a la surface de @huggingface/transformers', async () => {
@@ -189,7 +205,7 @@ test('le modèle par défaut est chargé une fois pour la vie du processus', () 
   return summarise(REPORT).then(() => assert.equal(globalThis.__summariserLoads.length, avant));
 });
 
-test('la seconde passe dépasse la fenêtre', async () => {
+test('les passes suivantes tiennent elles aussi dans la fenêtre', async () => {
   const document = Array.from({ length: 3600 }, (_, i) => `Paragraph ${i} describes another part of the warehouse.`).join(' ').slice(0, MAX_CHARACTERS);
   const model = new NoteTaker({});
   await summarise(document, { model });

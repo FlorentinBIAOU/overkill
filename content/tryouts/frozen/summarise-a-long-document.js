@@ -17,10 +17,11 @@
  * pas.
  */
 import { FakeLLM } from '../../snippets/_harness/fake-llm.mjs';
-import {
-  MAX_CHARACTERS,
-  summarise,
-} from '../../snippets/summarise-a-long-document/n3.js';
+import { summarise } from '../../snippets/summarise-a-long-document/n3.js';
+
+/* Le plafond est celui de l'appelant : celui-ci, volontairement bas, tient sur
+   la page. Le plafond par défaut de l'extrait, lui, est la fenêtre du modèle. */
+const PLAFOND = 2000;
 
 const RAPPORT = {
   fr: 'L’équipe support a migré le système de tickets vers une nouvelle plateforme en mars. Chaque agent a été formé pendant les deux semaines précédant la bascule. L’ancienne plateforme est restée disponible en lecture seule pendant un mois.',
@@ -85,7 +86,7 @@ async function execute(entree, lang, { reponse, failTimes = 0, prose = false }) 
     failTimes,
   });
   try {
-    const { summary, keyPoints } = await summarise(entree, { client });
+    const { summary, keyPoints } = await summarise(entree, { client, maxCharacters: PLAFOND });
     if (client.callCount === 0) {
       return { verdict: { label: t.aucunAppel } };
     }
@@ -143,13 +144,13 @@ export default {
     },
     {
       label: {
-        fr: 'Un document de 40 001 caractères',
-        en: 'A 40,001-character document',
+        fr: 'Un document au-dessus du plafond fixé',
+        en: 'A document over the ceiling that was set',
       },
-      input: 'x'.repeat(MAX_CHARACTERS + 1),
+      input: 'x'.repeat(PLAFOND + 1),
       shown: {
-        fr: 'un document de 40 001 caractères, un de trop',
-        en: 'a document of 40,001 characters, one too many',
+        fr: 'un document de 2 001 caractères, pour un plafond fixé à 2 000',
+        en: 'a 2,001-character document, for a ceiling set at 2,000',
       },
     },
     {

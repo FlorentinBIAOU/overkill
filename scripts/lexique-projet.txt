@@ -517,3 +517,4 @@ elasticsearch
 statsmodels
 latn
 und
+sum

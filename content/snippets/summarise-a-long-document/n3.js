@@ -9,12 +9,12 @@
  * or both — instead of trained into the weights. Whether the answer respects
  * that shape is checked below, not assumed.
  *
- * What it costs is in this file. Cap the input, because the provider charges
- * by the token and a document nobody meant to send is money gone. Retry,
- * because the call goes over a network. Parse an answer that is only probably
- * the JSON you asked for. Refuse an answer of the wrong shape rather than
- * passing half of one to the caller. That plumbing is what your tests can
- * cover.
+ * What it costs is in this file. Decide what one call may cost, because the
+ * provider charges by the token and a document nobody meant to send is money
+ * gone. Retry, because the call goes over a network. Parse an answer that is
+ * only probably the JSON you asked for. Refuse an answer of the wrong shape
+ * rather than passing half of one to the caller. That plumbing is what your
+ * tests can cover.
  *
  * What no test here can cover: whether the summary is true of the document.
  * Nothing below can tell a fluent sentence the document never supported from
@@ -30,7 +30,13 @@ const PROMPT = [
   'Document:',
 ].join('\n');
 
-export const MAX_CHARACTERS = 40000;
+// The default ceiling only guarantees that the document fits the window of the
+// example model below: that window is 1,047,576 tokens, and a token never
+// stands for less than one character, so a million characters cannot overflow
+// it. It is not a cost ceiling. Pass `maxCharacters` to set what one call may
+// cost you — the report of fifty pages this entry is about is a few hundred
+// thousand characters, and goes in one call either way.
+export const MAX_CHARACTERS = 1_000_000;
 
 // The provider named here is an example, not a recommendation: the reasoning
 // holds for any general-purpose model API, and the client is swappable. Pass
@@ -65,13 +71,16 @@ export class SummaryUnavailable extends Error {}
  *   tested without a network call; defaults to a real provider client
  * @param {number} [options.maxSentences]
  * @param {number} [options.attempts]
+ * @param {number} [options.maxCharacters] refused before the call, not after:
+ *   the provider bills the input whether the answer is useful or not
  */
-export async function summarise(document, { client, maxSentences = 3, attempts = 3 } = {}) {
-  // Refusing an oversized document is not an optimisation, it is a cost
-  // control: the provider bills the input whether the answer is useful or not.
+export async function summarise(
+  document,
+  { client, maxSentences = 3, attempts = 3, maxCharacters = MAX_CHARACTERS } = {},
+) {
   // Counted in code points, as Python counts characters.
-  if ([...document].length > MAX_CHARACTERS) {
-    throw new RangeError(`document longer than ${MAX_CHARACTERS} characters`);
+  if ([...document].length > maxCharacters) {
+    throw new RangeError(`document longer than ${maxCharacters} characters`);
   }
   if (!(maxSentences >= 1)) throw new RangeError('maxSentences must be at least 1');
 
