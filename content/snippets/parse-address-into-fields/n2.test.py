@@ -6,6 +6,8 @@ avant toute analyse, un échec est retenté, le jeu d'étiquettes de l'analyseur
 ramené au nôtre. Ce qu'ils ne prouvent pas : que libpostal étiquette bien.
 """
 
+import sys
+import textwrap
 import time
 from collections import Counter
 
@@ -44,13 +46,19 @@ EMPTY = dict.fromkeys(FIELDS, "")
 
 def test_point_de_rupture_une_ligne_qui_n_est_pas_une_adresse_ressort_en_champs():
     """
-    « Une ligne qui n'est pas une adresse — « the meeting is at ten in room four » —
-    ressort avec un numéro et une rue ». Les étiquettes sont écrites par le test ;
-    ce qui est démontré, c'est que le code les rend telles quelles.
+    « Si une ligne qui n'est pas une adresse — « the meeting is at ten in room four » — revient étiquetée en
+    numéro et en rue […] — deux réponses que le test simule —, rien dans le code ne distingue ce résultat d'un bon. »
     """
     nonsense = "the meeting is at ten in room four"
     parser = FakeClassifier({nonsense: {"house_number": "ten", "road": "room four"}})
     assert parse_addresses([nonsense], parser) == [{**EMPTY, "number": "ten", "street": "room four"}]
+
+
+def test_point_de_rupture_libpostal_rend_des_etiquettes_ni_score_ni_refus():
+    """« libpostal rend des étiquettes, ni score ni refus » : ce que `predict` garde d'une réponse, ce sont des paires."""
+    parser = object.__new__(LibpostalParser)
+    parser._parse_address = lambda address: [("ten", "house_number"), ("room four", "road")]
+    assert parser.predict(["the meeting is at ten in room four"]) == [{"house_number": "ten", "road": "room four"}]
 
 
 def test_point_de_rupture_un_code_postal_d_une_autre_ville_ressort_en_champs_propres():
@@ -86,17 +94,14 @@ def test_le_lot_entier_part_en_un_appel():
     assert parser.calls == [[FRENCH, GERMAN, BRITISH]]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring dit qu'« un lot de cent est un seul passage » dans le modèle ; "
-    "LibpostalParser.predict appelle parse_address une fois par adresse, cent appels pour cent adresses",
-)
-def test_un_lot_de_cent_adresses_est_un_seul_passage_dans_le_modele():
+def test_libpostal_n_a_pas_de_lots_predict_analyse_les_adresses_l_une_apres_l_autre():
+    """« The whole batch goes to the parser object in one call, but libpostal has no batching: `LibpostalParser.predict` parses the addresses one after the other. »"""
     calls = []
     parser = object.__new__(LibpostalParser)
     parser._parse_address = lambda address: calls.append(address) or [("8", "house_number")]
-    parse_addresses([f"{i} rue des Lilas" for i in range(100)], parser)
-    assert len(calls) == 1
+    batch = [f"{i} rue des Lilas" for i in range(100)]
+    assert len(parse_addresses(batch, parser)) == 100
+    assert calls == batch
 
 
 def test_predict_fusionne_les_paires_valeur_etiquette_et_les_etiquettes_repetees():
@@ -108,21 +113,18 @@ def test_predict_fusionne_les_paires_valeur_etiquette_et_les_etiquettes_repetees
 
 
 def test_les_etiquettes_qui_partagent_un_champ_sont_jointes_le_reste_est_ecarte():
-    """« everything unmapped is dropped on purpose »."""
+    """« everything unmapped is dropped on purpose » ; « "house" among them »."""
     parser = FakeClassifier({FRENCH: {"level": "étage 3", "unit": "porte b", "staircase": "escalier a", "entrance": "entrée 2",
                                       "house": "résidence les ormes", "country": "france", "po_box": "bp 12", "suburb": "x"}})
     parsed = parse_addresses([FRENCH], parser)[0]
-    assert parsed == {**EMPTY, "complement": "étage 3 porte b escalier a entrée 2"}
+    assert parsed == {**EMPTY, "complement": "étage 3 porte b escalier a entrée 2 résidence les ormes"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le commentaire dit que deux étiquettes de libpostal peuvent tomber dans un de nos champs ; "
-    "quatre tombent dans complement (unit, level, staircase, entrance)",
-)
-def test_deux_etiquettes_seulement_partagent_un_champ():
+def test_cinq_etiquettes_tombent_dans_le_complement_house_parmi_elles():
+    """Commentaire : « Five of its labels land in our complement, "house" among them ». Les autres champs n'en reçoivent qu'une."""
     shared = Counter(COMPONENT_MAP.values())
-    assert max(shared.values()) == 2
+    assert shared == {"complement": 5, "number": 1, "street": 1, "postcode": 1, "city": 1}
+    assert COMPONENT_MAP["house"] == "complement"
 
 
 def test_une_valeur_vide_blanche_ou_non_textuelle_est_ecartee():
@@ -146,10 +148,26 @@ def test_refuse_une_adresse_trop_longue_avant_d_analyser_quoi_que_ce_soit():
         parse_addresses([FRENCH, "x" * (MAX_CHARACTERS + 1)], parser)
     assert parser.calls == []
     assert parse_addresses(["x" * MAX_CHARACTERS], parser)[0]["city"] == "paris"
+    # Sans analyseur injecté non plus : le refus précède le chargement.
+    with pytest.raises(ValueError, match="300"):
+        parse_addresses(["x" * (MAX_CHARACTERS + 1)])
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="INFIRMÉ : le commentaire dit que La Poste permet six lignes de 38 caractères et que tout ce qui est plus long "
+    "est refusé ; le plafond vaut 300, et une adresse de 239 caractères (six lignes pleines séparées par « , », plus un) passe",
+)
+def test_une_adresse_plus_longue_que_six_lignes_de_trente_huit_caracteres_est_refusee():
+    parser = FakeClassifier({}, default={"city": "paris"})
+    six_lignes = ", ".join(["x" * 38] * 6)
+    assert len(six_lignes) == 238
+    with pytest.raises(ValueError):
+        parse_addresses([six_lignes + "x"], parser)
 
 
 def test_un_echec_est_retente_une_fois_pas_davantage():
-    """« Retry once » : deux essais au total, puis ParsingUnavailable."""
+    """« Retry a failed parse once » : deux essais au total, puis ParsingUnavailable."""
     class Failing:
         def __init__(self, failures):
             self.calls, self.failures = 0, failures
@@ -168,12 +186,8 @@ def test_un_echec_est_retente_une_fois_pas_davantage():
     assert always.calls == 2
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le commentaire dit « Retry once: loading the data files is the call that fails » ; le chargement a lieu "
-    "dans LibpostalParser(), avant la boucle de réessai, et son échec sort brut, sans réessai ni ParsingUnavailable",
-)
-def test_le_chargement_des_fichiers_de_donnees_est_retente(monkeypatch):
+def test_le_chargement_n_est_pas_retente_son_erreur_sort_telle_quelle(monkeypatch):
+    """« Loading is not retried: a parser that cannot load its data files fails before this point, with its own error. »"""
     loads = []
 
     class FlakyLoad:
@@ -186,7 +200,9 @@ def test_le_chargement_des_fichiers_de_donnees_est_retente(monkeypatch):
             return [COMPONENTS[a] for a in addresses]
 
     monkeypatch.setattr(n2, "LibpostalParser", FlakyLoad)
-    assert parse_addresses([FRENCH])[0]["postcode"] == "75011"
+    with pytest.raises(MemoryError, match="data files could not be mapped"):
+        parse_addresses([FRENCH])
+    assert len(loads) == 1
 
 
 def test_une_reponse_de_mauvaise_longueur_leve():
@@ -204,10 +220,40 @@ def test_l_analyseur_est_injecte_et_par_defaut_c_est_le_vrai():
         parse_addresses([FRENCH])
 
 
-def test_defaut_une_ligne_d_un_autre_type_leve_l_erreur_nommee():
-    parser = FakeClassifier({FRENCH: [("8", "house_number"), ("rue des lilas", "road")]})
-    with pytest.raises(ParsingUnavailable):
-        parse_addresses([FRENCH], parser)
+def test_par_defaut_la_bibliotheque_est_chargee_une_fois_par_processus_a_l_import(tmp_path, monkeypatch):
+    """
+    « The real parser: a C library and its data files, loaded once per process on import. » Double du paquet
+    `postal` écrit sur disque : son module compte ses exécutions.
+    """
+    package = tmp_path / "postal"
+    package.mkdir()
+    (package / "__init__.py").write_text("")
+    (package / "parser.py").write_text(textwrap.dedent('''
+        import builtins
+        builtins.postal_loads = getattr(builtins, "postal_loads", 0) + 1
+
+        def parse_address(address):
+            return [("8", "house_number"), ("rue des lilas", "road"), ("bâtiment c", "house"), ("75011", "postcode"), ("paris", "city")]
+    '''))
+    monkeypatch.syspath_prepend(str(tmp_path))
+    for name in ("postal", "postal.parser"):
+        monkeypatch.delitem(sys.modules, name, raising=False)
+    import builtins
+    monkeypatch.setattr(builtins, "postal_loads", 0, raising=False)
+    expected = {"number": "8", "street": "rue des lilas", "complement": "bâtiment c", "postcode": "75011", "city": "paris"}
+    assert parse_addresses([FRENCH]) == [expected]
+    assert parse_addresses([FRENCH, GERMAN]) == [expected, expected]
+    assert builtins.postal_loads == 1
+    for name in ("postal", "postal.parser"):
+        sys.modules.pop(name, None)
+
+
+def test_production_une_ligne_d_un_autre_type_leve_l_erreur_nommee():
+    """`None` reste une réponse vide ; une liste, une chaîne, un nombre lèvent ParsingUnavailable."""
+    for row in ([("8", "house_number"), ("rue des lilas", "road")], "8 rue des lilas", 8):
+        parser = FakeClassifier({FRENCH: row})
+        with pytest.raises(ParsingUnavailable, match="not a mapping"):
+            parse_addresses([FRENCH], parser)
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +270,8 @@ def test_production_mille_adresses_en_un_lot():
 
 def test_production_accents_nfd_emoji_et_trois_cents_points_de_code():
     parser = FakeClassifier({}, default={"city": "paris"})
-    batch = ["3 Allée du Château", "🏠 8 rue des Lilas", "﻿8 rue des Lilas", "🏠" * MAX_CHARACTERS]
+    batch = ["3 Allée du Château", "🏠 8 rue des Lilas", "\ufeff8 rue des Lilas", "🏠" * MAX_CHARACTERS]
     assert [r["city"] for r in parse_addresses(batch, parser)] == ["paris"] * 4
     assert parser.calls == [batch]
+    with pytest.raises(ValueError):
+        parse_addresses(["🏠" * (MAX_CHARACTERS + 1)], parser)

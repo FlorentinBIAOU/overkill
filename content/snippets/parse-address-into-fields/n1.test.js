@@ -123,12 +123,15 @@ test("chaque mot est étiqueté d'après ce à quoi il ressemble et ce qui l'ent
   assert.equal(fold('Allée'), 'allee');
 });
 
-test("INFIRMÉ : cinq chiffres et un mot capitalisé sont code postal et ville « où qu'ils soient » ; sur « 75011 Paris, 8 rue des Lilas », Paris passe en complément", async () => {
-  await assert.rejects(async () => {
-    const parsed = parse(model, '75011 Paris, 8 rue des Lilas');
-    assert.equal(parsed.postcode, '75011');
-    assert.equal(parsed.city, 'Paris');
-  }, assert.AssertionError);
+test('la position compte aussi : sur la ville écrite d’abord, la fin de ligne l’emporte', () => {
+  const parsed = parse(model, '75011 Paris, 8 rue des Lilas');
+  assert.equal(parsed.postcode, '75011');
+  assert.equal(parsed.city, 'Lilas');
+  // Témoin : à sa place habituelle, le même couple est lu code postal et ville.
+  assert.equal(parse(model, '8 rue des Lilas, 75011 Paris').city, 'Paris');
+  const traits = features(tokenise('75011 Paris, 8 rue des Lilas'), 5);
+  assert.equal(traits.last, 1);
+  assert.equal(traits.position, 5 / 6);
 });
 
 test('une régression binaire par étiquette, la plus forte l’emporte', () => {
@@ -136,12 +139,9 @@ test('une régression binaire par étiquette, la plus forte l’emporte', () => 
   for (const w of Object.values(model.weights)) assert.equal(w.length, model.columns.size + 1);
 });
 
-test('INFIRMÉ : « cela fait quarante lignes » ; n1.js compte 79 lignes de code', async () => {
-  const lines = readFileSync(new URL('./n1.js', import.meta.url), 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*\*|$)/.test(l)).length;
-  assert.equal(lines, 79);
-  await assert.rejects(async () => {
-    assert.ok(lines <= 40);
-  }, assert.AssertionError);
+test('écrit en entier : aucune dépendance à installer', () => {
+  // « Written out rather than pulled from a library: no dependency to install for a model this size. »
+  assert.doesNotMatch(readFileSync(new URL('./n1.js', import.meta.url), 'utf8'), /^\s*import\s|require\(/m);
 });
 
 test('les champs sont regroupés dans l’ordre de lecture et le type ouvre la voie', () => {
@@ -184,14 +184,10 @@ test('production : une chaîne vide et de la ponctuation seule', () => {
   assert.deepEqual(parse(model, ' ,;. '), EMPTY);
 });
 
-test("un modèle entraîné sur un jeu vide est accepté, puis parse lève TypeError (reduce d'un tableau vide)", async () => {
-  let empty;
-  try {
-    empty = train([]);
-  } catch {
-    return;
-  }
-  assert.doesNotThrow(() => parse(empty, '8 rue des Lilas'));
+test("production : un jeu d'entraînement vide ou d'une seule étiquette est refusé", () => {
+  // « Two labels at least, as scikit-learn demands. »
+  assert.throws(() => train([]), { name: 'RangeError', message: 'train needs at least two different labels' });
+  assert.throws(() => train([['Paris Lyon', ['city', 'city']]]), RangeError);
 });
 
 test('production : une adresse de trois mille caractères termine', () => {

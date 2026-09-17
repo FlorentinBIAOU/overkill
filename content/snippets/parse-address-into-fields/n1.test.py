@@ -136,14 +136,17 @@ def test_chaque_mot_est_etiquete_d_apres_ce_a_quoi_il_ressemble_et_ce_qui_l_ento
     assert fold("Allée") == fold("allee") == "allee"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la docstring de features dit que cinq chiffres suivis d'un mot capitalisé sont un code postal et une ville "
-    "« où qu'ils soient dans la ligne » ; sur « 75011 Paris, 8 rue des Lilas », Paris passe en complément et Lilas en ville",
-)
-def test_cinq_chiffres_et_un_mot_capitalise_sont_code_postal_et_ville_ou_qu_ils_soient(model):
+def test_la_position_compte_aussi_sur_la_ville_ecrite_d_abord_la_fin_de_ligne_l_emporte(model):
+    """
+    features : « five digits followed by a capitalised word look like a postcode and a town. Position counts as
+    well: on "75011 Paris, 8 rue des Lilas" the end of the line wins, and the town comes out as "Lilas". »
+    """
     parsed = parse(model, "75011 Paris, 8 rue des Lilas")
-    assert parsed["postcode"] == "75011" and parsed["city"] == "Paris"
+    assert parsed["postcode"] == "75011" and parsed["city"] == "Lilas"
+    # Témoin : à sa place habituelle, le même couple est lu code postal et ville.
+    assert parse(model, "8 rue des Lilas, 75011 Paris")["city"] == "Paris"
+    traits = features(tokenise("75011 Paris, 8 rue des Lilas"), 5)
+    assert traits["last"] == 1.0 and traits["position"] == 5 / 6
 
 
 def test_les_champs_sont_regroupes_dans_l_ordre_de_lecture_et_le_type_ouvre_la_voie(model):
@@ -191,9 +194,11 @@ def test_production_une_chaine_vide_et_de_la_ponctuation_seule(model):
     assert parse(model, " ,;. ") == EMPTY
 
 
-def test_production_un_jeu_d_entrainement_vide_est_refuse():
+def test_production_un_jeu_d_entrainement_vide_ou_d_une_seule_etiquette_est_refuse():
     with pytest.raises(ValueError):
         train([])
+    with pytest.raises(ValueError):
+        train([("Paris Lyon", ["city", "city"])])
 
 
 def test_production_une_adresse_de_trois_mille_caracteres_termine(model):

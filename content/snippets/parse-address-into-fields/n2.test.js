@@ -8,8 +8,24 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { register } from 'node:module';
 import { FakeClassifier } from '../_harness/fake-model.mjs';
 import { FIELDS, LibpostalParser, MAX_CHARACTERS, ParsingUnavailable, parseAddresses } from './n2.js';
+
+// Double du paquet CommonJS « node-postal » : importé depuis un module, ses
+// exportations sont sous `default`. Le module compte ses évaluations, et son
+// `parser` est lu à chaque chargement dans une fonction posée par le test.
+const FAUX_POSTAL = [
+  'globalThis.postalEvaluations = (globalThis.postalEvaluations ?? 0) + 1;',
+  'export default { get parser() { return globalThis.fauxPostal(); } };',
+].join('\n');
+const CROCHET = `export async function resolve(specifier, context, next) {
+  if (specifier === 'node-postal') {
+    return { url: 'data:text/javascript,' + encodeURIComponent(${JSON.stringify(FAUX_POSTAL)}), shortCircuit: true };
+  }
+  return next(specifier, context);
+}`;
+register(`data:text/javascript,${encodeURIComponent(CROCHET)}`);
 
 // Adresses inventées, et les composants que libpostal rendrait, dans son propre
 // vocabulaire. Les valeurs sont les nôtres.
@@ -39,6 +55,11 @@ test("point de rupture : une ligne qui n'est pas une adresse ressort en champs",
   const nonsense = 'the meeting is at ten in room four';
   const parser = new FakeClassifier({ [nonsense]: { house_number: 'ten', road: 'room four' } });
   assert.deepEqual(await parseAddresses([nonsense], parser), [{ ...EMPTY, number: 'ten', street: 'room four' }]);
+});
+
+test('point de rupture : libpostal rend des étiquettes, ni score ni refus', async () => {
+  const parser = new LibpostalParser(() => [{ component: 'house_number', value: 'ten' }, { component: 'road', value: 'room four' }]);
+  assert.deepEqual(await parser.predict(['the meeting is at ten in room four']), [{ house_number: 'ten', road: 'room four' }]);
 });
 
 test("point de rupture : un code postal d'une autre ville ressort en champs propres", async () => {
@@ -74,14 +95,12 @@ test('le lot entier part en un appel', async () => {
   assert.deepEqual(parser.calls, [[FRENCH, GERMAN, BRITISH]]);
 });
 
-test("INFIRMÉ : « un lot de cent est un seul passage » ; LibpostalParser.predict appelle parse_address une fois par adresse", async () => {
+test("libpostal n'a pas de lots : predict analyse les adresses l'une après l'autre", async () => {
   const calls = [];
   const parser = new LibpostalParser((address) => { calls.push(address); return [{ component: 'house_number', value: '8' }]; });
-  await parseAddresses(Array.from({ length: 100 }, (_, i) => `${i} rue des Lilas`), parser);
-  assert.equal(calls.length, 100);
-  await assert.rejects(async () => {
-    assert.equal(calls.length, 1);
-  }, assert.AssertionError);
+  const batch = Array.from({ length: 100 }, (_, i) => `${i} rue des Lilas`);
+  assert.equal((await parseAddresses(batch, parser)).length, 100);
+  assert.deepEqual(calls, batch);
 });
 
 test('predict fusionne les paires composant/valeur et les composants répétés', async () => {
@@ -96,15 +115,16 @@ test('les étiquettes qui partagent un champ sont jointes, le reste est écarté
   const parser = new FakeClassifier({
     [FRENCH]: { level: 'étage 3', unit: 'porte b', staircase: 'escalier a', entrance: 'entrée 2', house: 'résidence les ormes', country: 'france', po_box: 'bp 12', suburb: 'x' },
   });
-  assert.deepEqual((await parseAddresses([FRENCH], parser))[0], { ...EMPTY, complement: 'étage 3 porte b escalier a entrée 2' });
+  assert.deepEqual((await parseAddresses([FRENCH], parser))[0], { ...EMPTY, complement: 'étage 3 porte b escalier a entrée 2 résidence les ormes' });
 });
 
-test('INFIRMÉ : « Two of its labels can land in one of our fields » ; quatre tombent dans complement', async () => {
-  const parser = new FakeClassifier({ [FRENCH]: { level: 'a', unit: 'b', staircase: 'c', entrance: 'd' } });
-  const { complement } = (await parseAddresses([FRENCH], parser))[0];
-  await assert.rejects(async () => {
-    assert.equal(complement.split(' ').length, 2);
-  }, assert.AssertionError);
+test('cinq étiquettes tombent dans le complément, « house » parmi elles', async () => {
+  const labels = ['house', 'unit', 'level', 'staircase', 'entrance'];
+  const parser = new FakeClassifier({ [FRENCH]: Object.fromEntries(labels.map((l, i) => [l, `c${i}`])) });
+  assert.equal((await parseAddresses([FRENCH], parser))[0].complement, 'c0 c1 c2 c3 c4');
+  // Les autres étiquettes de libpostal tombent chacune dans un seul champ, ou nulle part.
+  const others = new FakeClassifier({ [FRENCH]: { house_number: '8', road: 'r', postcode: 'p', city: 'c', suburb: 's', country: 'f' } });
+  assert.deepEqual((await parseAddresses([FRENCH], others))[0], { number: '8', street: 'r', complement: '', postcode: 'p', city: 'c' });
 });
 
 test('une valeur vide, blanche ou non textuelle est écartée', async () => {
@@ -128,6 +148,23 @@ test("refuse une adresse trop longue avant d'analyser quoi que ce soit", async (
   await assert.rejects(() => parseAddresses([FRENCH, 'x'.repeat(MAX_CHARACTERS + 1)], parser), { name: 'RangeError', message: /300/ });
   assert.deepEqual(parser.calls, []);
   assert.equal((await parseAddresses(['x'.repeat(MAX_CHARACTERS)], parser))[0].city, 'paris');
+  // Sans analyseur injecté non plus : le refus précède le chargement.
+  globalThis.fauxPostal = () => assert.fail('chargé avant le contrôle de longueur');
+  try {
+    await assert.rejects(() => parseAddresses(['x'.repeat(MAX_CHARACTERS + 1)]), RangeError);
+    assert.deepEqual(await parseAddresses([]), []);
+  } finally {
+    delete globalThis.fauxPostal;
+  }
+});
+
+test('INFIRMÉ : « six lines of 38 characters. Anything longer […] is refused » ; le plafond vaut 300, une adresse de 239 caractères passe', async () => {
+  const parser = new FakeClassifier({}, { city: 'paris' });
+  const sixLignes = Array(6).fill('x'.repeat(38)).join(', ');
+  assert.equal(sixLignes.length, 238);
+  await assert.rejects(async () => {
+    await assert.rejects(() => parseAddresses([`${sixLignes}x`], parser), RangeError);
+  }, assert.AssertionError);
 });
 
 test('un échec est retenté une fois, pas davantage', async () => {
@@ -147,27 +184,18 @@ test('un échec est retenté une fois, pas davantage', async () => {
   assert.equal(always.calls, 2);
 });
 
-test('INFIRMÉ : « loading the data files is the call that fails » ; LibpostalParser.load est hors de la boucle de réessai', async () => {
-  const original = LibpostalParser.load;
+test("le chargement n'est pas retenté, son erreur sort telle quelle", async () => {
   let loads = 0;
-  LibpostalParser.load = async () => {
+  globalThis.fauxPostal = () => {
     loads += 1;
-    if (loads === 1) throw new Error('data files could not be mapped');
-    return { predict: async (a) => a.map((x) => COMPONENTS[x]) };
+    throw new Error('data files could not be mapped');
   };
   try {
-    await assert.rejects(async () => {
-      let rows;
-      try {
-        rows = await parseAddresses([FRENCH]);
-      } catch (error) {
-        assert.fail(`${error.name}: ${error.message}`);
-      }
-      assert.equal(rows[0].postcode, '75011');
-    }, assert.AssertionError);
+    await assert.rejects(() => parseAddresses([FRENCH]), (e) => !(e instanceof ParsingUnavailable) && e.message === 'data files could not be mapped');
   } finally {
-    LibpostalParser.load = original;
+    delete globalThis.fauxPostal;
   }
+  assert.equal(loads, 1);
 });
 
 test('une réponse de mauvaise longueur lève', async () => {
@@ -175,13 +203,33 @@ test('une réponse de mauvaise longueur lève', async () => {
   await assert.rejects(() => parseAddresses([FRENCH, GERMAN], parser), ParsingUnavailable);
 });
 
-test("l'analyseur est injecté, et par défaut c'est le vrai", async () => {
-  await assert.rejects(() => parseAddresses([FRENCH]), { code: 'ERR_MODULE_NOT_FOUND', message: /node-postal/ });
+test("l'analyseur est injecté ; par défaut c'est node-postal, lu sous default et chargé une fois à l'import", async () => {
+  // « node-postal is CommonJS: imported from a module, its exports sit under `default` » ;
+  // « a native binding and its data files, loaded once per process on import ».
+  const seen = [];
+  globalThis.fauxPostal = () => ({
+    parse_address: (address) => {
+      seen.push(address);
+      return [{ component: 'house_number', value: '8' }, { component: 'road', value: 'rue des lilas' }, { component: 'house', value: 'bâtiment c' },
+        { component: 'postcode', value: '75011' }, { component: 'city', value: 'paris' }];
+    },
+  });
+  try {
+    const expected = { number: '8', street: 'rue des lilas', complement: 'bâtiment c', postcode: '75011', city: 'paris' };
+    assert.deepEqual(await parseAddresses([FRENCH]), [expected]);
+    assert.deepEqual(await parseAddresses([FRENCH, GERMAN]), [expected, expected]);
+  } finally {
+    delete globalThis.fauxPostal;
+  }
+  assert.deepEqual(seen, [FRENCH, FRENCH, GERMAN]);
+  assert.equal(globalThis.postalEvaluations, 1);
 });
 
-test("une ligne d'un autre type (tableau de paires) devient des champs vides, sans erreur", async () => {
-  const parser = new FakeClassifier({ [FRENCH]: [{ component: 'house_number', value: '8' }, { component: 'road', value: 'rue des lilas' }] });
-  await assert.rejects(() => parseAddresses([FRENCH], parser), ParsingUnavailable);
+test("production : une ligne d'un autre type lève l'erreur nommée", async () => {
+  // null reste une réponse vide ; un tableau, une chaîne, un nombre lèvent ParsingUnavailable.
+  for (const row of [[{ component: 'house_number', value: '8' }], '8 rue des lilas', 8]) {
+    await assert.rejects(() => parseAddresses([FRENCH], new FakeClassifier({ [FRENCH]: row })), ParsingUnavailable);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -204,13 +252,9 @@ test('production : accents NFD, emoji, marque d’ordre', async () => {
   assert.deepEqual(parser.calls, [batch]);
 });
 
-test('le plafond compte des unités UTF-16 ; 300 emojis sont refusés en JavaScript, acceptés en Python', async () => {
+test('production : trois cents emojis sont acceptés, trois cent un refusés', async () => {
+  // « Code points, as Python counts them: an emoji is one character, not two. »
   const parser = new FakeClassifier({}, { city: 'paris' });
-  let rows;
-  try {
-    rows = await parseAddresses(['🏠'.repeat(MAX_CHARACTERS)], parser);
-  } catch (error) {
-    assert.fail(`${error.name}: ${error.message}`);
-  }
-  assert.equal(rows.length, 1);
+  assert.equal((await parseAddresses(['🏠'.repeat(MAX_CHARACTERS)], parser)).length, 1);
+  await assert.rejects(() => parseAddresses(['🏠'.repeat(MAX_CHARACTERS + 1)], parser), RangeError);
 });

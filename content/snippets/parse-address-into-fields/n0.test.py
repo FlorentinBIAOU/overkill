@@ -34,14 +34,11 @@ def test_point_de_rupture_un_complement_ecrit_devant_vide_le_numero():
     assert parsed["street"] == "Appartement 12 Bâtiment C 8 rue des Lilas"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : la fiche dit que « l'adresse entière passe en nom de rue » ; seule la ligne de voie y passe, "
-    "le code postal et la ville sont bien lus",
-)
-def test_un_complement_ecrit_devant_fait_passer_l_adresse_entiere_en_nom_de_rue():
+def test_point_de_rupture_toute_la_ligne_de_voie_complement_compris_passe_en_nom_de_rue():
+    """« et toute la ligne de voie, complément compris, passe en nom de rue » ; le code postal et la ville restent lus."""
     parsed = parse("Appartement 12, Bâtiment C, 8 rue des Lilas, 75011 Paris")
-    assert parsed["postcode"] == "" and "75011 Paris" in parsed["street"]
+    assert parsed == {"number": "", "street_type": "", "street": "Appartement 12 Bâtiment C 8 rue des Lilas",
+                      "postcode": "75011", "city": "Paris"}
 
 
 def test_point_de_rupture_hors_de_france_le_numero_allemand_reste_dans_la_rue():
@@ -83,25 +80,35 @@ def test_les_abreviations_tapees_ressortent_sous_une_seule_orthographe():
         assert parse(f"{written} 69003 Lyon")["street_type"] == "avenue", written
 
 
-def test_defaut_l_abreviation_r_apres_un_numero_est_lue_comme_rue():
+def test_une_lettre_isolee_n_est_un_indice_que_collee_au_numero_le_r_reste_un_type_de_voie():
+    """Commentaire : « A lone letter counts only when it touches the number, so the "r" of "8 r des Lilas" stays a street type. »"""
     assert STREET_TYPES["r"] == "rue"
     assert parse("8 r des Lilas 75011 Paris") == LILAS
+    assert parse("8 r. des Lilas 75011 Paris") == LILAS
+    assert parse("12b rue des Lilas 75011 Paris")["number"] == "12 b"
+    # Décision du rédacteur : une lettre séparée du numéro passe dans la voie, qui perd son type.
+    assert parse("12 B rue des Lilas 75011 Paris") == {
+        "number": "12", "street_type": "", "street": "B rue des Lilas", "postcode": "75011", "city": "Paris"}
 
 
-def test_garde_l_indice_de_repetition_avec_le_numero():
-    """Commentaire : « A house number, and the repetition index that may follow it: 8, 8 bis, 12B. »"""
+def test_garde_l_indice_de_repetition_et_la_plage_avec_le_numero():
+    """Commentaire : « A house number or a range of them, and the repetition index that may follow: 8, 8-10, 8 bis, 12B. »"""
     assert parse("12 bis rue des Lilas 75011 Paris")["number"] == "12 bis"
     assert parse("12 ter rue des Lilas 75011 Paris")["number"] == "12 ter"
+    assert parse("8 quater rue des Lilas 75011 Paris")["number"] == "8 quater"
+    assert parse("8bis rue des Lilas 75011 Paris")["number"] == "8 bis"
     assert parse("12B rue des Lilas 75011 Paris")["number"] == "12 B"
+    assert parse("8-10 rue des Lilas 75011 Paris") == {**LILAS, "number": "8-10"}
+    assert parse("8-10bis rue des Lilas 75011 Paris")["number"] == "8-10 bis"
+    # Témoin : « ter » au début d'un mot plus long n'est pas un indice.
+    assert parse("8 Terrasse des Lilas 75011 Paris")["street"] == "Terrasse des Lilas"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="INFIRMÉ : le commentaire justifie « le dernier code postal » par l'année qu'un nom de rue peut porter ; "
-    "une année a quatre chiffres et ne peut jamais être prise pour un code postal",
-)
-def test_une_annee_dans_le_nom_de_rue_peut_etre_prise_pour_un_code_postal():
-    assert n0.POSTCODE.findall("rue du 8 Mai 1945") != []
+def test_un_nombre_de_cinq_chiffres_place_avant_le_vrai_code_postal_n_est_pas_pris():
+    """Commentaire : « Take the last run of five digits […] a five-digit number earlier in the line is not taken for the postcode. »"""
+    parsed = parse("BP 40012, 8 rue des Lilas, 75011 Paris")
+    assert parsed["postcode"] == "75011" and parsed["city"] == "Paris"
+    assert parsed["street"] == "BP 40012 8 rue des Lilas"
 
 
 def test_une_annee_dans_le_nom_de_rue_reste_dans_la_rue():
@@ -114,8 +121,9 @@ def test_lit_accents_casse_et_ponctuation():
 
 
 def test_normalisation_et_repli():
-    """normalise : « Reduce commas, line breaks and exotic spaces to a single plain space » ; fold : « Lowercase, drop the accents and the trailing dot »."""
-    assert normalise("8 rue  des Lilas,\n75011 Paris") == "8 rue des Lilas 75011 Paris"
+    """normalise : « Reduce commas, line breaks, exotic spaces and byte order marks to a single plain space » ; fold : « Lowercase, drop the accents and the trailing dot »."""
+    assert normalise("8 rue  des Lilas,\n75011\u00a0Paris") == "8 rue des Lilas 75011 Paris"
+    assert normalise("\ufeff8 rue des\ufeffLilas\u2009 75011 Paris") == "8 rue des Lilas 75011 Paris"
     assert fold("Av.") == "av" and fold("Allée") == "allee" and fold(".av") == ".av"
 
 
@@ -170,10 +178,15 @@ def test_production_chiffres_pleine_largeur_espaces_insecables_nfd():
     assert parse("3 Allée du Château 33000 Bordeaux")["street_type"] == "allée"
 
 
-def test_defaut_une_marque_d_ordre_des_octets_ne_casse_pas_le_numero():
-    assert parse("﻿8 rue des Lilas, 75011 Paris") == LILAS
+def test_production_une_marque_d_ordre_des_octets_ne_casse_pas_le_numero():
+    assert parse("\ufeff8 rue des Lilas, 75011 Paris") == LILAS
+    assert parse("8 rue des\ufeffLilas 75011 Paris") == LILAS
 
 
-def test_defaut_une_plage_de_numeros_ne_passe_pas_dans_la_rue():
+def test_production_une_plage_de_numeros_ne_passe_pas_dans_la_rue():
     parsed = parse("8-10 rue des Lilas 75011 Paris")
     assert parsed["street"] == "rue des Lilas" and parsed["street_type"] == "rue"
+    assert parse("1234-5678 rue X 75011 Paris")["number"] == "1234-5678"
+    # Une plage écrite avec des espaces n'est pas reconnue : « - 10 » passe dans la voie.
+    assert parse("8 - 10 rue des Lilas 75011 Paris") == {
+        "number": "8", "street_type": "", "street": "- 10 rue des Lilas", "postcode": "75011", "city": "Paris"}

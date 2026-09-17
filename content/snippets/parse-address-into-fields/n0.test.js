@@ -23,12 +23,10 @@ test('point de rupture : un complément écrit devant vide le numéro', () => {
   assert.equal(parsed.street, 'Appartement 12 Bâtiment C 8 rue des Lilas');
 });
 
-test("INFIRMÉ : la fiche dit que « l'adresse entière passe en nom de rue » ; le code postal et la ville sont bien lus", async () => {
-  await assert.rejects(async () => {
-    const parsed = parse('Appartement 12, Bâtiment C, 8 rue des Lilas, 75011 Paris');
-    assert.equal(parsed.postcode, '');
-    assert.ok(parsed.street.includes('75011 Paris'));
-  }, assert.AssertionError);
+test('point de rupture : toute la ligne de voie, complément compris, passe en nom de rue', () => {
+  assert.deepEqual(parse('Appartement 12, Bâtiment C, 8 rue des Lilas, 75011 Paris'), {
+    number: '', street_type: '', street: 'Appartement 12 Bâtiment C 8 rue des Lilas', postcode: '75011', city: 'Paris',
+  });
 });
 
 test('point de rupture : hors de France, le numéro allemand reste dans la rue', () => {
@@ -64,21 +62,32 @@ test('les abréviations tapées ressortent sous une seule orthographe', () => {
   }
 });
 
-test('« r » est dans le dictionnaire, mais « 8 r des Lilas » donne le numéro « 8 r » et aucune rue', async () => {
+test('une lettre isolée n’est un indice que collée au numéro ; le « r » reste un type de voie', () => {
   assert.equal(STREET_TYPES.r, 'rue');
   assert.deepEqual(parse('8 r des Lilas 75011 Paris'), LILAS);
+  assert.deepEqual(parse('8 r. des Lilas 75011 Paris'), LILAS);
+  assert.equal(parse('12b rue des Lilas 75011 Paris').number, '12 b');
+  // Décision du rédacteur : une lettre séparée du numéro passe dans la voie, qui perd son type.
+  assert.deepEqual(parse('12 B rue des Lilas 75011 Paris'), { number: '12', street_type: '', street: 'B rue des Lilas', postcode: '75011', city: 'Paris' });
 });
 
-test("garde l'indice de répétition avec le numéro", () => {
+test("garde l'indice de répétition et la plage avec le numéro", () => {
   assert.equal(parse('12 bis rue des Lilas 75011 Paris').number, '12 bis');
   assert.equal(parse('12 ter rue des Lilas 75011 Paris').number, '12 ter');
+  assert.equal(parse('8 quater rue des Lilas 75011 Paris').number, '8 quater');
+  assert.equal(parse('8bis rue des Lilas 75011 Paris').number, '8 bis');
   assert.equal(parse('12B rue des Lilas 75011 Paris').number, '12 B');
+  assert.deepEqual(parse('8-10 rue des Lilas 75011 Paris'), { ...LILAS, number: '8-10' });
+  assert.equal(parse('8-10bis rue des Lilas 75011 Paris').number, '8-10 bis');
+  // Témoin : « ter » au début d'un mot plus long n'est pas un indice.
+  assert.equal(parse('8 Terrasse des Lilas 75011 Paris').street, 'Terrasse des Lilas');
 });
 
-test("INFIRMÉ : le commentaire justifie « le dernier code postal » par l'année d'un nom de rue ; une année n'est jamais un code postal", async () => {
-  await assert.rejects(async () => {
-    assert.notEqual(parse('rue du 8 Mai 1945').postcode, '');
-  }, assert.AssertionError);
+test('un nombre de cinq chiffres placé avant le vrai code postal n’est pas pris', () => {
+  const parsed = parse('BP 40012, 8 rue des Lilas, 75011 Paris');
+  assert.equal(parsed.postcode, '75011');
+  assert.equal(parsed.city, 'Paris');
+  assert.equal(parsed.street, 'BP 40012 8 rue des Lilas');
 });
 
 test('une année dans le nom de rue reste dans la rue', () => {
@@ -93,7 +102,8 @@ test('lit accents, casse et ponctuation', () => {
 });
 
 test('normalisation et repli', () => {
-  assert.equal(normalise('8 rue  des Lilas,\n75011 Paris'), '8 rue des Lilas 75011 Paris');
+  assert.equal(normalise('8 rue  des Lilas,\n75011\u00a0Paris'), '8 rue des Lilas 75011 Paris');
+  assert.equal(normalise('\ufeff8 rue des\ufeffLilas\u2009 75011 Paris'), '8 rue des Lilas 75011 Paris');
   assert.equal(fold('Av.'), 'av');
   assert.equal(fold('Allée'), 'allee');
   assert.equal(fold('.av'), '.av');
@@ -144,8 +154,15 @@ test("production : chiffres pleine largeur, espaces insécables, NFD, marque d'o
   assert.deepEqual(parse('﻿8 rue des Lilas, 75011 Paris'), LILAS);
 });
 
-test('une plage « 8-10 » donne le numéro « 8 » et la rue « -10 rue des Lilas »', async () => {
+test('production : une plage de numéros ne passe pas dans la rue', () => {
   const parsed = parse('8-10 rue des Lilas 75011 Paris');
   assert.equal(parsed.street, 'rue des Lilas');
   assert.equal(parsed.street_type, 'rue');
+  assert.equal(parse('1234-5678 rue X 75011 Paris').number, '1234-5678');
+  // Une plage écrite avec des espaces n'est pas reconnue : « - 10 » passe dans la voie.
+  assert.deepEqual(parse('8 - 10 rue des Lilas 75011 Paris'), { number: '8', street_type: '', street: '- 10 rue des Lilas', postcode: '75011', city: 'Paris' });
+});
+
+test("production : une marque d'ordre des octets au milieu de la ligne", () => {
+  assert.deepEqual(parse('8 rue des\ufeffLilas 75011 Paris'), LILAS);
 });
