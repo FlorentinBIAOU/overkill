@@ -145,16 +145,22 @@ def test_point_de_rupture_un_seuil_ne_distingue_pas_une_lecture_fausse_dune_just
     assert read_page(PAGE, FakeOCR({PAGE: READING}, confidence=0.41))["review"] is True
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : le point de rupture dit que « relever le seuil n'y change rien » ; "
-    "un seuil de 0,97 lève le drapeau sur la lecture fausse à 0,96 — mais aussi sur "
-    "toute lecture juste à 0,96 (test précédent). Ce qui est vrai : le seuil ne "
-    "sépare pas les deux, il ne laisse pas la page passer quoi qu'on en fasse"
-))
-def test_infirme_relever_le_seuil_ne_change_rien():
+def test_point_de_rupture_le_seuil_ne_separe_pas_la_lecture_fausse_de_la_juste():
+    """
+    breaking_point : « un seuil relevé lève le drapeau sur cette lecture-là,
+    mais sur les lectures justes notées pareil aussi ». Le seuil déplace la
+    frontière ; il ne distingue pas les deux pages, qui sont au même score.
+    """
+    fausse = FakeOCR({PAGE: "N° 2O24-OOO431"}, confidence=0.96)
+    juste = FakeOCR({PAGE: READING}, confidence=0.96)
     for centiemes in range(70, 100):
-        result = read_page(PAGE, FakeOCR({PAGE: "N° 2O24-OOO431"}, confidence=0.96), min_confidence=centiemes / 100)
-        assert result["review"] is False, centiemes
+        seuil = centiemes / 100
+        assert (read_page(PAGE, fausse, min_confidence=seuil)["review"]
+                == read_page(PAGE, juste, min_confidence=seuil)["review"]), centiemes
+    # Au-dessus de 0,96, les deux partent en relecture ; en dessous, les deux passent.
+    assert read_page(PAGE, fausse, min_confidence=0.97)["review"] is True
+    assert read_page(PAGE, juste, min_confidence=0.97)["review"] is True
+    assert read_page(PAGE, fausse, min_confidence=0.95)["review"] is False
 
 
 def test_point_de_rupture_temoin_une_regle_sur_la_forme_des_references_rattrape_la_faute():
@@ -180,28 +186,35 @@ def test_le_moteur_par_defaut_appelle_pytesseract_avec_la_langue_annoncee(vrai_m
     assert result["review"] is False
 
 
-def test_defaut_le_moteur_par_defaut_rend_les_lignes_de_la_page(vrai_moteur_simule):
+def test_le_moteur_par_defaut_rend_les_lignes_de_la_page(vrai_moteur_simule):
     assert read_page(PAGE)["text"].splitlines() == ["NORD FOURNITURES SAS", "N° 2024-000431", "NET A PAYER 92,40 EUR"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : la docstring de TesseractOCR dit « started once and kept for the "
-    "process » ; read_page sans moteur en construit un nouveau à chaque page, et "
-    "pytesseract lance de toute façon le binaire tesseract dans un sous-processus "
-    "à chaque appel (run_tesseract, subprocess.Popen)"
-))
-def test_infirme_le_moteur_par_defaut_est_demarre_une_fois_pour_le_processus(vrai_moteur_simule, monkeypatch):
-    construits = []
+def test_le_moteur_par_defaut_est_construit_une_fois_et_le_binaire_relance_a_chaque_page(vrai_moteur_simule, monkeypatch):
+    """
+    docstring de `default_engine` : « built on first use and kept, as in
+    JavaScript » ; docstring de `TesseractOCR` : « pytesseract starts the
+    tesseract binary for every call ». Le coût de ce niveau est là, et la fiche
+    ne prétend pas le contraire.
+    """
+    construits, appels = [], []
 
     class Compte(n2.TesseractOCR):
         def __init__(self, *args, **kwargs):
             construits.append(1)
             super().__init__(*args, **kwargs)
 
+        def read(self, image_path):
+            appels.append(image_path)
+            return super().read(image_path)
+
     monkeypatch.setattr(n2, "TesseractOCR", Compte)
+    n2.default_engine.cache_clear()
     read_page("page-1.png")
     read_page("page-2.png")
     assert len(construits) == 1
+    assert appels == ["page-1.png", "page-2.png"]
+    n2.default_engine.cache_clear()
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +247,7 @@ def test_recolle_un_mot_que_le_scan_a_coupe():
     assert clean("réfé-\nrence") == "référence"
 
 
-def test_infirme_python_et_javascript_recollent_les_memes_mots():
+def test_python_et_javascript_recollent_les_memes_mots():
     textes = ["réfé-\nrence", "ache-\ntée", "exem-\nplaire", "N°  2024\n\n  NET\xa0A PAYER"]
     assert clean_en_javascript(textes) == [clean(t) for t in textes]
 
@@ -337,6 +350,6 @@ def test_production_une_lecture_dun_megaoctet_se_nettoie_vite():
     assert texte.count("exemplaire") == 30_000
 
 
-def test_defaut_une_reference_coupee_en_fin_de_ligne_garde_son_trait_dunion():
+def test_production_une_reference_coupee_en_fin_de_ligne_est_recollee():
     texte = read_page(PAGE, FakeOCR({PAGE: "Facture N° 2024-\n000431"}, confidence=0.95))["text"]
     assert REFERENCE.search(texte.replace("\n", "")) is not None

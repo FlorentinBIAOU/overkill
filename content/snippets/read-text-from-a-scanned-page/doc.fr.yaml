@@ -3,52 +3,56 @@
 # fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
 
 n0.py: |
-  Lire la couche de texte que le document porte peut-être déjà, avant de sortir
-  un OCR.
+  Demander au document s'il porte déjà son texte, avant de sortir un OCR.
 
-  Niveau N0. Bibliothèque standard seule : zlib pour décompresser les flux de la
-  page, et une lecture des opérateurs qui y montrent du texte.
+  Niveau N0. Une question, posée à une bibliothèque PDF, et une réponse dont
+  l'appelant peut faire quelque chose.
 
   Un PDF produit par un logiciel de comptabilité, un traitement de texte ou un
   pilote d'impression en PDF porte son texte à côté de ses instructions de
-  dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater.
-  Poser la question d'abord, c'est un appel de fonction, et elle règle tout le
-  besoin dès que la réponse est oui.
+  dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater. Un
+  scan du même document, lui, porte des pixels. Les deux se ressemblent dans une
+  boîte aux lettres, et rien en aval ne les distingue si personne ne pose la
+  question.
 
-  L'intérêt est dans la question, pas dans l'extracteur. Quand la réponse est
-  non, cette fonction le dit — elle ne rend pas une chaîne vide, qu'un appelant
-  lirait comme « la page est blanche ».
+  La question est l'intérêt de ce niveau ; l'extracteur ne l'est pas. Écrire
+  l'extracteur est le piège : décompresser les flux de page et décoder les
+  opérateurs qui montrent du texte, c'est deux cents lignes qui perdent quand
+  même contre la première police que le fichier renumérote pour lui-même — ce
+  que fait un traitement de texte à chaque export. Ce travail est fait et
+  publié — « pypdf » ici, « pdf.js » en JavaScript, « pdftotext » en ligne de commande — et ce qui
+  reste à écrire, c'est la décision.
 
-  D'où un non qui vient avec l'une de deux suites. Rien n'a été montré du tout :
-  la page est une image, et un moteur de reconnaissance est l'étape suivante. Le
-  texte est là et ce fichier ne sait pas le décoder — une police qui porte sa
-  propre table, un document chiffré, un autre filtre que Flate : l'étape
-  suivante est une bibliothèque PDF complète, et un moteur de reconnaissance
-  serait une réponse fausse, puisque ce document n'a jamais été une image.
+  La voici : une page qui ne porte aucun texte lisible n'est pas une page vide,
+  et la fonction le dit au lieu de rendre une chaîne vide qu'un appelant lirait
+  comme « la page est blanche ». Un non vient avec son étape suivante.
+
 
 n0.js: |
-  Lire la couche de texte que le document porte peut-être déjà, avant de sortir
-  un OCR.
+  Demander au document s'il porte déjà son texte, avant de sortir un OCR.
 
-  Niveau N0. Bibliothèque standard seule : node:zlib pour décompresser les flux de la
-  page, et une lecture des opérateurs qui y montrent du texte.
+  Niveau N0. Une question, posée à une bibliothèque PDF, et une réponse dont
+  l'appelant peut faire quelque chose.
 
   Un PDF produit par un logiciel de comptabilité, un traitement de texte ou un
   pilote d'impression en PDF porte son texte à côté de ses instructions de
-  dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater.
-  Poser la question d'abord, c'est un appel de fonction, et elle règle tout le
-  besoin dès que la réponse est oui.
+  dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater. Un
+  scan du même document, lui, porte des pixels. Les deux se ressemblent dans une
+  boîte aux lettres, et rien en aval ne les distingue si personne ne pose la
+  question.
 
-  L'intérêt est dans la question, pas dans l'extracteur. Quand la réponse est
-  non, cette fonction le dit — elle ne rend pas une chaîne vide, qu'un appelant
-  lirait comme « la page est blanche ».
+  La question est l'intérêt de ce niveau ; l'extracteur ne l'est pas. Écrire
+  l'extracteur est le piège : décompresser les flux de page et décoder les
+  opérateurs qui montrent du texte, c'est deux cents lignes qui perdent quand
+  même contre la première police que le fichier renumérote pour lui-même — ce
+  que fait un traitement de texte à chaque export. Ce travail est fait et
+  publié — « pdf.js » ici, « pypdf » en Python, « pdftotext » en ligne de commande — et ce qui
+  reste à écrire, c'est la décision.
 
-  D'où un non qui vient avec l'une de deux suites. Rien n'a été montré du tout :
-  la page est une image, et un moteur de reconnaissance est l'étape suivante. Le
-  texte est là et ce fichier ne sait pas le décoder — une police qui porte sa
-  propre table, un document chiffré, un autre filtre que Flate : l'étape
-  suivante est une bibliothèque PDF complète, et un moteur de reconnaissance
-  serait une réponse fausse, puisque ce document n'a jamais été une image.
+  La voici : une page qui ne porte aucun texte lisible n'est pas une page vide,
+  et la fonction le dit au lieu de rendre une chaîne vide qu'un appelant lirait
+  comme « la page est blanche ». Un non vient avec son étape suivante.
+
 
 n2: |
   Lire une page scannée avec un moteur de reconnaissance optique auto-hébergé.

@@ -13,6 +13,7 @@ answer to « what does the code do when the engine says nothing usable ».
 
 from __future__ import annotations
 
+import functools
 import re
 
 # The language data the engine loads, named by its Tesseract code: `fra` for
@@ -28,8 +29,14 @@ class OCRUnavailable(Exception):
     """The engine failed, or answered something no caller can act on."""
 
 
+@functools.cache
+def default_engine():
+    """The real engine, built on first use and kept, as in JavaScript."""
+    return TesseractOCR()
+
+
 class TesseractOCR:
-    """The real engine. pytesseract starts the tesseract binary for every call."""
+    """The real engine, built once. pytesseract starts the tesseract binary for every call."""
 
     def __init__(self, language: str = LANGUAGE) -> None:
         import pytesseract  # wraps the tesseract binary installed on the host
@@ -68,7 +75,7 @@ def read_page(image_path, engine=None, *, min_confidence: float = DEFAULT_MIN_CO
     `engine` is injected so this can be tested without installing the binary
     or the language data. In production it defaults to the real engine above.
     """
-    engine = engine or TesseractOCR()
+    engine = engine or default_engine()
     reading = _read(engine, image_path, attempts)
     if not isinstance(reading, dict) or not isinstance(reading.get("text"), str):
         raise OCRUnavailable("the engine owed a reading, and did not give one")

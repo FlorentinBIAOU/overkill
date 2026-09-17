@@ -521,3 +521,4 @@ sum
 toxic
 comments
 factur
+binariser

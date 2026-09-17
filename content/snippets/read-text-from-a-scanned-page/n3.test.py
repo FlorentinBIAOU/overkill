@@ -20,7 +20,8 @@ import pytest
 
 import n3
 from _harness.fake_llm import FakeLLM
-from n3 import MAX_IMAGE_BYTES, PROMPT, ReadingUnavailable, read_page
+from _harness.fake_sdk import FakeSDK
+from n3 import MAX_IMAGE_BYTES, MODEL, PROMPT, ProviderClient, ReadingUnavailable, read_page
 
 # Enough of a PNG to be recognised as one. Nothing here decodes the pixels —
 # neither this test, nor the snippet, nor anything else on this rung.
@@ -103,10 +104,47 @@ def test_point_de_rupture_temoin_un_fragment_avoue_illisible_leve_le_drapeau():
 # ---------------------------------------------------------------------------
 
 
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(monkeypatch):
+def test_production_sans_client_le_kit_openai_est_construit_et_appele(monkeypatch):
     module = faux_openai(json.dumps(TRANSCRIPTION))
     monkeypatch.setitem(sys.modules, "openai", module)
     assert read_page(PNG)["text"] == TRANSCRIPTION["text"]
+
+
+def test_production_l_adaptateur_appelle_la_surface_du_vrai_kit():
+    """
+    docstring de `ProviderClient` : « The one call this snippet makes, on top of
+    the provider's SDK ». Sur le double du harnais, à la forme du kit `openai`
+    publié, sans méthode `complete` : `chat.completions.create(model=...,
+    messages=[...], temperature=...)`, l'image voyageant dans le message comme
+    URL de données, réponse lue dans `choices[0].message.content`.
+    """
+    sdk = FakeSDK(content=json.dumps(TRANSCRIPTION))
+    assert not hasattr(sdk, "complete")
+    assert read_page(PNG, client=ProviderClient(sdk=sdk))["text"] == TRANSCRIPTION["text"]
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL
+    assert request["temperature"] == 0
+    parts = request["messages"][0]["content"]
+    assert parts[0] == {"type": "text", "text": PROMPT}
+    url = parts[1]["image_url"]["url"]
+    assert url.startswith("data:image/png;base64,")
+    assert base64.b64decode(url.split(",", 1)[1]) == PNG
+    assert len(sdk.requests) == 1
+
+
+def test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_les_essais():
+    """Le kit type `content` comme facultatif : `None` n'est pas une transcription."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(ReadingUnavailable):
+        read_page(PNG, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content=json.dumps(TRANSCRIPTION), fail_times=2)
+    assert read_page(PNG, client=ProviderClient(sdk=sdk))["text"] == TRANSCRIPTION["text"]
+    assert len(sdk.requests) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +265,7 @@ def test_une_reponse_mal_formee_leve_aussi(reponse):
         read_page(PNG, client=FakeLLM(response=json.dumps(reponse)))
 
 
-def test_defaut_une_transcription_vide_leve_le_drapeau_de_relecture():
+def test_production_une_transcription_vide_leve_le_drapeau_de_relecture():
     result = read_page(PNG, client=FakeLLM(response=json.dumps({"text": "", "unreadable": []})))
     assert result["review"] is True
 

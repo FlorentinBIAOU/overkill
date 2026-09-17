@@ -112,3 +112,12 @@ régénéré.
   5.2.5 entre en dépendance de développement, Node n'ayant pas d'analyseur XML.
   Reste : l'exemple de l'indemnité forfaitaire n'a pas été vérifié sur des
   gabarits réels, faute de factures réelles.
+- **read-text-from-a-scanned-page** — N0 cesse d'écrire son propre lecteur de
+  flux PDF et pose la question à une bibliothèque (`pypdf`, `pdf.js`) : 183
+  lignes tombent à 67, et l'export d'un traitement de texte, que l'ancien
+  extrait ne savait pas lire, est lu. Les tests travaillent sur deux documents
+  réels versionnés à côté d'eux, un export LibreOffice et la même page rendue en
+  image. Point de rupture de N0 ramené à deux phrases, seuil de N2 démontré
+  aveugle plutôt que marqué, moteur Python mis en cache pour tenir la promesse
+  que JavaScript tenait déjà, adaptateur N3 exercé avec la forme du message
+  image. Reste : rien.

@@ -3,7 +3,7 @@ id: read-text-from-a-scanned-page
 family: recognize-transcribe
 status: published
 verdict: N2
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -15,22 +15,22 @@ need:
   en: "Get the text out of a document that arrived as a PDF or an image, to index it, file it or read it back."
 
 scenario:
-  fr: "Une chaîne de traitement qui envoie chaque page entrante à un moteur de reconnaissance, ou à un modèle multimodal, ne demande jamais au document s’il porte déjà son texte. Un document arrivé en PDF n’a pourtant pas forcément été scanné : une facture sortie d’un logiciel de comptabilité, un relevé imprimé en PDF, un contrat exporté d’un traitement de texte transportent leur texte à côté de leurs instructions de dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater. Poser la question coûte un appel de fonction, et elle règle tout le besoin quand la réponse est oui. Quand elle est non, le vrai travail commence : quelque chose doit regarder les pixels."
-  en: "A pipeline that ships every incoming page off to a recognition engine, or to a multimodal model, never asks the document whether it already carries its text. A document that arrived as a PDF was not necessarily scanned, though: an invoice out of an accounting package, a statement printed to PDF, a contract exported from a word processor all carry their text next to their drawing instructions, already correct, with no recognition step and therefore nothing to get wrong. Asking costs one function call, and it settles the whole need whenever the answer is yes. When the answer is no, the real work starts: something has to look at the pixels."
+  fr: "Une chaîne de traitement qui envoie chaque page entrante à un moteur de reconnaissance, ou à un modèle multimodal, ne demande jamais au document s’il porte déjà son texte. Un document arrivé en PDF n’a pourtant pas forcément été scanné : une facture sortie d’un logiciel de comptabilité, un relevé imprimé en PDF, un contrat exporté d’un traitement de texte transportent leur texte à côté de leurs instructions de dessin, déjà exact, sans étape de reconnaissance et donc sans rien à rater. Poser la question coûte un appel de fonction à une bibliothèque PDF, et elle règle tout le besoin quand la réponse est oui — y compris sur l’export d’un traitement de texte, dont les polices sous-ensemble mettent en échec tout lecteur de flux écrit à la main. Quand elle est non, le vrai travail commence : quelque chose doit regarder les pixels."
+  en: "A pipeline that ships every incoming page off to a recognition engine, or to a multimodal model, never asks the document whether it already carries its text. A document that arrived as a PDF was not necessarily scanned, though: an invoice out of an accounting package, a statement printed to PDF, a contract exported from a word processor all carry their text next to their drawing instructions, already correct, with no recognition step and therefore nothing to get wrong. Asking costs one call into a PDF library, and it settles the whole need whenever the answer is yes — including on a word processor’s export, whose subset fonts defeat any stream reader written by hand. When the answer is no, the real work starts: something has to look at the pixels."
 
 rungs:
   - level: N0
     available: true
     name:
-      fr: "Lire la couche de texte du document avant de sortir un OCR"
-      en: "Read the document’s text layer before reaching for OCR"
+      fr: "Demander sa couche de texte au document, par une bibliothèque PDF"
+      en: "Ask the document for its text layer, through a PDF library"
     cost: nul
     latency: "~10 ms"
     risks:
       data_egress: none
       deterministic: true
       testability: unit
-      vendor_lock: none
+      vendor_lock: library
       footprint: negligible
       regulatory:
         fr:
@@ -44,11 +44,11 @@ rungs:
       javascript: snippets/read-text-from-a-scanned-page/n0.js
       verification: executed
     breaking_point:
-      fr: "Une page réellement scannée n’a pas de couche de texte, et aucune lecture n’en inventera une. Le document du test est valide, il compte une page, et cette page est une photographie dessinée en plein cadre : zéro caractère, que son image se décompresse ou qu’elle arrive déjà compressée en JPEG, comme celle d’un vrai scanner. Ce que l’extrait rend alors n’est pas une chaîne vide, qui se lirait « page blanche » et ferait classer un document non lu, mais un rapport qui nomme la raison et renvoie vers un OCR ; le seuil de caractères y range aussi le tampon d’un numéro de page, un caractère posé sur une image. Le second renvoi va vers une bibliothèque PDF complète : un document chiffré, un flux encodé par un autre filtre que la seule décompression que l’extrait sait faire, ou une police sous-ensemble qui renumérote ses glyphes à partir de un. Cette dernière, l’extrait la reconnaît à un seul signe, un code sous 32, là où aucun encodage nommé d’une police simple ne place de glyphe. Et c’est là qu’il casse : une page dont la police renumérotée n’emploie que des codes à partir de 33 — « !F;0%J?4) » là où la page imprime des lettres — n’a aucun de ces codes, passe pour une couche de texte lisible, et rend du charabia comme s’il avait été lu."
-      en: "A page that was really scanned has no text layer, and no amount of parsing will invent one. The test document is valid, it has one page, and that page is a photograph drawn edge to edge: zero characters, whether its picture inflates or arrives already compressed as a JPEG, the way a real scanner writes it. What the snippet returns then is not an empty string, which would read as « this page is blank » and file an unread document, but a report that names the reason and points at OCR; the character threshold files a stamped page number there too, one character sitting on an image. The other referral goes to a full PDF library: an encrypted document, a stream encoded by a filter other than the one decompression the snippet knows, or a subset font that renumbers its glyphs from one. That last one the snippet recognises by a single sign, a code below 32, where no named encoding of a simple font puts a glyph. And that is where it breaks: a page whose renumbered font only uses codes from 33 up — « !F;0%J?4) » where the page prints letters — carries none of those codes, passes for a readable text layer, and hands back gibberish as if it had been read."
+      fr: "Une page réellement scannée n’a pas de couche de texte, et aucune bibliothèque n’en inventera une : le document du test est valide, il compte une page, et cette page est une photographie en plein cadre. L’extrait rend alors non pas une chaîne vide, qui se lirait « page blanche » et ferait classer un document non lu, mais un rapport qui nomme la raison et renvoie vers un OCR — c’est tout ce que ce niveau sait faire, et il ne prétend pas savoir lire des pixels."
+      en: "A page that was really scanned has no text layer, and no library will invent one: the test document is valid, it has one page, and that page is a photograph drawn edge to edge. What the snippet returns is not an empty string, which would read as « this page is blank » and file an unread document, but a report that names the reason and points at OCR — that is all this level can do, and it does not pretend to read pixels."
     escalate_when:
-      fr: "Le rapport revient avec « pas de couche de texte » sur des documents qu’il faut bien lire."
-      en: "The report comes back « no text layer » on documents you still have to read."
+      fr: "Le rapport revient avec « pas de couche de texte » sur des documents qu’il faut bien lire — des scans, donc, et c’est le moment de regarder les pixels."
+      en: "The report comes back « no text layer » on documents you still have to read — scans, then, and that is the moment to look at the pixels."
 
   - level: N1
     available: false
@@ -81,11 +81,11 @@ rungs:
       javascript: snippets/read-text-from-a-scanned-page/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Une erreur sûre d’elle, contre laquelle un seuil de confiance ne peut rien. Le test écrit la lecture lui-même dans un double local, faute de pouvoir commander une faute à un moteur : ce qui revient est « N° 2O24-OOO431 », la lettre O là où la facture imprimait un zéro, avec un score haut. Le drapeau de relecture reste alors baissé, puisque le score passe le seuil. Un seuil relevé au-dessus de ce score le lèverait, mais sur toutes les lectures justes rendues au même score aussi : un seuil attrape une page sur laquelle le moteur a peiné, il ne distingue pas une page mal lue d’une page bien lue au même score. Ce que le test prouve est donc cet aveuglement du seuil, pas la faute du moteur. Ce qui rattrape celle-là, c’est une règle sur la forme attendue de vos références, écrite à la main : N0 de nouveau."
-      en: "A confident mistake, and a confidence threshold can do nothing about it. The test writes the reading itself, into a local double, since no test can order a mistake from an engine: what comes back is « N° 2O24-OOO431 », the letter O where the invoice printed a zero, with a high score. The review flag then stays down, because the score clears the threshold. A threshold raised above that score would raise it, but on every correct reading returned at the same score as well: a threshold catches a page the engine struggled with, it cannot tell a page read wrong from a page read right at the same score. What the test proves is therefore that blindness of the threshold, not the engine’s mistake. What catches that mistake is a rule about the shape your references take, written by hand: level N0 again."
+      fr: "Une erreur sûre d’elle, contre laquelle un seuil de confiance ne peut rien : « N° 2O24-OOO431 », la lettre O là où la facture imprimait un zéro, rendue avec un score haut, donc sans drapeau de relecture. Relever le seuil au-dessus de ce score le lèverait, mais sur les lectures justes notées pareil aussi — le seuil attrape une page sur laquelle le moteur a peiné, il ne distingue pas une page mal lue d’une page bien lue au même score, et c’est cet aveuglement que le test démontre, sur une lecture écrite par le double. Ce qui rattrape la faute, c’est une règle sur la forme attendue de vos références, écrite à la main : N0 de nouveau."
+      en: "A confident mistake, and a confidence threshold can do nothing about it: « N° 2O24-OOO431 », the letter O where the invoice printed a zero, returned with a high score and therefore no review flag. Raising the threshold above that score would raise the flag, but on the correct readings scored the same as well — a threshold catches a page the engine struggled with, it cannot tell a page read wrong from a page read right at the same score, and that blindness is what the test demonstrates, on a reading written by the double. What catches the mistake is a rule about the shape your references take, written by hand: level N0 again."
     escalate_when:
-      fr: "Vos pages portent ce que la documentation de Tesseract dit mal lire : de l’écriture manuscrite, pour laquelle le moteur n’est pas conçu, ou des tableaux, qu’il reconnaît mal sans segmentation écrite pour eux."
-      en: "Your pages carry what Tesseract’s own documentation says it reads badly: handwriting, which the engine is not designed for, or tables, which it struggles with unless you write the segmentation for them."
+      fr: "Vos pages portent ce que la documentation de Tesseract dit mal lire : de l’écriture manuscrite, pour laquelle le moteur n’est pas conçu, ou des tableaux, qu’il reconnaît mal sans segmentation écrite pour eux — et vous avez déjà fait ce que cette même documentation demande d’abord, binariser, redresser et numériser à trois cents points par pouce, qui fait plus pour la qualité d’une lecture que le choix du seuil."
+      en: "Your pages carry what Tesseract’s own documentation says it reads badly: handwriting, which the engine is not designed for, or tables, which it struggles with unless you write the segmentation for them — and you have already done what that same documentation asks for first, binarise, deskew and scan at three hundred dots per inch, which does more for a reading than the choice of threshold."
 
   - level: N3
     available: true

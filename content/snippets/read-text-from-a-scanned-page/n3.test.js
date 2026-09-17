@@ -15,7 +15,8 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { performance } from 'node:perf_hooks';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { MAX_IMAGE_BYTES, MODEL, PROMPT, ReadingUnavailable, readPage } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import { MAX_IMAGE_BYTES, MODEL, PROMPT, ReadingUnavailable, providerClient, readPage } from './n3.js';
 
 // Enough of a PNG to be recognised as one. Nothing here decodes the pixels —
 // neither this test, nor the snippet, nor anything else on this rung.
@@ -96,7 +97,7 @@ test('point de rupture : témoin, un fragment avoué illisible lève le drapeau'
 // Le client par défaut
 // ---------------------------------------------------------------------------
 
-test('le client par défaut a la forme du vrai kit', async () => {
+test('production : sans client, le kit openai est construit et appelé', async () => {
   // `new OpenAI()` puis `chat.completions.create` : la seule surface que le kit
   // publié offre, et celle que l'adaptateur appelle. L'image voyage dans le
   // message, en URL de données.
@@ -111,6 +112,36 @@ test('le client par défaut a la forme du vrai kit', async () => {
   assert.deepEqual(texte, { type: 'text', text: PROMPT });
   assert.equal(image.type, 'image_url');
   assert.ok(image.image_url.url.startsWith(`data:image/png;base64,${PNG.toString('base64').slice(0, 8)}`));
+});
+
+test('production : l’adaptateur appelle la surface du vrai kit', async () => {
+  // L'adaptateur sur le double du harnais, à la forme du kit `openai` publié,
+  // sans méthode `complete` : `chat.completions.create({ model, messages,
+  // temperature })`, l'image voyageant dans le message comme URL de données.
+  const sdk = new FakeSDK({ content: JSON.stringify(TRANSCRIPTION) });
+  assert.equal(sdk.complete, undefined);
+  const client = await providerClient(sdk);
+  assert.equal((await readPage(PNG, { client })).text, TRANSCRIPTION.text);
+  const { endpoint, model, messages, temperature } = sdk.lastRequest;
+  assert.deepEqual([endpoint, model, temperature], ['chat.completions', MODEL, 0]);
+  const [texte, image] = messages[0].content;
+  assert.deepEqual(texte, { type: 'text', text: PROMPT });
+  assert.equal(image.image_url.url, `data:image/png;base64,${PNG.toString('base64')}`);
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('production : l’adaptateur, une réponse sans contenu lève après les essais', async () => {
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  await assert.rejects(() => readPage(PNG, { client }), ReadingUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  const sdk = new FakeSDK({ content: JSON.stringify(TRANSCRIPTION), failTimes: 2 });
+  const client = await providerClient(sdk);
+  assert.equal((await readPage(PNG, { client })).text, TRANSCRIPTION.text);
+  assert.equal(sdk.requests.length, 3);
 });
 
 // ---------------------------------------------------------------------------

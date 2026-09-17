@@ -65,6 +65,7 @@
     "fast-xml-parser": "5.2.5",
     "gray-matter": "^4.0.3",
     "pagefind": "1.5.2",
+    "pdfjs-dist": "5.4.149",
     "playwright": "^1.63.0",
     "tsx": "^4.23.13",
     "yaml": "^2.9.0"

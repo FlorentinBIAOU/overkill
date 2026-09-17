@@ -113,14 +113,23 @@ test('point de rupture : un seuil ne distingue pas une lecture fausse d’une ju
   assert.equal((await readPage(PAGE, new FakeOCR({ [PAGE]: READING }, 0.41))).review, true);
 });
 
-test('INFIRMÉ : relever le seuil ne change rien', async () => {
-  // À 0,97 le drapeau se lève — sur la lecture fausse comme sur toute lecture juste à 0,96.
-  await assert.rejects(async () => {
-    for (let centiemes = 70; centiemes < 100; centiemes += 1) {
-      const result = await readPage(PAGE, new FakeOCR({ [PAGE]: 'N° 2O24-OOO431' }, 0.96), { minConfidence: centiemes / 100 });
-      assert.equal(result.review, false, String(centiemes));
-    }
-  });
+test('point de rupture : le seuil ne sépare pas la lecture fausse de la juste', async () => {
+  // breaking_point : « un seuil relevé lève le drapeau sur cette lecture-là,
+  // mais sur les lectures justes notées pareil aussi ». Le seuil déplace la
+  // frontière ; il ne distingue pas les deux pages, qui sont au même score.
+  const fausse = new FakeOCR({ [PAGE]: 'N° 2O24-OOO431' }, 0.96);
+  const juste = new FakeOCR({ [PAGE]: READING }, 0.96);
+  for (let centiemes = 70; centiemes < 100; centiemes += 1) {
+    const minConfidence = centiemes / 100;
+    /* eslint-disable no-await-in-loop */
+    const a = await readPage(PAGE, fausse, { minConfidence });
+    const b = await readPage(PAGE, juste, { minConfidence });
+    /* eslint-enable no-await-in-loop */
+    assert.equal(a.review, b.review, String(centiemes));
+  }
+  assert.equal((await readPage(PAGE, fausse, { minConfidence: 0.97 })).review, true);
+  assert.equal((await readPage(PAGE, juste, { minConfidence: 0.97 })).review, true);
+  assert.equal((await readPage(PAGE, fausse, { minConfidence: 0.95 })).review, false);
 });
 
 test('point de rupture : témoin, une règle sur la forme des références rattrape la faute', async () => {
@@ -144,14 +153,15 @@ test('le moteur par défaut lit la page avec la forme publiée de tesseract.js',
   assert.equal(LANGUAGE, 'fra');
 });
 
-test('INFIRMÉ : le moteur par défaut est démarré une fois pour le processus', async () => {
-  // readPage sans moteur appelle TesseractOCR.load() à chaque page : un worker
-  // neuf par page, jamais terminé.
-  globalThis.__tesseract = { workers: [], images: [], terminated: 0 };
-  await readPage('page-1.png').catch(() => {});
-  await readPage('page-2.png').catch(() => {});
-  assert.throws(() => assert.equal(globalThis.__tesseract.workers.length, 1));
-  assert.equal(globalThis.__tesseract.terminated, 0);
+test('le moteur par défaut est construit une fois, et la page lui est passée à chaque appel', async () => {
+  // `defaultEngine` garde le worker : un seul démarrage pour le processus, et
+  // une image par page. C'est ce que Python fait aussi, par `functools.cache`.
+  globalThis.__tesseract.images.length = 0;
+  const avant = globalThis.__tesseract.workers.length;
+  await readPage(PAGE);
+  await readPage(PAGE);
+  assert.equal(globalThis.__tesseract.workers.length, avant);
+  assert.deepEqual(globalThis.__tesseract.images, [PAGE, PAGE]);
 });
 
 // ---------------------------------------------------------------------------
