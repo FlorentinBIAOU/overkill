@@ -35,20 +35,23 @@ classé sur sa phrase, et la colonne « pourquoi » dit quelle part a vieilli.
 |---|---|
 | **Exigences** | **47** |
 | dont déjà satisfaites par le code | 47 |
-| dont le code ne satisfait pas | **0** |
+| dont le code ne satisfait pas, telles qu'écrites | **0** |
+| exigence trouvée en jugeant ces tests, et non satisfaite | **1** (4 extraits) |
 | **Constats** | **25** |
 | dont réécrits en assertion sur le comportement réel | 20 |
 | dont retirés, ne prouvant plus rien | 5 |
 
-**Aucun test en échec ne réclame une correction de code.** Ce n'est pas une
-indulgence, c'est ce que le relevé montre : la passe 2 a corrigé les vingt-cinq
-fiches, et douze n'ont pas eu leur contre-épreuve — la session a été coupée
-avant. Les tests décrivent donc un code qui n'existe plus. Chaque ligne de
-`docs/lot15/corrections/<id>.md`, section « À retester », annonce très
-exactement la rupture qu'on observe.
+**Aucun test en échec, pris tel qu'il est écrit, ne réclame une correction de
+code.** Ce n'est pas une indulgence, c'est ce que le relevé montre : la passe 2 a
+corrigé les vingt-cinq fiches, et douze n'ont pas eu leur contre-épreuve — la
+session a été coupée avant. Les tests décrivent donc un code qui n'existe plus.
+Chaque ligne de `docs/lot15/corrections/<id>.md`, section « À retester »,
+annonce très exactement la rupture qu'on observe. Corriger le code pour
+satisfaire ces tests reviendrait à défaire la passe 2.
 
-L'étape 2 de la mission est donc vide, et c'est le bon résultat : corriger le
-code pour satisfaire ces tests reviendrait à défaire la passe 2.
+**Une exigence non satisfaite a tout de même été trouvée**, en jugeant les
+tests nos 41, 61 et 70, qui portent tous sur le même chemin de code. Voir la
+section ci-dessous.
 
 Quatre divergences Python / JavaScript que des tests documentaient ont été
 **closes** par la passe 2, à peu de frais : plafonds comptés en points de code
@@ -58,6 +61,50 @@ correspondants (nos 5, 12, 27, 38, 46, 65) deviennent des assertions de parité.
 Une seule divergence subsiste parmi les tests en échec, et elle est structurelle :
 `sshleifer/distilbart-cnn-12-6` en Python, sa conversion ONNX `Xenova/…` en
 JavaScript (no 35). Elle est écrite dans le commentaire de `n2.js`.
+
+---
+
+## Trouvé en jugeant les tests : une clôture de code non refermée était décodée
+
+Les tests nos 41 (`tag-articles-by-topic`), 61 (`translate-interface-strings`)
+et 70 (`write-product-descriptions`) épinglent tous la même décision, la
+douzième du lot : une réponse de modèle **entièrement** enveloppée dans une
+seule clôture ```` ```json … ``` ```` est décodée, et tout autre écart lève. La
+charte des tests l'écrit sans ambiguïté : « Tout autre écart — texte avant ou
+après, deux blocs, **clôture non refermée** — lève ».
+
+En vérifiant que le code faisait bien ce que ces trois tests supposent, j'ai
+trouvé qu'il ne le faisait qu'à moitié dans quatre extraits sur sept. Trois
+d'entre eux — `convert-messy-csv-to-clean-data`, `translate-interface-strings`,
+`write-product-descriptions` — écrivent la règle correctement :
+
+```python
+if text.startswith("```") and text.endswith("```") and text.count("```") == 2:
+```
+
+Quatre autres — `detect-spam-in-contact-form`, `extract-fields-from-invoice`,
+`summarise-a-long-document`, `tag-articles-by-topic` — retiraient le préfixe et
+le suffixe **indépendamment** :
+
+```python
+answer.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
+```
+
+Une clôture ouverte et jamais refermée passait donc pour la forme courante, et
+était décodée. C'est une exigence, pas un constat : la charte dit ce que le code
+doit faire, et le code ne le faisait pas.
+
+**Corrigé** dans ces quatre extraits, en Python et en JavaScript, en recopiant
+la forme des trois autres : une ligne de condition, aucun changement de longueur
+de l'extrait. Chacun reçoit son cas de test — clôture non refermée, et prose
+autour d'une clôture — dans les deux langages.
+
+**Non corrigé, et signalé** : `search-in-your-own-documents/n3` porte une
+troisième variante, plus permissive encore (`text.split("\n", 1)[-1].rsplit("```", 1)[0]`
+dès que la réponse commence par une clôture). Cette fiche est hors des douze en
+échec, sa contre-épreuve a été faite, et sa suite est verte : la toucher
+demanderait de reprendre des tests qui ne me sont pas confiés. À traiter au tour
+suivant.
 
 ---
 
