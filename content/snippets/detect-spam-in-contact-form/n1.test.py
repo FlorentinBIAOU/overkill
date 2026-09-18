@@ -164,7 +164,14 @@ def test_la_decision_est_une_somme_ponderee_dont_on_peut_imprimer_les_traits():
     contributions = row * classifier.coef_[0]
     names = vectoriser.get_feature_names_out()
     top = [names[i] for i in np.argsort(contributions)[::-1][:5]]
-    assert top[0] == "ran" and "cheap" in top
+    assert top[0] == "ran"
+    # Pas « cheap dans les cinq premiers » : ses n-grammes (cheap, chea, che,
+    # heap…) ne se rencontrent qu'ensemble dans les exemples, ont donc le même
+    # poids, et sont ex æquo au bit près. np.argsort départage les ex æquo
+    # selon le jeu d'instructions du processeur, pas selon une règle : en AVX2
+    # « cheap » sort deuxième, en AVX-512 il sort des cinq. Sa contribution,
+    # elle, ne dépend pas de la machine.
+    assert contributions[list(names).index("cheap")] >= np.sort(contributions)[-5]
     z = contributions.sum() + classifier.intercept_[0]
     assert spam_score(MODEL, VERDICT_SOLICITATION) == pytest.approx(1 / (1 + np.exp(-z)))
 
