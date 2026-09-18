@@ -6,12 +6,11 @@ n0.py: |
   Valider un formulaire sur le serveur : un schéma déclaratif, une erreur par
   champ.
 
-  Niveau N0. Déterministe, bibliothèque standard seule. Tout l'enjeu de cette
-  fiche est qu'un validateur qui vaille la peine tient en quarante lignes : les
-  règles restent lisibles, et chaque refus peut être expliqué à la personne qui
-  a tapé le formulaire.
+  Niveau N0. Déterministe, bibliothèque standard seule. Les règles restent
+  lisibles, et chaque refus peut être expliqué à la personne qui a tapé le
+  formulaire.
 
-  Trois décisions portent la conception.
+  Quatre décisions portent la conception.
 
   D'abord, le schéma est une donnée, pas du code. Il peut être écrit à côté du
   formulaire, lu par quelqu'un qui n'écrit pas de Python, et confié à la
@@ -29,16 +28,26 @@ n0.py: |
   court *et* mal formé, c'est du bruit ; qu'il corrige la première chose,
   renvoie le formulaire, et voie la suivante.
 
+  Enfin, les blancs de bord tombent de toute chaîne avant le moindre contrôle,
+  et une chaîne que cela vide est traitée comme absente. Le navigateur envoie ce
+  que l'utilisateur a tapé, et la saisie semi-automatique d'un téléphone ajoute
+  une espace : sans cela, « ada@example.com » précédée d'une espace est refusée
+  par un motif dont personne ne voit la faute, et un champ obligatoire rempli de
+  deux espaces passe pour rempli. La norme HTML retire les blancs de la valeur
+  d'un champ de courriel pour la même raison.
+
+  Une chose que le schéma doit porter, et que ce fichier ne peut pas : une
+  longueur maximale sur chaque chaîne. Un champ sans « max » accepte des
+  mégaoctets, et le motif s'applique alors à des mégaoctets.
+
 n0.js: |
   Valider un formulaire sur le serveur : un schéma déclaratif, une erreur par
   champ.
 
-  Niveau N0. Déterministe, aucune dépendance. Tout l'enjeu de cette fiche est
-  qu'un validateur qui vaille la peine tient en quarante lignes : les règles
-  restent lisibles, et chaque refus peut être expliqué à la personne qui a tapé
-  le formulaire.
+  Niveau N0. Déterministe, aucune dépendance. Les règles restent lisibles, et
+  chaque refus peut être expliqué à la personne qui a tapé le formulaire.
 
-  Trois décisions portent la conception.
+  Quatre décisions portent la conception.
 
   D'abord, le schéma est une donnée, pas du code. Il peut être écrit à côté du
   formulaire, lu par quelqu'un qui n'écrit pas de JavaScript, et confié à la
@@ -55,3 +64,15 @@ n0.js: |
   règle enfreinte. Dire à quelqu'un que son mot de passe est à la fois trop
   court *et* mal formé, c'est du bruit ; qu'il corrige la première chose,
   renvoie le formulaire, et voie la suivante.
+
+  Enfin, les blancs de bord tombent de toute chaîne avant le moindre contrôle,
+  et une chaîne que cela vide est traitée comme absente. Le navigateur envoie ce
+  que l'utilisateur a tapé, et la saisie semi-automatique d'un téléphone ajoute
+  une espace : sans cela, « ada@example.com » précédée d'une espace est refusée
+  par un motif dont personne ne voit la faute, et un champ obligatoire rempli de
+  deux espaces passe pour rempli. La norme HTML retire les blancs de la valeur
+  d'un champ de courriel pour la même raison.
+
+  Une chose que le schéma doit porter, et que ce fichier ne peut pas : une
+  longueur maximale sur chaque chaîne. Un champ sans « max » accepte des
+  mégaoctets, et le motif s'applique alors à des mégaoctets.

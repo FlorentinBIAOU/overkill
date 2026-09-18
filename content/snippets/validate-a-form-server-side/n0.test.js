@@ -39,10 +39,24 @@ test('point de rupture : une adresse bien formée qui n’existe pas', () => {
   assert.deepEqual(validate({ ...VALID, email: 'ada.no-such-mailbox.example' }, SCHEMA), { email: 'is not a valid email address' });
 });
 
-test('point de rupture : un pseudonyme fait de deux espaces satisfait la longueur minimale', () => {
-  assert.deepEqual(validate({ ...VALID, display_name: '  ' }, SCHEMA), {});
-  assert.deepEqual(validate({ ...VALID, display_name: ' ' }, SCHEMA), { display_name: 'must be at least 2 characters' });
-  assert.deepEqual(validate({ ...VALID, display_name: 'A' }, SCHEMA), { display_name: 'must be at least 2 characters' });
+test('les blancs de bord tombent avant tout contrôle', () => {
+  // « leading and trailing whitespace comes off every string before anything is
+  // checked, and a string left empty by that is treated as absent ». Les trois
+  // cas que cela règle, et qu'une règle absente laissait passer.
+  assert.deepEqual(validate({ ...VALID, display_name: '  ' }, SCHEMA), { display_name: 'is required' });
+  assert.deepEqual(validate({ ...VALID, email: ' ada@example.com ' }, SCHEMA), {});
+  assert.deepEqual(validate({ ...VALID, display_name: ' A ' }, SCHEMA), { display_name: 'must be at least 2 characters' });
+  assert.deepEqual(validate({ ...VALID, display_name: ' Ad ' }, SCHEMA), {});
+  // Ce qui n'est pas une chaîne n'est pas touché.
+  assert.deepEqual(validate({ ...VALID, age: 36 }, SCHEMA), {});
+});
+
+test('un pseudonyme fait de caractères invisibles passe la longueur minimale', () => {
+  // breaking_point : « un pseudonyme fait de caractères de largeur nulle ».
+  // `trim` ne retire pas U+200B, et `min` les compte comme des caractères.
+  const invisible = '\u200b\u200b';
+  assert.deepEqual(validate({ ...VALID, display_name: invisible }, SCHEMA), {});
+  assert.equal(invisible.trim().length, 2);
 });
 
 test('point de rupture : l’essai accepte la boîte qui n’existe pas', () => {
@@ -192,7 +206,9 @@ test('production : une saisie énorme termine vite', () => {
     email: `a@${'a.'.repeat(500_000)}!`,
     display_name: 'x'.repeat(1_000_000),
     age: 1e100,
-    website: `https://${'a'.repeat(1_000_000)} `,
+    // Sans les deux barres obliques : ce n'est pas l'espace de bord qui le
+    // refuse, puisqu'elle tombe désormais, c'est le motif.
+    website: `https:/${'a'.repeat(1_000_000)} `,
   };
   const start = performance.now();
   const errors = validate(huge, SCHEMA);
@@ -201,7 +217,9 @@ test('production : une saisie énorme termine vite', () => {
 });
 
 test('production : encodage, espaces insécables et casse', () => {
-  assert.deepEqual(validate({ ...VALID, email: ' ada@example.com ' }, SCHEMA), { email: 'is not a valid email address' });
+  // Un domaine en majuscules est refusé par le motif du test, pas corrigé ;
+  // les blancs de bord, eux, tombent.
+  assert.deepEqual(validate({ ...VALID, email: ' ada@example.com ' }, SCHEMA), {});
   assert.deepEqual(validate({ ...VALID, email: 'ada@EXAMPLE.COM' }, SCHEMA), { email: 'is not a valid email address' });
   assert.deepEqual(validate({ ...VALID, email: 'ada @example.com' }, SCHEMA), { email: 'is not a valid email address' });
   assert.deepEqual(validate({ ...VALID, display_name: '﻿Ada 🙂' }, SCHEMA), {});
@@ -216,12 +234,20 @@ test('les bornes comptent des points de code, pas des caractères perçus', () =
   assert.deepEqual(validate({ ...VALID, display_name: '🇫🇷' }, SCHEMA), {});
 });
 
-test('DÉFAUT : un même motif n’a pas le même sens côté navigateur et côté serveur', () => {
-  // `\w` sans drapeau `u` ne couvre que l'ASCII : « Zoé » est refusé ici, accepté en Python.
-  assert.throws(() => {
-    assert.equal(check('١٢٣٤٥', { pattern: '\\d{5}' }), 'is not in the expected format');
-    assert.equal(check('Zoé', { pattern: '\\w+' }), null);
-  }, assert.AssertionError);
+test('un raccourci de motif n’a pas le même sens des deux côtés', () => {
+  // « the shorthands for a digit and a word character reach beyond ASCII in
+  // Python and stop at it in JavaScript, so write [0-9] and [A-Za-z] ». Voici
+  // les deux moitiés de cette phrase, mesurées.
+  // `\d` refuse ici les chiffres arabes-indiens ; en Python, il les accepte.
+  assert.equal(check('١٢٣٤٥', { pattern: '\\d{5}' }), 'is not in the expected format');
+  // `[0-9]` les refuse des deux côtés : c'est le conseil de la docstring.
+  assert.equal(check('١٢٣٤٥', { pattern: '[0-9]{5}' }), 'is not in the expected format');
+  assert.equal(check('12345', { pattern: '[0-9]{5}' }), null);
+  // Et le prix de ce conseil : `[A-Za-z]` refuse « Zoé », que `\w` accepte en
+  // Python et refuse ici. Pour les lettres, la parité se tient avec `\p{L}`,
+  // que `re` ne connaît pas.
+  assert.equal(check('Zoé', { pattern: '\\w+' }), 'is not in the expected format');
+  assert.equal(check('Zoé', { pattern: '[A-Za-z]+' }), 'is not in the expected format');
 });
 
 test('un champ hors schéma passe sans un mot', () => {

@@ -3,7 +3,7 @@ id: validate-a-form-server-side
 family: decide-validate
 status: published
 verdict: N0
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/validate-a-form-server-side/n0.js
       verification: executed
     breaking_point:
-      fr: "Aucune règle ne dit si ce qui est saisi existe, ni s’il veut dire quelque chose. Le test soumet `ada@no-such-mailbox.example` : la forme est correcte, le schéma accepte, et personne ne lit le courrier envoyé là. Il soumet aussi un pseudonyme fait de deux espaces : `min` compte des caractères, une espace en est un, et le profil s’affiche vide. Le savoir demande une vérification externe — un message de confirmation, une interrogation du domaine — c’est-à-dire un autre besoin."
-      en: "No rule can tell whether what was typed exists, or whether it means anything. The test submits `ada@no-such-mailbox.example`: the shape is right, the schema accepts it, and nobody reads mail sent there. It also submits a display name of two spaces: `min` counts characters, a space is one, and the profile shows up blank. Finding out takes an external check — a confirmation message, a lookup on the domain — which is a different need."
+      fr: "Aucune règle ne dit si ce qui est saisi existe, ni s’il veut dire quelque chose. Le test soumet `ada@no-such-mailbox.example` : la forme est correcte, le schéma accepte, et personne ne lit le courrier envoyé là. Il soumet aussi un pseudonyme fait de deux caractères de largeur nulle : les blancs de bord tombent avant le contrôle, mais un U+200B n’est pas un blanc, `min` le compte comme un caractère, et le profil s’affiche vide. Le savoir demande une vérification externe — un message de confirmation, une interrogation du domaine — c’est-à-dire un autre besoin."
+      en: "No rule can tell whether what was typed exists, or whether it means anything. The test submits `ada@no-such-mailbox.example`: the shape is right, the schema accepts it, and nobody reads mail sent there. It also submits a display name made of two zero-width characters: edge whitespace comes off before the checks, but U+200B is not whitespace, `min` counts it as a character, and the profile shows up blank. Finding out takes an external check — a confirmation message, a lookup on the domain — which is a different need."
     escalate_when:
       fr: "Des saisies bien formées mais fausses commencent à vous coûter quelque chose de visible : des comptes créés qui ne confirment jamais, des courriers qui reviennent. Aucun niveau au-dessus n’y répond ; ce qu’il vous faut est une vérification externe, qui est un autre besoin."
       en: "Well-formed but false entries start costing you something you can see: accounts created that never confirm, mail that bounces. No level above answers that; what you need is an external check, which is a different need."
@@ -69,8 +69,8 @@ rungs:
       en: "A validation has to refuse deterministically, and to justify the refusal to the person whose entry it refuses. A model that sometimes accepts and sometimes refuses the same submission validates nothing: it offers an opinion. Two identical submissions must get the same answer, and that answer must be readable in a rule you can produce — a schema, a line of code, a test — not in a sentence whose production you can neither replay nor ground. On top of that, a form carries text written by the very person being validated: handing it to a model that reads text as instruction lets them lean on the verdict that concerns them."
 
 verdict_rationale:
-  fr: "N0 n’est pas ici la première marche d’un escalier, c’est la seule qui tienne. Une règle de formulaire est écrite avant d’être appliquée : elle se lit, elle se teste unitairement, et elle se montre à qui la conteste. Les trois niveaux au-dessus échangeraient cette propriété contre une décision qu’on ne peut ni rejouer ni justifier, ce qui est exactement ce qu’on demande à une validation."
-  en: "N0 is not the first step of a staircase here, it is the only step that holds. A form rule is written before it is enforced: you can read it, unit test it, and show it to whoever disputes it. The three levels above would trade that property for a decision you can neither replay nor justify, which is precisely what a validation is asked for."
+  fr: "N0 n’est pas ici la première marche d’un escalier, c’est la seule qui tienne. Une règle de formulaire est écrite avant d’être appliquée : elle se lit, elle se teste unitairement, et elle se montre à qui la conteste. Les trois niveaux au-dessus échangeraient cette propriété contre une décision qu’on ne peut ni rejouer ni justifier, alors que c’est exactement ce qu’on demande à une validation : pouvoir la rejouer et la justifier."
+  en: "N0 is not the first step of a staircase here, it is the only step that holds. A form rule is written before it is enforced: you can read it, unit test it, and show it to whoever disputes it. The three levels above would trade that property for a decision you can neither replay nor justify, when replaying it and justifying it is precisely what a validation is asked for."
 
 further_reading:
   - label: "JSON Schema — Validation, le vocabulaire d’un schéma déclaratif"

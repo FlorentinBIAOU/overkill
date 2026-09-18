@@ -159,3 +159,12 @@ fiche sort du brouillon : le catalogue compte désormais 25 fiches publiées.
   marquages levés sur la démonstration que rien ne survit à l'épellation, et
   adaptateur N3 exercé. Volume d'étiquetage de N1 et défis anti-robots gérés dits
   dans le verdict. Reste : rien.
+- **validate-a-form-server-side** — les blancs de bord tombent avant tout
+  contrôle, dans les deux langages : le champ obligatoire rempli d'espaces est
+  enfin vide, l'adresse qu'une saisie semi-automatique a fait précéder d'une
+  espace passe, et le point de rupture garde la vraie frontière en remplaçant
+  l'exemple du pseudonyme blanc par celui des caractères de largeur nulle,
+  démontré. Le marquage sur la parité des motifs devient une démonstration en
+  trois mesures, prix du conseil compris. Verdict corrigé d'une relative
+  inversée, longueur maximale recommandée, thèse des quarante lignes retirée.
+  Reste : rien.

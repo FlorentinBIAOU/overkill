@@ -50,15 +50,33 @@ def test_point_de_rupture_une_adresse_bien_formee_qui_n_existe_pas():
     assert validate({**VALID, "email": "ada.no-such-mailbox.example"}, SCHEMA) == {"email": "is not a valid email address"}
 
 
-def test_point_de_rupture_un_pseudonyme_fait_de_deux_espaces_satisfait_la_longueur_minimale():
+def test_les_blancs_de_bord_tombent_avant_tout_controle():
     """
-    « Il soumet aussi un pseudonyme fait de deux espaces : `min` compte des
-    caractères, une espace en est un, et le profil s'affiche vide » (existant, complété).
+    docstring : « leading and trailing whitespace comes off every string before
+    anything is checked, and a string left empty by that is treated as absent ».
+    Les trois cas que cela règle, et qu'une règle absente laissait passer.
     """
-    assert validate({**VALID, "display_name": "  "}, SCHEMA) == {}
-    # Témoin : une seule espace, ou une lettre, restent sous le minimum.
-    assert validate({**VALID, "display_name": " "}, SCHEMA) == {"display_name": "must be at least 2 characters"}
-    assert validate({**VALID, "display_name": "A"}, SCHEMA) == {"display_name": "must be at least 2 characters"}
+    # Un champ obligatoire rempli d'espaces est vide, donc manquant.
+    assert validate({**VALID, "display_name": "  "}, SCHEMA) == {"display_name": "is required"}
+    # Une adresse que la saisie semi-automatique a fait précéder d'une espace passe.
+    assert validate({**VALID, "email": " ada@example.com "}, SCHEMA) == {}
+    # Et la valeur retenue est bien la valeur nettoyée : deux lettres entourées
+    # d'espaces font deux caractères, pas quatre.
+    assert validate({**VALID, "display_name": " A "}, SCHEMA) == {"display_name": "must be at least 2 characters"}
+    assert validate({**VALID, "display_name": " Ad "}, SCHEMA) == {}
+    # Ce qui n'est pas une chaîne n'est pas touché.
+    assert validate({**VALID, "age": 36}, SCHEMA) == {}
+
+
+def test_un_pseudonyme_fait_de_caracteres_invisibles_passe_la_longueur_minimale():
+    """
+    breaking_point : « un pseudonyme fait de caractères de largeur nulle ».
+    `strip` ne retire ni U+200B ni U+FEFF, et `min` les compte comme des
+    caractères : le profil s'affiche vide.
+    """
+    invisible = "\u200b\u200b"
+    assert validate({**VALID, "display_name": invisible}, SCHEMA) == {}
+    assert len(invisible.strip()) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +215,9 @@ def test_production_une_saisie_enorme_termine_vite():
         "email": "a@" + "a." * 500_000 + "!",
         "display_name": "x" * 1_000_000,
         "age": 10**100,
-        "website": "https://" + "a" * 1_000_000 + " ",
+        # Sans les deux barres obliques : ce n'est pas l'espace de bord qui le
+        # refuse, puisqu'elle tombe désormais, c'est le motif.
+        "website": "https:/" + "a" * 1_000_000 + " ",
     }
     start = time.perf_counter()
     errors = validate(huge, SCHEMA)
@@ -206,8 +226,8 @@ def test_production_une_saisie_enorme_termine_vite():
 
 
 def test_production_encodage_espaces_insecables_et_casse():
-    """Précision : une espace de bord ou un domaine en majuscules sont refusés par le motif du test, pas corrigés."""
-    assert validate({**VALID, "email": " ada@example.com "}, SCHEMA) == {"email": "is not a valid email address"}
+    """Précision : un domaine en majuscules est refusé par le motif du test, pas corrigé ; les blancs de bord, eux, tombent."""
+    assert validate({**VALID, "email": " ada@example.com "}, SCHEMA) == {}
     assert validate({**VALID, "email": "ada@EXAMPLE.COM"}, SCHEMA) == {"email": "is not a valid email address"}
     assert validate({**VALID, "email": "ada @example.com"}, SCHEMA) == {"email": "is not a valid email address"}
     assert validate({**VALID, "display_name": "﻿Ada 🙂"}, SCHEMA) == {}
@@ -218,17 +238,25 @@ def test_defaut_les_bornes_comptent_des_caracteres_percus():
     assert validate({**VALID, "display_name": "🙂"}, SCHEMA) == {"display_name": "must be at least 2 characters"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="DÉFAUT : « compared with the JavaScript one that guards the same form in the browser » ; le même motif n'a "
-    "pas le même sens : `\\d` Python accepte « ١٢٣٤٥ » comme cinq chiffres, `\\w` JavaScript refuse « Zoé »",
-)
-def test_defaut_un_meme_motif_a_le_meme_sens_cote_navigateur_et_cote_serveur():
-    assert check("١٢٣٤٥", {"pattern": r"\d{5}"}) == "is not in the expected format"
+def test_un_raccourci_de_motif_n_a_pas_le_meme_sens_des_deux_cotes():
+    """
+    docstring : « the shorthands for a digit and a word character reach beyond
+    ASCII in Python and stop at it in JavaScript, so write [0-9] and [A-Za-z] ».
+    Voici les deux moitiés de cette phrase, mesurées.
+    """
+    # `\d` accepte ici les chiffres arabes-indiens ; en JavaScript, il les refuse.
+    assert check("١٢٣٤٥", {"pattern": r"\d{5}"}) is None
+    # `[0-9]` les refuse des deux côtés : c'est le conseil de la docstring.
+    assert check("١٢٣٤٥", {"pattern": r"[0-9]{5}"}) == "is not in the expected format"
+    assert check("12345", {"pattern": r"[0-9]{5}"}) is None
+    # Et le prix de ce conseil, dit dans la docstring : `[A-Za-z]` refuse « Zoé »,
+    # que `\w` accepte ici — et refuse en JavaScript. Pour les lettres, la parité
+    # se tient avec une classe Unicode explicite, `\p{L}`, hors de `re`.
     assert check("Zoé", {"pattern": r"\w+"}) is None
+    assert check("Zoé", {"pattern": r"[A-Za-z]+"}) == "is not in the expected format"
 
 
-def test_defaut_un_champ_hors_schema_est_signale():
+def test_un_champ_hors_schema_est_signale():
     assert validate({**VALID, "is_admin": True}, SCHEMA) != {}
 
 

@@ -1,11 +1,10 @@
 /**
  * Validate a form on the server: a declarative schema, one error per field.
  *
- * Rung N0. Deterministic, no dependency. The whole point of this entry is that
- * a validator worth having fits in forty lines, so the rules stay readable and
- * every refusal can be explained to the person who typed the form.
+ * Rung N0. Deterministic, no dependency. The rules stay readable, and every
+ * refusal can be explained to the person who typed the form.
  *
- * Three decisions carry the design.
+ * Four decisions carry the design.
  *
  * First, the schema is data, not code. It can be written next to the form, read
  * by someone who does not write JavaScript, and handed to the Python version
@@ -21,6 +20,17 @@
  * Third, one message per field: checks stop at the first broken rule. Telling
  * someone their password is too short *and* badly formed at once is noise; fix
  * the first thing, resubmit, see the next.
+ *
+ * Fourth, leading and trailing whitespace comes off every string before
+ * anything is checked, and a string left empty by that is treated as absent. A
+ * browser sends what the user typed, and a phone's autofill adds a space:
+ * without this, " ada@example.com" is refused by a pattern nobody can see the
+ * fault in, and a required field filled with two spaces passes as filled. The
+ * HTML standard trims the value of an email field for the same reason.
+ *
+ * One thing the schema has to carry, and this file cannot: a maximum length on
+ * every string. A field without `max` accepts megabytes, and the pattern is
+ * then applied to megabytes.
  */
 
 // The types a form field can hold once decoded. `Number.isInteger` rejects
@@ -29,6 +39,11 @@ const TYPES = {
   string: (v) => typeof v === 'string',
   integer: (v) => Number.isInteger(v),
 };
+
+/** A string without its edge whitespace; anything else is left alone. */
+export function trimmed(value) {
+  return typeof value === 'string' ? value.trim() : value;
+}
 
 /** Return the first broken rule as a message, or null if the value passes. */
 export function check(value, rule) {
@@ -52,9 +67,9 @@ export function check(value, rule) {
 /**
  * Check a submitted form against a schema, and return {field: message}.
  *
- * An empty object means the form is valid. A missing key, an explicit null and
- * an empty string are the same thing here, because that is what a browser posts
- * for a field the user left alone.
+ * An empty object means the form is valid. A missing key, an explicit null, an
+ * empty string and a string of spaces are the same thing here, because that is
+ * what a browser posts for a field the user left alone.
  */
 export function validate(data, schema) {
   // A field the schema does not declare is refused, not ignored: whoever
@@ -64,7 +79,7 @@ export function validate(data, schema) {
     if (!Object.hasOwn(schema, field)) errors[field] = 'is not a field of this form';
   }
   for (const [field, rule] of Object.entries(schema)) {
-    const value = data[field];
+    const value = trimmed(data[field]);
     if (value === undefined || value === null || value === '') {
       if (rule.required) errors[field] = 'is required';
       continue;
