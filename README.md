@@ -18,7 +18,7 @@ et c'est ce qui rend crédibles celles qui recommandent l'inverse.
 
 | Outil | Version |
 |---|---|
-| Node | 22.12 ou plus |
+| Node | 22.23.2, épinglée dans `.nvmrc` (`nvm use`) |
 | npm | 10 ou plus |
 | Python | 3.13 ou plus, pour les tests des extraits |
 

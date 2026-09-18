@@ -37,7 +37,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '22'
+  # Version exacte, la même que .nvmrc, que suit la machine de travail. « 22 »
+  # suivait la dernière Node 22 publiée pendant que la machine restait sur la
+  # sienne : un test vert en local échouait ici (voir docs/ci/DIAGNOSTIC-CI.md).
+  # Monter de version, c'est changer les deux fichiers dans le même commit.
+  NODE_VERSION: '22.23.2'
   PYTHON_VERSION: '3.13'
 
 jobs:
