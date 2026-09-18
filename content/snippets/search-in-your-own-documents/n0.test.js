@@ -122,24 +122,71 @@ test('les scores de FTS5 que le fichier JavaScript doit reproduire', () => {
   assert.deepEqual(search(manuel, 'trois jours'), [{ id: 'arret', score: 1.2796 }]);
 });
 
-test('Node 22 livre node:sqlite, derrière un drapeau avant 22.13.0, et sa version embarquée n’a pas FTS5', () => {
+test('node:sqlite est derrière un drapeau avant 22.13.0, sans FTS5 avant 22.16.0, et avec FTS5 à partir de 22.16.0', () => {
   // docstring : « Node 22 ships `node:sqlite` (behind --experimental-sqlite
-  // before 22.13.0), but its bundled SQLite has no FTS5 module ».
+  // before 22.13.0). The SQLite it bundles has no FTS5 module before Node
+  // 22.16.0, and has one from 22.16.0 on ». Le test lit la version qui
+  // l'exécute et vérifie la branche qui la concerne : la machine de travail et
+  // la CI n'ont pas à tourner sur la même.
   const [major, minor] = process.versions.node.split('.').map(Number);
-  assert.equal(major, 22);
+  const flagRequired = major === 22 && minor < 13;
+  const hasFts5 = major > 22 || (major === 22 && minor >= 16);
+
   const plain = spawnSync(process.execPath, ['-e', "require('node:sqlite')"], { encoding: 'utf8' });
-  if (minor < 13) {
+  if (flagRequired) {
     assert.notEqual(plain.status, 0);
     assert.match(plain.stderr, /ERR_UNKNOWN_BUILTIN_MODULE/);
   } else {
     assert.equal(plain.status, 0, plain.stderr);
   }
-  const flagged = spawnSync(process.execPath, [
-    '--experimental-sqlite', '-e',
+
+  const flags = flagRequired ? ['--experimental-sqlite'] : [];
+  const fts5 = spawnSync(process.execPath, [
+    ...flags, '-e',
     "const { DatabaseSync } = require('node:sqlite'); new DatabaseSync(':memory:').exec('CREATE VIRTUAL TABLE t USING fts5(a)')",
   ], { encoding: 'utf8' });
-  assert.notEqual(flagged.status, 0);
-  assert.match(flagged.stderr, /no such module: fts5/);
+  if (hasFts5) {
+    assert.equal(fts5.status, 0, fts5.stderr);
+  } else {
+    assert.notEqual(fts5.status, 0);
+    assert.match(fts5.stderr, /no such module: fts5/);
+  }
+});
+
+test('à partir de 22.16.0, le SQL de la version Python rend dans node:sqlite les scores de ce fichier', (t) => {
+  // docstring : « from 22.16.0 on: there, the SQL of the Python version runs
+  // as it is and returns the same scores as this file ». Le CREATE et le SELECT
+  // sont ceux de n0.py, recopiés à la lettre ; les termes sont cités comme
+  // n0.py les cite.
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  if (!(major > 22 || (major === 22 && minor >= 16))) {
+    t.skip(`Node ${process.versions.node} : pas de FTS5 dans node:sqlite`);
+    return;
+  }
+  const script = `
+    const { DatabaseSync } = require('node:sqlite');
+    const { documents, queries } = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));
+    const db = new DatabaseSync(':memory:');
+    db.exec("CREATE VIRTUAL TABLE documents USING fts5("
+      + "doc_id UNINDEXED, title, body, tokenize='unicode61 remove_diacritics 2')");
+    const insert = db.prepare('INSERT INTO documents (doc_id, title, body) VALUES (?, ?, ?)');
+    for (const d of documents) insert.run(d.id, d.title, d.body);
+    const select = db.prepare(
+      'SELECT doc_id, -bm25(documents, ?, ?, ?) AS score FROM documents '
+      + 'WHERE documents MATCH ? ORDER BY score DESC, doc_id LIMIT ?');
+    const rows = queries.map((terms) => select
+      .all(0.0, 10.0, 1.0, terms.map((term) => '"' + term + '"').join(' '), 5)
+      .map((row) => ({ id: row.doc_id, score: Math.round(row.score * 1e4) / 1e4 })));
+    process.stdout.write(JSON.stringify(rows));
+  `;
+  const queries = ['notes de frais', 'télétravail', 'trois jours', 'responsable', 'demi'];
+  const r = spawnSync(process.execPath, ['-e', script], {
+    input: JSON.stringify({ documents: MANUEL, queries: queries.map((q) => queryTerms(q)) }),
+    encoding: 'utf8',
+  });
+  assert.equal(r.status, 0, r.stderr);
+  const manuel = buildIndex(MANUEL);
+  assert.deepEqual(JSON.parse(r.stdout), queries.map((q) => search(manuel, q)));
 });
 
 test('une requête pleine de syntaxe MATCH est cherchée, pas exécutée', () => {

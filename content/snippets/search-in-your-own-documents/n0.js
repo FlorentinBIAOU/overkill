@@ -8,12 +8,16 @@
  * IN NATURAL LANGUAGE MODE. Whatever is under your application already has an
  * index and a ranking: on this rung you write SQL, not an algorithm.
  *
- * Node 22 ships `node:sqlite` (behind --experimental-sqlite before 22.13.0),
- * but its bundled SQLite has no FTS5 module, so there is nothing to call from
- * a plain `node` process. This file therefore writes out what the FTS5 table
- * does: the same tokenizer (lower case, accents off Latin letters), the same
- * implicit AND between terms, the same BM25 with the same constants and column
- * weights. Read it as the documentation of the SQL, not as something to deploy.
+ * Node 22 ships `node:sqlite` (behind --experimental-sqlite before 22.13.0).
+ * The SQLite it bundles has no FTS5 module before Node 22.16.0, and has one
+ * from 22.16.0 on: there, the SQL of the Python version runs as it is and
+ * returns the same scores as this file. This file writes out what the FTS5
+ * table does all the same: the same tokenizer (lower case, accents off Latin
+ * letters), the same implicit AND between terms, the same BM25 with the same
+ * constants and column weights. That is a choice, not a necessity: it imports
+ * nothing, so it runs wherever JavaScript runs, a browser included, and every
+ * step of the ranking can be read. Read it as the documentation of the SQL. On
+ * a server with Node 22.16.0 or later, deploy the SQL, not this file.
  *
  * One thing the SQL has and this does not: prefix tokens. For a search box that
  * answers as the reader types, FTS5 matches a prefix when a `*` follows a

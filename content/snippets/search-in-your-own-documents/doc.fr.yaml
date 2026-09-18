@@ -40,13 +40,17 @@ n0.js: |
   votre application a déjà un index et un classement : à ce niveau, vous
   écrivez du SQL, pas un algorithme.
 
-  Node 22 livre `node:sqlite` (derrière --experimental-sqlite avant la 22.13.0),
-  mais le SQLite qu'il embarque n'a pas le module FTS5 : il n'y a donc rien à
-  appeler depuis un processus `node` ordinaire. Ce fichier écrit par conséquent
-  ce que fait la table FTS5 : le même découpage en jetons (minuscules, accents
-  retirés des lettres latines), le même ET implicite entre les termes, le même BM25 avec les mêmes
-  constantes et les mêmes poids de colonne. Lisez-le comme la documentation du
-  SQL, pas comme quelque chose à déployer.
+  Node 22 livre `node:sqlite` (derrière --experimental-sqlite avant la 22.13.0).
+  Le SQLite qu'il embarque n'a pas le module FTS5 avant Node 22.16.0, et l'a à
+  partir de la 22.16.0 : le SQL de la version Python y tourne alors tel quel,
+  et rend les mêmes scores que ce fichier. Ce fichier écrit malgré tout ce que
+  fait la table FTS5 : le même découpage en jetons (minuscules, accents retirés
+  des lettres latines), le même ET implicite entre les termes, le même BM25 avec
+  les mêmes constantes et les mêmes poids de colonne. C'est un choix, pas une
+  nécessité : il n'importe rien, il tourne donc partout où tourne JavaScript, un
+  navigateur compris, et chaque étape du classement se lit. Lisez-le comme la
+  documentation du SQL. Sur un serveur en Node 22.16.0 ou plus récent,
+  déployez le SQL, pas ce fichier.
 
   Une chose que le SQL a et que celui-ci n'a pas : la recherche par préfixe.
   Pour une barre qui répond à la frappe, FTS5 cherche un préfixe quand une « * »
