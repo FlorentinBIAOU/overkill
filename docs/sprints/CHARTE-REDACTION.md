@@ -92,12 +92,17 @@ comprendre ce que fait le code sans l'ouvrir.
 
 ### `breaking_point` — ce qui fait échouer, avec un exemple
 
-Repris du test. Une ou deux phrases. Un exemple concret, pas une catégorie.
+Repris du test. **Deux phrases, un exemple, un témoin.** Le reste — les renvois, les cas
+voisins, ce que le double simule — va dans la docstring de l'extrait. Sur les 74 points de
+rupture du catalogue relus au lot 15, 68 dépassaient soixante mots : ils ne se lisaient plus.
 
 Bon : « L'obfuscation volontaire : chiffres écrits en lettres, caractères sosies, emojis
 intercalés. »
 
 Mauvais : « Cette approche a des limites en cas d'entrées inhabituelles. »
+
+Et ce que le point de rupture nomme est la **première** chose qui casse sur des données
+réelles, pas la plus élégante : voir la règle R1 ci-dessous.
 
 ### `escalate_when` — la condition précise
 
@@ -125,7 +130,103 @@ assumez-le sans vous excuser : le site n'est pas anti-IA.
 Des liens **réellement consultés**. Documentation officielle, article de référence, dépôt.
 Aucun lien inventé, aucun lien vers un article de blog promotionnel.
 
-Si vous n'avez pas de source, laissez la liste vide. Une liste vide est honnête.
+**Tout ce que vous avez vérifié pour écrire la fiche va dans `sources`**, avec la phrase que
+vous y avez lue quand elle porte un chiffre. Un lecteur ne lit pas votre compte rendu de
+corrections. Une liste vide n'est honnête que si vous n'avez rien eu à vérifier — ce qui est
+rare : au lot 15, `show-similar-articles` avançait 128 et 512 jetons, relevés sur deux fiches
+de modèle, avec `sources: []`.
+
+---
+
+## Treize règles, et l'erreur qui les a fait écrire
+
+Elles viennent de la relecture des vingt-cinq premières fiches, où vingt-quatre ont été
+refusées, et de leur correction. Chacune porte le cas réel qui l'a fait naître, pour que
+vous reconnaissiez le vôtre. Elles sont classées par importance.
+
+**R1. Faites tourner l'extrait sur l'entrée ordinaire de votre lecteur avant d'écrire le
+point de rupture.** Le point de rupture est la première chose qui casse sur des données
+réelles. Avant de rédiger, exécutez le niveau sur une dizaine d'entrées que votre public
+produit tous les jours et notez ce qui sort. Pour un public francophone : une ville à trait
+d'union, une rue au nom d'une personne, un montant au format anglais, un numéro de téléphone
+étranger, un mois abrégé, une société qui commence par son métier.
+*Ce qui l'a fait écrire :* `mask-personal-data-in-chat` citait l'obfuscation et laissait
+passer `+32 470 12 34 56` ; `extract-dates-from-text` citait « jeudi prochain » et manquait
+`3 janv. 2024`.
+
+**R2. Une sortie fausse et silencieuse sur une entrée ordinaire se corrige, ou se dit en
+premier.** Jamais en dernier, jamais pas du tout : le site reproche aux modèles de rendre une
+valeur devinée qui ressemble à une valeur lue, et un niveau N0 qui fait pareil perd
+l'argument. Toute ambiguïté que le code tranche seul — séparateur décimal, ordre jour-mois,
+casse, fuseau — est soit déclarée par l'appelant, soit rejetée au journal.
+*Ce qui l'a fait écrire :* `convert-messy-csv-to-clean-data` promettait un journal de tout ce
+qui n'avait pas pu être lu, et rendait `12,500` en `12.5` sans une ligne.
+
+**R3. Nommez l'outil standard avant d'en écrire un, et mettez-le dans l'échelle.** Le
+concurrent réel d'un appel de modèle est rarement « du code à la main » : c'est une
+bibliothèque, un service public, un identifiant, une donnée structurée. Répondez par écrit à
+« qu'est-ce qu'un développeur expérimenté brancherait en premier ? ». Si c'est un outil
+existant, il est un niveau, ou il est écarté avec une raison mesurée.
+*Ce qui l'a fait écrire :* `read-text-from-a-scanned-page` écrivait un lecteur PDF de cent
+quatre-vingts lignes qu'un export de traitement de texte mettait en échec, là où `pypdf` lit
+juste ; `extract-fields-from-invoice` ignorait Factur-X alors que la réception électronique
+est obligatoire depuis le 1er septembre 2026.
+
+**R4. Confrontez le verdict aux données de la fiche elle-même.** Pour un verdict qui préfère
+un niveau à celui du dessous, écrivez le test qui fait tourner **les deux** sur le point de
+rupture du niveau recommandé, et publiez ce qu'il montre. Ne reprochez pas à un niveau un
+échec que le niveau recommandé partage.
+*Ce qui l'a fait écrire :* `forecast-weekly-sales` recommandait N1 « parce qu'il suit
+l'activité qui bouge » quand ses propres séries donnaient N1 à +28 % et N0 à −3 % ;
+`detect-language-of-text` reprochait à N1 de rendre « chat » en anglais, ce que N0 fait avec
+l'écart le plus large de la fiche.
+
+**R5. Ne présentez pas un défaut réparable comme une limite de l'approche.** Si une ligne de
+code règle le cas, c'est un bogue, pas un point de rupture.
+*Ce qui l'a fait écrire :* `validate-a-form-server-side` citait « un pseudonyme de deux
+espaces » comme ce qu'« aucune règle ne peut dire » ; retirer les blancs de bord est la
+règle, et la norme HTML le fait déjà pour un champ de courriel.
+
+**R6. Le modèle nommé doit servir la langue et l'usage du lecteur.** Avant de nommer un point
+de contrôle, lisez sa fiche : langues, licence, usage commercial, existence. Si le modèle ne
+lit pas la langue de vos lecteurs, dites-le dans le nom du niveau ou son point de rupture, et
+tirez-en la conséquence dans le verdict.
+*Ce qui l'a fait écrire :* `moderate-user-comments` et `summarise-a-long-document` nommaient
+des modèles anglais seulement ; `write-product-descriptions` pointait vers
+`./models/catalogue-copy`, qui n'existe pas.
+
+**R7. Dites les réglages par défaut en conditions d'exploitation.** Un seuil, une fenêtre, un
+plafond par défaut se jugent sur ce qu'ils produisent un jour ordinaire, pas sur l'exemple
+qui les illustre.
+*Ce qui l'a fait écrire :* `detect-anomalies-in-metrics` mesurait dix fausses alertes par
+jour et par métrique saine, et la fiche promettait d'être réveillé « et pas le reste du
+temps ».
+
+**R8. Un plafond refuse ce qui coûte, et dégrade plutôt que de lever dans un chemin de
+requête.** Écrivez ce que l'appelant fait au-dessus du plafond.
+*Ce qui l'a fait écrire :* `detect-language-of-text` levait au-delà de huit mille caractères
+alors qu'il n'en envoyait que six cents ; `route-support-tickets` levait sur un ticket long,
+et un routeur qui lève laisse le ticket nulle part.
+
+**R9. Pensez au cycle de vie réel de la sortie avant de compter un coût.** Une description se
+génère une fois et se stocke ; une table de voisins se calcule hors ligne ; une alerte se
+rejoue.
+*Ce qui l'a fait écrire :* `write-product-descriptions` comptait le non-déterminisme comme un
+prix permanent, alors que personne ne régénère une description à chaque affichage.
+
+**R10. Un contrôle de sécurité dit d'où vient la valeur qu'il contrôle.** Si le client peut
+la fournir, le contrôle ne contrôle rien.
+*Ce qui l'a fait écrire :* `detect-spam-in-contact-form` prenait le délai de soumission en
+argument sans dire qu'il doit être horodaté et signé par le serveur.
+
+**R11. `breaking_point` : deux phrases, un exemple, un témoin.** Voir plus haut.
+
+**R12. Tout ce qui a été vérifié pour écrire la fiche va dans `sources`.** Voir plus haut.
+
+**R13. Le titre anglais décrit le même besoin que `need`.** L'anglais est la version
+canonique.
+*Ce qui l'a fait écrire :* « Mask personal data » pour un besoin qui ne masque que le
+téléphone, l'adresse électronique et l'IBAN.
 
 ---
 

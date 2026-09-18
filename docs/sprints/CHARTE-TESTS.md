@@ -94,7 +94,16 @@ relevé :
 
 Une borne de temps n'est **jamais** un chiffre de performance publié : elle
 sert à attraper un effondrement, pas à mesurer. Prenez-la dix fois plus large
-que ce que vous observez.
+que ce que vous observez, **sans exception** : deux suites du lot 15 étaient
+rouges sur la machine du relecteur pour des marges de deux et de trois. Une
+classe de latence se justifie dans le relevé, par une mesure écrite, jamais par
+une assertion serrée.
+
+Et un cas manque à ce tableau tant qu'on ne l'y met pas : **l'entrée ordinaire
+de la population visée**. Les suites du lot 15 testaient très bien le NFD, la
+marque d'ordre des octets et l'emoji, et pas `Boulogne-Billancourt` ni
+`12,500`. Ajoutez la ligne « entrée banale » à chaque extrait : celle que votre
+lecteur produit tous les jours.
 
 ---
 
@@ -125,7 +134,65 @@ production indéfendable qu'aucune phrase de la fiche n'annonce : une exception
 sur une entrée vide, un temps qui explose sur une entrée longue.
 
 Une fiche publiée ne garde aucun test marqué `INFIRMÉ` ou `DÉFAUT` à la fin du
-lot qui les a posés.
+lot qui les a posés. **Ce n'est plus une consigne, c'est un contrôle** :
+`node scripts/check-marquages.mjs`, enchaîné par `npm run check`, échoue si un
+test d'une fiche `published` porte `xfail`, `INFIRMÉ` ou `DÉFAUT`. Un brouillon
+a le droit d'en porter : c'est à cela qu'il sert.
+
+Quand le lot suivant corrige le code ou la phrase, il **réécrit le test sur la
+phrase nouvelle** ; il ne se contente pas de retirer le marquage. Un marquage
+strict passe dès que le corps lève, pour n'importe quelle raison : laissé en
+place, il ne prouve plus rien et masque la régression suivante. Le lot 15 en a
+laissé cent vingt-deux dans vingt et une fiches ; le lot 16 les a tous levés, et
+chacun est devenu la démonstration de ce que la fiche affirme aujourd'hui.
+
+---
+
+## Huit règles, et l'erreur qui les a fait écrire
+
+Elles viennent de la relecture des vingt-cinq premières fiches et de leur
+correction. Les deux premières sont vérifiées par un contrôle ; les six autres
+se relisent.
+
+**T1. Un marquage ne survit pas à la correction : le testeur réécrit le test sur
+la phrase nouvelle.** Contrôlé par `check-marquages`. Voir plus haut.
+
+**T2. Chaque fiche à niveau N3 a un test qui exécute l'adaptateur** sur
+`content/snippets/_harness/fake_sdk.py` et `fake-sdk.mjs` : modèle, messages et
+température envoyés, réponse lue dans `choices[0].message.content`, et le cas
+`content` nul. Contrôlé par `check-adaptateur`, qui exige `ProviderClient(` dans
+`n3.test.py` et `providerClient(` dans `n3.test.js`.
+*Ce qui l'a fait écrire :* dix fiches sur seize ne l'avaient pas, et plusieurs
+clients par défaut appelaient une méthode absente du kit — l'erreur était avalée
+par la boucle de réessai et ressortait en panne de fournisseur.
+
+**T3. Les données de test ne sont pas construites dans la forme du modèle
+testé.** Ajoutez au moins une entrée qui viole l'hypothèse du modèle.
+*Ce qui l'a fait écrire :* la série « vérité » de `forecast-weekly-sales` était
+une constante, une droite et deux harmoniques — c'est-à-dire les colonnes de la
+matrice de conception. Le test démontrait que les moindres carrés retrouvent
+leurs propres coefficients.
+
+**T4. Le test comparatif du verdict est obligatoire** : le niveau recommandé et
+celui du dessous, sur le point de rupture du niveau recommandé, avec les nombres
+que le verdict affirme. C'est la règle R4 de la charte de rédaction, vue du
+testeur.
+
+**T5. Le cas de production « entrée ordinaire de la population visée » s'ajoute
+aux cas obligatoires.** Voir le tableau plus haut.
+
+**T6. Indépendance et distribution quand le code prétend tirer au hasard.** Un
+générateur « aléatoire » se teste sur un tableau de contingence et une
+autocorrélation, pas seulement sur sa reproductibilité.
+*Ce qui l'a fait écrire :* `generate-test-data` était parfaitement reproductible
+et parfaitement biaisé — deux colonnes tirées de la même graine variaient
+ensemble.
+
+**T7. Une borne de temps a une marge de dix, sans exception.** Voir plus haut.
+
+**T8. Une donnée invalide dans un lot : le test vérifie que les autres passent.**
+*Ce qui l'a fait écrire :* `rank-products-by-relevance` levait pour toute la page
+sur une seule marge négative.
 
 ---
 
@@ -204,6 +271,10 @@ n'en est pas un.
 
 ```bash
 node scripts/test-snippets.mjs <id>
+node scripts/check-marquages.mjs
+node scripts/check-adaptateur.mjs
 ```
 
-Vert, avec les seuls marquages `INFIRMÉ` et `DÉFAUT` que le relevé explique.
+Le premier vert, avec les seuls marquages `INFIRMÉ` et `DÉFAUT` que le relevé
+explique — et la fiche reste alors en `status: draft` tant qu'il en porte un.
+Les deux autres verts, toujours.
