@@ -3,7 +3,7 @@ id: detect-spam-in-contact-form
 family: detect-filter
 status: published
 verdict: N1
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -15,15 +15,15 @@ need:
   en: "Keep automated and promotional submissions out of a public form without blocking genuine enquiries."
 
 scenario:
-  fr: "On voit des formulaires de contact dont chaque envoi part chez un fournisseur de modèle pour être jugé, avant même qu’on ait regardé qui envoie. Or un script qui poste sur le point de terminaison sans afficher la page se trahit s’il remplit le champ caché que la page ne montre pas, ou s’il envoie plus vite qu’une personne ne tape : deux contrôles qui ne lisent pas une ligne du message et ne coûtent rien. Ce qui reste à lire, c’est ce qui passe ces deux contrôles, pas tout le flot."
-  en: "You see contact forms where every submission is shipped to a model provider for judgement before anyone has looked at who is sending. Yet a script that posts to the endpoint without rendering the page gives itself away if it fills in the field the page keeps out of sight, or posts faster than a person types: two checks that read not a word of the message and cost nothing. What is left to read is whatever gets past those two, not the whole flow."
+  fr: "On voit des formulaires de contact dont chaque envoi part chez un fournisseur de modèle pour être jugé, avant même qu’on ait regardé qui envoie. Or un script qui poste sur le point de terminaison sans afficher la page se trahit s’il remplit le champ caché que la page ne montre pas, ou s’il envoie plus vite qu’une personne ne tape : deux contrôles qui ne lisent pas une ligne du message et ne coûtent rien — à condition de les bâtir correctement, le délai étant mesuré à partir d’un horodatage que le serveur a émis et signé, jamais d’un nombre que l’envoi transporte. Ce qui reste à lire, c’est ce qui passe ces deux contrôles, pas tout le flot."
+  en: "You see contact forms where every submission is shipped to a model provider for judgement before anyone has looked at who is sending. Yet a script that posts to the endpoint without rendering the page gives itself away if it fills in the field the page keeps out of sight, or posts faster than a person types: two checks that read not a word of the message and cost nothing — provided they are built right, the delay being measured from a timestamp the server issued and signed, never from a number the submission carries. What is left to read is whatever gets past those two, not the whole flow."
 
 rungs:
   - level: N0
     available: true
     name:
-      fr: "Pot de miel, délai de soumission, plafond de liens et phrases interdites"
-      en: "Honeypot, submission delay, link cap and banned phrases"
+      fr: "Pot de miel masqué en CSS, délai signé par le serveur, plafond de liens et phrases interdites"
+      en: "CSS-hidden honeypot, server-signed delay, link cap and banned phrases"
     cost: nul
     latency: "<1 ms"
     risks:
@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/detect-spam-in-contact-form/n0.js
       verification: executed
     breaking_point:
-      fr: "Le robot patient. Il attend avant d’envoyer, laisse le champ caché vide, ne met aucun lien et n’emploie aucun mot de la liste : « Bonjour, je découvre votre société et je souhaiterais discuter d’un partenariat pour accroître votre visibilité. » Le test le passe au travers des quatre contrôles sans un seul motif de rejet, parce qu’aucun d’eux ne regarde l’intention."
-      en: "The patient sender. It waits before posting, leaves the hidden field alone, sends no link and uses none of the listed words: \"Good morning, I came across your company and I would like to discuss a partnership to increase your visibility.\" The test walks it through all four checks without a single reason to reject, because none of them looks at intent."
+      fr: "Le délai ne vaut que ce que vaut sa signature : un horodatage posé dans un champ caché par le navigateur est un nombre que l’expéditeur écrit, et un script y écrit trente secondes. L’extrait le signe côté serveur et revérifie la signature à la réception ; un jeton modifié, rejoué ou inventé ne vaut pas un délai plus court, il ne vaut aucun délai, et le test le montre sur six formes de jeton trafiqué. Ce qui casse vraiment, c’est le robot patient. Il attend avant d’envoyer, laisse le champ caché vide, ne met aucun lien et n’emploie aucun mot de la liste : « Bonjour, je découvre votre société et je souhaiterais discuter d’un partenariat pour accroître votre visibilité. » Le test le passe au travers des quatre contrôles sans un seul motif de rejet, parce qu’aucun d’eux ne regarde l’intention."
+      en: "The delay is worth exactly what its signature is worth: a timestamp dropped into a hidden field by the browser is a number the sender writes, and a script writes thirty seconds into it. The snippet signs it server-side and checks the signature again on submission; a token that was edited, replayed or made up is not a shorter delay, it is no delay at all, and the test shows that on six shapes of tampered token. What really breaks is the patient sender. It waits before posting, leaves the hidden field alone, sends no link and uses none of the listed words: \"Good morning, I came across your company and I would like to discuss a partnership to increase your visibility.\" The test walks it through all four checks without a single reason to reject, because none of them looks at intent."
     escalate_when:
       fr: "Vous ajoutez un mot à la liste après chaque campagne, et les envois que vous ratez n’ont ni lien ni mot de la liste."
       en: "You add a word to the list after every campaign, and the submissions you miss carry neither a link nor a listed phrase."
@@ -121,8 +121,8 @@ rungs:
       en: "There is no level above this one."
 
 verdict_rationale:
-  fr: "N1, parce qu’une sollicitation n’a pas besoin des mots de la liste de N0 : « Hi, we can boost your google ranking with quality links, cheap offer. » ne porte ni lien ni mot interdit, traverse les quatre contrôles sans un seul motif de rejet, et le classifieur la range du bon côté sans l’avoir jamais vue. On échange un test unitaire contre des envois étiquetés, pris parmi ceux que la boîte de réception a déjà reçus, et on étiquette les envois ratés au lieu d’ajouter un mot à une liste après chaque campagne. Le pot de miel et le délai de N0 restent en amont : ils ne coûtent rien et écartent le script qui remplit le champ caché en écrivant comme un client, que N1 laisse passer. N3 ajoute un appel payé par envoi, et une invite sans parade."
-  en: "N1, because a solicitation does not need the words on N0's list: \"Hi, we can boost your google ranking with quality links, cheap offer.\" carries neither a link nor a banned phrase, walks through all four checks without a single reason to reject, and the classifier files it correctly having never seen it. You trade a unit test for labelled submissions, taken from those your inbox has already received, and you label the ones you miss instead of adding a word to a list after every campaign. Keep N0's honeypot and delay in front of it: they cost nothing and turn away the script that fills in the hidden field while writing like a customer, which N1 lets through. N3 adds a paid call per submission, and a prompt with no defence."
+  fr: "N1, parce qu’une sollicitation n’a pas besoin des mots de la liste de N0 : « Hi, we can boost your google ranking with quality links, cheap offer. » ne porte ni lien ni mot interdit, traverse les quatre contrôles sans un seul motif de rejet, et le classifieur la range du bon côté sans l’avoir jamais vue. On échange un test unitaire contre des envois étiquetés, pris parmi ceux que la boîte de réception a déjà reçus, et on étiquette les envois ratés au lieu d’ajouter un mot à une liste après chaque campagne. Le pot de miel et le délai de N0 restent en amont : ils ne coûtent rien et écartent le script qui remplit le champ caché en écrivant comme un client, que N1 laisse passer. N3 ajoute un appel payé par envoi, et une invite sans parade. Deux réserves avant de monter : N1 demande des envois étiquetés en nombre, quelques centaines par classe, ce qu’un formulaire qui reçoit quelques dizaines de messages par mois mettra des années à réunir — en dessous de ce flux, N0 reste la réponse, et les envois ratés s’étiquettent en attendant. Et l’alternative que tout le monde a en tête, un défi anti-robot géré ou un service de filtrage, n’est pas sur cette échelle pour deux raisons qui se disent : il fait sortir chez un tiers ce que vos visiteurs écrivent, et il ajoute à chacun d’eux une friction que le pot de miel n’a pas."
+  en: "N1, because a solicitation does not need the words on N0's list: \"Hi, we can boost your google ranking with quality links, cheap offer.\" carries neither a link nor a banned phrase, walks through all four checks without a single reason to reject, and the classifier files it correctly having never seen it. You trade a unit test for labelled submissions, taken from those your inbox has already received, and you label the ones you miss instead of adding a word to a list after every campaign. Keep N0's honeypot and delay in front of it: they cost nothing and turn away the script that fills in the hidden field while writing like a customer, which N1 lets through. N3 adds a paid call per submission, and a prompt with no defence. Two caveats before moving up: N1 wants labelled submissions in quantity, a few hundred per class, which a form receiving a few dozen messages a month will take years to gather — below that flow N0 stays the answer, and you label the ones you miss while you wait. And the alternative everybody has in mind, a managed anti-bot challenge or a filtering service, is not on this ladder for two reasons worth saying: it sends what your visitors write to a third party, and it adds friction for every one of them, which the honeypot does not."
 
 further_reading:
   - label: "Ned Batchelder — Stopping spambots with hashes and honeypots"
@@ -134,5 +134,7 @@ further_reading:
   - label: "OWASP GenAI — LLM01 Prompt Injection"
     url: "https://genai.owasp.org/llmrisk/llm01-prompt-injection/"
 
-sources: []
+sources:
+  - label: "Ned Batchelder, Stopping spambots with hashes and honeypots : « Bots understand hidden fields […] Invisible fields are ordinary editable fields that have been made invisible in the browser » — le champ leurre se masque donc par la feuille de style, pas par `type=\"hidden\"` ; et son « spinner » est un condensat « of: The timestamp, The client's IP address, The entry id […] and A secret », d'où l'horodatage signé par le serveur de l'extrait N0"
+    url: "https://nedbatchelder.com/text/stopbots.html"
 ---

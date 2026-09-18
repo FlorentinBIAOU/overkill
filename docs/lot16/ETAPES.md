@@ -151,3 +151,11 @@ fiche sort du brouillon : le catalogue compte désormais 25 fiches publiées.
   borne d'effondrement. Quatre marquages levés, adaptateur N3 exercé, point de
   rupture de N2 remis dans l'ordre et sources du vrai modèle écrites. Reste :
   rien.
+- **detect-spam-in-contact-form** — le délai de soumission devient un vrai
+  contrôle : horodatage émis et signé par le serveur (HMAC, `hmac` et
+  `node:crypto`, aucune dépendance), vérifié à la réception, et six formes de
+  jeton trafiqué démontrées à zéro seconde, donc « trop rapide ». Le pot de miel
+  est dit masqué en CSS et non par `type="hidden"`, source à l'appui. Deux
+  marquages levés sur la démonstration que rien ne survit à l'épellation, et
+  adaptateur N3 exercé. Volume d'étiquetage de N1 et défis anti-robots gérés dits
+  dans le verdict. Reste : rien.

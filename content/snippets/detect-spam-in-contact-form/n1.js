@@ -20,15 +20,22 @@ export function fold(text) {
 }
 
 /** How often each hashed character n-gram occurs in the message. */
-function counts(text) {
+/** The character n-grams of a message, padded like Python's `char_wb`. */
+export function ngrams(text) {
   const padded = ` ${fold(text)} `;
-  const seen = new Float64Array(BUCKETS);
+  const found = [];
   for (const n of NGRAMS) {
-    for (let i = 0; i + n <= padded.length; i += 1) {
-      let h = 2166136261;
-      for (const c of padded.slice(i, i + n)) h = ((h ^ c.codePointAt(0)) * 16777619) >>> 0;
-      seen[h % BUCKETS] += 1;
-    }
+    for (let i = 0; i + n <= padded.length; i += 1) found.push(padded.slice(i, i + n));
+  }
+  return found;
+}
+
+function counts(text) {
+  const seen = new Float64Array(BUCKETS);
+  for (const gram of ngrams(text)) {
+    let h = 2166136261;
+    for (const c of gram) h = ((h ^ c.codePointAt(0)) * 16777619) >>> 0;
+    seen[h % BUCKETS] += 1;
   }
   return seen;
 }

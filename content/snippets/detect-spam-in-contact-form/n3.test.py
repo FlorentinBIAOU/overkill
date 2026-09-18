@@ -19,8 +19,9 @@ from types import SimpleNamespace
 import pytest
 
 from _harness.fake_llm import FakeLLM
+from _harness.fake_sdk import FakeSDK
 from n0 import reasons
-from n3 import MAX_CHARACTERS, PROMPT, ClassificationUnavailable, classify
+from n3 import MAX_CHARACTERS, MODEL, PROMPT, ClassificationUnavailable, ProviderClient, classify
 
 SPAM_ANSWER = '{"spam": true, "reason": "unsolicited link building offer"}'
 CLEAN_ANSWER = '{"spam": false, "reason": "a customer asking about an order"}'
@@ -169,15 +170,48 @@ def test_une_reponse_entierement_close_est_decodee_les_autres_non():
         assert client.call_count == 3
 
 
-def test_defaut_une_raison_nulle_devient_none():
+def test_production_une_raison_nulle_devient_vide():
     assert classify("x", client=FakeLLM(response='{"spam": true, "reason": null}'))["reason"] == ""
 
 
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(openai_kit):
+def test_production_sans_client_le_kit_openai_est_construit_et_appele(openai_kit):
     assert classify("My lamp arrived damaged.") == {"spam": False, "reason": "a customer asking about an order"}
 
 
-def test_le_client_par_defaut_envoie_la_requete_que_le_kit_attend(openai_kit):
+def test_production_l_adaptateur_appelle_la_surface_du_vrai_kit():
+    """
+    docstring de `ProviderClient` : « The one call this snippet makes, on top of
+    the provider's SDK ». Sur le double du harnais, à la forme du kit `openai`
+    publié, sans méthode `complete`.
+    """
+    sdk = FakeSDK(content=CLEAN_ANSWER)
+    assert not hasattr(sdk, "complete")
+    assert classify("My lamp arrived damaged.", client=ProviderClient(sdk=sdk))["spam"] is False
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL
+    assert request["temperature"] == 0
+    assert request["messages"] == [
+        {"role": "user", "content": PROMPT.format(message="My lamp arrived damaged.")}
+    ]
+    assert len(sdk.requests) == 1
+
+
+def test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_les_essais():
+    """Le kit type `content` comme facultatif : `None` n'est pas un verdict."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(ClassificationUnavailable):
+        classify("My lamp arrived damaged.", client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content=CLEAN_ANSWER, fail_times=2)
+    assert classify("My lamp arrived damaged.", client=ProviderClient(sdk=sdk))["spam"] is False
+    assert len(sdk.requests) == 3
+
+
+def test_production_sans_client_la_requete_est_celle_que_le_kit_attend(openai_kit):
     """L'adaptateur appelle `chat.completions.create`, la seule surface que le kit publié offre."""
     classify("My lamp arrived damaged.")
     assert openai_kit.calls == [
@@ -202,7 +236,7 @@ def test_l_extrait_n_importe_que_json():
 # ---------------------------------------------------------------------------
 
 
-def test_defaut_un_envoi_vide_ne_coute_aucun_appel():
+def test_production_un_envoi_vide_ne_coute_aucun_appel():
     client = FakeLLM(response=CLEAN_ANSWER)
     for message in ("", "   "):
         try:
@@ -219,7 +253,7 @@ def test_production_nfd_espace_insecable_et_emoji_partent_tels_quels():
     assert client.last_request["prompt"].endswith(message)
 
 
-def test_production_constat_le_plafond_compte_en_points_de_code_en_python():
+def test_production_le_plafond_compte_en_points_de_code_en_python():
     """2 001 emoji passent ici (2 001 caractères) et sont refusés en JavaScript (4 002 unités UTF-16)."""
     client = FakeLLM(response=CLEAN_ANSWER)
     classify("🙁" * 2001, client=client)

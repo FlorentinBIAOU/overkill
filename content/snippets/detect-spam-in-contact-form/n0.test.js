@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { HONEYPOT_FIELD, MAXIMUM_LINKS, MINIMUM_SECONDS, fold, isSpam, reasons } from './n0.js';
+import {
+  HONEYPOT_FIELD,
+  MAXIMUM_LINKS,
+  MINIMUM_SECONDS,
+  fold,
+  isSpam,
+  issueToken,
+  reasons,
+  secondsOnPage,
+} from './n0.js';
 
 const GENUINE = {
   name: 'Claire Dubois',
@@ -98,9 +107,48 @@ test('un rejet vient avec ses motifs, une liste vide veut dire accepter', () => 
   assert.equal(isSpam(GENUINE, 42), false);
 });
 
-test('l’extrait n’importe rien', () => {
+test('l’extrait n’importe que la bibliothèque standard de Node', () => {
+  // « nothing but `node:crypto` » : la signature du jeton, et rien d'autre.
   const source = readFileSync(new URL('./n0.js', import.meta.url), 'utf8');
-  assert.doesNotMatch(source, /^\s*import\s/m);
+  const imports = [...source.matchAll(/^\s*import .* from '([^']+)';/gm)].map((m) => m[1]);
+  assert.deepEqual(imports, ['node:crypto']);
+});
+
+test('le délai est signé par le serveur, et un jeton trafiqué compte comme trop rapide', () => {
+  // « a hidden field holding the time the page was rendered is a number the
+  // sender writes […] So the server issues that timestamp itself, signed with a
+  // secret only it holds ». Zéro seconde est la réponse sûre : `reasons` la lit
+  // comme « submitted too fast ».
+  const secret = 'le secret du serveur, jamais dans la page';
+  const maintenant = Date.now() / 1000;
+  const jeton = issueToken(secret, maintenant - 30);
+  const lu = secondsOnPage(jeton, secret, maintenant);
+  assert.ok(lu >= 29 && lu <= 31, String(lu));
+
+  const [issued, signature] = jeton.split('.');
+  const truques = [
+    `${Number(issued) - 3600}.${signature}`, // l'horodatage reculé, la signature gardée
+    `${issued}.${'0'.repeat(signature.length)}`, // la signature remplacée
+    issued, // pas de signature du tout
+    '', // pas de jeton
+    'abc.def', // un jeton inventé
+    `${issued}.${signature.slice(0, -1)}`, // un caractère en moins
+  ];
+  for (const faux of truques) {
+    assert.equal(secondsOnPage(faux, secret), 0, faux);
+    assert.deepEqual(reasons(GENUINE, secondsOnPage(faux, secret)), ['submitted too fast'], faux);
+  }
+
+  // Et un secret qui n'est pas celui du serveur ne vaut pas mieux.
+  assert.equal(secondsOnPage(jeton, 'un autre secret'), 0);
+  // Témoin : le vrai jeton, lu avec le vrai secret, traverse le contrôle.
+  assert.deepEqual(reasons(GENUINE, secondsOnPage(jeton, secret, maintenant)), []);
+});
+
+test('un jeton du futur ne donne pas un délai négatif', () => {
+  const secret = 'secret';
+  const maintenant = Date.now() / 1000;
+  assert.equal(secondsOnPage(issueToken(secret, maintenant + 600), secret, maintenant), 0);
 });
 
 test('verdict : la sollicitation réelle traverse les quatre contrôles', () => {

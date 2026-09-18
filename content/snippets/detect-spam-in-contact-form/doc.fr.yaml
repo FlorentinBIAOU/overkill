@@ -11,10 +11,22 @@ n0: |
   demande pourquoi son message s'est perdu.
 
   Deux des contrôles regardent l'expéditeur plutôt que le texte. Un champ
-  pot de miel, soustrait à la vue dans le formulaire, et le temps passé sur
+  pot de miel, masqué par la feuille de style — et non par « type="hidden" »,
+  qu'un script sait ignorer —, et le temps passé sur
   la page attrapent les scripts qui postent sur le point de terminaison sans
   l'afficher, pour peu qu'ils remplissent tous les champs ou postent plus
   vite qu'une personne ne tape. Aucun des deux n'a besoin de lire le message.
+
+  Le délai est celui qu'il faut bâtir correctement, et c'est là que ce genre de
+  contrôle se rate d'ordinaire. Un champ caché qui porte l'heure d'affichage de
+  la page est un nombre que l'expéditeur écrit, et un script y écrit ce qu'il
+  veut. Le serveur émet donc lui-même cet horodatage, signé avec un secret que
+  lui seul détient, et recalcule la signature à la réception : un horodatage
+  modifié, ou que personne n'a signé, n'est pas un délai du tout, et compte
+  comme trop rapide. Trente lignes plus bas, sans aucune dépendance. Le
+  « spinner » de Ned Batchelder, dont ceci s'inspire, signe aussi l'adresse du
+  visiteur et l'identifiant de la page, pour qu'un jeton émis pour un formulaire
+  ne puisse pas être rejoué sur un autre.
 
   Les deux contrôles de texte sont la moitié faible, et la fiche le dit.
 

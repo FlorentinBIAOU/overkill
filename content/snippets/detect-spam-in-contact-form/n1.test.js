@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { reasons } from './n0.js';
-import { fold, isSpam, spamScore, train } from './n1.js';
+import { fold, isSpam, ngrams, spamScore, train } from './n1.js';
 import essai from '../../tryouts/live/detect-spam-in-contact-form.js';
 
 const SPAM = [
@@ -103,18 +103,16 @@ test('attrape les phrases où figurent les graphies contournées', () => {
   }
 });
 
-test('INFIRMÉ : les graphies contournées survivent aux n-grammes', async () => {
-  // Ici, ni « b a c k l i n k s » (0,377) ni « backl1nks » (0,394) ne scorent
-  // plus qu'un mot neutre (« l a m p s » 0,461, « lamps » 0,619) ; dans les
-  // phrases, le mot neutre fait autant ou plus.
-  await assert.rejects(async () => {
-    assert.ok(spamScore(model, 'b a c k l i n k s') > spamScore(model, 'l a m p s'));
-  });
-  await assert.rejects(async () => {
-    assert.ok(spamScore(model, 'backl1nks') > spamScore(model, 'lamps'));
-    assert.ok(spamScore(model, 'we sell backl1nks and cheap seo packages, boost your ranking now')
-      > spamScore(model, 'we sell lamps and cheap seo packages, boost your ranking now'));
-  });
+test('un mot épelé ne partage aucun n-gramme avec le mot entier', () => {
+  // « a word spelled out letter by letter shares none: no n-gram crosses a
+  // space ». C'est la limite du niveau, et non son point fort : ce qui classe
+  // « b a c k l i n k s » dans une phrase, c'est le reste de la phrase.
+  const grammes = (texte) => new Set(ngrams(fold(texte)));
+  const entier = grammes('backlinks');
+  const epele = grammes('b a c k l i n k s');
+  assert.equal([...entier].filter((g) => epele.has(g)).length, 0);
+  // Et le score le dit : le mot épelé ne pèse pas plus qu'un mot neutre épelé.
+  assert.ok(spamScore(model, 'b a c k l i n k s') < spamScore(model, 'l a m p s'));
 });
 
 test('le hachage : aucun vocabulaire à construire ni à livrer', () => {
@@ -122,12 +120,14 @@ test('le hachage : aucun vocabulaire à construire ni à livrer', () => {
   assert.equal(model.weights.length, 1024);
 });
 
-test('INFIRMÉ : un n-gramme que tout message porte « says nothing »', async () => {
-  // L'IDF lissé lui donne 1, contre ln((n+1)/2) + 1 au plus rare.
+test('un n-gramme que tout message porte pèse le moins, sans jamais peser zéro', () => {
+  // L'IDF lissé lui donne 1, contre ln((n+1)/2) + 1 au plus rare : le poids
+  // plancher est 1 et non 0, faute de quoi un terme universel disparaîtrait du
+  // vecteur au lieu d'y compter pour peu.
   const corpus = ['hello cheap offer', 'hello my order', 'hello the lamp', 'hello seo traffic'];
   const small = train(corpus, [1, 0, 0, 1], { epochs: 1 });
   assert.equal(Math.min(...small.idf), 1);
-  await assert.rejects(async () => assert.equal(Math.min(...small.idf), 0));
+  assert.ok(Math.max(...small.idf) > 1);
 });
 
 test('le seuil est à vous', () => {

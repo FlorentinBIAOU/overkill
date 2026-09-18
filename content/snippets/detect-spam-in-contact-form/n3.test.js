@@ -10,8 +10,9 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
 import { reasons } from './n0.js';
-import { MAX_CHARACTERS, MODEL, ClassificationUnavailable, classify } from './n3.js';
+import { MAX_CHARACTERS, MODEL, ClassificationUnavailable, classify, providerClient } from './n3.js';
 
 const SPAM_ANSWER = '{"spam": true, "reason": "unsolicited link building offer"}';
 const CLEAN_ANSWER = '{"spam": false, "reason": "a customer asking about an order"}';
@@ -134,11 +135,41 @@ test('une réponse entièrement close est décodée, les autres non', async () =
   }
 });
 
-test('le client par défaut a la forme du vrai kit', async () => {
+test('production : sans client, le kit openai est construit et appelé', async () => {
   assert.deepEqual(await classify('My lamp arrived damaged.'), { spam: false, reason: 'a customer asking about an order' });
 });
 
-test('le client par défaut envoie la requête que le kit attend', async () => {
+test('production : l’adaptateur appelle la surface du vrai kit', async () => {
+  // L'adaptateur sur le double du harnais, à la forme du kit `openai` publié,
+  // sans méthode `complete`.
+  const sdk = new FakeSDK({ content: CLEAN_ANSWER });
+  assert.equal(sdk.complete, undefined);
+  const client = await providerClient(sdk);
+  assert.deepEqual(await classify('My lamp arrived damaged.', { client }), {
+    spam: false, reason: 'a customer asking about an order',
+  });
+  const { endpoint, model, messages, temperature } = sdk.lastRequest;
+  assert.deepEqual([endpoint, model, temperature], ['chat.completions', MODEL, 0]);
+  assert.equal(messages[0].role, 'user');
+  assert.ok(messages[0].content.endsWith('My lamp arrived damaged.'));
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('production : l’adaptateur, une réponse sans contenu lève après les essais', async () => {
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  await assert.rejects(() => classify('My lamp arrived damaged.', { client }), ClassificationUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  const sdk = new FakeSDK({ content: CLEAN_ANSWER, failTimes: 2 });
+  const client = await providerClient(sdk);
+  assert.equal((await classify('My lamp arrived damaged.', { client })).spam, false);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : sans client, la requête est celle que le kit attend', async () => {
   // L'adaptateur appelle `chat.completions.create`, la seule surface que le kit
   // publié offre ; il n'y a pas de méthode `complete` en face.
   globalThis.__openaiCalls.length = 0;

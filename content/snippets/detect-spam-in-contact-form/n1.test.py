@@ -127,26 +127,21 @@ def test_attrape_les_phrases_ou_figurent_les_graphies_contournees():
         assert is_spam(MODEL, written), written
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring dit que les n-grammes de caractères « survive the "
-        "spellings a sender uses to dodge a word list, `b a c k l i n k s` », et le "
-        "verdict qu'il range « b a c k l i n k s » comme la sollicitation. Avec "
-        "`char_wb`, aucun n-gramme ne franchit l'espace : « b a c k l i n k s » seul "
-        "score 0,362, moins que « l a m p s » (0,441) ; dans la phrase du test, "
-        "remplacer le mot par « l a m p s » donne 0,853 contre 0,847. C'est le reste "
-        "de la phrase qui la classe"
-    ),
-)
-def test_infirme_les_lettres_espacees_survivent_aux_n_grammes():
-    assert spam_score(MODEL, "b a c k l i n k s") > spam_score(MODEL, "l a m p s")
-    spaced = "we sell b a c k l i n k s and cheap traffic, boost your rankings today"
-    neutral = "we sell l a m p s and cheap traffic, boost your rankings today"
-    assert spam_score(MODEL, spaced) > spam_score(MODEL, neutral)
+def test_un_mot_epele_ne_partage_aucun_n_gramme_avec_le_mot_entier():
+    """
+    docstring : « a word spelled out letter by letter shares none: no n-gram
+    crosses a space ». C'est la limite du niveau, et non son point fort : ce qui
+    classe « b a c k l i n k s » dans une phrase, c'est le reste de la phrase.
+    """
+    analyzer = MODEL.named_steps["tfidfvectorizer"].build_analyzer()
+    entier = set(analyzer("backlinks"))
+    epele = set(analyzer("b a c k l i n k s"))
+    assert entier & epele == set()
+    # Et le score le dit : le mot épelé ne pèse pas plus qu'un mot neutre épelé.
+    assert spam_score(MODEL, "b a c k l i n k s") < spam_score(MODEL, "l a m p s")
 
 
-def test_constat_char_wb_ne_forme_aucun_n_gramme_a_travers_une_espace():
+def test_char_wb_ne_forme_aucun_n_gramme_a_travers_une_espace():
     """Commentaire : « `char_wb` keeps n-grams inside word boundaries »."""
     analyzer = MODEL.named_steps["tfidfvectorizer"].build_analyzer()
     assert [gram for gram in analyzer("b a c k l i n k s") if "bac" in gram] == []
@@ -240,11 +235,17 @@ def test_defaut_un_message_vide_n_est_pas_tranche_par_hasard():
 
 
 def test_production_un_entrainement_degenere_leve():
-    """Python lève sur un jeu vide ou d'une seule classe (le JavaScript, non : DÉFAUT côté js)."""
+    """
+    Jeu vide, une seule classe, étiquettes de longueur différente : trois façons
+    de rendre un modèle qui répond n'importe quoi sans le dire. JavaScript lève
+    de même, sur les mêmes trois cas.
+    """
     with pytest.raises(ValueError):
         train([], [])
     with pytest.raises(ValueError):
         train(SPAM, [1] * len(SPAM))
+    with pytest.raises(ValueError):
+        train(SPAM + GENUINE, [1])
 
 
 def test_production_trois_mille_deux_cents_envois_etiquetes():
