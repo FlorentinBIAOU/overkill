@@ -20,7 +20,8 @@ import pytest
 
 import n3
 from _harness.fake_llm import FakeLLM
-from n3 import DEFAULT_TEAM, MAX_CHARACTERS, TEAMS, RoutingUnavailable, route
+from _harness.fake_sdk import FakeSDK
+from n3 import DEFAULT_TEAM, MAX_CHARACTERS, MODEL, PROMPT, TEAMS, ProviderClient, RoutingUnavailable, route
 
 BILLING = "Le prélèvement de mars est passé deux fois, merci de m'en rembourser un."
 
@@ -78,9 +79,42 @@ def test_point_de_rupture_sans_la_liste_fermee_le_ticket_part_dans_une_equipe_qu
 # ---------------------------------------------------------------------------
 
 
-def test_defaut_le_client_par_defaut_a_la_forme_du_vrai_kit(monkeypatch):
+def test_production_sans_client_le_kit_openai_est_construit_et_appele(monkeypatch):
     monkeypatch.setitem(sys.modules, "openai", faux_openai('{"team": "billing"}'))
     assert route(BILLING) == "billing"
+
+
+def test_production_l_adaptateur_appelle_la_surface_du_vrai_kit():
+    """
+    docstring de `ProviderClient` : « The one call this snippet makes, on top of
+    the provider's SDK ». Sur le double du harnais, à la forme du kit `openai`
+    publié, sans méthode `complete`.
+    """
+    sdk = FakeSDK(content='{"team": "billing"}')
+    assert not hasattr(sdk, "complete")
+    assert route(BILLING, client=ProviderClient(sdk=sdk)) == "billing"
+    request = sdk.last_request
+    assert request["endpoint"] == "chat.completions"
+    assert request["model"] == MODEL
+    assert request["temperature"] == 0
+    assert request["messages"] == [
+        {"role": "user", "content": PROMPT.format(teams=", ".join(TEAMS), default=DEFAULT_TEAM, ticket=BILLING)}
+    ]
+    assert len(sdk.requests) == 1
+
+
+def test_production_l_adaptateur_une_reponse_sans_contenu_leve_apres_les_essais():
+    """Le kit type `content` comme facultatif : `None` n'est pas une file."""
+    sdk = FakeSDK(content=None)
+    with pytest.raises(RoutingUnavailable):
+        route(BILLING, client=ProviderClient(sdk=sdk))
+    assert len(sdk.requests) == 3
+
+
+def test_production_l_adaptateur_une_panne_du_kit_est_retentee():
+    sdk = FakeSDK(content='{"team": "billing"}', fail_times=2)
+    assert route(BILLING, client=ProviderClient(sdk=sdk)) == "billing"
+    assert len(sdk.requests) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -110,14 +144,25 @@ def test_une_equipe_ecrite_dans_une_autre_casse_reste_une_equipe():
     assert route(BILLING, client=FakeLLM(response='{"team": "SHIPPING\\n"}')) == "shipping"
 
 
-def test_refuse_une_entree_trop_longue_avant_de_rien_depenser_et_accepte_la_limite_exacte():
-    """Commentaire : « Refusing oversized input is not an optimisation, it is a cost control »."""
+def test_un_ticket_trop_long_est_tronque_et_route_quand_meme():
+    """
+    Commentaire : « it truncates rather than raising: a router that throws
+    leaves the ticket nowhere, and the team is usually decided by the first
+    paragraph anyway ». Un fil de courriels cité ou un journal collé sous le
+    ticket n'est pas une anomalie ; qu'il n'arrive nulle part en serait une.
+    """
     client = FakeLLM(response='{"team": "billing"}')
-    with pytest.raises(ValueError):
-        route("x" * (MAX_CHARACTERS + 1), client=client)
-    assert client.call_count == 0
-    assert route("x" * MAX_CHARACTERS, client=client) == "billing"
+    long_ticket = BILLING + " " + "x" * MAX_CHARACTERS
+    assert route(long_ticket, client=client) == "billing"
     assert client.call_count == 1
+    envoye = client.last_request["prompt"]
+    # Ce qui part est le début du ticket, coupé au plafond, et pas un caractère de plus.
+    assert long_ticket[:MAX_CHARACTERS] in envoye
+    assert long_ticket[: MAX_CHARACTERS + 1] not in envoye
+    # Et un ticket à la limite exacte part en entier.
+    court = FakeLLM(response='{"team": "billing"}')
+    assert route("x" * MAX_CHARACTERS, client=court) == "billing"
+    assert "x" * MAX_CHARACTERS in court.last_request["prompt"]
 
 
 def test_reessaie_une_panne_du_fournisseur_le_nombre_de_fois_annonce():
@@ -201,10 +246,14 @@ def test_production_ticket_vide_nfd_emoji_bom_et_insecables():
         assert client.last_request["prompt"].endswith("Ticket:\n" + ticket)
 
 
-def test_production_la_limite_compte_des_points_de_code_en_python():
-    """2 001 emoji font 2 001 caractères en Python (acceptés) et 4 002 unités UTF-16 en JavaScript (refusés)."""
-    ticket = "📦" * 2001
-    assert route(ticket, client=FakeLLM(response='{"team": "shipping"}')) == "shipping"
+def test_production_la_troncature_compte_des_points_de_code():
+    """Un emoji fait un point de code ici et deux unités UTF-16 là : c'est la première mesure qui coupe, des deux côtés."""
+    client = FakeLLM(response='{"team": "shipping"}')
+    assert route("📦" * (MAX_CHARACTERS + 10), client=client) == "shipping"
+    envoye = client.last_request["prompt"]
+    # Ni un emoji de moins, ni un emoji de plus, ni une moitié d'emoji.
+    assert "📦" * MAX_CHARACTERS in envoye
+    assert "📦" * (MAX_CHARACTERS + 1) not in envoye
 
 
 def test_production_une_tres_longue_reponse_du_modele_se_decode_vite():

@@ -75,14 +75,24 @@ test('pluriels et formes dérivées se déclenchent encore', () => {
   assert.equal(route('Les livraisons du mois sont toutes en retard'), 'shipping');
 });
 
-test('INFIRMÉ : facture déclenche aussi facturation', () => {
-  // « facturation » s'écrit f-a-c-t-u-r-a : le préfixe « facture » n'y est pas.
-  assert.throws(() => assert.deepEqual(matches('Question sur la facturation'), { billing: ['facture'] }));
+test('« facturation » ne dérive pas de « facture », et a sa propre entrée', () => {
+  // « "facturation" does not start with it, and has its own entry ». Le préfixe
+  // s'arrête à « factur-e » ; « facturation » s'écrit f-a-c-t-u-r-a.
+  assert.deepEqual(matches('Question sur la facturation'), { billing: ['facturation'] });
+  // Témoin : le préfixe « facture » couvre bien ses propres dérivés.
+  assert.deepEqual(matches('Mes factures de mars'), { billing: ['facture'] });
+  // Et c'est bien l'entrée qui le route : sans elle, le mot ne déclenche rien.
+  assert.ok(Object.fromEntries(RULES).billing.includes('facturation'));
+  assert.deepEqual(matches('Question sur la factura'), {});
 });
 
 test('le prix de la frontière à gauche : un mot plus long qui commence pareil', () => {
+  // « "panne" catches "panneau", "retard" catches "retardataire", "devis"
+  // catches "devise". The test names them. »
   assert.deepEqual(matches('Le panneau solaire est tombé'), { technical: ['panne'] });
+  assert.deepEqual(matches('Un client retardataire'), { shipping: ['retard'] });
   assert.deepEqual(matches('Votre devise préférée ?'), { billing: ['devis'] });
+  // Témoin : un mot qui contient le mot-clé ailleurs qu'au début ne déclenche rien.
   assert.deepEqual(matches('un antibug'), {});
 });
 

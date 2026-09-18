@@ -80,18 +80,15 @@ def route_en_javascript(tickets):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : le point de rupture (et le why de l'essai) dit que « Votre entrepôt "
-    "accepte-t-il les visites scolaires le mercredi » « ne recoupe aucun mot des "
-    "tickets déjà résolus » ; il partage « le » avec l'archive, qui figure dans le "
-    "vocabulaire appris. Le ticket part bien en file par défaut, mais pas faute de "
-    "tout mot commun"
-))
-def test_infirme_le_ticket_inconnu_ne_recoupe_aucun_mot_de_larchive():
+def test_point_de_rupture_le_ticket_inconnu_ne_partage_que_le_mot_le():
+    """
+    breaking_point : « « Votre entrepôt accepte-t-il les visites scolaires le
+    mercredi » ne partage avec les tickets déjà résolus que le mot « le » ».
+    """
     model = make_model()
     vectorizer = model.named_steps["tfidfvectorizer"]
     communs = [term for term in vectorizer.build_analyzer()(UNKNOWN) if term in vectorizer.vocabulary_]
-    assert communs == []
+    assert communs == ["le"]
 
 
 def test_point_de_rupture_les_trois_equipes_ressortent_presque_a_egalite_et_le_seuil_nest_pas_atteint():
@@ -162,21 +159,24 @@ def test_une_archive_desequilibree_non_ponderee_repond_lequipe_la_plus_chargee()
     assert rank(non_ponderee, ticket)[0][0] == "billing"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : le commentaire dit qu'avec le C par défaut « no ticket ever clears a "
-    "useful floor » ; avec C=1, « Le tableau de bord ne s'ouvre plus depuis la mise "
-    "à jour » sort à 0,51 et franchit le plancher de 0,5. Ce qui est vrai : deux des "
-    "trois tickets du test tombent sous le plancher"
-))
-def test_infirme_avec_le_c_par_defaut_aucun_ticket_ne_franchit_le_plancher():
+def test_avec_le_c_par_defaut_deux_des_trois_tickets_restent_sous_le_plancher():
+    """
+    Commentaire de `train` : « With the default C=1, two of the three unseen
+    tickets stay under the 0.5 floor » — c'est-à-dire qu'ils repartiraient en
+    file par défaut, alors que l'archive les connaît.
+    """
     defaut = make_pipeline(
         TfidfVectorizer(strip_accents="unicode", ngram_range=(1, 2), sublinear_tf=True),
         LogisticRegression(class_weight="balanced", max_iter=1000),
     ).fit(ARCHIVE, TEAMS)
-    for ticket in ["Le montant prélevé sur ma facture de février est faux",
-                   "Le tableau de bord ne s'ouvre plus depuis la mise à jour",
-                   "Le transporteur a livré le colis chez le voisin"]:
-        assert rank(defaut, ticket)[0][1] < 0.5, ticket
+    tickets = ["Le montant prélevé sur ma facture de février est faux",
+               "Le tableau de bord ne s'ouvre plus depuis la mise à jour",
+               "Le transporteur a livré le colis chez le voisin"]
+    sous_le_plancher = [t for t in tickets if rank(defaut, t)[0][1] < 0.5]
+    assert len(sous_le_plancher) == 2
+    # Témoin : avec le C de l'extrait, les trois franchissent le plancher.
+    model = make_model()
+    assert all(rank(model, t)[0][1] >= 0.5 for t in tickets)
 
 
 def test_rank_montre_lequipe_suivante():

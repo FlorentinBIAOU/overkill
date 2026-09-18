@@ -71,11 +71,12 @@ def route(ticket: str, client=None, *, attempts: int = 3) -> str:
     client = client or ProviderClient()
 
     # The provider bills every token of the prompt, and a ticket with a
-    # forwarded thread under it is long. The cap counts characters, not tokens.
-    if len(ticket) > MAX_CHARACTERS:
-        raise ValueError(f"ticket longer than {MAX_CHARACTERS} characters")
-
-    answer = _ask(client, ticket, attempts)
+    # forwarded thread or a pasted log under it is long. The cap counts
+    # characters, not tokens, and it truncates rather than raising: a router
+    # that throws leaves the ticket nowhere, and the team is usually decided by
+    # the first paragraph anyway. What is cut is said to nobody, which is why
+    # the caller gets the ticket back only through its queue.
+    answer = _ask(client, ticket[:MAX_CHARACTERS], attempts)
     team = answer.get("team") if isinstance(answer, dict) else None
     team = str(team).strip().lower() if team is not None else ""
     # Two failures, two treatments. A provider that cannot answer is an

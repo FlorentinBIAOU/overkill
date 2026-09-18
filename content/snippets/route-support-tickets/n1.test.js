@@ -65,10 +65,10 @@ function routeEnPython(tickets) {
 // Point de rupture
 // ---------------------------------------------------------------------------
 
-test('INFIRMÉ : le ticket inconnu ne recoupe aucun mot de l’archive', () => {
-  // Il partage « le » avec l'archive, qui est dans le vocabulaire appris.
+test('point de rupture : le ticket inconnu ne partage que le mot « le »', () => {
+  // breaking_point : « ne partage avec les tickets déjà résolus que le mot « le » ».
   const mots = UNKNOWN.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').match(/[\p{L}\p{N}]+/gu);
-  assert.throws(() => assert.deepEqual(mots.filter((m) => model.vocabulary.terms.has(m)), []));
+  assert.deepEqual([...new Set(mots.filter((m) => model.vocabulary.terms.has(m)))], ['le']);
 });
 
 test('point de rupture : les trois équipes ressortent presque à égalité et le seuil n’est pas atteint', () => {

@@ -43,7 +43,9 @@ def _fold(text: str) -> str:
 
 # A word boundary on the left only. "facture" then also matches "factures"
 # and "facturé"; "facturation" does not start with it, and has its own entry.
-# The price is that a keyword matches a longer word starting the same way.
+# The price is that a keyword matches a longer word starting the same way:
+# "panne" catches "panneau", "retard" catches "retardataire", "devis" catches
+# "devise". The test names them.
 _COMPILED = tuple(
     (team, tuple((word, re.compile(rf"\b{re.escape(_fold(word))}")) for word in words))
     for team, words in RULES

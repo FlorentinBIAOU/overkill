@@ -88,7 +88,9 @@ n3: |
   équipes vont dans l'invite, et le modèle répond par l'un d'eux.
 
   Voyez ce que le code doit faire et que le niveau N0 n'avait pas à faire :
-  borner la taille de l'entrée, réessayer quand le fournisseur échoue, analyser
+  borner la taille de ce qui part — en tronquant, jamais en levant, parce qu'un
+  routeur qui lève laisse le ticket nulle part et que l'équipe se décide le plus
+  souvent au premier paragraphe —, réessayer quand le fournisseur échoue, analyser
   une réponse qui n'est que probablement du JSON, et refuser une équipe que le
   modèle a inventée. Cette plomberie est le vrai coût de ce niveau, et c'est la
   part que vos tests doivent couvrir, puisque le modèle lui-même n'est pas

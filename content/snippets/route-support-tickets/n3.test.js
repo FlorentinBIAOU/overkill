@@ -15,7 +15,16 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { performance } from 'node:perf_hooks';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
-import { DEFAULT_TEAM, MAX_CHARACTERS, MODEL, TEAMS, RoutingUnavailable, route } from './n3.js';
+import { FakeSDK } from '../_harness/fake-sdk.mjs';
+import {
+  DEFAULT_TEAM,
+  MAX_CHARACTERS,
+  MODEL,
+  TEAMS,
+  RoutingUnavailable,
+  providerClient,
+  route,
+} from './n3.js';
 
 const BILLING = "Le prélèvement de mars est passé deux fois, merci de m'en rembourser un.";
 
@@ -69,7 +78,35 @@ test('point de rupture : sans la liste fermée, le ticket part dans une équipe 
 // Le client par défaut
 // ---------------------------------------------------------------------------
 
-test('le client par défaut a la forme du vrai kit', async () => {
+test('production : l’adaptateur appelle la surface du vrai kit', async () => {
+  // L'adaptateur sur le double du harnais, à la forme du kit `openai` publié,
+  // sans méthode `complete`.
+  const sdk = new FakeSDK({ content: '{"team": "billing"}' });
+  assert.equal(sdk.complete, undefined);
+  const client = await providerClient(sdk);
+  assert.equal(await route(BILLING, { client }), 'billing');
+  const { endpoint, model, messages, temperature } = sdk.lastRequest;
+  assert.deepEqual([endpoint, model, temperature], ['chat.completions', MODEL, 0]);
+  assert.equal(messages[0].role, 'user');
+  assert.ok(messages[0].content.endsWith(`Ticket:\n${BILLING}`));
+  assert.equal(sdk.requests.length, 1);
+});
+
+test('production : l’adaptateur, une réponse sans contenu lève après les essais', async () => {
+  const sdk = new FakeSDK({ content: null });
+  const client = await providerClient(sdk);
+  await assert.rejects(() => route(BILLING, { client }), RoutingUnavailable);
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : l’adaptateur, une panne du kit est retentée', async () => {
+  const sdk = new FakeSDK({ content: '{"team": "billing"}', failTimes: 2 });
+  const client = await providerClient(sdk);
+  assert.equal(await route(BILLING, { client }), 'billing');
+  assert.equal(sdk.requests.length, 3);
+});
+
+test('production : sans client, le kit openai est construit et appelé', async () => {
   // `new OpenAI()` puis `chat.completions.create` : la seule surface que le kit
   // publié offre, et celle que l'adaptateur appelle.
   globalThis.__openai = { requests: [] };
@@ -107,12 +144,20 @@ test('une équipe écrite dans une autre casse reste une équipe', async () => {
   assert.equal(await route(BILLING, { client: new FakeLLM({ response: '{"team": "SHIPPING\\n"}' }) }), 'shipping');
 });
 
-test('refuse une entrée trop longue avant de rien dépenser, et accepte la limite exacte', async () => {
+test('un ticket trop long est tronqué, et routé quand même', async () => {
+  // « it truncates rather than throwing: a router that throws leaves the ticket
+  // nowhere, and the team is usually decided by the first paragraph anyway ».
   const client = new FakeLLM({ response: '{"team": "billing"}' });
-  await assert.rejects(() => route('x'.repeat(MAX_CHARACTERS + 1), { client }), RangeError);
-  assert.equal(client.callCount, 0);
-  assert.equal(await route('x'.repeat(MAX_CHARACTERS), { client }), 'billing');
+  const long = `${BILLING} ${'x'.repeat(MAX_CHARACTERS)}`;
+  assert.equal(await route(long, { client }), 'billing');
   assert.equal(client.callCount, 1);
+  const envoye = client.lastRequest.prompt;
+  assert.ok(envoye.includes(long.slice(0, MAX_CHARACTERS)));
+  assert.ok(!envoye.includes(long.slice(0, MAX_CHARACTERS + 1)));
+  // Et un ticket à la limite exacte part en entier.
+  const court = new FakeLLM({ response: '{"team": "billing"}' });
+  assert.equal(await route('x'.repeat(MAX_CHARACTERS), { client: court }), 'billing');
+  assert.ok(court.lastRequest.prompt.includes('x'.repeat(MAX_CHARACTERS)));
 });
 
 test('réessaie une panne du fournisseur le nombre de fois annoncé', async () => {
@@ -188,12 +233,15 @@ test('production : ticket vide, NFD, emoji, BOM et insécables', async () => {
   }
 });
 
-test('production : la limite compte des points de code, comme en Python', async () => {
+test('production : la troncature compte des points de code, comme en Python', async () => {
   // Un emoji fait deux unités UTF-16 et un seul point de code : c'est la seconde
-  // mesure qui compte, des deux côtés.
+  // mesure qui coupe, des deux côtés, et jamais au milieu d'un emoji.
   const client = new FakeLLM({ response: '{"team": "shipping"}' });
-  assert.equal(await route('📦'.repeat(MAX_CHARACTERS), { client }), 'shipping');
-  await assert.rejects(() => route('📦'.repeat(MAX_CHARACTERS + 1), { client }), RangeError);
+  assert.equal(await route('📦'.repeat(MAX_CHARACTERS + 10), { client }), 'shipping');
+  const envoye = client.lastRequest.prompt;
+  assert.ok(envoye.includes('📦'.repeat(MAX_CHARACTERS)));
+  assert.ok(!envoye.includes('📦'.repeat(MAX_CHARACTERS + 1)));
+  assert.ok(envoye.isWellFormed());
 });
 
 test('production : une très longue réponse du modèle se décode vite', async () => {

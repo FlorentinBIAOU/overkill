@@ -116,15 +116,17 @@ def test_le_voisin_le_plus_proche_et_son_score():
     assert round(similarity, 12) == 0.857142857143
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : la docstring dit que « the neighbours are shown to the agent as the "
-    "reason for the routing — which is more than N1's weights ever explain » ; "
-    "`neighbours` rend des couples (score, équipe) sans le ticket archivé ni son "
-    "rang dans l'archive : l'agent voit « billing, 0,62 », pas le ticket qui a décidé"
-))
-def test_infirme_les_voisins_montres_a_lagent_disent_quel_ticket_a_decide():
+def test_les_voisins_rendus_sont_un_score_et_une_equipe_pas_le_ticket_qui_a_decide():
+    """
+    docstring de `neighbours` : « The k nearest resolved tickets, best first,
+    with their cosine score ». Ce que l'agent reçoit est « billing, 0,62 » : le
+    ticket archivé qui a décidé n'est pas dans la réponse, et la fiche ne dit
+    pas le contraire.
+    """
     found = neighbours(make_index(), POLITENESS, k=1)
-    assert any(isinstance(part, str) and part in TICKETS for part in found[0])
+    (score, team), = found
+    assert isinstance(score, float) and team in TEAMS
+    assert not any(isinstance(part, str) and part in TICKETS for part in found[0])
 
 
 def test_larchive_est_encodee_une_fois_et_non_a_chaque_question():

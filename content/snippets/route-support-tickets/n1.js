@@ -21,6 +21,8 @@
 export const DEFAULT_TEAM = 'general';
 
 // The penalty, as scikit-learn's C: the same value as the Python snippet.
+// Three tickets is a demonstration, not a calibration: on a real archive this
+// value is chosen by cross-validation, and it moves when the archive does.
 const C = 10;
 
 /** Words of a ticket, lowercased and stripped of accents. */

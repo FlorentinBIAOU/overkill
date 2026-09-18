@@ -112,10 +112,15 @@ test('le voisin le plus proche et son score', async () => {
   assert.equal(Number(similarity.toFixed(12)), 0.857142857143);
 });
 
-test('INFIRMÉ : les voisins montrés à l’agent disent quel ticket a décidé', async () => {
-  // `neighbours` rend [score, équipe], sans le ticket archivé.
+test('les voisins rendus sont un score et une équipe, pas le ticket qui a décidé', async () => {
+  // « The k nearest resolved tickets, best first, with their cosine score » :
+  // l'agent reçoit « billing, 0,62 », pas le ticket archivé qui a décidé, et la
+  // fiche ne dit pas le contraire.
   const [premier] = await neighbours(await makeIndex(), POLITENESS, 1);
-  assert.throws(() => assert.ok(premier.some((part) => typeof part === 'string' && TICKETS.includes(part))));
+  const [score, team] = premier;
+  assert.equal(typeof score, 'number');
+  assert.ok(TEAMS.includes(team));
+  assert.ok(!premier.some((part) => typeof part === 'string' && TICKETS.includes(part)));
 });
 
 test('l’archive est encodée une fois et non à chaque question', async () => {

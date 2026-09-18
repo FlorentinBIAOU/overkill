@@ -168,3 +168,10 @@ fiche sort du brouillon : le catalogue compte désormais 25 fiches publiées.
   trois mesures, prix du conseil compris. Verdict corrigé d'une relative
   inversée, longueur maximale recommandée, thèse des quarante lignes retirée.
   Reste : rien.
+- **route-support-tickets** — quatre marquages périmés devenus des
+  démonstrations de la phrase actuelle (dont le ticket inconnu qui ne partage que
+  « le »), adaptateur N3 exercé, et le plafond de N3 qui levait tronque
+  désormais : un routeur qui lève laisse le ticket nulle part. Archive dite pour
+  ce qu'elle est dans le verdict — l'équipe qui ferme n'est pas celle qui aurait
+  dû recevoir —, `C` dit comme un réglage à valider, frontière à gauche illustrée
+  de trois exemples vérifiés. Reste : rien.

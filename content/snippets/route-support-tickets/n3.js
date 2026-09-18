@@ -66,13 +66,13 @@ export async function route(ticket, { client, attempts = 3 } = {}) {
   client ??= await providerClient();
 
   // The provider bills every token of the prompt, and a ticket with a
-  // forwarded thread under it is long. The cap counts characters, not tokens:
-  // code points, as in Python.
-  if ([...ticket].length > MAX_CHARACTERS) {
-    throw new RangeError(`ticket longer than ${MAX_CHARACTERS} characters`);
-  }
+  // forwarded thread or a pasted log under it is long. The cap counts
+  // characters, not tokens — code points, as in Python — and it truncates
+  // rather than throwing: a router that throws leaves the ticket nowhere, and
+  // the team is usually decided by the first paragraph anyway.
+  const sent = [...ticket].slice(0, MAX_CHARACTERS).join('');
 
-  const answer = await ask(client, ticket, attempts);
+  const answer = await ask(client, sent, attempts);
   const named = answer && typeof answer.team === 'string' ? answer.team.trim().toLowerCase() : '';
   // Two failures, two treatments. A provider that cannot answer is an
   // incident, and `ask` above throws. A model that answers a team nobody

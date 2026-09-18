@@ -35,7 +35,9 @@ def train(tickets: list[str], teams: list[str]):
         TfidfVectorizer(strip_accents="unicode", ngram_range=(1, 2), sublinear_tf=True),
         # C loosens the penalty. With the default C=1, two of the three unseen
         # tickets in the test stay under the 0.5 floor; with C=10 all three
-        # clear it.
+        # clear it. Three tickets is a demonstration, not a calibration: on a
+        # real archive this value is chosen by cross-validation, and it moves
+        # when the archive does.
         LogisticRegression(class_weight="balanced", max_iter=1000, C=10),
     )
     model.fit(tickets, teams)

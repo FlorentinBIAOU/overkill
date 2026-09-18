@@ -42,7 +42,8 @@ function fold(text) {
 // both languages cut "我的colis" the same way. "facture" then also matches
 // "factures" and "facturé"; "facturation" does not start with it, and has its
 // own entry. The price is that a keyword matches a longer word starting the
-// same way.
+// same way: "panne" catches "panneau", "retard" catches "retardataire",
+// "devis" catches "devise". The test names them.
 const COMPILED = RULES.map(([team, words]) => [
   team,
   words.map((word) => [word, new RegExp(`(?<![\\p{L}\\p{N}_])${fold(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u')]),

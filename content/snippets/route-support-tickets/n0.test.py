@@ -98,18 +98,28 @@ def test_pluriels_et_formes_derivees_se_declenchent_encore():
     assert route("Les livraisons du mois sont toutes en retard") == "shipping"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "INFIRMÉ : le commentaire dit que « facture » déclenche aussi « facturation » ; "
-    "« facturation » s'écrit f-a-c-t-u-r-a, le préfixe « facture » n'y est pas, et "
-    "« Question sur la facturation » part dans la file par défaut"
-))
-def test_infirme_facture_declenche_aussi_facturation():
-    assert matches("Question sur la facturation") == {"billing": ["facture"]}
+def test_facturation_ne_derive_pas_de_facture_et_a_sa_propre_entree():
+    """
+    Commentaire : « "facturation" does not start with it, and has its own
+    entry ». Le préfixe s'arrête à « factur-e » ; « facturation » s'écrit
+    f-a-c-t-u-r-a, et sans son entrée le ticket partirait dans la file par
+    défaut.
+    """
+    assert matches("Question sur la facturation") == {"billing": ["facturation"]}
+    # Témoin : le préfixe « facture » couvre bien ses propres dérivés.
+    assert matches("Mes factures de mars") == {"billing": ["facture"]}
+    # Et c'est bien l'entrée qui le route : sans elle, le mot ne déclenche rien.
+    assert "facturation" in dict(RULES)["billing"]
+    assert matches("Question sur la factura") == {}
 
 
 def test_le_prix_de_la_frontiere_a_gauche_un_mot_plus_long_qui_commence_pareil():
-    """Commentaire : « the price is that it would match a longer word starting the same way »."""
+    """
+    Commentaire : « "panne" catches "panneau", "retard" catches
+    "retardataire", "devis" catches "devise". The test names them. »
+    """
     assert matches("Le panneau solaire est tombé") == {"technical": ["panne"]}
+    assert matches("Un client retardataire") == {"shipping": ["retard"]}
     assert matches("Votre devise préférée ?") == {"billing": ["devis"]}
     # Témoin : un mot qui contient le mot-clé ailleurs qu'au début ne déclenche rien.
     assert matches("un antibug") == {}
