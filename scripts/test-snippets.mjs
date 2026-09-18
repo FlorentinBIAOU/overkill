@@ -120,8 +120,31 @@ for (const fiche of dossiers) {
   for (const f of manquants) lignes.push(`            aucun test pour ${f}`);
   for (const [langage, r] of enEchec) {
     lignes.push(`            ${langage} :`);
-    for (const l of r.sortie.trim().split('\n').slice(-18)) lignes.push(`              ${l}`);
+    const sortie = r.sortie.trim().split('\n');
+    const cites = testsEnEchec(sortie);
+    if (cites.length) {
+      lignes.push('              en échec :');
+      for (const l of cites) lignes.push(`                ${l}`);
+    }
+    for (const l of sortie.slice(-18)) lignes.push(`              ${l}`);
   }
+}
+
+/**
+ * Les lignes qui nomment un test en échec, où qu'elles soient dans la sortie.
+ *
+ * Les dix-huit dernières lignes seules ne suffisent pas : avec le rapporteur
+ * TAP de `node --test`, elles ne portent que le récapitulatif et le dernier
+ * test passé, et le test en échec, plus haut, n'était nommé nulle part dans le
+ * journal de la CI. On cite donc d'abord les lignes `not ok` (TAP), `✖`
+ * (rapporteur spec des versions de Node plus récentes), `FAILED` et `ERROR`
+ * (pytest), une seule fois chacune.
+ */
+function testsEnEchec(sortie) {
+  const motif = /^\s*(not ok \d+ - |✖ |FAILED |ERROR )/;
+  const cites = sortie.filter((l) => motif.test(l)).map((l) => l.trim());
+  // L'en-tête de la liste finale du rapporteur spec n'est pas un test.
+  return [...new Set(cites.filter((l) => l !== '✖ failing tests:'))];
 }
 
 console.log(`\ntest-snippets — ${dossiers.length} fiche(s), ${extraits} extrait(s)\n`);
