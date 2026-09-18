@@ -270,19 +270,16 @@ def test_le_modele_par_defaut_a_la_surface_de_sentence_transformers(sentence_tra
     assert sentence_transformers.loads == [MODEL_NAME]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : la docstring compte « a process to keep warm » parmi ce que ce "
-        "niveau fait tourner, et le verdict « un service à tenir chaud ». Le code "
-        "charge le modèle dans la construction hors ligne et le lâche ensuite : "
-        "chaque construction recharge, rien n'est tenu chaud, rien ne sert à l'affichage"
-    ),
-)
-def test_infirme_le_modele_reste_charge_entre_deux_constructions(sentence_transformers):
+def test_le_modele_est_charge_par_construction_et_lache_ensuite(sentence_transformers):
+    """
+    Le modèle sert à construire la table, hors ligne, et rien ne le garde entre
+    deux constructions : ce niveau ne demande pas un service à tenir chaud, il
+    demande une machine le temps d'une construction. C'est ce qui le sépare
+    d'un modèle interrogé à l'affichage.
+    """
     build_neighbour_table(ARTICLES)
     build_neighbour_table(ARTICLES)
-    assert len(sentence_transformers.loads) == 1
+    assert len(sentence_transformers.loads) == 2
 
 
 def test_deux_constructions_rendent_la_meme_table():

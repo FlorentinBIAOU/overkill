@@ -175,3 +175,19 @@ fiche sort du brouillon : le catalogue compte désormais 25 fiches publiées.
   ce qu'elle est dans le verdict — l'équipe qui ferme n'est pas celle qui aurait
   dû recevoir —, `C` dit comme un réglage à valider, frontière à gauche illustrée
   de trois exemples vérifiés. Reste : rien.
+- **show-similar-articles** — les neuf marquages, tous périmés, deviennent la
+  démonstration de la phrase actuelle : les deux signes de l'escalade de N0, les
+  six mots que l'annonce partage avec l'article anglais, le mot présent partout
+  qui pèse le moins sans peser rien, la réécriture qui change la table puisque ce
+  niveau lit le texte, le mot d'une lettre qui coûte le sujet, le lissage qui ne
+  protège d'aucune division par zéro, le zéro de l'essai, et le modèle lâché
+  entre deux constructions. Les trois sources du point de rupture de N2 entrent
+  dans la fiche, l'écart 128/512 est dit comme le piège d'exploitation qu'il est,
+  et le scénario dit ce qu'on montre d'un article publié entre deux
+  constructions. Reste : rien.
+
+**Point d'étape groupe 3 — six fiches sur six.** `check-marquages` et
+`check-adaptateur`, écrits au début du groupe et enchaînés dans
+`npm run check:fast`, sont verts : plus aucun `xfail`, `INFIRMÉ` ni `DÉFAUT`
+dans les tests d'une fiche publiée, et les trente-deux adaptateurs N3 du
+catalogue sont exercés contre le double du harnais. `npm run check:fast` vert.

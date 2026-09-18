@@ -225,19 +225,18 @@ def test_point_de_rupture_un_seul_article_de_plus_et_l_etiquette_generique_redev
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : escalate_when dit que la table « contient des lignes vides, parce "
-        "que vos étiquettes sont soit sur tous les articles, soit sur un seul ». Une "
-        "étiquette sur tous les articles sauf un ne vide aucune ligne : elle remplit "
-        "celles des articles génériques de voisins à 1,0. Le signal ne se déclenche pas"
-    ),
-)
-def test_infirme_une_etiquette_presque_universelle_laisse_des_lignes_vides():
+def test_escalate_when_les_deux_signes_sont_la_ligne_vide_et_le_voisin_a_un():
+    """
+    escalate_when : « La table que vous construisez contient des lignes vides,
+    ou des voisins à 1,0 qui ne partagent qu'une étiquette générique ». Ce sont
+    deux signes distincts, et un fonds peut porter les deux à la fois.
+    """
     mixed = TOO_GENERIC + [{"id": "fourth", "tags": ["blog", "unique"]}]
     table = build_neighbour_table(mixed)
-    assert table["first"] == [] and table["second"] == [] and table["third"] == []
+    # Le voisin à 1,0 : trois articles que seule une étiquette générique réunit.
+    assert table["first"] == [("second", 1.0), ("third", 1.0)]
+    # Et la ligne vide, sur l'article dont la seconde étiquette n'est qu'à lui.
+    assert table["fourth"] == []
 
 
 def test_scenario_les_niveaux_rendent_la_meme_forme_de_table():

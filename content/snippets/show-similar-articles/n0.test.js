@@ -82,11 +82,13 @@ test('point de rupture : un seul article de plus et l’étiquette générique r
   });
 });
 
-test('INFIRMÉ : une étiquette presque universelle laisse des lignes vides', async () => {
-  await assert.rejects(async () => {
-    const table = buildNeighbourTable([...TOO_GENERIC, { id: 'fourth', tags: ['blog', 'unique'] }]);
-    assert.ok(table.first.length === 0 && table.second.length === 0 && table.third.length === 0);
-  });
+test('escalate_when : les deux signes sont la ligne vide et le voisin à 1,0', () => {
+  // « La table que vous construisez contient des lignes vides, ou des voisins à
+  // 1,0 qui ne partagent qu'une étiquette générique » : deux signes distincts,
+  // qu'un même fonds peut porter tous les deux.
+  const table = buildNeighbourTable([...TOO_GENERIC, { id: 'fourth', tags: ['blog', 'unique'] }]);
+  assert.deepEqual(table.first, [['second', 1], ['third', 1]]);
+  assert.deepEqual(table.fourth, []);
 });
 
 // ---------------------------------------------------------------------------

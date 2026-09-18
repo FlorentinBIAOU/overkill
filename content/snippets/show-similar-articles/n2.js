@@ -7,7 +7,11 @@
  * translation land close together: that is what could bring the French and the
  * English piece on sourdough together, which the test's local double does not do.
  * It reads only the start of a long article (128 tokens in Python, 512 in
- * JavaScript) and truncates the rest.
+ * JavaScript) and truncates the rest. That difference is a trap: the same article
+ * gets two different vectors depending on which runtime encoded it, with no error
+ * anywhere. Build the table and encode a new article with the same one. And for
+ * articles, encoding the title and the standfirst is usually better than the whole
+ * text cut off mid-paragraph: they say what the piece is about, and they fit.
  *
  * The table is still built offline, once per corpus change, and it has the same
  * shape as the one N0 and N1 return: the page-rendering code never changes.

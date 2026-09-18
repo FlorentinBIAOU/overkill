@@ -58,7 +58,12 @@ n2: |
   c'est ce qui pourrait réunir l'article français et l'article anglais sur le
   levain, ce que le double local du test ne fait pas. Il ne lit que le début
   d'un long article (128 jetons en Python, 512 en JavaScript) et coupe le
-  reste.
+  reste. Cet écart est un piège : le même article reçoit deux vecteurs
+  différents selon l'environnement qui l'a encodé, et aucune erreur ne le
+  signale. Construisez la table et encodez un article neuf avec le même. Et
+  pour des articles, encoder le titre et le chapeau vaut souvent mieux que le
+  texte entier coupé au milieu d'un paragraphe : ils disent le sujet, et ils
+  tiennent dans la fenêtre.
 
   La table est toujours construite hors ligne, une fois par modification du
   fonds, et elle a la même forme que celle que rendent N0 et N1 : le code qui

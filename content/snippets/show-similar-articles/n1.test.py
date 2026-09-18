@@ -163,18 +163,14 @@ def test_point_de_rupture_l_annonce_de_demenagement_obtient_un_score_strictement
     assert build_neighbour_table(SAME_SUBJECT_TWO_LANGUAGES)["sourdough-starter"] == [("office-move", 0.199)]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : l'annonce « ne partage avec l'article anglais que de la grammaire » ; "
-        "elle partage aussi « day » (« for a day » / « twice a day »). Sans ce mot, "
-        "le score reste strictement supérieur (0,192) : la conclusion tient, "
-        "l'exemple est inexact"
-    ),
-)
-def test_infirme_l_annonce_ne_partage_que_de_la_grammaire():
+def test_ce_que_l_annonce_partage_avec_l_article_anglais():
+    """
+    Ce que les deux textes ont en commun, mot pour mot : de la grammaire, et
+    « day » — « for a day » d'un côté, « twice a day » de l'autre. Le témoin
+    ci-dessous montre que même sans ce mot, l'annonce reste devant le jumeau.
+    """
     shared = tokens(SAME_SUBJECT_TWO_LANGUAGES[0]) & tokens(SAME_SUBJECT_TWO_LANGUAGES[2])
-    assert shared <= set(ENGLISH_FILLER) | {"will"}
+    assert shared == {"and", "day", "is", "of", "the", "will"}
 
 
 def test_point_de_rupture_la_grammaire_seule_suffit_a_passer_devant_le_jumeau():
@@ -218,22 +214,21 @@ def test_le_titre_compte_deux_fois():
     assert build_neighbour_table(pair)["t"] == [("u", 0.8)]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : « a word appearing in every article weighs almost nothing ». Avec "
-        "l'IDF lissé, un mot présent partout pèse 1, le plus rare 1 + ln((n+1)/2) : "
-        "« the » vaut 1,0 contre 2,39 sur ce fonds de sept articles. Trois articles qui "
-        "ne partagent que « the » sont voisins à 0,583, bien au-dessus du plancher"
-    ),
-)
-def test_infirme_un_mot_present_partout_ne_pese_presque_rien():
+def test_un_mot_present_partout_pese_le_moins_mais_pas_rien():
+    """
+    Commentaire : « A term present everywhere weighs 1, the least possible ».
+    Le moins possible n'est pas zéro : trois articles qui ne partagent que
+    « the » sont voisins à 0,583, bien au-dessus du plancher. C'est pour cela
+    que la liste de mots vides est le prix de ce niveau.
+    """
     three = [
         {"id": "a", "title": "the", "body": "sourdough"},
         {"id": "b", "title": "the", "body": "rye"},
         {"id": "c", "title": "the", "body": "kimchi"},
     ]
-    assert build_neighbour_table(three) == {"a": [], "b": [], "c": []}
+    assert dict(build_neighbour_table(three)["a"])["b"] == 0.583
+    # Et avec le mot dans la liste, les trois lignes sont vides.
+    assert build_neighbour_table(three, stop_words=("the",)) == {"a": [], "b": [], "c": []}
 
 
 def test_constat_l_idf_d_un_mot_present_partout_vaut_un():
@@ -242,19 +237,6 @@ def test_constat_l_idf_d_un_mot_present_partout_vaut_un():
     idf = dict(zip(vectoriser.get_feature_names_out(), vectoriser.idf_))
     assert idf["the"] == 1.0
     assert round(max(idf.values()), 3) == 2.386
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : « Nobody has to maintain anything » et « Without one [a stop list] the "
-        "ranking still works ». Sans liste de mots vides, l'article sur l'affûtage reçoit "
-        "l'annonce du site pour voisin (0,054, au-dessus du plancher de 0,05) ; le "
-        "verdict de la fiche dit lui-même que la liste est le prix de N1"
-    ),
-)
-def test_infirme_sans_liste_de_mots_vides_le_classement_tient_encore():
-    assert "site-news" not in dict(build_neighbour_table(ARTICLES)["knife-sharpening"])
 
 
 def test_sans_liste_de_mots_vides_l_affutage_est_apparie_a_l_annonce_du_site():
@@ -284,48 +266,52 @@ def test_la_ponderation_est_recalculee_sur_le_seul_fonds_a_chaque_construction()
     assert after == [("z", 0.349), ("pickled-cucumbers", 0.278)]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ pour N1 : le scénario dit que la table « ne change que lorsqu'un article "
-        "est publié ou que ses étiquettes changent ». N1 lit le texte : réécrire le corps "
-        "de l'annonce, sans rien publier ni réétiqueter, lui donne un voisin"
-    ),
-)
-def test_infirme_la_table_ne_change_qu_a_la_publication_ou_au_reetiquetage():
+def test_reecrire_un_article_change_la_table_puisque_ce_niveau_lit_le_texte():
+    """
+    scenario : la table « ne change que lorsque le fonds change : un article
+    publié, réécrit, ou dont les étiquettes changent ». Le mot « réécrit » est
+    là pour ce niveau : N0 ne lisait que les étiquettes, N1 lit le texte.
+    """
     edited = [dict(a) for a in ARTICLES]
     edited[6]["body"] = "Sharpen your knife on a whetstone before the comment form comes back."
-    assert build_neighbour_table(edited, stop_words=ENGLISH_FILLER) == EXPECTED
+    table = build_neighbour_table(edited, stop_words=ENGLISH_FILLER)
+    assert table != EXPECTED
+    assert table["site-news"] == [("knife-sharpening", 0.124)]
+    assert EXPECTED["site-news"] == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : le commentaire JS dit qu'un jeton d'une lettre « carries no subject, "
-        "and dropping it costs nothing ». « Programming in C » et « Pointers in C » ont "
-        "C pour sujet, et un cosinus de zéro. Même motif par défaut dans scikit-learn"
-    ),
-)
-def test_infirme_ecarter_les_jetons_d_une_lettre_ne_coute_rien():
+def test_un_mot_d_une_lettre_est_ecarte_et_cela_coute_le_sujet_de_l_article():
+    """
+    Commentaire : « A one-letter word, such as the C of "Programming in C", is
+    dropped with the rest ». C'est le motif de jeton par défaut de
+    scikit-learn, et son prix se voit : deux articles dont C est le sujet ont
+    un cosinus nul.
+    """
     corpus = [
         {"id": "a", "title": "Programming in C", "body": ""},
         {"id": "b", "title": "Pointers in C", "body": ""},
         {"id": "c", "title": "Rust traits", "body": ""},
     ]
-    assert scores_of(build_neighbour_table(corpus, stop_words=ENGLISH_FILLER, minimum=-1.0), "a")["b"] > 0
+    assert scores_of(build_neighbour_table(corpus, stop_words=ENGLISH_FILLER, minimum=-1.0), "a")["b"] == 0.0
+    # Témoin : nommé en entier, le même sujet rapproche les deux articles.
+    nommé = [dict(a, title=a["title"].replace(" C", " Ada")) for a in corpus]
+    assert scores_of(build_neighbour_table(nommé, stop_words=ENGLISH_FILLER, minimum=-1.0), "a")["b"] > 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "INFIRMÉ : le commentaire JS dit que le lissage donne un poids défini « instead "
-        "of a division by zero ». Sans lissage (idf = ln(n/df) + 1), un terme présent "
-        "partout vaut 1 : df vaut au moins 1 pour tout terme vu, aucune division par zéro"
-    ),
-)
-def test_infirme_sans_lissage_un_terme_present_partout_divise_par_zero():
-    vectoriser = TfidfVectorizer(smooth_idf=False).fit([article_text(a) for a in ARTICLES])
-    assert not all(value == value and value != float("inf") for value in vectoriser.idf_)
+def test_le_lissage_ne_protege_d_aucune_division_par_zero_ici():
+    """
+    Commentaire : « Smoothed, as scikit-learn does by default: as if one extra
+    document held every term once. » Ce lissage change les poids, il n'évite
+    aucune division par zéro : le vocabulaire vient du fonds, donc tout terme
+    vu figure dans au moins un document.
+    """
+    lisse = TfidfVectorizer().fit([article_text(a) for a in ARTICLES])
+    brut = TfidfVectorizer(smooth_idf=False).fit([article_text(a) for a in ARTICLES])
+    assert all(value == value and value != float("inf") for value in brut.idf_)
+    # Ce qu'il change : le poids d'un terme présent partout, 1 dans les deux cas,
+    # et celui du terme le plus rare, plus élevé sans lissage.
+    assert round(min(lisse.idf_), 3) == round(min(brut.idf_), 3) == 1.0
+    assert max(brut.idf_) > max(lisse.idf_)
 
 
 def test_l_extrait_n_importe_que_scikit_learn():

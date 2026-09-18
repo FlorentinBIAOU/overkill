@@ -131,11 +131,12 @@ test('point de rupture : l’annonce de déménagement obtient un score strictem
   assert.deepEqual(buildNeighbourTable(SAME_SUBJECT_TWO_LANGUAGES)['sourdough-starter'], [['office-move', 0.199]]);
 });
 
-test('INFIRMÉ : l’annonce ne partage que de la grammaire, elle partage aussi « day »', async () => {
-  await assert.rejects(async () => {
-    const grammar = new Set([...ENGLISH_FILLER, 'will']);
-    assert.ok(shared(SAME_SUBJECT_TWO_LANGUAGES[0], SAME_SUBJECT_TWO_LANGUAGES[2]).every((t) => grammar.has(t)));
-  });
+test('ce que l’annonce partage avec l’article anglais', () => {
+  // Mot pour mot : de la grammaire, et « day » — « for a day » d'un côté,
+  // « twice a day » de l'autre. Le témoin suivant montre que même sans ce mot,
+  // l'annonce reste devant le jumeau.
+  assert.deepEqual(shared(SAME_SUBJECT_TWO_LANGUAGES[0], SAME_SUBJECT_TWO_LANGUAGES[2]),
+    ['and', 'day', 'is', 'of', 'the', 'will']);
 });
 
 test('point de rupture : la grammaire seule suffit à passer devant le jumeau', () => {
@@ -173,15 +174,18 @@ test('le titre compte deux fois', () => {
   assert.deepEqual(buildNeighbourTable(pair).t, [['u', 0.8]]);
 });
 
-test('INFIRMÉ : un mot présent partout ne pèse presque rien', async () => {
-  await assert.rejects(async () => {
-    const three = [
-      { id: 'a', title: 'the', body: 'sourdough' },
-      { id: 'b', title: 'the', body: 'rye' },
-      { id: 'c', title: 'the', body: 'kimchi' },
-    ];
-    assert.deepEqual(buildNeighbourTable(three), { a: [], b: [], c: [] });
-  });
+test('un mot présent partout pèse le moins, mais pas rien', () => {
+  // « A term present everywhere weighs 1, the least possible » : le moins
+  // possible n'est pas zéro, et trois articles qui ne partagent que « the »
+  // sont voisins. C'est pour cela que la liste de mots vides est le prix de ce
+  // niveau.
+  const three = [
+    { id: 'a', title: 'the', body: 'sourdough' },
+    { id: 'b', title: 'the', body: 'rye' },
+    { id: 'c', title: 'the', body: 'kimchi' },
+  ];
+  assert.equal(scoresOf(buildNeighbourTable(three), 'a').b, 0.583);
+  assert.deepEqual(buildNeighbourTable(three, { stopWords: ['the'] }), { a: [], b: [], c: [] });
 });
 
 test('constat : l’idf d’un mot présent partout vaut un', () => {
@@ -189,12 +193,6 @@ test('constat : l’idf d’un mot présent partout vaut un', () => {
   // « the » pèse 1 et « sourdough » ln(4/2) + 1 avant normalisation.
   const [vector] = vectorise(['the sourdough', 'the rye', 'the kimchi']);
   assert.ok(Math.abs(vector.get('sourdough') / vector.get('the') - (Math.log(2) + 1)) < 1e-12);
-});
-
-test('INFIRMÉ : sans liste de mots vides, le classement tient encore', async () => {
-  await assert.rejects(async () => {
-    assert.ok(!new Map(buildNeighbourTable(ARTICLES)['knife-sharpening']).has('site-news'));
-  });
 });
 
 test('sans liste de mots vides, l’affûtage est apparié à l’annonce du site', () => {
@@ -223,31 +221,42 @@ test('la pondération est recalculée sur le seul fonds à chaque construction',
   ]);
 });
 
-test('INFIRMÉ : la table ne change qu’à la publication ou au réétiquetage', async () => {
-  await assert.rejects(async () => {
-    const edited = ARTICLES.map((a) => ({ ...a }));
-    edited[6].body = 'Sharpen your knife on a whetstone before the comment form comes back.';
-    assert.deepEqual(buildNeighbourTable(edited, { stopWords: ENGLISH_FILLER }), EXPECTED);
-  });
+test('réécrire un article change la table, puisque ce niveau lit le texte', () => {
+  // scenario : la table « ne change que lorsque le fonds change : un article
+  // publié, réécrit, ou dont les étiquettes changent ». Le mot « réécrit » est
+  // là pour ce niveau : N0 ne lisait que les étiquettes, N1 lit le texte.
+  const edited = ARTICLES.map((a) => ({ ...a }));
+  edited[6].body = 'Sharpen your knife on a whetstone before the comment form comes back.';
+  const table = buildNeighbourTable(edited, { stopWords: ENGLISH_FILLER });
+  assert.notDeepEqual(table, EXPECTED);
+  assert.deepEqual(table['site-news'], [['knife-sharpening', 0.124]]);
+  assert.deepEqual(EXPECTED['site-news'], []);
 });
 
-test('INFIRMÉ : écarter les jetons d’une lettre ne coûte rien', async () => {
-  await assert.rejects(async () => {
-    const corpus = [
-      { id: 'a', title: 'Programming in C', body: '' },
-      { id: 'b', title: 'Pointers in C', body: '' },
-      { id: 'c', title: 'Rust traits', body: '' },
-    ];
-    assert.ok(scoresOf(buildNeighbourTable(corpus, { stopWords: ENGLISH_FILLER, minimum: -1 }), 'a').b > 0);
-  });
+test('un mot d’une lettre est écarté, et cela coûte le sujet de l’article', () => {
+  // « A one-letter word, such as the C of "Programming in C", is dropped with
+  // the rest » : c'est le motif de jeton par défaut de scikit-learn, et son
+  // prix se voit.
+  const corpus = [
+    { id: 'a', title: 'Programming in C', body: '' },
+    { id: 'b', title: 'Pointers in C', body: '' },
+    { id: 'c', title: 'Rust traits', body: '' },
+  ];
+  assert.equal(scoresOf(buildNeighbourTable(corpus, { stopWords: ENGLISH_FILLER, minimum: -1 }), 'a').b, 0);
+  // Témoin : nommé en entier, le même sujet rapproche les deux articles.
+  const nomme = corpus.map((a) => ({ ...a, title: a.title.replace(' C', ' Ada') }));
+  assert.ok(scoresOf(buildNeighbourTable(nomme, { stopWords: ENGLISH_FILLER, minimum: -1 }), 'a').b > 0);
 });
 
-test('INFIRMÉ : sans lissage, un terme présent partout diviserait par zéro', async () => {
-  // Formule non lissée : ln(n / df) + 1. df vaut au moins 1 pour un terme vu.
-  await assert.rejects(async () => {
-    const n = ARTICLES.length;
-    for (let df = 1; df <= n; df += 1) assert.ok(!Number.isFinite(Math.log(n / df) + 1));
-  });
+test('le lissage ne protège d’aucune division par zéro ici', () => {
+  // « Smoothed, as scikit-learn does by default: as if one extra document held
+  // every term once. » Ce lissage change les poids, il n'évite aucune division
+  // par zéro : le vocabulaire vient du fonds, donc tout terme vu figure dans au
+  // moins un document.
+  const n = ARTICLES.length;
+  for (let df = 1; df <= n; df += 1) assert.ok(Number.isFinite(Math.log(n / df) + 1));
+  // Ce qu'il change : le terme le plus rare pèse moins une fois lissé.
+  assert.ok(Math.log((1 + n) / (1 + 1)) + 1 < Math.log(n / 1) + 1);
 });
 
 test('l’extrait n’importe rien', () => {
@@ -367,15 +376,21 @@ test('essai : un sujet que le fonds ne traite pas ne passe pas le plancher', () 
   assert.equal(essai.run(cas.input.fr, 'fr').note, 'Aucun des 8 articles ne passe le plancher de 0,05.');
 });
 
-test('INFIRMÉ : la note dit qu’un zéro est « l’absence de tout mot commun », « un » et « de » sont communs', async () => {
-  // Le zéro est l'absence de mot commun hors mots vides.
+test('essai : un zéro est l’absence de tout mot commun, mots vides mis à part', () => {
+  // Note de l'essai : « Un zéro n'est pas un score faible, c'est l'absence de
+  // tout mot commun, mots vides mis à part. » Les mots vides, eux, sont bien
+  // partagés — « un », « de » — et ne comptent pour rien.
   const cas = essai.cases[2];
   const levain = rowsOf('fr', cas).find((r) => r[0] === 'Entretenir un levain naturel');
   assert.equal(levain[1].v, '0,00');
-  await assert.rejects(async () => {
-    const title = new Set(tokenise('Entretenir un levain naturel'));
-    assert.ok(tokenise(cas.input.fr).every((t) => !title.has(t)));
-  });
+  const title = new Set(tokenise('Entretenir un levain naturel'));
+  const communs = tokenise(cas.input.fr).filter((t) => title.has(t));
+  assert.ok(communs.length > 0);
+  // La liste de mots vides française de l'essai, reprise ici pour la lecture.
+  const motsVides = ('au aux avec ce ces dans de des du elle en et eux il je la le les leur lui ma mais '
+    + 'me même mes moi mon ne nos notre nous on ou par pas pour qu que qui sa se ses son '
+    + 'sur ta te tes toi ton tu un une vos votre vous est été être ai as avons avez ont sont').split(' ');
+  assert.ok(communs.every((t) => motsVides.includes(t)), communs.join(', '));
 });
 
 test('essai : le même sujet dans l’autre langue vaut zéro, et l’annonce passe le plancher', () => {

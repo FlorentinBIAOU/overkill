@@ -3,7 +3,7 @@ id: show-similar-articles
 family: recommend
 status: published
 verdict: N1
-updated: 2026-09-15
+updated: 2026-09-18
 contributors: [florentin-biaou]
 
 title:
@@ -15,8 +15,8 @@ need:
   en: "Offer three or four other articles from the site, under the one being read, that cover the same subject."
 
 scenario:
-  fr: "On voit un appel de modèle au moment d’afficher la page, pour lui demander quels articles ressemblent à celui qu’on lit. Le résultat ne dépend pourtant pas du lecteur, et il ne change que lorsque le fonds change : un article publié, réécrit, ou dont les étiquettes changent. C’est une table à construire hors ligne, pour tout le fonds d’un coup, pas un calcul à refaire à chaque affichage ; les latences annoncées sont celles d’un article, pas celle de la table entière. Les trois niveaux de cette fiche rendent une table de même forme, un article vers ses voisins et leurs scores, et le code qui affiche le bloc ne change pas quand vous montez d’un niveau."
-  en: "The reflex is to call a model when the page is rendered, asking which articles look like the one being read. But the result does not depend on the reader, and it only changes when the corpus does: an article published, rewritten or retagged. It is a table to build offline, for the whole corpus at once, not a computation to redo on every view; the latencies given are those of one article, not of the whole table. The three levels here return a table of the same shape, an article to its neighbours and their scores, and the code that renders the block does not change when you move up a level."
+  fr: "On voit un appel de modèle au moment d’afficher la page, pour lui demander quels articles ressemblent à celui qu’on lit. Le résultat ne dépend pourtant pas du lecteur, et il ne change que lorsque le fonds change : un article publié, réécrit, ou dont les étiquettes changent. C’est une table à construire hors ligne, pour tout le fonds d’un coup, pas un calcul à refaire à chaque affichage — à chaque publication, ou la nuit, l’article paru entre deux constructions n’ayant aucun voisin jusque-là : montrez-lui ceux de sa rubrique en attendant ; les latences annoncées sont celles d’un article, pas celle de la table entière. Les trois niveaux de cette fiche rendent une table de même forme, un article vers ses voisins et leurs scores, et le code qui affiche le bloc ne change pas quand vous montez d’un niveau."
+  en: "The reflex is to call a model when the page is rendered, asking which articles look like the one being read. But the result does not depend on the reader, and it only changes when the corpus does: an article published, rewritten or retagged. It is a table to build offline, for the whole corpus at once, not a computation to redo on every view — on every publication, or overnight, since an article published between two builds has no neighbours until the next one: show it the ones from its section in the meantime; the latencies given are those of one article, not of the whole table. The three levels here return a table of the same shape, an article to its neighbours and their scores, and the code that renders the block does not change when you move up a level."
 
 rungs:
   - level: N0
@@ -106,11 +106,11 @@ rungs:
       javascript: snippets/show-similar-articles/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Un article reçoit un seul vecteur, qui mêle tout ce qu’il contient. Le test ajoute un paragraphe digressif à l’article sur le pain de seigle — le four, la planche, le pot de confiture, la poêle — et cela suffit à lui coûter sa place de premier voisin : l’article sur le levain se retrouve apparié à celui sur la poêle en fonte, et l’article rallongé perd au passage son propre meilleur voisin ; rallongé de son propre sujet, il garde sa place. Ces vecteurs sont ceux du double local : ce que le vrai modèle rend sur ces articles n’est pas mesuré ici. Et le modèle nommé ne lit que le début d’un long article, 128 jetons en Python et 512 en JavaScript : ce qui dépasse ne dilue pas le vecteur, il n’y entre pas."
-      en: "An article gets a single vector, which blends everything it holds. The test adds a rambling paragraph to the rye loaf article — the oven, the board, the jar of jam, the pan — and that alone costs it its place as first neighbour: the sourdough piece is paired with the cast iron one instead, and the lengthened article loses its own best neighbour along the way; lengthened with its own subject, it keeps its place. These vectors come from the local double: what the real model returns on these articles is not measured here. And the named model only reads the start of a long article, 128 tokens in Python and 512 in JavaScript: what lies beyond does not dilute the vector, it never enters it."
+      fr: "Un article reçoit un seul vecteur, qui mêle tout ce qu’il contient : un paragraphe digressif ajouté à l’article sur le pain de seigle — le four, la planche, le pot de confiture, la poêle — suffit à lui coûter sa place de premier voisin, et les vecteurs de ce test sont ceux du double local. Et le modèle nommé ne lit que le début d’un long article, 128 jetons en Python et 512 en JavaScript : ce qui dépasse ne dilue pas le vecteur, il n’y entre pas — construisez donc la table et interrogez-la avec le même environnement, faute de quoi le même article y aura deux vecteurs."
+      en: "An article gets a single vector, which blends everything it holds: a rambling paragraph added to the rye loaf article — the oven, the board, the jar of jam, the pan — is enough to cost it its place as first neighbour, and the vectors in that test come from the local double. And the named model only reads the start of a long article, 128 tokens in Python and 512 in JavaScript: what lies beyond does not dilute the vector, it never enters it — so build the table and query it with the same runtime, or the same article will have two vectors."
     escalate_when:
-      fr: "Il n’y a pas de niveau au-dessus dans cette fiche : au-delà, on ne change plus d’algorithme, on découpe les articles en passages et on indexe les passages."
-      en: "There is no level above this one here: past it you do not change algorithm, you cut articles into passages and index the passages."
+      fr: "Il n’y a pas de niveau au-dessus dans cette fiche : au-delà, on ne change plus d’algorithme, on découpe les articles en passages et on indexe les passages. Avant d’en arriver là, pour des articles, encodez le titre et le chapeau plutôt que le texte entier coupé au milieu du deuxième paragraphe : ils disent le sujet, et ils tiennent dans la fenêtre."
+      en: "There is no level above this one here: past it you do not change algorithm, you cut articles into passages and index the passages. Before going that far, for articles, encode the title and the standfirst rather than the whole text cut off mid-second-paragraph: they state the subject, and they fit in the window."
 
   - level: N3
     available: false
@@ -132,5 +132,11 @@ further_reading:
   - label: "Sentence-Transformers — documentation des encodeurs auto-hébergés"
     url: "https://www.sbert.net/"
 
-sources: []
+sources:
+  - label: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2, `sentence_bert_config.json` : `\"max_seq_length\": 128` — le modèle du niveau N2 côté Python ne lit que les 128 premiers jetons d’un article"
+    url: "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/blob/main/sentence_bert_config.json"
+  - label: "Xenova/paraphrase-multilingual-MiniLM-L12-v2, `tokenizer_config.json` : `model_max_length` 512 — la conversion ONNX chargée par l’extrait JavaScript coupe quatre fois plus loin, d’où deux vecteurs possibles pour un même article long"
+    url: "https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/blob/main/tokenizer_config.json"
+  - label: "SBERT — Computing Embeddings, « Input Sequence Length » : chaque modèle porte une longueur maximale sous `model.max_seq_length`, et « longer texts will be truncated to the first `model.max_seq_length` tokens »"
+    url: "https://sbert.net/examples/sentence_transformer/applications/computing-embeddings/README.html"
 ---

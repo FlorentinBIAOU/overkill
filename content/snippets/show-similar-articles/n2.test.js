@@ -219,13 +219,14 @@ test('le modèle par défaut a la surface de @huggingface/transformers', async (
   assert.deepEqual(globalThis.__transformersLoads, [['feature-extraction', MODEL_NAME]]);
 });
 
-test('INFIRMÉ : le modèle reste chargé entre deux constructions', async () => {
-  await assert.rejects(async () => {
-    globalThis.__transformersLoads.length = 0;
-    await buildNeighbourTable(ARTICLES);
-    await buildNeighbourTable(ARTICLES);
-    assert.equal(globalThis.__transformersLoads.length, 1);
-  });
+test('le modèle est chargé par construction, et lâché ensuite', async () => {
+  // Le modèle sert à construire la table, hors ligne, et rien ne le garde entre
+  // deux constructions : ce niveau ne demande pas un service à tenir chaud, il
+  // demande une machine le temps d'une construction.
+  globalThis.__transformersLoads.length = 0;
+  await buildNeighbourTable(ARTICLES);
+  await buildNeighbourTable(ARTICLES);
+  assert.equal(globalThis.__transformersLoads.length, 2);
 });
 
 test('deux constructions rendent la même table', async () => {
