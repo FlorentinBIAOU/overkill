@@ -9,7 +9,6 @@
   ],
   "dette": [
     "check-a-company-identification-number",
-    "check-a-file-is-really-the-format-it-claims",
     "check-bank-details-before-a-transfer",
     "convert-a-pdf-to-plain-text",
     "convert-messy-csv-to-clean-data",

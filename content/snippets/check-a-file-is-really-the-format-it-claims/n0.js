@@ -22,12 +22,20 @@
  * SVG and a plain note have no binary header, so they are reported as
  * unrecognised rather than guessed — and an unrecognised file is never
  * allowed.
+ *
+ * One format, one name. `.jpeg` and `.jpg` are the same picture, `.tif` and
+ * `.tiff` the same scan, and the two tables do not always pick the same
+ * spelling. The detected type, the claimed extension and every entry of the
+ * caller's allow list are compared under one canonical name, so a photo
+ * exported by a phone as `photo.jpeg` is not reported as a mismatch.
  */
 
 import { fileTypeFromBuffer } from 'file-type';
 
-// Signatures live in the first bytes; reading more than this from an untrusted
-// upload buys nothing and costs memory.
+// Signatures live in the first bytes; reading more than this buys nothing.
+// Here it really is the whole read — `file-type` tells a .docx from a .xlsx
+// from the head alone. `puremagic` cannot, so the Python side opens the
+// archive and holds the whole upload in memory to answer the same thing.
 export const HEAD = 4096;
 
 // The two tables do not need the same number of bytes: `puremagic` calls a PNG
@@ -36,8 +44,14 @@ export const HEAD = 4096;
 // nothing rather than answering differently in each language.
 export const MIN_BYTES = 16;
 
-// The same format under two names in the two tables.
+// The same format under two names, in the tables and in the wild.
 const ALIASES = { jfif: 'jpg', jpeg: 'jpg', tif: 'tiff', htm: 'html' };
+
+/** The one name this snippet uses for a format, however it was written. */
+const canonical = (extension) => {
+  const name = String(extension).trim().replace(/^\.+/, '').toLowerCase();
+  return ALIASES[name] ?? name;
+};
 
 // What a web upload actually carries. A signature table holds a thousand
 // formats, and on binary noise it finds one: a hundred null bytes come back
@@ -77,7 +91,7 @@ export async function sniffFile(data, { claimedName, allowed = [] } = {}) {
   }
 
   const match = await fileTypeFromBuffer(bytes.subarray(0, HEAD));
-  const extension = match ? ALIASES[match.ext] ?? match.ext : null;
+  const extension = match ? canonical(match.ext) : null;
   if (extension === null || !KNOWN.has(extension)) {
     return report(null, claimedName, allowed, 'no signature read from the bytes');
   }
@@ -90,12 +104,17 @@ function report(detected, claimedName, allowed, reason) {
   const claimed = claimedName && claimedName.includes('.')
     ? claimedName.slice(claimedName.lastIndexOf('.') + 1).toLowerCase()
     : null;
+  // `claimed` is reported as the client spelled it; the comparisons are made
+  // on canonical names, on all three sides. Comparing a canonical `jpg` to a
+  // raw `jpeg` raised a mismatch on half the photos on the web, and refused
+  // them when the allow list was spelled `jpeg` too.
+  const permitted = new Set([...allowed].map(canonical));
   return {
     detected,
     claimed,
     // null when there is nothing to compare: no claim, or nothing read.
-    matches_claim: claimed === null || detected === null ? null : claimed === detected,
-    allowed: detected !== null && [...allowed].includes(detected),
+    matches_claim: claimed === null || detected === null ? null : canonical(claimed) === detected,
+    allowed: detected !== null && permitted.has(detected),
     reason,
   };
 }

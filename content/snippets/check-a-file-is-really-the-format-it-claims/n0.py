@@ -21,6 +21,12 @@ same thing.
 What no table can do is a format whose file is text. A CSV, a JSON file, an
 SVG and a plain note have no binary header, so they are reported as
 unrecognised rather than guessed — and an unrecognised file is never allowed.
+
+One format, one name. `.jpeg` and `.jpg` are the same picture, `.tif` and
+`.tiff` the same scan, and the two tables do not always pick the same spelling.
+The detected type, the claimed extension and every entry of the caller's allow
+list are compared under one canonical name, so a photo exported by a phone as
+`photo.jpeg` is not reported as a mismatch.
 """
 
 from __future__ import annotations
@@ -39,8 +45,13 @@ ODF_MIMETYPES = {
 }
 OOXML_FOLDERS = {"word/": "docx", "xl/": "xlsx", "ppt/": "pptx"}
 
-# Signatures live in the first bytes; reading more than this from an untrusted
-# upload buys nothing and costs memory.
+# Signatures live in the first bytes; reading more than this to find one buys
+# nothing. It is not a bound on the whole read, and saying so matters on an
+# upload path: a ZIP keeps its table of contents at the end of the file, so
+# `_inside_zip` below holds the whole upload in memory. That is the price of
+# answering `docx` rather than `zip`, and of answering it in both languages —
+# `file-type` tells the two apart from the head alone, `puremagic` cannot. A
+# caller that will not pay it bounds the upload before calling.
 HEAD = 4096
 
 # The two tables do not need the same number of bytes: `puremagic` calls a PNG
@@ -49,7 +60,7 @@ HEAD = 4096
 # nothing rather than answering differently in each language.
 MIN_BYTES = 16
 
-# The same format under two names in the two tables.
+# The same format under two names, in the tables and in the wild.
 ALIASES = {"jfif": "jpg", "jpeg": "jpg", "tif": "tiff", "htm": "html"}
 
 # What a web upload actually carries. A signature table holds a thousand
@@ -63,6 +74,12 @@ KNOWN = {
     "pdf", "rtf", "zip", "docx", "xlsx", "pptx", "odt", "ods", "odp",
     "mp3", "mp4", "wav", "ogg", "webm", "gz", "7z", "rar", "exe",
 }
+
+
+def _canonical(extension: str) -> str:
+    """The one name this snippet uses for a format, however it was written."""
+    name = extension.strip().lstrip(".").lower()
+    return ALIASES.get(name, name)
 
 
 def _inside_zip(data: bytes) -> str:
@@ -104,10 +121,12 @@ def sniff_file(data, *, claimed_name: str | None = None, allowed=()) -> dict:
 
     try:
         matches = puremagic.magic_string(head)
-    except Exception:  # noqa: BLE001 - an unrecognised file is an answer, not a crash
+    # puremagic raises PureError (a LookupError) when nothing matches, and
+    # PureValueError (a ValueError) on empty input. An unrecognised file is an
+    # answer here, not a crash.
+    except (LookupError, ValueError):
         matches = []
-    candidates = [ALIASES.get(m.extension.lstrip(".").lower(), m.extension.lstrip(".").lower())
-                  for m in matches]
+    candidates = [_canonical(m.extension) for m in matches]
     detected = [c for c in candidates if c in KNOWN][:1]
     if detected and detected[0] in {"zip", "docx", "xlsx", "pptx", "odt", "ods", "odp"}:
         detected = [_inside_zip(bytes(data))]
@@ -119,11 +138,16 @@ def _report(detected: list, claimed_name: str | None, allowed, reason: str | Non
     claimed = None
     if claimed_name and "." in claimed_name:
         claimed = claimed_name.rsplit(".", 1)[1].lower()
+    # `claimed` is reported as the client spelled it; the comparisons are made
+    # on canonical names, on all three sides. Comparing a canonical `jpg` to a
+    # raw `jpeg` raised a mismatch on half the photos on the web, and refused
+    # them when the allow list was spelled `jpeg` too.
+    permitted = {_canonical(extension) for extension in allowed}
     return {
         "detected": detected[0] if detected else None,
         "claimed": claimed,
         # None when there is nothing to compare: no claim, or nothing read.
-        "matches_claim": None if (claimed is None or not detected) else claimed in detected,
-        "allowed": bool(detected) and detected[0] in set(allowed),
+        "matches_claim": None if (claimed is None or not detected) else _canonical(claimed) in detected,
+        "allowed": bool(detected) and detected[0] in permitted,
         "reason": reason,
     }

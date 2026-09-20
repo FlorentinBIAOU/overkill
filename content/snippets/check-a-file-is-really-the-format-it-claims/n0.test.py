@@ -24,6 +24,10 @@ CSV = "nom;prenom;ville\nDupont;Jean;Boulogne-Billancourt\n".encode()
 CSV_BOM = b"\xef\xbb\xbf" + CSV
 JSON_FILE = b'{"nom": "Dupont"}'
 TXT = "Bonjour, ceci est une note.\n".encode()
+# Un TIFF minimal : un en-tête petit-boutien et un répertoire d'une entrée.
+# Il sert à exercer l'alias « tif »/« tiff », que les deux tables n'écrivent
+# pas pareil — puremagic rend « .tiff », file-type rend « tif ».
+TIFF = bytes.fromhex("49492a00080000000100000103000100000001000000" "00000000")
 
 ZIP = base64.b64decode(
     "UEsDBBQAAAAIAEMhNF3I8LalCQAAAAcAAAAJAAAAbm90ZXMudHh0S8rPy8ovLQIAUEsBAhQDFAAAAAgAQyE0Xc"
@@ -52,7 +56,7 @@ ODT = base64.b64decode(
     "sFBgAAAAACAAIAbwAAAJAAAAAAAA==")
 
 RECONNUS = {"png": PNG, "jpg": JPEG, "gif": GIF, "pdf": PDF, "exe": EXE, "rtf": RTF,
-            "zip": ZIP, "docx": DOCX, "xlsx": XLSX, "odt": ODT}
+            "tiff": TIFF, "zip": ZIP, "docx": DOCX, "xlsx": XLSX, "odt": ODT}
 SANS_SIGNATURE = {"csv": CSV, "csv-bom": CSV_BOM, "json": JSON_FILE, "txt": TXT, "svg": SVG}
 SANS_SIGNATURE_REASON = "no signature read from the bytes"
 
@@ -88,6 +92,33 @@ def test_point_de_rupture_temoin_les_formats_binaires_sont_bien_reconnus():
 # ---------------------------------------------------------------------------
 # Les autres affirmations du niveau
 # ---------------------------------------------------------------------------
+
+
+def test_les_extensions_synonymes_designent_un_seul_format():
+    """
+    Docstring : « The detected type, the claimed extension and every entry of
+    the caller's allow list are compared under one canonical name. »
+
+    T3 : la table ALIASES est exercée des deux côtés — une extension qui y
+    figure, et une qui n'y figure pas —, sur le nom réclamé comme sur la liste
+    d'autorisation. Le nom du fichier n'est pas construit à partir du format
+    attendu : c'est ce qui laissait passer le défaut.
+    """
+    # « .jpeg » est ce qu'exporte un téléphone, et ce qu'écrit image/jpeg.
+    rapport = sniff_file(JPEG, claimed_name="photo.jpeg", allowed=("jpeg",))
+    assert rapport["detected"] == "jpg"
+    assert rapport["claimed"] == "jpeg", "la réclamation est rendue telle que le client l'a écrite"
+    assert rapport["matches_claim"] is True
+    assert rapport["allowed"] is True
+    # Et dans l'autre sens : « .tif » réclamé, « tiff » détecté.
+    scan = sniff_file(TIFF, claimed_name="scan.tif", allowed=("tif",))
+    assert (scan["detected"], scan["matches_claim"], scan["allowed"]) == ("tiff", True, True)
+    # Une extension qui ne figure pas dans la table n'est pas transformée.
+    ordinaire = sniff_file(PNG, claimed_name="logo.png", allowed=("png",))
+    assert (ordinaire["claimed"], ordinaire["matches_claim"]) == ("png", True)
+    # Témoin : l'alias ne fait pas concorder deux formats différents.
+    faux = sniff_file(PNG, claimed_name="photo.jpeg", allowed=("jpeg",))
+    assert (faux["detected"], faux["matches_claim"], faux["allowed"]) == ("png", False, False)
 
 
 def test_le_nom_du_fichier_ne_decide_jamais():
@@ -145,11 +176,18 @@ def test_un_fichier_non_reconnu_nest_jamais_autorise():
         assert sniff_file(octets, allowed=("png", "csv", "txt"))["allowed"] is False
 
 
-def test_aucune_entree_ne_leve():
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """
+    R14 : la raison rendue dit ce que le code a constaté — le type reçu — et
+    rien de plus. Elle est citée ici mot pour mot.
+    """
+    assert sniff_file(None)["reason"] == "a file is bytes, not NoneType"
+    assert sniff_file("PNG")["reason"] == "a file is bytes, not str"
+    assert sniff_file(0)["reason"] == "a file is bytes, not int"
     for entree in [None, 0, "PNG", [], {}, object()]:
         rapport = sniff_file(entree)
         assert rapport["detected"] is None
-        assert isinstance(rapport["reason"], str) and rapport["reason"]
+        assert rapport["reason"].startswith("a file is bytes, not ")
 
 
 # ---------------------------------------------------------------------------
@@ -162,13 +200,18 @@ def test_production_entree_banale_ce_quon_televerse_dans_un_formulaire():
     for nom, octets, attendu in [
         ("justificatif.pdf", PDF, "pdf"),
         ("photo.jpg", JPEG, "jpg"),
+        # Ce que rend l'export d'un téléphone, et ce qu'écrit image/jpeg.
+        ("photo.jpeg", JPEG, "jpg"),
+        ("scan.tif", TIFF, "tiff"),
         ("logo.png", PNG, "png"),
         ("contrat.docx", DOCX, "docx"),
         ("comptes.xlsx", XLSX, "xlsx"),
         ("note.odt", ODT, "odt"),
     ]:
+        # La liste d'autorisation est écrite comme l'écrit un développeur qui
+        # part des types MIME : « jpeg », pas « jpg ».
         rapport = sniff_file(octets, claimed_name=nom,
-                             allowed=("pdf", "jpg", "png", "docx", "xlsx", "odt"))
+                             allowed=("pdf", "jpeg", "png", "docx", "xlsx", "tif", "odt"))
         assert rapport["detected"] == attendu, nom
         assert rapport["matches_claim"] is True, nom
         assert rapport["allowed"] is True, nom
@@ -245,15 +288,17 @@ def test_python_et_javascript_rendent_le_meme_rapport():
                 "zip+png": ZIP + PNG, "png+zip": PNG + ZIP, "vide": b"",
                 "un-octet": b"\x89", "png-tronque": PNG[:15], "png-16": PNG[:16],
                 "nuls": b"\x00" * 100}
-    autorises = ("png", "jpg", "pdf", "docx")
-    attendu = {nom: sniff_file(octets, claimed_name="fichier.png", allowed=autorises)
+    # Le nom réclamé porte un alias, et la liste d'autorisation aussi : la
+    # parité se vérifie là où le défaut était, pas seulement ailleurs.
+    autorises = ("png", "jpeg", "pdf", "docx", "tif")
+    attendu = {nom: sniff_file(octets, claimed_name="fichier.jpeg", allowed=autorises)
                for nom, octets in fichiers.items()}
     script = (
         f"import {{ sniffFile }} from {json.dumps((ICI / 'n0.js').as_uri())};"
         "let d='';process.stdin.on('data',c=>d+=c).on('end',async()=>{"
         "const f=JSON.parse(d);const out={};"
         "for (const [k,b64] of Object.entries(f)) out[k]=await sniffFile("
-        "Buffer.from(b64,'base64'),{claimedName:'fichier.png',"
+        "Buffer.from(b64,'base64'),{claimedName:'fichier.jpeg',"
         f"allowed:{json.dumps(list(autorises))}}});"
         "process.stdout.write(JSON.stringify(out));});"
     )

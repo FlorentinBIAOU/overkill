@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/check-a-file-is-really-the-format-it-claims/n0.js
       verification: executed
     breaking_point:
-      fr: "Un format dont le fichier est du texte n’a rien à lire : un CSV, un JSON, un SVG et une note en clair n’ont aucun en-tête binaire, et le rapport les rend non reconnus — donc non autorisés, y compris quand c’est bien ce qu’ils prétendent être. Le témoin est dans le même test : sur un PNG, un JPEG, un GIF, un PDF, un ZIP, un DOCX, un XLSX et un ODT, le bon type revient."
-      en: "A format whose file is text has nothing to read: a CSV, a JSON file, an SVG and a plain note have no binary header, and the report returns them unrecognised — so not allowed, even when that is exactly what they are. The witness is in the same test: on a PNG, a JPEG, a GIF, a PDF, a ZIP, a DOCX, an XLSX and an ODT, the right type comes back."
+      fr: "Un fichier texte n’a pas d’en-tête à lire : un CSV, un JSON, un SVG et une note en clair reviennent non reconnus, donc non autorisés, même quand ils sont ce qu’ils prétendent être. Témoin dans le même test : un PNG, un JPEG, un PDF et un DOCX rendent le bon type."
+      en: "A text file has no header to read: a CSV, a JSON file, an SVG and a plain note come back unrecognised, so not allowed, even when they are exactly what they claim. The witness is in the same test: a PNG, a JPEG, a PDF and a DOCX all return the right type."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus pour cette question-là. Le jour où ce que vous voulez savoir n’est plus « quel format » mais « que contient-il » — une macro, un script dans un SVG, une charge utile —, c’est une analyse antivirale ou un bac à sable, pas une lecture de signature."
       en: "There is no level above this one for that question. The day what you want to know stops being “which format” and becomes “what is inside it” — a macro, a script in an SVG, a payload —, that is malware scanning or a sandbox, not reading a signature."

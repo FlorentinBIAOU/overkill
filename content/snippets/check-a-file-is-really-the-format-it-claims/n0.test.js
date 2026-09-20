@@ -29,6 +29,10 @@ const CSV = texte('nom;prenom;ville\nDupont;Jean;Boulogne-Billancourt\n');
 const CSV_BOM = Buffer.concat([hex('efbbbf'), CSV]);
 const JSON_FILE = texte('{"nom": "Dupont"}');
 const TXT = texte('Bonjour, ceci est une note.\n');
+// Un TIFF minimal : un en-tête petit-boutien et un répertoire d'une entrée.
+// Il sert à exercer l'alias « tif »/« tiff », que les deux tables n'écrivent
+// pas pareil — file-type rend « tif », puremagic rend « .tiff ».
+const TIFF = hex('49492a0008000000010000010300010000000100000000000000');
 
 const ZIP = b64(
   'UEsDBBQAAAAIAEMhNF3I8LalCQAAAAcAAAAJAAAAbm90ZXMudHh0S8rPy8ovLQIAUEsBAhQDFAAAAAgAQyE0Xc'
@@ -58,7 +62,7 @@ const ODT = b64(
 
 const RECONNUS = {
   png: PNG, jpg: JPEG, gif: GIF, pdf: PDF, exe: EXE, rtf: RTF,
-  zip: ZIP, docx: DOCX, xlsx: XLSX, odt: ODT,
+  tiff: TIFF, zip: ZIP, docx: DOCX, xlsx: XLSX, odt: ODT,
 };
 const SANS_SIGNATURE = { csv: CSV, 'csv-bom': CSV_BOM, json: JSON_FILE, txt: TXT, svg: SVG };
 const SANS_SIGNATURE_REASON = 'no signature read from the bytes';
@@ -91,6 +95,30 @@ test('point de rupture : témoin, les formats binaires sont bien reconnus', asyn
 // ---------------------------------------------------------------------------
 // Les autres affirmations du niveau
 // ---------------------------------------------------------------------------
+
+test('les extensions synonymes désignent un seul format', async () => {
+  // Docstring : « The detected type, the claimed extension and every entry of
+  // the caller's allow list are compared under one canonical name. »
+  //
+  // T3 : la table ALIASES est exercée des deux côtés — une extension qui y
+  // figure, et une qui n'y figure pas —, sur le nom réclamé comme sur la liste
+  // d'autorisation. Le nom du fichier n'est pas construit à partir du format
+  // attendu : c'est ce qui laissait passer le défaut.
+  const rapport = await sniffFile(JPEG, { claimedName: 'photo.jpeg', allowed: ['jpeg'] });
+  assert.equal(rapport.detected, 'jpg');
+  assert.equal(rapport.claimed, 'jpeg', "la réclamation est rendue telle que le client l'a écrite");
+  assert.equal(rapport.matches_claim, true);
+  assert.equal(rapport.allowed, true);
+  // Et dans l'autre sens : « .tif » réclamé, « tiff » détecté.
+  const scan = await sniffFile(TIFF, { claimedName: 'scan.tif', allowed: ['tif'] });
+  assert.deepEqual([scan.detected, scan.matches_claim, scan.allowed], ['tiff', true, true]);
+  // Une extension qui ne figure pas dans la table n'est pas transformée.
+  const ordinaire = await sniffFile(PNG, { claimedName: 'logo.png', allowed: ['png'] });
+  assert.deepEqual([ordinaire.claimed, ordinaire.matches_claim], ['png', true]);
+  // Témoin : l'alias ne fait pas concorder deux formats différents.
+  const faux = await sniffFile(PNG, { claimedName: 'photo.jpeg', allowed: ['jpeg'] });
+  assert.deepEqual([faux.detected, faux.matches_claim, faux.allowed], ['png', false, false]);
+});
 
 test('le nom du fichier ne décide jamais', async () => {
   const rapport = await sniffFile(ZIP, {
@@ -132,12 +160,16 @@ test("un fichier non reconnu n'est jamais autorisé", async () => {
   }
 });
 
-test('aucune entrée ne lève', async () => {
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', async () => {
+  // R14 : la raison rendue dit ce que le code a constaté — le type reçu — et
+  // rien de plus. Elle est citée ici mot pour mot.
+  assert.equal((await sniffFile(null)).reason, 'a file is bytes, not null');
+  assert.equal((await sniffFile('PNG')).reason, 'a file is bytes, not string');
+  assert.equal((await sniffFile(0)).reason, 'a file is bytes, not number');
   for (const entree of [null, undefined, 0, 'PNG', [], {}]) {
     const rapport = await sniffFile(entree);
     assert.equal(rapport.detected, null);
-    assert.equal(typeof rapport.reason, 'string');
-    assert.ok(rapport.reason.length > 0);
+    assert.ok(rapport.reason.startsWith('a file is bytes, not '));
   }
 });
 
@@ -146,10 +178,15 @@ test('aucune entrée ne lève', async () => {
 // ---------------------------------------------------------------------------
 
 test("production : entrée banale, ce qu'on téléverse dans un formulaire", async () => {
-  const autorises = ['pdf', 'jpg', 'png', 'docx', 'xlsx', 'odt'];
+  // La liste d'autorisation est écrite comme l'écrit un développeur qui part
+  // des types MIME : « jpeg », pas « jpg ».
+  const autorises = ['pdf', 'jpeg', 'png', 'docx', 'xlsx', 'tif', 'odt'];
   for (const [nom, octets, attendu] of [
     ['justificatif.pdf', PDF, 'pdf'],
     ['photo.jpg', JPEG, 'jpg'],
+    // Ce que rend l'export d'un téléphone, et ce qu'écrit image/jpeg.
+    ['photo.jpeg', JPEG, 'jpg'],
+    ['scan.tif', TIFF, 'tiff'],
     ['logo.png', PNG, 'png'],
     ['contrat.docx', DOCX, 'docx'],
     ['comptes.xlsx', XLSX, 'xlsx'],
