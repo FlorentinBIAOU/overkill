@@ -13,3 +13,4 @@ dateparser==1.2.2
 pypdf==6.1.3
 python-stdnum==2.2
 phonenumbers==9.0.39
+email-validator==2.3.0

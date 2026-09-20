@@ -1,0 +1,34 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Contrôler une adresse électronique avec la définition que le navigateur a
+  déjà appliquée.
+
+  Niveau N0, et il n'y en a pas d'autre : rien ici ne touche au réseau, donc
+  rien ici ne sait si la boîte existe. Ce que le code sait, c'est la forme.
+
+  Cette forme est spécifiée. Le standard HTML définit ce qu'est une adresse
+  valide pour `input type=email` et publie l'expression régulière
+  correspondante, en précisant que « cette exigence est une violation
+  délibérée de la RFC 5322 ». Cette violation est justement l'intérêt : c'est
+  la définition contre laquelle vos utilisateurs ont déjà été validés dans leur
+  navigateur, donc celle avec laquelle un serveur devrait être d'accord.
+
+  Les bibliothèques mûres, elles, ne sont d'accord ni avec elle ni entre elles.
+  Sur les trente-deux adresses du test, `email-validator` 2.3.0 en Python et
+  `validator.js` 13.15.35 en JavaScript rendent quatre verdicts différents, et
+  la définition du navigateur s'écarte de l'une ou de l'autre quatorze fois.
+  Parmi les quatre : la forme entre guillemets "jean dupont"@exemple.fr, un
+  domaine de premier niveau d'une seule lettre, et une partie locale de
+  soixante-cinq caractères, qu'`email-validator` accepte alors que la RFC 5321
+  la plafonne à soixante-quatre — d'où la longueur contrôlée ici plutôt que
+  laissée à une bibliothèque.
+
+  Deux choses que le rapport dit au lieu de les trancher. La partie avant
+  l'arobase garde sa casse, parce que la RFC 5321 la rend sensible à la casse
+  et que seul le domaine ne l'est pas : mettre l'adresse entière en minuscules
+  réécrit en silence le nom d'une boîte. Et `routable` vaut faux pour
+  jean@localhost, que la définition HTML accepte : un nom d'hôte sans point est
+  une adresse valide qu'aucun serveur de courrier public n'atteindra.

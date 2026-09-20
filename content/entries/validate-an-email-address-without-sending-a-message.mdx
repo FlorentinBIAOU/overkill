@@ -1,0 +1,96 @@
+---
+id: validate-an-email-address-without-sending-a-message
+family: decide-validate
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Vérifier une adresse e-mail sans envoyer de message"
+  en: "Validate an email address without sending a message"
+
+need:
+  fr: "Contrôler qu’une adresse saisie dans un formulaire a la forme d’une adresse, avant de l’enregistrer."
+  en: "Check that an address typed into a form has the shape of an address, before storing it."
+
+scenario:
+  fr: "On voit des inscriptions envoyer chaque adresse saisie à un modèle généraliste pour qu’il dise si elle est correcte. La forme d’une adresse est pourtant définie par le standard HTML, qui en publie l’expression régulière, et c’est cette définition-là que le navigateur de votre visiteur vient d’appliquer au champ. Le reste — le domaine reçoit-il du courrier, la boîte existe-t-elle — ne se devine pas davantage : ce sont une résolution DNS et un message envoyé, deux choses qu’aucun modèle ne remplace."
+  en: "Sign-up forms are routinely seen sending every address typed to a general-purpose model, asking whether it looks right. The shape of an address is defined by the HTML standard, which publishes the regular expression for it, and that is the definition your visitor’s browser just applied to the field. The rest — does the domain take mail, does the mailbox exist — is no more guessable: those are a DNS lookup and a message actually sent, two things no model replaces."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "La définition du standard HTML, plus les longueurs de la RFC 5321"
+      en: "The HTML standard’s definition, plus the RFC 5321 lengths"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : l’adresse est contrôlée dans votre processus et n’est transmise à personne"
+          - "Une adresse électronique est une donnée personnelle : la contrôler localement ne la communique pas, la soumettre à un service de vérification en ligne la communique"
+        en:
+          - "No specific scope added: the address is checked inside your own process and is sent to nobody"
+          - "An email address is personal data: checking it locally discloses nothing, submitting it to an online verification service discloses it"
+    code:
+      python: snippets/validate-an-email-address-without-sending-a-message/n0.py
+      javascript: snippets/validate-an-email-address-without-sending-a-message/n0.js
+      verification: executed
+    breaking_point:
+      fr: "La syntaxe ne dit rien de la boîte : « jean@gmial.com » passe, et le domaine est une faute de frappe sur gmail.com — la forme est la même, le courriel part et ne revient jamais. Le témoin est dans le même test : « jean@@exemple.fr », « jean@-exemple.fr » et « jean@exemple..fr » sont bien refusés."
+      en: "Syntax says nothing about the mailbox: jean@gmial.com passes, and the domain is a typo for gmail.com — the shape is identical, the message leaves and never comes back. The witness is in the same test: jean@@exemple.fr, jean@-exemple.fr and jean@exemple..fr are properly refused."
+    escalate_when:
+      fr: "Vos utilisateurs signalent une adresse refusée à tort, et c’est l’adresse internationalisée — « jéan@exemple.fr » — que la définition HTML écarte comme le font tous les navigateurs. La suite est la RFC 6531, pas un modèle."
+      en: "Your users report an address refused that should not be, and it is the internationalised one — jéan@exemple.fr — which the HTML definition turns down, as every browser does. What follows is RFC 6531, not a model."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : la forme d’une adresse est une grammaire publiée, pas une régularité statistique, et un classifieur entraîné sur des adresses étiquetées rendrait un score là où une expression régulière rend une décision qu’on peut relire. Le seul jugement qu’un modèle classique pourrait apporter — ce domaine ressemble à une faute de frappe sur un grand fournisseur — est une distance d’édition contre une liste de domaines connus, c’est-à-dire encore du code ordinaire."
+      en: "There is nothing to learn: the shape of an address is a published grammar, not a statistical regularity, and a classifier trained on labelled addresses would return a score where a regular expression returns a decision you can read back. The one judgement a classic model might add — this domain looks like a typo for a large provider — is an edit distance against a list of known domains, which is ordinary code again."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec un service à tenir en plus. Et l’objection propre à ce besoin : le contrôle est appelé à chaque frappe dans un champ, y compris dans le navigateur. Un petit modèle spécialisé y ajouterait un chargement, une mémoire résidente et une inférence par caractère tapé, pour approcher une grammaire que le navigateur applique déjà gratuitement."
+      en: "The same argument, with a service to keep running on top. And the objection specific to this need: the check runs on every keystroke in a field, in the browser included. A small specialised model would add a load, resident memory and an inference per character typed, to approximate a grammar the browser already applies for free."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un appel de modèle par adresse saisie coûte un aller-retour réseau, une latence dans un champ de formulaire, et l’envoi d’une donnée personnelle chez un tiers, pour approcher une expression régulière publiée. Il ne sait pas davantage ce que la syntaxe ignore : l’existence du domaine se résout dans le DNS, l’existence de la boîte se prouve en lui écrivant, et un modèle qui affirmerait l’une ou l’autre inventerait."
+      en: "One model call per address typed costs a network round trip, latency inside a form field, and personal data sent to a third party, to approximate a published regular expression. Nor does it know what syntax cannot: whether the domain exists is settled in DNS, whether the mailbox exists is proved by writing to it, and a model asserting either would be making it up."
+
+verdict_rationale:
+  fr: "N0, parce que la définition est publiée et qu’elle est celle que votre visiteur vient de subir dans son navigateur : un serveur qui applique autre chose refuse ce que le champ a accepté, ou l’inverse. C’est mesuré dans la fiche : sur trente-deux adresses, `email-validator` et `validator.js` rendent quatre verdicts différents l’un de l’autre, et quatorze qui s’écartent de la définition du navigateur — dont une partie locale de soixante-cinq caractères qu’`email-validator` accepte alors que la RFC 5321 la plafonne à soixante-quatre. Ce que ce niveau ne fait pas, il le dit : le rapport rend `routable` à faux sur un domaine sans point, et la suite — le domaine reçoit-il du courrier — est une résolution DNS, pas un niveau de plus."
+  en: "N0, because the definition is published and it is the one your visitor has just been put through in their browser: a server applying anything else refuses what the field accepted, or the reverse. This entry measures it: across thirty-two addresses, email-validator and validator.js return four verdicts that differ from each other, and fourteen that differ from the browser’s definition — including a sixty-five-character local part that email-validator accepts although RFC 5321 caps it at sixty-four. What this level does not do, it says: the report returns routable false on a domain with no dot, and what comes next — does the domain take mail — is a DNS lookup, not one more level."
+
+further_reading:
+  - label: "HTML Standard — la définition d’une adresse valide pour input type=email"
+    url: "https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address"
+  - label: "RFC 5321 — les longueurs maximales d’une partie locale et d’une adresse"
+    url: "https://www.rfc-editor.org/rfc/rfc5321#section-4.5.3.1"
+  - label: "RFC 6531 — SMTP pour les adresses internationalisées"
+    url: "https://www.rfc-editor.org/rfc/rfc6531"
+  - label: "email-validator — la bibliothèque Python, qui sait aussi résoudre les enregistrements MX"
+    url: "https://github.com/JoshData/python-email-validator"
+  - label: "validator.js — la bibliothèque JavaScript, et son isEmail"
+    url: "https://github.com/validatorjs/validator.js"
+
+sources:
+  - label: "HTML Standard (consulté) : l’expression régulière publiée pour input type=email, et « This requirement is a willful violation of RFC 5322 »"
+    url: "https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address"
+  - label: "RFC 5321, section 4.5.3.1 (consultée) : soixante-quatre octets pour la partie locale, deux cent cinquante-six pour le chemin"
+    url: "https://www.rfc-editor.org/rfc/rfc5321#section-4.5.3.1"
+  - label: "email-validator sur PyPI (consulté) : version 2.3.0, publiée le 26 août 2025, licence Unlicense"
+    url: "https://pypi.org/project/email-validator/"
+  - label: "validator.js sur son dépôt (consulté) : version 13.15.35, publiée le 2 avril 2026, licence MIT, aucune dépendance"
+    url: "https://github.com/validatorjs/validator.js"
+---
