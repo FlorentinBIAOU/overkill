@@ -1,0 +1,52 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Retrouver les montants cités dans un texte, avec la devise écrite à côté.
+
+  Niveau N0. Un montant dans un texte courant, c'est un nombre avec une marque
+  à côté de lui — un symbole, un code ISO 4217, ou le mot dans la langue du
+  lecteur. C'est cette marque qui distingue un montant du numéro de facture
+  trois mots plus tôt, et chercher le nombre sans elle est ce qui fait rendre
+  « 2026 » comme total.
+
+  L'outil de référence est `price-parser`, en Python. Il lit un prix dans une
+  chaîne, ce qu'est un champ de prix aspiré sur une page, et le test de cette
+  fiche montre où cela s'arrête : sur une ligne de facture française qui porte
+  un numéro de pièce, une date et un total, il rend le numéro de pièce ; et sur
+  un document dont l'entête dit « Montants en euros » quand la ligne cite une
+  somme en dollars, il rend l'euro de l'entête. En JavaScript, rien de maintenu
+  n'en fait même autant.
+
+  La seule chose qu'un texte ne tranche pas, c'est le séparateur. « 1,859 » est
+  un groupe de milliers sous une convention et trois décimales sous l'autre, et
+  les deux sont ordinaires — une somme ronde d'un côté, un prix de carburant de
+  l'autre. L'appelant déclare donc la convention dans laquelle ses documents
+  sont écrits, et tout nombre dont la lecture dépend de cette déclaration
+  revient marqué `ambiguous`. Rien n'est deviné en silence, et rien n'est
+  transformé en flottant au passage : la valeur, ce sont les chiffres qui ont
+  été écrits.
+
+n3: |
+  Lire les montants d'un document dont la devise est écrite une fois, en tête.
+
+  Niveau N3. Il existe pour le cas que le niveau N0 signale sans pouvoir le
+  trancher : un tableau dont la colonne s'intitule « Montant (en euros) », un
+  contrat qui dit une fois que toutes les sommes sont en euros, puis trois
+  pages de nombres sans rien à côté. Aucune marque ne touche ces nombres, et
+  les rattacher à l'entête est une question de mise en page, pas de chiffres.
+
+  La garde est ce qui rend la lecture vérifiable, et elle vaut mieux que la
+  consigne. On demande au modèle des portions, pas des valeurs : chaque montant
+  qu'il rend doit figurer dans le document, caractère pour caractère, et la
+  devise qu'il donne doit être nommée quelque part dans le document. Ce qui
+  survit est ensuite lu par la fonction du niveau N0 — l'arithmétique reste là
+  où elle se teste, et le modèle ne rend jamais un nombre que personne n'a
+  écrit.
+
+  Deux conditions d'exploitation. Le document est coupé à un budget : un
+  contrat plus long que le budget est lu jusque-là et pas au-delà. Et le coût
+  est un appel par document : ce niveau est pour les documents où le niveau N0
+  signale des nombres qu'il n'a pas pu marquer, pas pour une boîte de factures
+  qui portent leur symbole.

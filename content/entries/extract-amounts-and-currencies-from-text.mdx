@@ -1,0 +1,122 @@
+---
+id: extract-amounts-and-currencies-from-text
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Extraire les montants d’un texte"
+  en: "Extract amounts and currencies from a text"
+
+need:
+  fr: "Retrouver les sommes citées dans un message ou un document, avec leur devise, quelle que soit leur écriture."
+  en: "Find the sums quoted in a message or a document, with their currency, however they are written."
+
+scenario:
+  fr: "On voit envoyer un contrat ou un relevé entier à un modèle pour qu’il en sorte les sommes. Un montant dans un texte est pourtant un nombre avec une marque à côté de lui — un symbole, un code ISO 4217, ou le mot dans la langue du lecteur —, et c’est cette marque qui le distingue du numéro de facture trois mots plus tôt. Le vrai problème n’est pas de trouver les montants mais de les lire : une virgule ne veut pas dire la même chose des deux côtés de la Manche, et aucun modèle ne lèvera cette ambiguïté mieux que la personne qui sait dans quelle convention ses documents sont écrits."
+  en: "Sending a whole contract or statement to a model to get the sums out of it is a common sight. But an amount in running text is a number with a mark beside it — a symbol, an ISO 4217 code, or the word in the reader’s language — and that mark is what tells it from the invoice number three words earlier. The real problem is not finding the amounts but reading them: a comma does not mean the same thing on both sides of the Channel, and no model will settle that better than the person who knows which convention their documents are written in."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "La marque de devise à côté du nombre, et la convention déclarée par l’appelant"
+      en: "The currency mark beside the number, and the convention the caller declares"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le texte est lu dans votre processus et n’est transmis à personne"
+          - "Un relevé, un contrat ou une facture porte des données financières : ce niveau est celui qui les garde chez vous"
+        en:
+          - "No specific scope added: the text is read inside your own process and is sent to nobody"
+          - "A statement, a contract or an invoice carries financial data: this is the level that keeps it at home"
+    code:
+      python: snippets/extract-amounts-and-currencies-from-text/n0.py
+      javascript: snippets/extract-amounts-and-currencies-from-text/n0.js
+      verification: executed
+    # données-fictives:début — les montants cités ci-dessous sont ceux du test
+    # de la fiche, pas des tarifs que le site annoncerait.
+    breaking_point:
+      fr: "Trois chiffres derrière un séparateur se lisent de deux façons, et les deux sont ordinaires : « 1,859 € » vaut 1,859 en convention française — le prix d’un litre de carburant — et mille fois plus en convention anglaise. Le code lit sous la convention que l’appelant a déclarée et marque le résultat `ambiguous` ; ce drapeau dit que la lecture dépend de la déclaration, il ne dit pas laquelle est juste. Le témoin est dans le même test : « 1 859,00 € », où l’espace tranche le groupement, revient sans drapeau et vaut la même chose sous les deux conventions."
+      en: "Three digits behind a separator read two ways, and both are ordinary: “1,859 €” is 1.859 under the French convention — the price of a litre of fuel — and a thousand times more under the English one. The code reads under the convention the caller declared and marks the result `ambiguous`; that flag says the reading depends on the declaration, it does not say which one is right. The witness is in the same test: “1 859,00 €”, where the space settles the grouping, comes back with no flag and is worth the same under both conventions."
+    # données-fictives:fin
+    escalate_when:
+      fr: "Le rapport compte des nombres sans marque à côté d’eux, et vous savez que ce sont des montants : la devise est écrite une fois, dans un intitulé de colonne ou une phrase du préambule. Rattacher l’une aux autres est une question de mise en page, et c’est ce que fait le niveau N3."
+      en: "The report counts numbers with no mark beside them, and you know they are amounts: the currency is written once, in a column heading or a sentence of the preamble. Tying the one to the others is a question of layout, and that is what level N3 does."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "C’est le niveau qui existe en anglais et pas en français, et cette fiche est écrite pour les deux. Les modèles anglais de spaCy portent une étiquette `MONEY` parmi dix-huit ; les modèles français, entraînés sur un autre corpus, en portent quatre — lieu, organisation, personne, divers — et aucune ne désigne une somme. Même là où l’étiquette existe, elle rend une portion de texte et pas une valeur : il faut encore lire le nombre, c’est-à-dire ce que fait le niveau ci-dessus."
+      en: "This is the level that exists in English and not in French, and this entry is written for both. The English spaCy models carry a MONEY label among eighteen; the French models, trained on another corpus, carry four — location, organisation, person, miscellaneous — and none of them is a sum. Even where the label exists it returns a span and not a value: you still have to read the number, which is what the level above does."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Un petit modèle spécialisé auto-hébergé devrait être entraîné sur des textes annotés dans chaque langue traitée, pour retrouver une frontière qu’un symbole donne exactement. Et il ne dirait rien de plus sur la seule question difficile : « 1,859 » reste deux nombres possibles, quelle que soit la machine qui le regarde, parce que l’information qui tranche n’est pas dans le texte mais dans la convention du document."
+      en: "A small self-hosted specialised model would have to be trained on annotated texts in every language handled, to recover a boundary a symbol gives exactly. And it would say nothing more about the one hard question: “1,859” stays two possible numbers whatever machine looks at it, because what settles it is not in the text but in the document’s convention."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Le modèle rattache les nombres à la devise de l’entête, et ne rend que des portions du document"
+      en: "The model ties the numbers to the heading’s currency, and returns only spans of the document"
+    cost: modéré
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Transfert de données financières à un sous-traitant, avec l’encadrement contractuel que cela suppose"
+          - "Localisation du traitement à vérifier auprès du fournisseur"
+        en:
+          - "Transfer of financial data to a processor, with the contractual arrangements that implies"
+          - "Where the processing happens is to be checked with the provider"
+    code:
+      python: snippets/extract-amounts-and-currencies-from-text/n3.py
+      javascript: snippets/extract-amounts-and-currencies-from-text/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "La garde vérifie que les chiffres rendus sont dans le document et que la devise y est nommée, pas que le nombre était un montant : sur une facture dont l’entête dit que tout est en euros, le numéro de pièce passe la garde et revient comme une somme. Le témoin est dans le même test : un total que le document ne contient pas est écarté, avec sa raison."
+      en: "The guard checks that the digits returned are in the document and that the currency is named in it, not that the number was an amount: on an invoice whose heading says everything is in euros, the document number passes the guard and comes back as a sum. The witness is in the same test: a total the document does not contain is dropped, with its reason."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus."
+      en: "There is no level above this one."
+
+verdict_rationale:
+  fr: "N0, parce que ce qui fait d’un nombre un montant est écrit à côté de lui, et qu’une marque se cherche. L’outil de référence est `price-parser`, en Python ; il lit un prix dans une chaîne, ce qu’est un champ de prix aspiré sur une page, et sur une ligne de facture française qui porte un numéro de pièce, une date et un total, il rend le numéro de pièce — le test de la fiche le montre. En JavaScript, rien de maintenu n’en fait même autant. Deux décisions portent le reste. La convention de séparateur est exigée de l’appelant et n’a pas de défaut, parce qu’un défaut est exactement la supposition silencieuse que ce site existe pour refuser : le même outil de référence rend « 1,859 » mille fois trop grand ou juste selon un paramètre qu’on ne lui passe pas. Et la valeur rendue est une chaîne de chiffres, jamais un flottant : sur des sommes d’argent, la différence a un nom."
+  en: "N0, because what makes a number an amount is written beside it, and a mark can be searched for. The reference tool is price-parser, in Python; it reads one price out of one string, which is what a scraped price field is, and on a French invoice line carrying a document number, a date and a total it returns the document number — this entry’s test shows it. In JavaScript nothing maintained does even that much. Two decisions carry the rest. The separator convention is required of the caller and has no default, because a default is exactly the silent guess this site exists to refuse: the same reference tool returns “1,859” a thousand times too large, or right, depending on an argument you do not pass it. And the value returned is a string of digits, never a float: on sums of money, that difference has a name."
+
+further_reading:
+  - label: "price-parser — la bibliothèque Python, et son paramètre de séparateur décimal"
+    url: "https://github.com/scrapinghub/price-parser"
+  - label: "ISO 4217 — la liste des codes de devise tenue par l’ISO"
+    url: "https://www.iso.org/iso-4217-currency-codes.html"
+  - label: "CLDR — les conventions de nombre et de devise, langue par langue"
+    url: "https://cldr.unicode.org/"
+  - label: "spaCy — les modèles français et les étiquettes qu’ils portent"
+    url: "https://spacy.io/models/fr"
+
+sources:
+  - label: "price-parser sur PyPI (consulté) : version 0.5.1, publiée le 19 mars 2026, licence BSD 3-Clause ; « Extract price and currency from a raw string »"
+    url: "https://pypi.org/project/price-parser/"
+  - label: "spaCy, modèles français (consulté) : `fr_core_news_sm` 3.8.0, licence LGPL-LR, quatre étiquettes d’entités — LOC, MISC, ORG, PER"
+    url: "https://spacy.io/models/fr"
+  - label: "spaCy, modèles anglais (consulté) : `en_core_web_sm` 3.8.0, licence MIT, dix-huit étiquettes dont MONEY"
+    url: "https://spacy.io/models/en"
+  - label: "ISO 4217 (consultée) : la norme qui donne les codes à trois lettres employés ici, et le nombre de décimales de chaque devise"
+    url: "https://www.iso.org/iso-4217-currency-codes.html"
+---
