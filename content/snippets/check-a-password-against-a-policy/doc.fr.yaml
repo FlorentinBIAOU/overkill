@@ -1,0 +1,49 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Contrôler un mot de passe contre la politique que la norme demande vraiment.
+
+  Niveau N0. La NIST SP 800-63B-4 est courte, et ses exigences sont des règles,
+  pas des jugements : quinze caractères pour un mot de passe employé seul, au
+  moins soixante-quatre permis, aucune règle de composition, aucun changement
+  périodique, et une comparaison à une liste de mots de passe déjà connus pour
+  avoir fuité. Quatre des cinq sont de l'arithmétique sur une chaîne.
+
+  La cinquième est la seule qui sorte de la machine, et elle en sort presque
+  rien. Le service Have I Been Pwned prend les cinq premiers caractères du
+  SHA-1 du mot de passe et rend tous les suffixes qui commencent par eux — huit
+  cents environ — si bien que le mot de passe n'est jamais envoyé, que le
+  service ne peut pas savoir lequel des huit cents était demandé, et que la
+  réponse est un compte. C'est ce que fait `pwned_count` plus bas, et cela mérite
+  d'être lu : tout l'argument de confidentialité tient en deux lignes.
+
+  Ce que ce fichier ne fait délibérément pas, c'est compter les majuscules, les
+  chiffres et les symboles. La norme l'interdit — « Verifiers and CSPs SHALL
+  NOT impose other composition rules » — parce que ces règles poussent vers
+  « Motdepasse1! », que la liste de fuites attrape et qu'aucune règle de
+  composition n'attrape.
+
+n0.js: |
+  Contrôler un mot de passe contre la politique que la norme demande vraiment.
+
+  Niveau N0. La NIST SP 800-63B-4 est courte, et ses exigences sont des règles,
+  pas des jugements : quinze caractères pour un mot de passe employé seul, au
+  moins soixante-quatre permis, aucune règle de composition, aucun changement
+  périodique, et une comparaison à une liste de mots de passe déjà connus pour
+  avoir fuité. Quatre des cinq sont de l'arithmétique sur une chaîne.
+
+  La cinquième est la seule qui sorte de la machine, et elle en sort presque
+  rien. Le service Have I Been Pwned prend les cinq premiers caractères du
+  SHA-1 du mot de passe et rend tous les suffixes qui commencent par eux — huit
+  cents environ — si bien que le mot de passe n'est jamais envoyé, que le
+  service ne peut pas savoir lequel des huit cents était demandé, et que la
+  réponse est un compte. C'est ce que fait `pwnedCount` plus bas, et cela mérite
+  d'être lu : tout l'argument de confidentialité tient en deux lignes.
+
+  Ce que ce fichier ne fait délibérément pas, c'est compter les majuscules, les
+  chiffres et les symboles. La norme l'interdit — « Verifiers and CSPs SHALL
+  NOT impose other composition rules » — parce que ces règles poussent vers
+  « Motdepasse1! », que la liste de fuites attrape et qu'aucune règle de
+  composition n'attrape.

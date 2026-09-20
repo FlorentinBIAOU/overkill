@@ -544,3 +544,10 @@ xlsx
 puremagic
 nullable
 resume
+staple
+zxcvbn
+motdepasse
+anonymat
+horse
+battery
+clementine
