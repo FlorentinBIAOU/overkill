@@ -74,11 +74,11 @@ const MOTIFS = [
     motif: new RegExp(
       [
         `\\b\\d+(?:[.,]\\d+)?\\s?(?:x|fois)\\s+(?:plus|moins|faster|slower|cheaper|rapide|vite|lent)\\b`,
-        `(?<![\\w.,])×\\s?\\d`,
-        `\\bdivis(?:e|ent|é|ée|és|ées)\\b[^.]{0,40}?\\bpar\\s+(?:\\d|${LETTRES_FR})`,
-        `\\bmultipli(?:e|ent|é|ée|és|ées)\\b[^.]{0,40}?\\bpar\\s+(?:\\d|${LETTRES_FR})`,
-        `\\bdivides?\\b[^.]{0,40}?\\bby\\s+(?:\\d|${LETTRES_EN})`,
-        `\\bmultiplies?\\b[^.]{0,40}?\\bby\\s+(?:\\d|${LETTRES_EN})`,
+        `(?<![\\w.,])×\\s?\\d+`,
+        `\\bdivis(?:e|ent|é|ée|és|ées)\\b[^.]{0,40}?\\bpar\\s+(?:\\d+(?:[.,]\\d+)?|${LETTRES_FR})`,
+        `\\bmultipli(?:e|ent|é|ée|és|ées)\\b[^.]{0,40}?\\bpar\\s+(?:\\d+(?:[.,]\\d+)?|${LETTRES_FR})`,
+        `\\bdivides?\\b[^.]{0,40}?\\bby\\s+(?:\\d+(?:[.,]\\d+)?|${LETTRES_EN})`,
+        `\\bmultiplies?\\b[^.]{0,40}?\\bby\\s+(?:\\d+(?:[.,]\\d+)?|${LETTRES_EN})`,
         `\\b\\d{2,3}\\s?%\\s+(?:de\\s+)?(?:précision|exactitude|rappel|accuracy|precision|recall|f1)\\b`,
       ].join('|'),
       'gi',
