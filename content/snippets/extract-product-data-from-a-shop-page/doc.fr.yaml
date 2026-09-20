@@ -1,0 +1,53 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Lire le produit qu'une page de boutique publie déjà sur elle-même.
+
+  Niveau N0. Presque toutes les boutiques bâties sur une plateforme de commerce
+  émettent leur produit en JSON-LD, dans un bloc
+  `<script type="application/ld+json">`, parce que les moteurs de recherche le
+  demandent. Le nom, la référence, la marque, le prix, la devise et la
+  disponibilité y sont déjà, nommés par schema.org, typés, et écrits par la
+  boutique elle-même. Les lire, c'est analyser du JSON.
+
+  C'est tout ce niveau, et c'est pourquoi écrire des sélecteurs — ou envoyer la
+  page à un modèle — est le cas de sur-ingénierie le mieux documenté de
+  l'extraction web : les deux vont chercher dans le rendu ce que la page
+  déclare en clair quelques lignes plus haut.
+
+  Deux choses sont refusées plutôt que devinées. Une page peut porter plusieurs
+  produits — celui dont elle parle, et le carrousel des articles voisins — et
+  rien dans le format ne dit lequel est lequel : tous ceux qui sont trouvés
+  sont rendus, et l'appelant choisit. Et un prix écrit « 1 234,56 » n'est pas
+  un nombre pour schema.org, qui demande un point : plutôt que de le lire comme
+  mille ou comme un, le prix revient nul, avec le texte d'origine à côté.
+
+n3: |
+  Lire un produit sur une page qui ne publie rien de structuré, en le demandant
+  à un modèle.
+
+  Niveau N3. C'est le niveau de la boutique qui n'émet pas de JSON-LD et dont
+  le rendu change tous les trimestres, où écrire des sélecteurs revient à les
+  réécrire. Il y gagne sa place, et nulle part au-dessus : sur une page qui
+  porte déjà son JSON-LD, le niveau N0 lit les mêmes valeurs pour rien.
+
+  Trois choses que ce code fait et que le modèle ne fait pas, et qui sont le
+  vrai travail de ce niveau.
+
+  Il coupe. Une page de boutique fait des centaines de kilooctets de balisage,
+  presque tous en menus, en mouchards et en styles ; les balises sautent, et ce
+  qui reste est plafonné. Le fournisseur facture ce qu'on envoie, donc le
+  plafond est un budget — et la fiche sur l'estimation du coût d'un appel est
+  l'endroit où ce budget se calcule.
+
+  Il refuse une valeur inventée. Chaque chaîne rendue par le modèle est
+  cherchée dans le texte qui a été envoyé : un nom, une référence ou un prix
+  qui ne figure nulle part dans la page est écarté, et `invented` dit lesquels.
+  C'est la seule garde qui sépare une lecture d'une réponse vraisemblable, et
+  elle vaut plus que la consigne.
+
+  Et il traite un refus comme un refus. Un fournisseur qui ne peut pas répondre
+  lève ; un contenu nul n'est pas une valeur, et il n'est pas passé au décodeur
+  JSON en comptant sur l'exception.
