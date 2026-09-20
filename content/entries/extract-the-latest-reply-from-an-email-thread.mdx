@@ -1,0 +1,121 @@
+---
+id: extract-the-latest-reply-from-an-email-thread
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Isoler la dernière réponse d’un fil d’e-mails"
+  en: "Isolate the newest reply in an email thread"
+
+need:
+  fr: "Séparer le message qui vient d’arriver de l’historique recopié en dessous."
+  en: "Separate the message that just arrived from the history copied under it."
+
+scenario:
+  fr: "On voit envoyer le fil entier à un modèle généraliste avec la consigne « donne-moi le dernier message ». Ce qu’on cherche est pourtant délimité par une marque que le client de messagerie a écrite lui-même avant d’envoyer : un « > » devant chaque ligne recopiée, un trait de soulignés, un bloc d’en-têtes. Il n’y a rien à déduire, il y a une chaîne à trouver — et un traitement de boîte aux lettres se compte en milliers de messages par jour, là où la coupe prend quelques microsecondes sur la machine qui les reçoit."
+  en: "Sending the whole thread to a general-purpose model with the instruction “give me the last message” is a common sight. But what you are looking for is bounded by a mark the mail client wrote itself before sending: a “>” in front of every copied line, a rule of underscores, a header block. There is nothing to infer, there is a string to find — and processing a mailbox is counted in thousands of messages a day, where the cut takes a few microseconds on the machine that receives them."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Le marqueur que le client de messagerie a écrit, français compris"
+      en: "The marker the mail client wrote, French ones included"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le message est découpé dans votre processus et n’est transmis à personne"
+          - "Un fil d’e-mails est une correspondance, et porte les données personnelles de gens qui ne vous ont rien demandé : ce niveau est celui qui les garde chez vous"
+        en:
+          - "No specific scope added: the message is cut inside your own process and is sent to nobody"
+          - "An email thread is correspondence, and carries the personal data of people who asked you nothing: this is the level that keeps it at home"
+    code:
+      python: snippets/extract-the-latest-reply-from-an-email-thread/n0.py
+      javascript: snippets/extract-the-latest-reply-from-an-email-thread/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une réponse écrite dans la citation plutôt qu’au-dessus n’est pas au-dessus du premier marqueur : sur un fil où « Oui, il est signé de ce matin. » répond sous la question citée, la coupe ne rend rien. Le témoin est dans le même test : le fil ordinaire, répondu au-dessus, revient entier, signature comprise — et sur le fil intercalé le rapport dit qu’il y a plus de texte sous la citation qu’au-dessus, au lieu de laisser croire que le message était vide."
+      en: "A reply written inside the quote rather than above it is not above the first marker: on a thread where “Yes, it was signed this morning.” answers under the quoted question, the cut returns nothing. The witness is in the same test: the ordinary thread, answered on top, comes back whole, signature included — and on the interleaved thread the report says there is more text under the quote than above it, instead of letting you believe the message was empty."
+    escalate_when:
+      fr: "Le rapport signale qu’il y a plus de texte sous la citation qu’au-dessus, c’est-à-dire que la réponse a été écrite dedans. Pour ces fils-là, et pour ceux-là seulement, le niveau N3 lit ce qu’aucun marqueur ne délimite."
+      en: "The report says there is more text under the quote than above it, that is, that the reply was written inside it. For those threads, and those only, level N3 reads what no marker delimits."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Un modèle classique apprendrait à reconnaître ce qu’un programme a écrit noir sur blanc. Le seul outil du domaine qui apprend vraiment est `talon`, dont le module de signature est un classifieur entraîné sur des messages annotés ; il est en version 1.4.4, publiée le 24 août 2017, et il fige des versions de `scikit-learn` d’alors. Et il porterait le biais que cette fiche mesure : un classifieur entraîné sur des corpus anglais coupe le fil anglais et pas le fil français."
+      en: "A classic model would learn to recognise what a program wrote in plain sight. The one tool in the field that genuinely learns is talon, whose signature module is a classifier trained on annotated messages; it is at version 1.4.4, published on 24 August 2017, and it pins the scikit-learn versions of the day. And it would carry the very bias this entry measures: a classifier trained on English corpora cuts the English thread and not the French one."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Le même argument, avec le budget en plus. Le traitement est appelé une fois par message sur une boîte aux lettres qui en reçoit des milliers par jour ; la mesure de cette fiche le situe à quelques microsecondes le message. Un modèle résident, même petit, coûte des ordres de grandeur de plus par message, pour retrouver une limite que le client de messagerie a écrite en clair."
+      en: "The same argument, with budget on top. This runs once per message over a mailbox that receives thousands a day; this entry measures it at a few microseconds per message. A resident model, however small, costs orders of magnitude more per message, to recover a boundary the mail client wrote in plain text."
+
+  - level: N3
+    available: true
+    name:
+      fr: "Les numéros des lignes du fil, demandés au modèle et vérifiés"
+      en: "The thread’s line numbers, asked of the model and checked"
+    cost: modéré
+    latency: "~1 s"
+    risks:
+      data_egress: third-party
+      deterministic: false
+      testability: hard
+      vendor_lock: provider
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Transfert d’une correspondance à un sous-traitant, avec l’encadrement contractuel que cela suppose, et pour des gens qui ne l’ont pas choisi"
+          - "Localisation du traitement à vérifier auprès du fournisseur"
+        en:
+          - "Transfer of correspondence to a processor, with the contractual arrangements that implies, and for people who did not choose it"
+          - "Where the processing happens is to be checked with the provider"
+    code:
+      python: snippets/extract-the-latest-reply-from-an-email-thread/n3.py
+      javascript: snippets/extract-the-latest-reply-from-an-email-thread/n3.js
+      verification: stubbed
+    breaking_point:
+      fr: "La garde refuse les lignes préfixées par « > », pas les lignes d’un message recopié sans préfixe : sur un fil Outlook, les lignes de l’ancien message passent la garde et entrent dans la réponse. Le témoin est dans le même test : sur un fil cité ligne à ligne, la ligne citée est refusée et rendue dans `dropped`."
+      en: "The guard refuses lines prefixed with “>”, not the lines of a message copied without a prefix: on an Outlook thread, the lines of the old message pass the guard and enter the reply. The witness is in the same test: on a thread quoted line by line, the quoted line is refused and returned in `dropped`."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus."
+      en: "There is no level above this one."
+
+verdict_rationale:
+  fr: "N0, parce que la limite cherchée n’est pas à déduire : c’est une chaîne que le client de messagerie a écrite avant d’envoyer. Les deux bibliothèques du domaine sont `email_reply_parser` en Python et `email-reply-parser` en JavaScript, et cette fiche les nomme sans les appeler, pour une raison qu’elle mesure. Sur le même fil français, la première laisse « Le 10 octobre 2026 à 13:55, Marie Martin a écrit : » dans la réponse, faute de connaître l’en-tête français ; la seconde le coupe, mais retire aussi la signature, parce que « Bien à vous, » figure dans sa liste de formules de politesse quand « Best, » n’y est pas. Deux extraits qui ne répondent pas la même chose du même message ne servent à rien sur une page qui montre les deux : les marqueurs sont donc écrits ici, les français compris, et la signature n’est pas touchée — un nom seul sur une ligne est parfois tout le message, et la retirer est le sujet d’une autre fiche. Montez à N3 pour les fils, et seulement pour eux, où le rapport dit que la réponse a été écrite dans la citation."
+  en: "N0, because the boundary you are looking for is not to be inferred: it is a string the mail client wrote before sending. The two libraries in the field are email_reply_parser in Python and email-reply-parser in JavaScript, and this entry names them without calling them, for a reason it measures. On the same French thread, the first leaves “Le 10 octobre 2026 à 13:55, Marie Martin a écrit :” inside the reply, for want of knowing the French header; the second cuts it, but also removes the signature, because “Bien à vous,” is in its list of sign-offs where “Best,” is not. Two extracts that do not answer the same thing about the same message are of no use on a page that shows both: so the markers are written here, French ones included, and the signature is left alone — a name on a line of its own is sometimes the whole message, and removing it is another entry’s subject. Move up to N3 for the threads, and only those, where the report says the reply was written inside the quote."
+
+further_reading:
+  - label: "email-reply-parser — la bibliothèque JavaScript, et ses expressions par langue"
+    url: "https://github.com/crisp-oss/email-reply-parser"
+  - label: "email_reply_parser — la bibliothèque Python, portée de celle de GitHub"
+    url: "https://github.com/zapier/email-reply-parser"
+  - label: "talon — l’outil de Mailgun, et son classifieur de signatures"
+    url: "https://github.com/mailgun/talon"
+  - label: "RFC 3676 — la citation par « > », telle qu’elle est spécifiée"
+    url: "https://www.rfc-editor.org/rfc/rfc3676#section-4.5"
+
+sources:
+  - label: "email-reply-parser sur npm (consulté) : version 2.3.9, publiée le 16 juillet 2026, licence MIT, aucune dépendance d’exécution — `re2` est une dépendance de pair facultative, employée pour rendre ses expressions régulières sûres"
+    url: "https://github.com/crisp-oss/email-reply-parser"
+  - label: "email-reply-parser, son fichier d’expressions (consulté) : la liste des formules de politesse françaises contient « Bien . vous,?!? », d’où la signature retirée en français et gardée en anglais"
+    url: "https://github.com/crisp-oss/email-reply-parser/blob/master/src/regex.js"
+  - label: "email_reply_parser sur PyPI (consulté) : version 0.5.12, publiée le 7 octobre 2020, licence MIT ; ses marqueurs de citation sont ceux de la bibliothèque anglaise d’origine"
+    url: "https://pypi.org/project/email-reply-parser/"
+  - label: "talon sur PyPI (consulté) : version 1.4.4, publiée le 24 août 2017, licence Apache 2.0 ; c’est le seul outil du domaine dont une partie soit un modèle appris"
+    url: "https://pypi.org/project/talon/"
+  - label: "RFC 3676, section 4.5 (consultée) : la profondeur de citation est le nombre de « > » en tête de ligne, ce qui fait du préfixe une convention spécifiée et pas un usage"
+    url: "https://www.rfc-editor.org/rfc/rfc3676#section-4.5"
+---

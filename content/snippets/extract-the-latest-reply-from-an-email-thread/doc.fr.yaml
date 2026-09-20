@@ -1,0 +1,50 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Garder la dernière réponse d'un fil d'e-mail, et jeter le fil qui suit.
+
+  Niveau N0. Un client de messagerie n'envoie pas la réponse seule : il envoie
+  la réponse, puis toute la conversation en dessous, marquée par quelque chose
+  qu'il a écrit lui-même — un « > » devant chaque ligne, un trait de
+  soulignés, un bloc d'en-têtes, ou la phrase « Le 10 octobre 2026 à 13:55,
+  Marie Martin a écrit : ». Ces marqueurs sont ce que ce niveau cherche, et la
+  réponse est ce qui se trouve au-dessus du premier d'entre eux.
+
+  Les bibliothèques qui font ce travail sont `email-reply-parser` en JavaScript
+  et `email_reply_parser` en Python. Elles ont été écrites pour des fils
+  anglais, et cela se voit : sur le fil français du test de cette fiche, celle
+  de Python laisse « Le 10 octobre 2026 à 13:55, Marie Martin
+  <marie@exemple.fr> a écrit : » dans la réponse, et celle de JavaScript retire
+  la signature qu'elle garde sur le fil anglais. Deux extraits qui ne répondent
+  pas la même chose du même message ne servent à rien sur une page qui montre
+  les deux : les marqueurs sont donc écrits ici, les français compris.
+
+  Une chose n'est délibérément pas faite : retirer la signature. « Bien à vous,
+  Jean Dupont » fait partie de ce que Jean a écrit, et une ligne qui ne porte
+  qu'un nom est parfois tout le message. La coupe a lieu à la citation, et
+  s'arrête là.
+
+n3: |
+  Demander à un modèle quelles lignes du fil le dernier expéditeur a écrites.
+
+  Niveau N3. Il existe pour le seul cas que le niveau N0 ne sait pas trancher :
+  une réponse écrite non pas au-dessus de la citation mais à l'intérieur, ligne
+  à ligne, sous les phrases auxquelles elle répond. Aucun marqueur ne sépare
+  ces lignes de celles qui les entourent — le client n'en a écrit aucun — et un
+  modèle les lit comme un humain les lit.
+
+  La garde est ce qui rend ce niveau défendable, et elle est ici
+  particulièrement forte parce que la réponse demandée n'est pas du texte mais
+  des numéros de ligne. Le modèle reçoit le fil numéroté et rend les numéros
+  des lignes qu'il attribue au dernier expéditeur ; tout ce qui n'est pas une
+  ligne du message envoyé est écarté, et `dropped` dit lesquelles. La réponse
+  rendue est donc faite de lignes du fil, dans leur ordre, et jamais d'une
+  phrase que le modèle aurait trouvée plus vraisemblable.
+
+  Deux conditions d'exploitation. Le fil est coupé à un budget par la fin,
+  parce que la réponse cherchée est normalement près du début ; un fil plus
+  long que le budget dont la réponse est tout en bas est coupé avant d'être lu.
+  Et le coût est un appel par message : ce niveau est pour les fils que le
+  niveau N0 a signalés, pas pour une boîte aux lettres.

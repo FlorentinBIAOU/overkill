@@ -281,8 +281,8 @@
     fr: "Isoler la dernière réponse d'un fil d'e-mails"
     en: "Isolate the newest reply in an email thread"
   need:
-    fr: "Séparer le message qui vient d'arriver du texte cité et de la signature qui l'accompagnent."
-    en: "Separate the message that just arrived from the quoted history and signature wrapped around it."
+    fr: "Séparer le message qui vient d'arriver de l'historique recopié en dessous."
+    en: "Separate the message that just arrived from the history copied under it."
 - id: extract-product-data-from-a-shop-page
   family: extract
   title:
