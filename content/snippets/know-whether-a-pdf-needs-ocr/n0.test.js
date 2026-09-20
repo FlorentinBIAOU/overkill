@@ -34,6 +34,9 @@ test('point de rupture : témoin, une vraie page de texte est rangée pareil', a
   assert.deepEqual(plan.pages.map((p) => p.verdict), ['text', 'text']);
   assert.deepEqual(plan.readable, [1, 2]);
   const casse = await triagePages(MOJIBAKE);
+  // Le chiffre publié dans le point de rupture, asserté à l'unité.
+  assert.equal(plan.pages[0].characters, 224);
+  assert.equal(casse.pages[0].characters, 183);
   assert.ok(Math.abs(plan.pages[0].characters - casse.pages[0].characters) < 60);
 });
 

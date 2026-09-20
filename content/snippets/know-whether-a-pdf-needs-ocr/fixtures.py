@@ -85,26 +85,45 @@ NUMERO_PAGE = _pdf(
     "zmISBKPHlPwCoXKbog==")
 
 CORPUS = [
-    "Contrat de prestation de services conclu entre la societe Exemple SAS, au capital"
-    " social de mille euros, dont le siege social est situe a Boulogne-Billancourt,"
-    " immatriculee au registre du commerce et des societes, representee par son president"
-    " en exercice, ci-apres denommee le prestataire.",
-    "Article premier. Objet du contrat. Le prestataire s'engage a realiser pour le compte"
-    " du client les travaux decrits en annexe du present contrat. Les parties conviennent"
-    " que cette annexe fait partie integrante du contrat et que toute modification fera"
-    " l'objet d'un avenant ecrit.",
-    "Article deux. Duree. Le present contrat est conclu pour une duree de douze mois a"
-    " compter de sa signature. Il se renouvelle par tacite reconduction pour des periodes"
-    " de meme duree, sauf denonciation par lettre recommandee avec accuse de reception.",
-    "Article trois. Prix et modalites de reglement. Le prix des prestations est fixe dans"
-    " l'annexe financiere. Les factures sont payables a trente jours fin de mois. Tout"
-    " retard de paiement entraine de plein droit l'application de penalites.",
-    "Article quatre. Confidentialite. Chacune des parties s'engage a ne pas divulguer les"
-    " informations dont elle aurait connaissance a l'occasion de l'execution du contrat, et"
-    " a prendre toutes mesures utiles pour en preserver le caractere confidentiel.",
-    "Article cinq. Resiliation. En cas de manquement grave de l'une des parties a ses"
-    " obligations, l'autre partie pourra resilier le contrat de plein droit apres mise en"
-    " demeure restee sans effet pendant un delai de trente jours.",
+    "Contrat de prestation de services conclu entre la société Exemple SAS, au capital"
+    " social de mille euros, dont le siège social est situé à Boulogne-Billancourt,"
+    " immatriculée au registre du commerce et des sociétés, représentée par son président"
+    " en exercice, ci-après dénommée le prestataire.",
+    "Article premier. Objet du contrat. Le prestataire s'engage à réaliser pour le compte"
+    " du client les travaux décrits en annexe du présent contrat. Les parties conviennent"
+    " que cette annexe fait partie intégrante du contrat et que toute modification fera"
+    " l'objet d'un avenant écrit.",
+    "Article deux. Durée. Le présent contrat est conclu pour une durée de douze mois à"
+    " compter de sa signature. Il se renouvelle par tacite reconduction pour des périodes"
+    " de même durée, sauf dénonciation par lettre recommandée avec accusé de réception.",
+    "Article trois. Prix et modalités de règlement. Le prix des prestations est fixé dans"
+    " l'annexe financière. Les factures sont payables à trente jours fin de mois. Tout"
+    " retard de paiement entraîne de plein droit l'application de pénalités.",
+    "Article quatre. Confidentialité. Chacune des parties s'engage à ne pas divulguer les"
+    " informations dont elle aurait connaissance à l'occasion de l'exécution du contrat, et"
+    " à prendre toutes mesures utiles pour en préserver le caractère confidentiel.",
+    "Article cinq. Résiliation. En cas de manquement grave de l'une des parties à ses"
+    " obligations, l'autre partie pourra résilier le contrat de plein droit après mise en"
+    " demeure restée sans effet pendant un délai de trente jours.",
+]
+
+# Quatre pages de prose administrative française qui ne sont PAS dans CORPUS.
+# C'est sur elles que la marge se règle et que le témoin du point de rupture se
+# prend : une page d'entraînement passe son propre seuil par construction, donc
+# elle ne démontre rien.
+RETENUES = [
+    "Le présent avenant a pour objet de préciser les modalités de mise en œuvre de la"
+    " prestation définie à l'article premier du contrat initial, ainsi que les délais"
+    " applicables à chacune des étapes convenues entre les parties.",
+    "Conformément à l'article 1231-1 du code civil, le débiteur est condamné, s'il y a"
+    " lieu, au paiement de dommages et intérêts, soit à raison de l'inexécution de"
+    " l'obligation, soit à raison du retard dans l'exécution.",
+    "Madame, Monsieur, nous accusons réception de votre courrier du douze janvier dernier"
+    " et vous confirmons que votre dossier a été transmis au service compétent, qui"
+    " reviendra vers vous dans les meilleurs délais.",
+    "Facture numéro deux mille vingt-six tiret zéro quatre cent douze. Prestations de"
+    " conseil réalisées au cours du mois écoulé, conformément au bon de commande annexé"
+    " au présent document et accepté par le client.",
 ]
 
 # Ce qu'extrait une page dont la police n'a pas de table de caracteres : les

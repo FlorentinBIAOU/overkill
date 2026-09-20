@@ -42,9 +42,13 @@ def test_point_de_rupture_temoin_une_vraie_page_de_texte_est_rangee_pareil():
     plan = triage_pages(NUMERIQUE)
     assert [p["verdict"] for p in plan["pages"]] == ["text", "text"]
     assert plan["readable"] == [1, 2]
+    # Le chiffre publié dans le point de rupture, asserté à l'unité.
+    assert plan["pages"][0]["characters"] == 224
     # Les deux pages, la lisible et l'illisible, sont indistinguables ici :
-    # même verdict, même ordre de grandeur de caractères.
-    assert abs(plan["pages"][0]["characters"] - triage_pages(MOJIBAKE)["pages"][0]["characters"]) < 60
+    # même verdict, et quarante et un caractères d'écart.
+    casse = triage_pages(MOJIBAKE)["pages"][0]["characters"]
+    assert casse == 183
+    assert abs(plan["pages"][0]["characters"] - casse) < 60
 
 
 # ---------------------------------------------------------------------------

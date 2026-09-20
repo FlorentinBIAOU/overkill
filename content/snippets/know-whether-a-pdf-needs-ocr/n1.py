@@ -35,9 +35,21 @@ OTHER = "#"
 SYMBOLS = ALPHABET + OTHER
 
 # How far below the worst training page a page may score before it is called
-# unreadable. Three tenths of a nat per pair: measured on the pages of this
-# entry, a readable page sits within a tenth of the training set.
-MARGIN = 0.3
+# unreadable.
+#
+# Half a nat per pair, and the number comes from pages that are NOT in the
+# training set: four ordinary French administrative pages — an amendment, an
+# article of the civil code, an acknowledgement letter, an invoice heading —
+# score between −2.42 and −2.83 against a model fitted on six contract pages
+# whose worst is −2.48. The furthest sits 0.35 below it, so three tenths would
+# refuse it, and did. Half a nat clears it and still refuses an English page,
+# 0.65 below, and a table of amounts, 1.66 below.
+#
+# It is a default, not a constant: it was measured on six training pages and
+# four held-out ones, which is small. Keep a handful of your own readable pages
+# out of `fit`, score them, and move this number until they all pass — that is
+# the only calibration that says anything about your own documents.
+MARGIN = 0.5
 
 
 def normalise(text: str) -> str:
@@ -56,7 +68,13 @@ def fit(pages) -> dict:
     model = {"log_probability": {a: {b: math.log(counts[a][b] / totals[a]) for b in SYMBOLS}
                                  for a in SYMBOLS}}
     scores = [score(page, model) for page in pages]
-    model["threshold"] = (min(scores) - MARGIN) if scores else float("-inf")
+    if not scores:
+        # A model fitted on nothing would answer « readable » to everything,
+        # which is the expensive mistake of this entry: a page declared
+        # readable that is not one goes into the index empty, and nobody looks
+        # at it again.
+        raise ValueError("fit needs at least one page you have read yourself")
+    model["threshold"] = min(scores) - MARGIN
     return model
 
 

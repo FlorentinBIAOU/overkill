@@ -2,7 +2,8 @@ import time
 import unicodedata
 
 from n0 import triage_pages
-from fixtures import CORPUS, MOJIBAKE, MOJIBAKE_TEXTE, PAGE_ANGLAISE, TABLEAU_DE_CHIFFRES
+from fixtures import (CORPUS, MOJIBAKE, MOJIBAKE_TEXTE, PAGE_ANGLAISE, RETENUES,
+                      TABLEAU_DE_CHIFFRES)
 from n1 import MARGIN, fit, is_readable, normalise, score
 
 MODELE = fit(CORPUS)
@@ -21,16 +22,56 @@ def test_point_de_rupture_une_page_de_chiffres_nest_pas_de_la_langue():
     chiffres = is_readable(TABLEAU_DE_CHIFFRES, MODELE)
     assert chiffres["readable"] is False
     assert round(chiffres["score"], 2) == -4.10
-    assert round(MODELE["threshold"], 2) == -2.69
+    assert round(MODELE["threshold"], 2) == -2.98
     # Le tableau est du vrai texte : il n'a rien d'illisible pour un humain.
     assert "12/01/2026" in TABLEAU_DE_CHIFFRES
 
 
-def test_point_de_rupture_temoin_une_page_de_prose_passe_largement():
-    """« Le témoin : une page de contrat marque −2,39, au-dessus du seuil. »"""
-    prose = is_readable(CORPUS[0], MODELE)
-    assert prose["readable"] is True
-    assert round(prose["score"], 2) == -2.39
+def test_point_de_rupture_temoin_une_page_hors_du_lot_passe():
+    """
+    « Le témoin : une lettre commerciale qui n'est pas dans le lot
+    d'entraînement marque −2,83, au-dessus du seuil. »
+
+    Le témoin est pris HORS de `CORPUS`, et c'est tout ce qui fait qu'il
+    démontre quelque chose : une page d'entraînement passe son propre seuil par
+    construction, puisque le seuil est le minimum de leurs scores moins la
+    marge. L'ancien témoin était `CORPUS[0]`.
+    """
+    temoin = is_readable(RETENUES[2], MODELE)
+    assert RETENUES[2] not in CORPUS
+    assert temoin["readable"] is True
+    assert round(temoin["score"], 2) == -2.83
+
+
+def test_les_quatre_pages_retenues_hors_du_lot_passent_toutes():
+    """
+    R7 : ce que le réglage par défaut produit un jour ordinaire, pas sur
+    l'exemple qui l'illustre. Quatre pages de prose administrative française
+    qui ne sont pas dans le lot d'entraînement — un avenant, un article du code
+    civil, un accusé de réception, un en-tête de facture.
+    """
+    attendus = [-2.42, -2.63, -2.83, -2.65]
+    for page, attendu in zip(RETENUES, attendus):
+        lu = is_readable(page, MODELE)
+        assert lu["readable"] is True, page[:40]
+        assert round(lu["score"], 2) == attendu, page[:40]
+    # La plus basse des quatre est à 0,35 sous la pire page d'entraînement :
+    # c'est ce nombre-là qui fixe la marge, et trois dixièmes la refusaient.
+    pire_entrainement = min(score(page, MODELE) for page in CORPUS)
+    assert round(pire_entrainement - min(score(p, MODELE) for p in RETENUES), 2) == 0.35
+    assert MARGIN == 0.5
+
+
+def test_le_modele_generalise_en_validation_croisee():
+    """
+    Le seuil vient du lot d'entraînement, donc la seule façon de savoir s'il
+    généralise est de retirer une page du lot et de la noter contre les cinq
+    autres. Les six passent.
+    """
+    for retiree in range(len(CORPUS)):
+        reste = CORPUS[:retiree] + CORPUS[retiree + 1:]
+        modele = fit(reste)
+        assert is_readable(CORPUS[retiree], modele)["readable"] is True, retiree
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +111,7 @@ def test_une_autre_langue_sur_le_meme_alphabet_tombe_sous_le_seuil():
     """
     anglais = is_readable(PAGE_ANGLAISE, MODELE)
     assert anglais["readable"] is False
-    assert round(anglais["score"], 2) == -3.17
+    assert round(anglais["score"], 2) == -3.25
     # Et il remonte au-dessus du seuil dès que l'anglais entre dans le lot.
     bilingue = fit(CORPUS + [PAGE_ANGLAISE])
     assert is_readable(PAGE_ANGLAISE, bilingue)["readable"] is True
@@ -114,6 +155,18 @@ def test_production_entree_tres_grande_et_terminaison_rapide():
     assert resultat["readable"] is True
 
 
+def test_le_lot_dentrainement_est_du_francais_accentue():
+    """
+    T5 et R1 : l'entrée ordinaire d'un fonds documentaire francophone porte des
+    accents. Un lot d'entraînement sans un seul « é » ne donne à `ALPHABET` que
+    le lissage add-one sur la moitié de ses lettres, et le modèle pénalise
+    alors le français écrit correctement.
+    """
+    accentuees = [page for page in CORPUS if any(c in page for c in "àâçéèêîïôùû")]
+    assert len(accentuees) == len(CORPUS)
+    assert sum(page.count("é") for page in CORPUS) >= 10
+
+
 def test_production_encodages_inattendus():
     # Accents décomposés : le « é » composé est dans l'alphabet, le décomposé
     # est un « e » suivi d'un accent seul, qui tombe dans « autre ». Les deux
@@ -132,9 +185,14 @@ def test_production_valeurs_aux_limites():
     assert score("", MODELE) == float("-inf")
     assert score("a", MODELE) == float("-inf")
     assert score("es", MODELE) > float("-inf")
-    # Un lot d'entraînement vide donne un seuil qui n'accepte rien de fini.
-    assert fit([])["threshold"] == float("-inf")
-    assert is_readable("le contrat", fit([]))["readable"] is True
+    # Un lot d'entraînement vide est refusé : un modèle ajusté sur rien
+    # déclarerait tout lisible, et c'est l'erreur coûteuse de cette fiche.
+    try:
+        fit([])
+    except ValueError as erreur:
+        assert str(erreur) == "fit needs at least one page you have read yourself"
+    else:
+        raise AssertionError("fit([]) doit refuser")
 
 
 def test_production_une_page_illisible_dans_un_lot_nempeche_pas_les_autres():

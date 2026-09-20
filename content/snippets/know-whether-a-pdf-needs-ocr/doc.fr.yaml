@@ -76,7 +76,18 @@ n1: |
   pages lisibles — N0 vient de les lister —, si bien que la référence est faite
   de vos documents, dans votre langue, avec votre vocabulaire. Le seuil vient du
   même endroit : la note la plus basse du lot d'entraînement, avec une marge,
-  plutôt qu'un nombre choisi ici.
+  plutôt qu'un nombre choisi ici. `fit` refuse un lot vide : un modèle ajusté
+  sur rien déclarerait tout lisible, et c'est l'erreur coûteuse de cette fiche.
+
+  La marge, elle, est un réglage par défaut et non une constante. Une page du
+  lot d'entraînement passe son propre seuil par construction, donc elle ne dit
+  rien : le demi-nat vient de quatre pages de prose administrative française
+  retenues **hors** du lot — un avenant, un article du code civil, un accusé de
+  réception, un en-tête de facture —, qui notent entre −2,42 et −2,83 contre un
+  lot dont la pire page note −2,48. La plus éloignée est à 0,35 en dessous : à
+  trois dixièmes elle était refusée. Gardez quelques-unes de vos pages lisibles
+  hors de `fit`, notez-les, et déplacez ce nombre jusqu'à ce qu'elles passent
+  toutes : c'est le seul réglage qui dise quelque chose de vos documents.
 
   Ce que cela ne sait pas faire, c'est lire. Une page de chiffres, un tableau de
   montants, un formulaire à champs courts : ce sont de vrais textes qu'aucun

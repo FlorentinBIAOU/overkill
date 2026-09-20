@@ -11,7 +11,6 @@
     "check-a-password-against-a-policy",
     "forecast-weekly-sales",
     "fuzzy-match-company-names",
-    "know-whether-a-pdf-needs-ocr",
     "show-similar-articles",
     "summarise-a-long-document",
     "validate-an-api-payload-against-its-contract"
