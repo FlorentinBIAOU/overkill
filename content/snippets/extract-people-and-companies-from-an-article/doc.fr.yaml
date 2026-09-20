@@ -21,9 +21,21 @@ n0: |
 
   Deux limites sont comptées plutôt que cachées. Un mot capitalisé seul en tête
   de phrase n'est pas rendu, parce que la plupart ne sont que le premier mot de
-  la phrase ; `skipped_at_sentence_start` dit combien ont été passés. Et les
-  marqueurs ci-dessous sont français et anglais : c'est une liste déclarée,
-  faite pour être étendue, et un texte qui n'en porte aucun revient
+  la phrase ; et un mot d'ouverture placé devant un vrai nom — « Après » dans
+  « Après Renault » — ne fait pas partie du nom. `skipped_at_sentence_start`
+  compte les deux. La liste de ces mots d'ouverture est déclarée, comme celle
+  des civilités et celle des formes juridiques : un niveau qui devinerait
+  lesquels sont des noms devinerait exactement ce qu'il annonce ne pas faire.
+  Les articles en sont absents, sans quoi « Le Monde » perdrait son journal.
+
+  Ce que ce niveau ne sait pas reconnaître du tout, c'est ce dont un nom est le
+  nom : une référence de produit comme « A350 » dans « Airbus a livré son
+  premier A350 » est capitalisée, ne suit aucun mot d'ouverture et ne porte
+  aucun marqueur, donc elle revient comme un nom `unknown`. C'est le niveau
+  au-dessus.
+
+  Et les marqueurs ci-dessous sont français et anglais : c'est une liste
+  déclarée, faite pour être étendue, et un texte qui n'en porte aucun revient
   entièrement `unknown`.
 
 n2: |

@@ -1,11 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { HONORIFICS, LEGAL_FORMS, PARTICLES, extractNames } from './n0.js';
+import {
+  HONORIFICS, LEGAL_FORMS, PARTICLES, SENTENCE_OPENERS, extractNames,
+} from './n0.js';
 
 // Un paragraphe de presse française ordinaire : le public visé de la fiche.
 const ARTICLE = 'Le contrat lie la société Lumière SARL à Jean de La Fontaine et à '
   + 'Mme Marie Martin, de Lyon. M. Boulanger a livré le colis mercredi.';
+
+// Cinq ouvertures de phrase de presse française, et ce qui suit chacune. Ce
+// sont elles qui ont fait tomber la fiche : le mot d'ouverture entrait dans le
+// nom, et rien dans le rapport ne le disait.
+const OUVERTURES = [
+  ['Après Renault, Stellantis a annoncé un accord.', 'Renault'],
+  ['Selon Le Monde, Renault et Stellantis ont signé un accord.', 'Le Monde'],
+  ['Depuis Lyon, Marie Martin dirige le groupe.', 'Lyon'],
+  ['Chez Boulanger, les prix ont baissé.', 'Boulanger'],
+  ['Malgré Airbus, le marché recule.', 'Airbus'],
+];
 
 const lus = (texte) => extractNames(texte).names.map((n) => [n.text, n.type, n.evidence]);
 
@@ -58,16 +71,48 @@ test("un nom de plusieurs mots en tête de phrase est rendu", () => {
   assert.deepEqual(lus('Marie Martin a livré le colis.'), [['Marie Martin', 'unknown', null]]);
 });
 
+test("un mot d'ouverture devant un nom ne fait pas partie du nom", () => {
+  // Docstring : « A capitalised run that starts a sentence with one of them
+  // starts one word later: « Après Renault » is Renault, « Selon Le Monde » is
+  // Le Monde. » R1 : cinq ouvertures de prose de presse française.
+  for (const [phrase, attendu] of OUVERTURES) {
+    const rapport = extractNames(phrase);
+    assert.equal(rapport.names[0].text, attendu, phrase);
+    assert.equal(rapport.skipped_at_sentence_start, 1, phrase);
+  }
+  // Témoin : un vrai nom en tête de phrase commence bien à son premier mot.
+  assert.deepEqual(lus('Jean Dupont, président de la société Acme, a signé.'),
+    [['Jean Dupont', 'unknown', null], ['Acme', 'company', 'la société']]);
+  assert.equal(extractNames('Jean Dupont a signé.').skipped_at_sentence_start, 0);
+  // Et « Le Monde » en tête de phrase garde son article.
+  assert.deepEqual(lus('Le Monde a publié un article.'), [['Le Monde', 'unknown', null]]);
+  assert.ok(!SENTENCE_OPENERS.has('le') && !SENTENCE_OPENERS.has('la'));
+});
+
+test("une référence de produit revient comme un nom, et la docstring le dit", () => {
+  // Docstring : « a product reference like « A350 » […] comes back as an
+  // `unknown` name. That is a rung above. »
+  assert.deepEqual(lus('Airbus a livré son premier A350 à Air France.'),
+    [['A350', 'unknown', null], ['Air France', 'unknown', null]]);
+  assert.equal(
+    extractNames('Airbus a livré son premier A350 à Air France.').skipped_at_sentence_start, 1,
+  );
+});
+
 test('les marqueurs sont une liste déclarée faite pour être étendue', () => {
   assert.ok(HONORIFICS.has('mme') && LEGAL_FORMS.has('sarl'));
+  assert.ok(SENTENCE_OPENERS.has('après') && SENTENCE_OPENERS.has('according'));
   assert.equal(lus('La société Lumière GmbH a signé.')[0][1], 'company');
 });
 
-test('aucune entrée ne lève', () => {
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(extractNames(null).reason, 'expected text, not object');
+  assert.equal(extractNames(42).reason, 'expected text, not number');
   for (const entree of [null, undefined, 42, [], {}, '']) {
     const rapport = extractNames(entree);
     assert.deepEqual(rapport.names, []);
-    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text'));
+    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text, not '));
   }
 });
 

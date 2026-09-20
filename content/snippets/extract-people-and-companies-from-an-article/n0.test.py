@@ -4,7 +4,8 @@ import subprocess
 import time
 from pathlib import Path
 
-from n0 import HONORIFICS, LEGAL_FORMS, PARTICLES, extract_names
+from n0 import (HONORIFICS, LEGAL_FORMS, PARTICLES, SENTENCE_OPENERS,
+                extract_names)
 
 ICI = Path(__file__).parent
 
@@ -15,12 +16,26 @@ ARTICLE = ("Le contrat lie la société Lumière SARL à Jean de La Fontaine et 
 ANGLAIS = ("Sir Alex Ferguson and Acme Inc. signed the contract in Manchester. "
            "The company Lumiere Ltd was not represented.")
 
+# Cinq ouvertures de phrase de presse française, et ce qui suit chacune. Ce
+# sont elles qui ont fait tomber la fiche : le mot d'ouverture entrait dans le
+# nom, et rien dans le rapport ne le disait.
+OUVERTURES = [
+    ("Après Renault, Stellantis a annoncé un accord.", "Renault"),
+    ("Selon Le Monde, Renault et Stellantis ont signé un accord.", "Le Monde"),
+    ("Depuis Lyon, Marie Martin dirige le groupe.", "Lyon"),
+    ("Chez Boulanger, les prix ont baissé.", "Boulanger"),
+    ("Malgré Airbus, le marché recule.", "Airbus"),
+]
+
 TOUS = [ARTICLE, ANGLAIS, "Boulanger a livré le colis.",
         "La société Boulanger a livré le colis.", "M. Boulanger a livré le colis.",
         "Lumière a livré le colis à Paris.", "Marks and Spencer ouvre à Lille.",
         "", "Jean de La Fontaine", "IBM et SAP", "l'entreprise Lumière",
         "Le groupe Lumière", "the firm Lumiere", "Mme  Marie Martin",
-        "société lumière sarl", "Dr Martin et Pr Dupont"]
+        "société lumière sarl", "Dr Martin et Pr Dupont",
+        "Lors du salon, Renault a présenté sa voiture.",
+        "Airbus a livré son premier A350 à Air France.",
+        *[phrase for phrase, _ in OUVERTURES]]
 
 
 def lus(texte):
@@ -92,17 +107,60 @@ def test_un_nom_de_plusieurs_mots_en_tete_de_phrase_est_rendu():
     assert lus("Marie Martin a livré le colis.") == [("Marie Martin", "unknown", None)]
 
 
+def test_un_mot_douverture_devant_un_nom_ne_fait_pas_partie_du_nom():
+    """
+    Docstring : « A capitalised run that starts a sentence with one of them
+    starts one word later: « Après Renault » is Renault, « Selon Le Monde » is
+    Le Monde. »
+
+    R1 : cinq ouvertures de prose de presse française, celles qui ouvrent une
+    phrase une fois sur trois. Le mot d'ouverture entrait dans le nom, et
+    l'entité sortait avec `evidence: None` et `type: "unknown"`, exactement
+    comme un nom correct.
+    """
+    for phrase, attendu in OUVERTURES:
+        rapport = extract_names(phrase)
+        assert rapport["names"][0]["text"] == attendu, phrase
+        # Le mot mis de côté est compté, pas avalé.
+        assert rapport["skipped_at_sentence_start"] == 1, phrase
+    # Témoin : un vrai nom en tête de phrase commence bien à son premier mot.
+    assert lus("Jean Dupont, président de la société Acme, a signé.") == [
+        ("Jean Dupont", "unknown", None), ("Acme", "company", "la société")]
+    assert extract_names("Jean Dupont a signé.")["skipped_at_sentence_start"] == 0
+    # Et « Le Monde » en tête de phrase garde son article : un article n'est
+    # pas un mot d'ouverture, sans quoi le journal disparaîtrait.
+    assert lus("Le Monde a publié un article.") == [("Le Monde", "unknown", None)]
+    assert "le" not in SENTENCE_OPENERS and "la" not in SENTENCE_OPENERS
+
+
+def test_une_reference_de_produit_revient_comme_un_nom_et_la_docstring_le_dit():
+    """
+    Docstring : « a product reference like « A350 » […] comes back as an
+    `unknown` name. That is a rung above. »
+    """
+    assert lus("Airbus a livré son premier A350 à Air France.") == [
+        ("A350", "unknown", None), ("Air France", "unknown", None)]
+    # « Airbus » ouvre la phrase, seul : il est compté, pas rendu.
+    assert extract_names(
+        "Airbus a livré son premier A350 à Air France.")["skipped_at_sentence_start"] == 1
+
+
 def test_les_marqueurs_sont_une_liste_declaree_faite_pour_etre_etendue():
     assert "mme" in HONORIFICS and "sarl" in LEGAL_FORMS
+    assert "après" in SENTENCE_OPENERS and "according" in SENTENCE_OPENERS
     assert lus("La société Lumière GmbH a signé.")[0][1] == "company"
 
 
-def test_aucune_entree_ne_leve():
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """R14 : la raison dit ce que le code a constaté — le type reçu."""
+    assert extract_names(None)["reason"] == "expected text, not NoneType"
+    assert extract_names(42)["reason"] == "expected text, not int"
+    assert extract_names(b"octets")["reason"] == "expected text, not bytes"
     for entree in [None, 42, [], {}, b"octets", ""]:
         rapport = extract_names(entree)
         assert rapport["names"] == []
         if not isinstance(entree, str):
-            assert rapport["reason"].startswith("expected text")
+            assert rapport["reason"].startswith("expected text, not ")
 
 
 # ---------------------------------------------------------------------------

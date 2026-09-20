@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/extract-people-and-companies-from-an-article/n0.js
       verification: executed
     breaking_point:
-      fr: "Sans marqueur, la phrase ne prouve rien : dans « Le colis a été livré par Boulanger », le nom revient `unknown`, et c’est un nom de famille autant qu’une enseigne. Le témoin est dans le même test, et il tranche dans les deux sens : la même phrase avec « la société » devant donne une entreprise, et avec « M. » devant, une personne."
-      en: "With no marker, the sentence proves nothing: in “Le colis a été livré par Boulanger”, the name comes back `unknown`, and it is a family name as much as a shop sign. The witness is in the same test, and it settles both ways: the same sentence with “la société” in front gives a company, and with “M.” in front, a person."
+      fr: "Sans marqueur, la phrase ne prouve rien : dans « Le colis a été livré par Boulanger », le nom revient `unknown`, et c’est un nom de famille autant qu’une enseigne. Témoin dans le même test : la même phrase avec « la société » devant donne une entreprise, et avec « M. » devant, une personne."
+      en: "With no marker, the sentence proves nothing: in “Le colis a été livré par Boulanger”, the name comes back `unknown`, and it is a family name as much as a shop sign. Witness in the same test: the same sentence with “la société” in front gives a company, and with “M.” in front, a person."
     escalate_when:
       fr: "Vos textes ne portent pas ces marqueurs. La prose de presse nomme les gens et les entreprises sans jamais écrire « la société », et c’est le cas ordinaire : la part d’`unknown` dans le rapport vous le dira avant vous."
       en: "Your texts do not carry those markers. Press prose names people and companies without ever writing “la société”, and that is the ordinary case: the share of `unknown` in the report will tell you before you notice."
@@ -81,8 +81,8 @@ rungs:
       javascript: snippets/extract-people-and-companies-from-an-article/n2.js
       verification: stubbed
     breaking_point:
-      fr: "Le pipeline rend une étiquette pour chaque nom qu’il trouve, et rien à côté : pas de score, donc pas de seuil à monter et pas d’`unknown` sur quoi retomber. Dans l’essai de cette fiche, « Lyon » rendu comme une entreprise entre dans la liste comme une entreprise, et tout ce que le code peut vérifier — que le nom figure bien dans le texte envoyé, que l’étiquette se traduit — passe. Le témoin est dans le même test : sur ce même nom, le niveau N0 répond `unknown`, ce qui est exactement ce que la phrase prouve."
-      en: "The pipeline returns a label for every name it finds, and nothing beside it: no score, so no threshold to raise and no `unknown` to fall back on. In this entry’s tryout, “Lyon” returned as a company enters the list as a company, and everything the code can check — that the name really is in the text sent, that the label can be mapped — passes. The witness is in the same test: on that same name, level N0 answers `unknown`, which is exactly what the sentence proves."
+      fr: "Le pipeline rend une étiquette pour chaque nom qu’il trouve, et rien à côté : pas de score, donc pas de seuil à monter et pas d’`unknown` sur quoi retomber — « Lyon » rendu comme une entreprise entre dans la liste comme une entreprise. Témoin dans le même test : sur ce même nom, le niveau N0 répond `unknown`."
+      en: "The pipeline returns a label for every name it finds, and nothing beside it: no score, so no threshold to raise and no `unknown` to fall back on — “Lyon” returned as a company enters the list as a company. Witness in the same test: on that same name, level N0 answers `unknown`."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus qui vaille la peine ici. Ce qui manque à ce niveau — savoir qu’il ne sait pas — ne s’achète pas à l’appel."
       en: "There is no level above this one worth taking here. What this level lacks — knowing that it does not know — is not something a paid call provides."

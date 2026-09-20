@@ -47,6 +47,32 @@ export const PARTICLES = new Set(['de', 'du', 'des', 'da', 'della', 'van', 'von'
 // name, and « L'enseigne » is two tokens, which keeps the article out of it.
 const WORD = /\p{L}[\p{L}\p{N}_-]*/gu;
 
+// Words that open a sentence and are never part of a name. A capitalised run
+// that starts a sentence with one of them starts one word later: « Après
+// Renault » is Renault, « Selon Le Monde » is Le Monde. The list is declared
+// rather than inferred, like HONORIFICS and LEGAL_FORMS, because a rung that
+// guessed which openers are names would be guessing exactly what it says it
+// will not — and it is meant to be extended.
+//
+// Articles and particles are deliberately absent from it: « Le Monde » opens a
+// sentence with « Le », and dropping that word would lose the newspaper.
+export const SENTENCE_OPENERS = new Set([
+  'après', 'avant', 'selon', 'depuis', 'chez', 'pour', 'contre', 'malgré',
+  'dès', 'lors', 'entre', 'face', 'sans', 'sous', 'sur', 'dans', 'avec',
+  'par', 'vers', 'pendant', 'durant', 'outre', 'parmi', 'quant', 'comme',
+  'alors', 'ainsi', 'aussi', 'cependant', 'pourtant', 'toutefois', 'enfin',
+  'ensuite', 'puis', 'donc', 'mais', 'car', 'quand', 'lorsque',
+  'ce', 'cet', 'cette', 'ces', 'son', 'sa', 'ses', 'leur', 'leurs',
+  'notre', 'votre', 'nos', 'vos', 'mon', 'ma', 'mes',
+  'il', 'elle', 'ils', 'elles', 'on', 'nous', 'vous',
+  'after', 'before', 'since', 'according', 'despite', 'during', 'among',
+  'between', 'through', 'under', 'over', 'about', 'against', 'within',
+  'without', 'across', 'around', 'because', 'although', 'however',
+  'therefore', 'meanwhile', 'instead', 'finally', 'then', 'when', 'while',
+  'where', 'this', 'these', 'that', 'those', 'their', 'his', 'her', 'its',
+  'our', 'your', 'but', 'and', 'for', 'nor', 'yet', 'with', 'from',
+]);
+
 // What two words of one name may be separated by: a space, or the apostrophe
 // French elides on — « Jean d'Artagnan » is one name.
 const JOINS = /^([ \t\r\n\f\v  ]+|['’])$/;
@@ -58,6 +84,15 @@ const UPPER = /^\p{Lu}/u;
  *
  * `type` is « person », « company » or « unknown », and `evidence` says what
  * proved it. A name with no evidence is never typed by its spelling.
+ *
+ * `skipped_at_sentence_start` counts the capitalised words this rung set aside
+ * because they open a sentence: a word alone, which it cannot tell from a
+ * name, and the opener in front of a name — « Après » in « Après Renault ».
+ *
+ * What this rung has no way to recognise at all is what a name is *of*: a
+ * product reference like « A350 » in « Airbus a livré son premier A350 » is
+ * capitalised, follows no opener and carries no evidence, so it comes back as
+ * an `unknown` name. That is a rung above.
  */
 export function extractNames(text) {
   if (typeof text !== 'string') {
@@ -78,6 +113,13 @@ export function extractNames(text) {
     let start = tokens[index][1];
     const end = tokens[index + length - 1][2];
     const opens = index === 0 || SENTENCE_END.test(text.slice(tokens[index - 1][2], start));
+    if (opens && SENTENCE_OPENERS.has(tokens[index][0].toLowerCase())) {
+      // « Après Renault, … » — the name starts one word later, and the word
+      // set aside is counted rather than swallowed.
+      skipped += 1;
+      index += 1;
+      continue;
+    }
     const [kind, evidence] = typed(tokens, index, length);
     if (length > 1 && HONORIFICS.has(tokens[index][0].toLowerCase())) {
       start = tokens[index + 1][1]; // « Mme » is not part of the name
