@@ -31,8 +31,6 @@ both languages answer the same thing.
 
 from __future__ import annotations
 
-import json
-
 from jsonschema import Draft202012Validator, FormatChecker
 
 # The methods an operation can be written under, as OpenAPI spells them.
@@ -43,8 +41,19 @@ MAX_ERRORS = 200
 # This runs on a request path, and compiling a document costs more than
 # checking one body against it — far more in JavaScript, where `ajv` generates
 # code, than in Python, where `jsonschema` interprets. The compiled validators
-# are kept here, keyed by the document and the operation; the cap is what stops
-# a caller that builds a new document per request from filling memory.
+# are kept here.
+#
+# Keyed by the **identity** of the document, never by its contents. Serialising
+# the contract to build a cache key would undo the cache and more: on a
+# hundred-and-twenty-nine-kilobyte document — four hundred paths, an ordinary
+# enterprise API — `json.dumps(document, sort_keys=True)` took thirty times the
+# validation it saves, and it took it on every request. A document is an object
+# the caller loads once at start-up; its identity is what tells two of them
+# apart, and the entry keeps a reference to it, which is what stops its id from
+# being reused by something else.
+#
+# The cap is what stops a caller that builds a new document per request from
+# filling memory: the oldest document goes first.
 _COMPILED: dict = {}
 MAX_COMPILED = 64
 
@@ -56,6 +65,11 @@ def validate_request(document, method: str, path: str, body) -> dict:
     `operation` in the report is the operation that was matched, so a caller
     can see which schema the answer came from: a request validated against the
     wrong path is a yes that means nothing.
+
+    `error_count` counts what this function kept, not what the validator
+    raised: two `additionalProperties` failures at the same path are one entry
+    here, because the two libraries do not report them the same way and this
+    entry answers the same thing in both languages.
     """
     if not isinstance(document, dict) or not isinstance(path, str):
         return _report(False, None, [], 0, "this document is not usable")
@@ -97,27 +111,43 @@ def validate_request(document, method: str, path: str, body) -> dict:
 
 def _compiled(document, pointer: str):
     """The compiled validator for this operation, or None when it is not usable."""
-    try:
-        key = (json.dumps(document, sort_keys=True), pointer)
-    except TypeError:
-        return None
-    if key not in _COMPILED:
-        try:
-            root = {**_without_nullable(document), "$ref": pointer}
-            _COMPILED[key] = Draft202012Validator(root, format_checker=FormatChecker())
-        except Exception:  # noqa: BLE001 - a broken contract is an answer too
-            _COMPILED[key] = None
+    held, validators = _COMPILED.get(id(document), (None, None))
+    if held is not document:
+        validators = {}
+        _COMPILED[id(document)] = (document, validators)
         if len(_COMPILED) > MAX_COMPILED:
             del _COMPILED[next(iter(_COMPILED))]
-    return _COMPILED[key]
+    if pointer not in validators:
+        try:
+            root = {**_without_nullable(document), "$ref": pointer}
+            validators[pointer] = Draft202012Validator(root, format_checker=FormatChecker())
+        except Exception:  # noqa: BLE001 - a broken contract is an answer too
+            validators[pointer] = None
+    return validators[pointer]
 
 
 def _match_path(paths, path: str) -> str | None:
-    """The path template this request belongs to, exact match winning."""
+    """
+    The path template this request belongs to, exact match winning.
+
+    When two templates of the same length still match — `/factures/{id}` and
+    `/{ressource}/{id}` — the one with the fewest variables wins, then the one
+    whose first concrete segment comes earliest. Sorting the strings would
+    settle it by the order of `{` in ASCII, which is an accident, and this
+    entry makes precedence one of its three arguments.
+    """
     if path in paths:
         return path
     wanted = path.strip("/").split("/")
-    for template in sorted(paths):
+
+    def precedence(template: str):
+        steps = template.strip("/").split("/")
+        variables = sum(1 for s in steps if s.startswith("{") and s.endswith("}"))
+        concret = next((i for i, s in enumerate(steps)
+                        if not (s.startswith("{") and s.endswith("}"))), len(steps))
+        return (variables, concret, template)
+
+    for template in sorted(paths, key=precedence):
         steps = template.strip("/").split("/")
         if len(steps) != len(wanted):
             continue

@@ -12,7 +12,6 @@
     "forecast-weekly-sales",
     "fuzzy-match-company-names",
     "show-similar-articles",
-    "summarise-a-long-document",
-    "validate-an-api-payload-against-its-contract"
+    "summarise-a-long-document"
   ]
 }

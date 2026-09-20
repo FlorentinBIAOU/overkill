@@ -85,10 +85,20 @@ def test_point_de_rupture_une_facture_qui_ne_tombe_pas_juste_est_valide():
 
 
 def test_point_de_rupture_temoin_une_faute_de_forme_est_bien_attrapee():
-    """« Le témoin : le même montant écrit en texte est refusé, avec son chemin. »"""
-    rapport = validate_request(DOCUMENT, "POST", "/factures", {**FACTURE, "montant_ht": "1000"})
+    """
+    « Le témoin est dans le même test : le même montant écrit « 1 000,00 » est
+    refusé, avec son chemin et sa règle. »
+
+    L'exemple est celui de la fiche, mot pour mot : c'est ainsi qu'un
+    partenaire francophone écrit mille euros, et le contrat demande un nombre.
+    """
+    rapport = validate_request(DOCUMENT, "POST", "/factures",
+                               {**FACTURE, "montant_ht": "1 000,00"})
     assert rapport["valid"] is False
     assert rapport["errors"] == [{"path": "/montant_ht", "rule": "type"}]
+    # Témoin du témoin : le même montant en nombre passe.
+    assert validate_request(DOCUMENT, "POST", "/factures",
+                            {**FACTURE, "montant_ht": 1000})["valid"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -136,11 +146,26 @@ def test_nullable_de_la_version_3_0_est_traduit_avant_validation():
 
 
 def test_un_chemin_ou_une_methode_absents_sont_une_raison():
-    """Un appel hors contrat est nommé, pas confondu avec un corps invalide."""
+    """
+    Un appel hors contrat est nommé, pas confondu avec un corps invalide.
+    R14 : quatre situations que le code distingue, quatre raisons.
+    """
     assert validate_request(DOCUMENT, "POST", "/clients", {})["reason"] == (
         "no path in the document matches /clients")
     assert validate_request(DOCUMENT, "DELETE", "/factures/42", None)["reason"] == (
         "DELETE is not declared on /factures/{id}")
+    # Un document qui n'en est pas un, et un contrat que le validateur refuse
+    # de compiler : deux formes d'inutilisable, et la même raison, parce que le
+    # code ne les distingue pas.
+    assert validate_request("pas un document", "POST", "/factures", {})["reason"] == (
+        "this document is not usable")
+    casse = {"openapi": "3.0.3", "paths": {"/factures": {"post": {"requestBody": {
+        "content": {"application/json": {"schema": {"type": 12}}}}}}}}
+    assert validate_request(casse, "POST", "/factures", {})["reason"] == (
+        "this document is not usable")
+    # Et un corps non déclaré, qui est une quatrième situation.
+    assert validate_request(DOCUMENT, "GET", "/factures/42", {"x": 1})["reason"] == (
+        "no body is declared")
 
 
 def test_une_operation_sans_corps_declare_refuse_un_corps():
@@ -177,6 +202,49 @@ def test_un_document_inutilisable_est_une_raison_pas_une_exception():
 # ---------------------------------------------------------------------------
 # Cas de production
 # ---------------------------------------------------------------------------
+
+
+def test_deux_gabarits_qui_correspondent_sont_departages_par_une_regle_ecrite():
+    """
+    Docstring de `_match_path` : « the one with the fewest variables wins, then
+    the one whose first concrete segment comes earliest. Sorting the strings
+    would settle it by the order of `{` in ASCII, which is an accident. »
+    """
+    deux = {"openapi": "3.0.3", "paths": {
+        "/factures/{id}": {"get": {}},
+        "/{ressource}/{id}": {"get": {}},
+    }}
+    assert validate_request(deux, "GET", "/factures/42", None)["operation"] == (
+        "get /factures/{id}")
+    # Le gabarit générique reste celui des autres ressources.
+    assert validate_request(deux, "GET", "/clients/42", None)["operation"] == (
+        "get /{ressource}/{id}")
+    # Et l'ordre de déclaration ne change rien, ce qu'un tri de chaînes ne
+    # garantissait que par accident : « f » vient avant « { » en ASCII.
+    inverse = {"openapi": "3.0.3", "paths": {
+        "/{ressource}/{id}": {"get": {}},
+        "/factures/{id}": {"get": {}},
+    }}
+    assert validate_request(inverse, "GET", "/factures/42", None)["operation"] == (
+        "get /factures/{id}")
+    # Le même départage quand le segment concret est le second.
+    second = {"openapi": "3.0.3", "paths": {
+        "/{ressource}/resume": {"get": {}},
+        "/{ressource}/{id}": {"get": {}},
+    }}
+    assert validate_request(second, "GET", "/factures/resume", None)["operation"] == (
+        "get /{ressource}/resume")
+
+
+def test_error_count_compte_ce_qui_est_garde_pas_ce_que_le_validateur_leve():
+    """
+    Docstring : « `error_count` counts what this function kept, not what the
+    validator raised. »
+    """
+    deux_en_trop = {**FACTURE, "inconnu_a": 1, "inconnu_b": 2}
+    rapport = validate_request(DOCUMENT, "POST", "/factures", deux_en_trop)
+    assert rapport["errors"] == [{"path": "", "rule": "additionalProperties"}]
+    assert rapport["error_count"] == 1
 
 
 def test_production_entree_banale_une_facture_postee_par_un_partenaire():
@@ -256,6 +324,52 @@ def test_production_la_validation_tient_la_classe_de_latence_annoncee():
     for _ in range(1_000):
         validate_request(DOCUMENT, "POST", "/factures", FACTURE)
     assert time.perf_counter() - debut < 60.0
+
+
+def _document_de(chemins: int, proprietes: int = 42) -> dict:
+    """
+    Un document OpenAPI de la taille d'une vraie API : quatre cents chemins,
+    deux méthodes chacun, un schéma de quarante-deux propriétés. Le chemin
+    `/factures` y est toujours, pour valider la même requête que partout.
+    """
+    import copy
+
+    props = {f"champ_{i}": {"type": "string"} for i in range(proprietes)}
+    schema = {"type": "object", "required": ["numero"],
+              "properties": {"numero": {"type": "string"}, **props}}
+    paths = {f"/ressource{i}/{{id}}": {
+        methode: {"requestBody": {"content": {"application/json": {
+            "schema": copy.deepcopy(schema)}}}}
+        for methode in ("post", "put")} for i in range(chemins)}
+    paths["/factures"] = {"post": {"requestBody": {"content": {"application/json": {
+        "schema": {"type": "object", "required": ["numero"],
+                   "properties": {"numero": {"type": "string"}}}}}}}}
+    return {"openapi": "3.0.3", "paths": paths}
+
+
+def test_le_temps_par_requete_ne_depend_pas_de_la_taille_du_document():
+    """
+    Commentaire : « Keyed by the identity of the document, never by its
+    contents. »
+
+    C'était le défaut : la clé du cache sérialisait le document entier à chaque
+    requête, si bien qu'un contrat d'API d'entreprise coûtait quatorze fois le
+    même contrat réduit à deux chemins. Le rapport est ici borné large — la
+    borne attrape un effondrement, elle ne mesure rien.
+    """
+    petit, gros = _document_de(2), _document_de(400)
+    corps = {"numero": "FA-2026-0412"}
+    assert len(json.dumps(gros)) > 100_000
+    for document in (petit, gros):
+        assert validate_request(document, "POST", "/factures", corps)["valid"] is True
+
+    def par_appel(document):
+        debut = time.perf_counter()
+        for _ in range(200):
+            validate_request(document, "POST", "/factures", corps)
+        return (time.perf_counter() - debut) / 200
+
+    assert par_appel(gros) < 10 * par_appel(petit)
 
 
 def test_le_document_compile_est_garde_et_le_cache_est_plafonne():

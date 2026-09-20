@@ -93,9 +93,18 @@ test('point de rupture : une facture qui ne tombe pas juste est valide', () => {
 });
 
 test('point de rupture : témoin, une faute de forme est bien attrapée', () => {
-  const rapport = validateRequest(DOCUMENT, 'POST', '/factures', { ...FACTURE, montant_ht: '1000' });
+  // « Le témoin est dans le même test : le même montant écrit « 1 000,00 »
+  // est refusé, avec son chemin et sa règle. » L'exemple est celui de la
+  // fiche, mot pour mot : c'est ainsi qu'un partenaire francophone écrit mille
+  // euros, et le contrat demande un nombre.
+  const rapport = validateRequest(DOCUMENT, 'POST', '/factures',
+    { ...FACTURE, montant_ht: '1 000,00' });
   assert.equal(rapport.valid, false);
   assert.deepEqual(rapport.errors, [{ path: '/montant_ht', rule: 'type' }]);
+  assert.equal(
+    validateRequest(DOCUMENT, 'POST', '/factures', { ...FACTURE, montant_ht: 1000 }).valid,
+    true,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -133,10 +142,28 @@ test('nullable de la version 3.0 est traduit avant validation', () => {
 });
 
 test('un chemin ou une méthode absents sont une raison', () => {
+  // R14 : quatre situations que le code distingue, quatre raisons.
   assert.equal(validateRequest(DOCUMENT, 'POST', '/clients', {}).reason,
     'no path in the document matches /clients');
   assert.equal(validateRequest(DOCUMENT, 'DELETE', '/factures/42', null).reason,
     'DELETE is not declared on /factures/{id}');
+  // Un document qui n'en est pas un, et un contrat que le validateur refuse de
+  // compiler : deux formes d'inutilisable, et la même raison, parce que le
+  // code ne les distingue pas.
+  assert.equal(validateRequest('pas un document', 'POST', '/factures', {}).reason,
+    'this document is not usable');
+  const casse = {
+    openapi: '3.0.3',
+    paths: {
+      '/factures': {
+        post: { requestBody: { content: { 'application/json': { schema: { type: 12 } } } } },
+      },
+    },
+  };
+  assert.equal(validateRequest(casse, 'POST', '/factures', {}).reason,
+    'this document is not usable');
+  assert.equal(validateRequest(DOCUMENT, 'GET', '/factures/42', { x: 1 }).reason,
+    'no body is declared');
 });
 
 test('une opération sans corps déclaré refuse un corps', () => {
@@ -184,6 +211,39 @@ test("les propriétés en trop ne comptent qu'une fois", () => {
 // ---------------------------------------------------------------------------
 // Cas de production
 // ---------------------------------------------------------------------------
+
+test('deux gabarits qui correspondent sont départagés par une règle écrite', () => {
+  // Commentaire de `matchPath` : « the one with the fewest variables wins,
+  // then the one whose first concrete segment comes earliest. »
+  const deux = {
+    openapi: '3.0.3',
+    paths: { '/factures/{id}': { get: {} }, '/{ressource}/{id}': { get: {} } },
+  };
+  assert.equal(validateRequest(deux, 'GET', '/factures/42', null).operation, 'get /factures/{id}');
+  assert.equal(validateRequest(deux, 'GET', '/clients/42', null).operation,
+    'get /{ressource}/{id}');
+  const inverse = {
+    openapi: '3.0.3',
+    paths: { '/{ressource}/{id}': { get: {} }, '/factures/{id}': { get: {} } },
+  };
+  assert.equal(validateRequest(inverse, 'GET', '/factures/42', null).operation,
+    'get /factures/{id}');
+  const second = {
+    openapi: '3.0.3',
+    paths: { '/{ressource}/resume': { get: {} }, '/{ressource}/{id}': { get: {} } },
+  };
+  assert.equal(validateRequest(second, 'GET', '/factures/resume', null).operation,
+    'get /{ressource}/resume');
+});
+
+test("error_count compte ce qui est gardé, pas ce que le validateur lève", () => {
+  // Commentaire : « `error_count` counts what this function kept, not what the
+  // validator raised. »
+  const deuxEnTrop = { ...FACTURE, inconnu_a: 1, inconnu_b: 2 };
+  const rapport = validateRequest(DOCUMENT, 'POST', '/factures', deuxEnTrop);
+  assert.deepEqual(rapport.errors, [{ path: '', rule: 'additionalProperties' }]);
+  assert.equal(rapport.error_count, 1);
+});
 
 test('production : entrée banale, une facture postée par un partenaire', () => {
   const rapport = validateRequest(DOCUMENT, 'POST', '/factures', {
@@ -251,6 +311,63 @@ test('production : la validation tient la classe de latence annoncée', () => {
   const debut = performance.now();
   for (let i = 0; i < 1_000; i += 1) validateRequest(DOCUMENT, 'POST', '/factures', FACTURE);
   assert.ok(performance.now() - debut < 60_000);
+});
+
+/**
+ * Un document OpenAPI de la taille d'une vraie API : quatre cents chemins,
+ * deux méthodes chacun, un schéma de quarante-deux propriétés. Le chemin
+ * `/factures` y est toujours, pour valider la même requête que partout.
+ */
+function documentDe(chemins, proprietes = 42) {
+  const props = Object.fromEntries(
+    Array.from({ length: proprietes }, (unused, i) => [`champ_${i}`, { type: 'string' }]),
+  );
+  const schema = {
+    type: 'object', required: ['numero'], properties: { numero: { type: 'string' }, ...props },
+  };
+  const paths = {};
+  for (let i = 0; i < chemins; i += 1) {
+    paths[`/ressource${i}/{id}`] = Object.fromEntries(['post', 'put'].map((methode) => [
+      methode,
+      { requestBody: { content: { 'application/json': { schema: structuredClone(schema) } } } },
+    ]));
+  }
+  paths['/factures'] = {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object', required: ['numero'], properties: { numero: { type: 'string' } },
+            },
+          },
+        },
+      },
+    },
+  };
+  return { openapi: '3.0.3', paths };
+}
+
+test("le temps par requête ne dépend pas de la taille du document", () => {
+  // Commentaire : « Keyed by the identity of the document, never by its
+  // contents. »
+  //
+  // C'était le défaut : la clé du cache sérialisait le document entier à
+  // chaque requête. Le rapport est ici borné large — la borne attrape un
+  // effondrement, elle ne mesure rien.
+  const petit = documentDe(2);
+  const gros = documentDe(400);
+  const corps = { numero: 'FA-2026-0412' };
+  assert.ok(JSON.stringify(gros).length > 100_000);
+  for (const document of [petit, gros]) {
+    assert.equal(validateRequest(document, 'POST', '/factures', corps).valid, true);
+  }
+  const parAppel = (document) => {
+    const debut = performance.now();
+    for (let i = 0; i < 200; i += 1) validateRequest(document, 'POST', '/factures', corps);
+    return (performance.now() - debut) / 200;
+  };
+  assert.ok(parAppel(gros) < 10 * parAppel(petit));
 });
 
 test('le document compilé est gardé, et le cache est plafonné', () => {

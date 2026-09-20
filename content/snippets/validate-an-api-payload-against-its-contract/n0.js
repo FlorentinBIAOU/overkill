@@ -43,20 +43,28 @@ export const MAX_ERRORS = 200;
 // This runs on a request path, and compiling a document costs more than
 // checking one body against it — far more here, where `ajv` generates code,
 // than in Python, where `jsonschema` interprets. The compiled validators are
-// kept here, keyed by the document and the operation; the cap is what stops a
-// caller that builds a new document per request from filling memory.
-const COMPILED = new Map();
+// kept here.
+//
+// Keyed by the **identity** of the document, never by its contents.
+// Serialising the contract to build a cache key would undo the cache and more:
+// on a hundred-and-twenty-nine-kilobyte document — four hundred paths, an
+// ordinary enterprise API — `JSON.stringify(document)` took four fifths of the
+// time of a request, and it took it on every one. A document is an object the
+// caller loads once at start-up, so a `WeakMap` holds it: nothing here keeps a
+// document alive, and nothing has to be evicted.
+//
+// The cap is per document, on the operations compiled from it.
+const COMPILED = new WeakMap();
 export const MAX_COMPILED = 64;
 
 /** The compiled validator for this operation, or null when it is not usable. */
 function compiled(document, pointer) {
-  let key;
-  try {
-    key = `${JSON.stringify(document)}\u0000${pointer}`;
-  } catch {
-    return null;
+  let validators = COMPILED.get(document);
+  if (!validators) {
+    validators = new Map();
+    COMPILED.set(document, validators);
   }
-  if (!COMPILED.has(key)) {
+  if (!validators.has(pointer)) {
     let validate = null;
     try {
       const ajv = new Ajv({ allErrors: true, strictSchema: false });
@@ -65,10 +73,10 @@ function compiled(document, pointer) {
     } catch {
       validate = null;
     }
-    COMPILED.set(key, validate);
-    if (COMPILED.size > MAX_COMPILED) COMPILED.delete(COMPILED.keys().next().value);
+    validators.set(pointer, validate);
+    if (validators.size > MAX_COMPILED) validators.delete(validators.keys().next().value);
   }
-  return COMPILED.get(key);
+  return validators.get(pointer);
 }
 
 /**
@@ -77,6 +85,11 @@ function compiled(document, pointer) {
  * `operation` in the report is the operation that was matched, so a caller can
  * see which schema the answer came from: a request validated against the wrong
  * path is a yes that means nothing.
+ *
+ * `error_count` counts what this function kept, not what the validator raised:
+ * two `additionalProperties` failures at the same path are one entry here,
+ * because the two libraries do not report them the same way and this entry
+ * answers the same thing in both languages.
  *
  * @param {object} document  the parsed OpenAPI document
  * @param {string} method
@@ -132,7 +145,23 @@ export function validateRequest(document, method, path, body) {
 function matchPath(paths, path) {
   if (path in paths) return path;
   const wanted = path.replace(/^\/|\/$/g, '').split('/');
-  for (const template of Object.keys(paths).sort()) {
+  const variable = (step) => step.startsWith('{') && step.endsWith('}');
+  // When two templates of the same length still match — `/factures/{id}` and
+  // `/{ressource}/{id}` — the one with the fewest variables wins, then the one
+  // whose first concrete segment comes earliest. Sorting the strings would
+  // settle it by the order of `{` in ASCII, which is an accident, and this
+  // entry makes precedence one of its three arguments.
+  const precedence = (template) => {
+    const steps = template.replace(/^\/|\/$/g, '').split('/');
+    const concret = steps.findIndex((step) => !variable(step));
+    return [steps.filter(variable).length, concret < 0 ? steps.length : concret, template];
+  };
+  const ordonnes = Object.keys(paths).sort((a, b) => {
+    const [va, ca, ta] = precedence(a);
+    const [vb, cb, tb] = precedence(b);
+    return va - vb || ca - cb || (ta < tb ? -1 : ta > tb ? 1 : 0);
+  });
+  for (const template of ordonnes) {
     const steps = template.replace(/^\/|\/$/g, '').split('/');
     if (steps.length !== wanted.length) continue;
     const fits = steps.every((step, i) => (

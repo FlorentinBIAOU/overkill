@@ -16,7 +16,6 @@
     "extract-links-from-a-page",
     "extract-tracking-numbers-from-an-email",
     "read-text-from-a-scanned-page",
-    "validate-a-phone-number-and-its-country-code",
-    "validate-an-api-payload-against-its-contract"
+    "validate-a-phone-number-and-its-country-code"
   ]
 }
