@@ -1,12 +1,10 @@
 {
   "_commentaire": [
-    "Dette du contrôle des sorties de données, relevée le 2026-09-20. Une fiche",
-    "listée ici déclare « data_egress: none » sur un niveau dont le code ouvre une",
-    "connexion. check-egress échoue si une fiche y reste alors qu'elle est en règle :",
-    "la liste ne peut que diminuer. La seule ligne présente est le refus n° 10 du",
-    "lot 17 ; elle doit avoir disparu à la fin du lot 18."
+    "Dette du contrôle des sorties de données. Elle a été relevée le 2026-09-20 avec",
+    "une seule ligne — le refus n° 10 du lot 17 — et le lot 18 l'a vidée en",
+    "corrigeant la fiche : check-a-password-against-a-policy déclare désormais",
+    "third-party, qui est ce que son code fait. Ce fichier ne se remplit pas : un",
+    "extrait qui ouvre une connexion ne déclare pas « none »."
   ],
-  "dette": [
-    "check-a-password-against-a-policy"
-  ]
+  "dette": []
 }

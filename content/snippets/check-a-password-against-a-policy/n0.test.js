@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 
 import {
-  MAXIMUM, MINIMUM, MINIMUM_WITH_SECOND_FACTOR, RANGE_URL, checkPassword, pwnedCount,
+  BLOCKING, MAXIMUM, MINIMUM, MINIMUM_WITH_SECOND_FACTOR, RANGE_URL, checkPassword, pwnedCount,
 } from './n0.js';
 
 // La liste de fuites que le double sert. Ce sont les mots de passe qui ont
@@ -139,6 +139,60 @@ test("le plancher descend quand il y a un second facteur", async () => {
 test("pwnedCount rend zéro quand le suffixe n'est pas dans la plage", async () => {
   assert.equal(await pwnedCount('motdepasse', double()), 9_999);
   assert.equal(await pwnedCount(FILLE, double()), 0);
+});
+
+test("une liste de fuites qui ne répond pas ne bloque pas une inscription", async () => {
+  // Docstring : « a service that does not answer must not throw here: the
+  // failure comes back as `blocklist-unavailable` in `reasons` […] and
+  // `acceptable` says what the rest of the check says. »
+  //
+  // R8 : dégrader plutôt que lever dans un chemin de requête.
+  const enPanne = () => { throw new Error('connection reset'); };
+
+  const rapport = await checkPassword('Clementine-2019-Martin', { fetchRange: enPanne });
+  assert.equal(rapport.acceptable, true);
+  assert.deepEqual(rapport.reasons, ['blocklist-unavailable']);
+  assert.equal(rapport.breaches, null);
+  assert.ok(!BLOCKING.includes('blocklist-unavailable'));
+  const court = await checkPassword('court', { fetchRange: enPanne });
+  assert.deepEqual([court.acceptable, court.reasons], [false, ['too-short']]);
+  assert.deepEqual(
+    (await checkPassword('Clementine-2019-Martin', { fetchRange: double() })).reasons, [],
+  );
+});
+
+test("une phrase de passe longue n'est pas refusée pour sa longueur", async () => {
+  // Commentaire : « sixty-four is a floor on the ceiling, not the ceiling
+  // […] a good password refused by a rule of shape, in an entry whose whole
+  // thesis is that rules of shape push people towards bad ones. »
+  assert.equal(MAXIMUM, 256);
+  const sixMots = 'correcte-agrafe-batterie-cheval-lanterne-tambour-boulangerie';
+  const longue = 'mot-de-passe-de-sept-mots-tres-long-issu-dun-gestionnaire-de-mots-de-passe';
+  assert.equal(longue.length, 74);
+  for (const phrase of [sixMots, longue]) {
+    const rapport = await checkPassword(phrase, { fetchRange: double() });
+    assert.equal(rapport.acceptable, true, phrase);
+    assert.deepEqual(rapport.reasons, [], phrase);
+  }
+  assert.deepEqual(
+    (await checkPassword('a'.repeat(MAXIMUM + 1), { fetchRange: double() })).reasons,
+    ['too-long'],
+  );
+});
+
+test('le contexte ne compare que des mots entiers', async () => {
+  // `escalate_when` : « `context` compares whole words, not parts:
+  // “Boulangerie-Martin-2026” passes a list that carries “Boulangerie-Martin”. »
+  assert.deepEqual(
+    (await checkPassword('Boulangerie-Martin',
+      { context: ['Boulangerie-Martin'], fetchRange: double() })).reasons,
+    ['context-word'],
+  );
+  assert.deepEqual(
+    (await checkPassword('Boulangerie-Martin-2026',
+      { context: ['Boulangerie-Martin'], fetchRange: double() })).reasons,
+    [],
+  );
 });
 
 test('aucune entrée ne lève', async () => {

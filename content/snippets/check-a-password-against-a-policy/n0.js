@@ -24,14 +24,27 @@
 import { createHash } from 'node:crypto';
 
 // SP 800-63B-4, section 3.1.1.2: fifteen characters for a password used as a
-// single factor, eight when it is only one factor among several. Sixty-four is
-// the length the standard asks verifiers to permit at least, not a ceiling to
-// be proud of: raise it, never lower it.
+// single factor, eight when it is only one factor among several.
 export const MINIMUM = 15;
 export const MINIMUM_WITH_SECOND_FACTOR = 8;
-export const MAXIMUM = 64;
+
+// The standard says « SHOULD permit a maximum password length of at least 64
+// characters »: sixty-four is a floor on the ceiling, not the ceiling. Taking
+// it as one turns down a seventy-character passphrase — six words out of a
+// password manager — which is a good password refused by a rule of shape, in
+// an entry whose whole thesis is that rules of shape push people towards bad
+// ones. Two hundred and fifty-six is the usual ceiling; it exists to bound the
+// hashing, not to judge anything.
+export const MAXIMUM = 256;
 
 export const RANGE_URL = 'https://api.pwnedpasswords.com/range/';
+
+// Reasons that block. A blocklist that did not answer is reported and never
+// decided: refusing every sign-up because a third party is down is an outage
+// you did not choose, and accepting in silence is the check the standard puts
+// in a SHALL, skipped without a word. The caller decides; `reasons` is what it
+// decides on.
+export const BLOCKING = ['not-text', 'too-short', 'too-long', 'context-word', 'breached'];
 
 /**
  * How many breaches this password appears in, without sending the password.
@@ -66,6 +79,10 @@ export async function pwnedCount(password, fetchRange) {
  * about the password's shape is judged.
  *
  * `fetchRange` is injected by the tests; in production it is an HTTPS request.
+ * It runs on a sign-up path, so a service that does not answer must not throw
+ * here: the failure comes back as `blocklist-unavailable` in `reasons`, with
+ * `breaches` at null, and `acceptable` says what the rest of the check says.
+ * Only `BLOCKING` reasons make a password unacceptable.
  *
  * @param {string} password
  * @param {{secondFactor?: boolean, context?: string[], fetchRange?: Function}} [options]
@@ -93,10 +110,16 @@ export async function checkPassword(password, { secondFactor = false, context = 
   // accepted: a request that will change nothing is a request not to make.
   let breaches = null;
   if (reasons.length === 0) {
-    breaches = await pwnedCount(normalised, fetchRange);
-    if (breaches) reasons.push('breached');
+    try {
+      breaches = await pwnedCount(normalised, fetchRange);
+      if (breaches) reasons.push('breached');
+    } catch {
+      // See BLOCKING: an outage is not a verdict.
+      reasons.push('blocklist-unavailable');
+    }
   }
-  return report(reasons.length === 0, reasons, breaches, length);
+  const blocking = reasons.filter((reason) => BLOCKING.includes(reason));
+  return report(blocking.length === 0, reasons, breaches, length);
 }
 
 const report = (acceptable, reasons, breaches, length) => ({

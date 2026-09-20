@@ -6,7 +6,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-from n0 import (MAXIMUM, MINIMUM, MINIMUM_WITH_SECOND_FACTOR, RANGE_URL,
+from n0 import (BLOCKING, MAXIMUM, MINIMUM, MINIMUM_WITH_SECOND_FACTOR, RANGE_URL,
                 check_password, pwned_count)
 
 ICI = Path(__file__).parent
@@ -164,6 +164,63 @@ def test_le_plancher_descend_quand_il_y_a_un_second_facteur():
 def test_pwned_count_rend_zero_quand_le_suffixe_nest_pas_dans_la_plage():
     assert pwned_count("motdepasse", double()) == 9_999
     assert pwned_count(FILLE, double()) == 0
+
+
+def test_une_liste_de_fuites_qui_ne_repond_pas_ne_bloque_pas_une_inscription():
+    """
+    Docstring : « a service that does not answer must not raise here: the
+    failure comes back as `blocklist-unavailable` in `reasons`, with `breaches`
+    at None, and `acceptable` says what the rest of the check says. »
+
+    R8 : dégrader plutôt que lever dans un chemin de requête. Une panne de la
+    liste de fuites renvoyait une exception au chemin d'inscription, après cinq
+    secondes d'attente, pour chaque nouvel utilisateur.
+    """
+    def en_panne(url):
+        raise OSError("connection reset")
+
+    rapport = check_password("Clementine-2019-Martin", fetch=en_panne)
+    assert rapport["acceptable"] is True
+    assert rapport["reasons"] == ["blocklist-unavailable"]
+    assert rapport["breaches"] is None
+    # « blocklist-unavailable » n'est pas une raison de refus : l'appelant
+    # décide, et il a de quoi décider.
+    assert "blocklist-unavailable" not in BLOCKING
+    # Un refus qui ne vient pas de la liste reste un refus, panne ou pas.
+    court = check_password("court", fetch=en_panne)
+    assert (court["acceptable"], court["reasons"]) == (False, ["too-short"])
+    # Témoin : le même mot de passe avec une liste qui répond.
+    assert check_password("Clementine-2019-Martin", fetch=double())["reasons"] == []
+
+
+def test_une_phrase_de_passe_longue_nest_pas_refusee_pour_sa_longueur():
+    """
+    Commentaire : « sixty-four is a floor on the ceiling, not the ceiling
+    […] a good password refused by a rule of shape, in an entry whose whole
+    thesis is that rules of shape push people towards bad ones. »
+    """
+    assert MAXIMUM == 256
+    six_mots = "correcte-agrafe-batterie-cheval-lanterne-tambour-boulangerie"
+    longue = "mot-de-passe-de-sept-mots-tres-long-issu-dun-gestionnaire-de-mots-de-passe"
+    assert len(longue) == 74
+    for phrase in (six_mots, longue):
+        rapport = check_password(phrase, fetch=double())
+        assert rapport["acceptable"] is True, phrase
+        assert rapport["reasons"] == [], phrase
+    # Le plafond existe toujours, et il borne le hachage, pas le jugement.
+    assert check_password("a" * (MAXIMUM + 1), fetch=double())["reasons"] == ["too-long"]
+
+
+def test_le_contexte_ne_compare_que_des_mots_entiers():
+    """
+    `escalate_when` : « `context` ne compare que des mots entiers, pas des
+    morceaux : « Boulangerie-Martin-2026 » passe une liste qui porte
+    « Boulangerie-Martin ». »
+    """
+    assert check_password("Boulangerie-Martin", context=["Boulangerie-Martin"],
+                          fetch=double())["reasons"] == ["context-word"]
+    assert check_password("Boulangerie-Martin-2026", context=["Boulangerie-Martin"],
+                          fetch=double())["reasons"] == []
 
 
 def test_aucune_entree_ne_leve():

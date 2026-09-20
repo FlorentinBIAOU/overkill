@@ -11,6 +11,22 @@ n0.py: |
   périodique, et une comparaison à une liste de mots de passe déjà connus pour
   avoir fuité. Quatre des cinq sont de l'arithmétique sur une chaîne.
 
+  Le « au moins soixante-quatre permis » est un plancher sur le plafond, pas le
+  plafond : le prendre pour un plafond refuse une phrase de passe de soixante-
+  dix caractères, ce que produit un gestionnaire réglé sur six mots, c'est-à-
+  dire un bon mot de passe refusé par une règle de forme, dans une fiche dont
+  toute la thèse est que les règles de forme mènent aux mauvais. Le plafond par
+  défaut est donc à deux cent cinquante-six, et il borne le hachage, pas le
+  jugement.
+
+  Le « au moins soixante-quatre permis » est un plancher sur le plafond, pas le
+  plafond : le prendre pour un plafond refuse une phrase de passe de soixante-
+  dix caractères, ce que produit un gestionnaire réglé sur six mots, c'est-à-
+  dire un bon mot de passe refusé par une règle de forme, dans une fiche dont
+  toute la thèse est que les règles de forme mènent aux mauvais. Le plafond par
+  défaut est donc à deux cent cinquante-six, et il borne le hachage, pas le
+  jugement.
+
   La cinquième est la seule qui sorte de la machine, et elle en sort presque
   rien. Le service Have I Been Pwned prend les cinq premiers caractères du
   SHA-1 du mot de passe et rend tous les suffixes qui commencent par eux — huit
@@ -18,6 +34,16 @@ n0.py: |
   service ne peut pas savoir lequel des huit cents était demandé, et que la
   réponse est un compte. C'est ce que fait `pwned_count` plus bas, et cela mérite
   d'être lu : tout l'argument de confidentialité tient en deux lignes.
+
+  Quelque chose sort donc de votre infrastructure — cinq caractères d'une
+  empreinte, jamais le mot de passe —, et le bloc de risques de cette fiche le
+  déclare : `third-party`. Et parce que ce contrôle tourne sur un chemin
+  d'inscription, un service qui ne répond pas ne lève pas ici : l'échec revient
+  en `blocklist-unavailable` dans `reasons`, avec `breaches` nul, et c'est
+  l'appelant qui décide d'accepter ou de refuser l'inscription. Refuser tout le
+  monde parce qu'un tiers est en panne est une panne qu'on n'a pas choisie ;
+  accepter en silence, c'est sauter sans le dire le seul contrôle que la norme
+  met en SHALL.
 
   Ce que ce fichier ne fait délibérément pas, c'est compter les majuscules, les
   chiffres et les symboles. La norme l'interdit — « Verifiers and CSPs SHALL
@@ -34,6 +60,22 @@ n0.js: |
   périodique, et une comparaison à une liste de mots de passe déjà connus pour
   avoir fuité. Quatre des cinq sont de l'arithmétique sur une chaîne.
 
+  Le « au moins soixante-quatre permis » est un plancher sur le plafond, pas le
+  plafond : le prendre pour un plafond refuse une phrase de passe de soixante-
+  dix caractères, ce que produit un gestionnaire réglé sur six mots, c'est-à-
+  dire un bon mot de passe refusé par une règle de forme, dans une fiche dont
+  toute la thèse est que les règles de forme mènent aux mauvais. Le plafond par
+  défaut est donc à deux cent cinquante-six, et il borne le hachage, pas le
+  jugement.
+
+  Le « au moins soixante-quatre permis » est un plancher sur le plafond, pas le
+  plafond : le prendre pour un plafond refuse une phrase de passe de soixante-
+  dix caractères, ce que produit un gestionnaire réglé sur six mots, c'est-à-
+  dire un bon mot de passe refusé par une règle de forme, dans une fiche dont
+  toute la thèse est que les règles de forme mènent aux mauvais. Le plafond par
+  défaut est donc à deux cent cinquante-six, et il borne le hachage, pas le
+  jugement.
+
   La cinquième est la seule qui sorte de la machine, et elle en sort presque
   rien. Le service Have I Been Pwned prend les cinq premiers caractères du
   SHA-1 du mot de passe et rend tous les suffixes qui commencent par eux — huit
@@ -41,6 +83,16 @@ n0.js: |
   service ne peut pas savoir lequel des huit cents était demandé, et que la
   réponse est un compte. C'est ce que fait `pwnedCount` plus bas, et cela mérite
   d'être lu : tout l'argument de confidentialité tient en deux lignes.
+
+  Quelque chose sort donc de votre infrastructure — cinq caractères d'une
+  empreinte, jamais le mot de passe —, et le bloc de risques de cette fiche le
+  déclare : `third-party`. Et parce que ce contrôle tourne sur un chemin
+  d'inscription, un service qui ne répond pas ne lève pas ici : l'échec revient
+  en `blocklist-unavailable` dans `reasons`, avec `breaches` nul, et c'est
+  l'appelant qui décide d'accepter ou de refuser l'inscription. Refuser tout le
+  monde parce qu'un tiers est en panne est une panne qu'on n'a pas choisie ;
+  accepter en silence, c'est sauter sans le dire le seul contrôle que la norme
+  met en SHALL.
 
   Ce que ce fichier ne fait délibérément pas, c'est compter les majuscules, les
   chiffres et les symboles. La norme l'interdit — « Verifiers and CSPs SHALL

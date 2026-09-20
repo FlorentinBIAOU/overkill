@@ -27,14 +27,27 @@ import hashlib
 import unicodedata
 
 # SP 800-63B-4, section 3.1.1.2: fifteen characters for a password used as a
-# single factor, eight when it is only one factor among several. Sixty-four is
-# the length the standard asks verifiers to permit at least, not a ceiling to
-# be proud of: raise it, never lower it.
+# single factor, eight when it is only one factor among several.
 MINIMUM = 15
 MINIMUM_WITH_SECOND_FACTOR = 8
-MAXIMUM = 64
+
+# The standard says « SHOULD permit a maximum password length of at least 64
+# characters »: sixty-four is a floor on the ceiling, not the ceiling. Taking
+# it as one turns down a seventy-character passphrase — six words out of a
+# password manager — which is a good password refused by a rule of shape, in
+# an entry whose whole thesis is that rules of shape push people towards bad
+# ones. Two hundred and fifty-six is the usual ceiling; it exists to bound the
+# hashing, not to judge anything.
+MAXIMUM = 256
 
 RANGE_URL = "https://api.pwnedpasswords.com/range/"
+
+# Reasons that block. A blocklist that did not answer is reported and never
+# decided: refusing every sign-up because a third party is down is an outage
+# you did not choose, and accepting in silence is the check the standard puts
+# in a SHALL, skipped without a word. The caller decides; `reasons` is what it
+# decides on.
+BLOCKING = ("not-text", "too-short", "too-long", "context-word", "breached")
 
 
 def pwned_count(password: str, fetch=None) -> int:
@@ -72,6 +85,10 @@ def check_password(password, *, second_factor: bool = False, context=(), fetch=N
     else about the password's shape is judged.
 
     `fetch` is injected by the tests; in production it is an HTTPS request.
+    It runs on a sign-up path, so a service that does not answer must not raise
+    here: the failure comes back as `blocklist-unavailable` in `reasons`, with
+    `breaches` at None, and `acceptable` says what the rest of the check says.
+    Only `BLOCKING` reasons make a password unacceptable.
     """
     if not isinstance(password, str):
         return _report(False, ["not-text"], None, 0)
@@ -97,10 +114,15 @@ def check_password(password, *, second_factor: bool = False, context=(), fetch=N
     # accepted: a request that will change nothing is a request not to make.
     breaches = None
     if not reasons:
-        breaches = pwned_count(normalised, fetch)
-        if breaches:
-            reasons.append("breached")
-    return _report(not reasons, reasons, breaches, length)
+        try:
+            breaches = pwned_count(normalised, fetch)
+        except Exception:  # noqa: BLE001 - see BLOCKING: an outage is not a verdict
+            reasons.append("blocklist-unavailable")
+        else:
+            if breaches:
+                reasons.append("breached")
+    blocking = [reason for reason in reasons if reason in BLOCKING]
+    return _report(not blocking, reasons, breaches, length)
 
 
 def _report(acceptable: bool, reasons: list, breaches: int | None, length: int) -> dict:
