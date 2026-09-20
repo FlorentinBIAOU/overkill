@@ -25,10 +25,21 @@ from html.parser import HTMLParser
 
 CELLS = {"td", "th"}
 
-# The largest span the HTML specification allows: « greater than zero and
-# less than or equal to 1000 ». A page can claim more than it draws, and past
-# this the claim is capped rather than believed.
-MAX_SPAN = 1000
+# The largest spans the HTML specification allows, and they are not the same
+# number: colspan « must be greater than zero and less than or equal to 1000 »,
+# rowspan « must be greater than zero and less than or equal to 65534 ». The
+# grid-forming algorithm repeats both caps. A page can claim more than it
+# draws, and past these the claim is capped rather than believed — `capped` in
+# the report counts how often.
+MAX_COLSPAN = 1000
+MAX_ROWSPAN = 65534
+
+# « For this attribute, the value zero means that the cell is to span all the
+# remaining rows in the row group. » Kept as zero here and resolved in `_grid`,
+# which is the only place that knows how many rows follow. Row groups are not
+# tracked, so « the row group » is read as « the table », which is the same
+# thing on a table with one `tbody` — the ordinary case.
+TO_END_OF_GROUP = 0
 
 
 class _Tables(HTMLParser):
@@ -44,7 +55,8 @@ class _Tables(HTMLParser):
             if self._stack:
                 self._stack[-1]["nested"] = True
             table = {"rows": [], "caption": None, "nested": False,
-                     "cell": None, "in_caption": False}
+                     "cell": None, "in_caption": False, "row_open": False,
+                     "capped": 0}
             # Listed in the order the page opens them, so a table that holds
             # another comes before it — the order a reader would give.
             self.tables.append(table)
@@ -53,22 +65,42 @@ class _Tables(HTMLParser):
             return
         elif tag == "tr":
             self._stack[-1]["rows"].append([])
+            self._stack[-1]["row_open"] = True
         elif tag in CELLS:
-            if not self._stack[-1]["rows"]:
+            # « in table body »: a `td` met outside a `tr` opens one. Adding it
+            # to the row that just closed would widen every row of the table.
+            if not self._stack[-1]["rows"] or not self._stack[-1].get("row_open"):
                 self._stack[-1]["rows"].append([])
+                self._stack[-1]["row_open"] = True
             cell = {"text": [], "header": tag == "th",
-                    "colspan": _span(values.get("colspan")),
-                    "rowspan": _span(values.get("rowspan"))}
+                    "colspan": self._span(values.get("colspan"), MAX_COLSPAN),
+                    "rowspan": self._span(values.get("rowspan"), MAX_ROWSPAN,
+                                          zero_allowed=True)}
             self._stack[-1]["rows"][-1].append(cell)
             self._stack[-1]["cell"] = cell
         elif tag == "caption":
             self._stack[-1]["in_caption"] = True
+
+    def _span(self, value, largest: int, *, zero_allowed: bool = False) -> int:
+        """One span attribute, read as the standard reads it."""
+        try:
+            number = int(str(value))
+        except (TypeError, ValueError):
+            return 1
+        if zero_allowed and number == 0:
+            return TO_END_OF_GROUP
+        if number > largest:
+            self._stack[-1]["capped"] += 1
+            return largest
+        return max(1, number)
 
     def handle_endtag(self, tag):
         if not self._stack:
             return
         if tag == "table":
             self._stack.pop()
+        elif tag == "tr":
+            self._stack[-1]["row_open"] = False
         elif tag in CELLS:
             self._stack[-1]["cell"] = None
         elif tag == "caption":
@@ -98,14 +130,18 @@ def extract_tables(html) -> dict:
 
     tables = []
     for table in parser.tables:
-        grid = _grid(table["rows"])
+        grid, padded = _grid(table["rows"])
         tables.append({"rows": grid, "columns": len(grid[0]) if grid else 0,
+                       # How many cells the rectangular padding added, and how
+                       # many spans the caps cut back. Without them, `columns`
+                       # says a width and never says where it came from.
+                       "padded": padded, "capped": table["capped"],
                        "caption": " ".join((table["caption"] or "").split()) or None,
                        "nested": table["nested"]})
     return {"tables": tables, "reason": None}
 
 
-def _grid(rows) -> list:
+def _grid(rows) -> tuple:
     """The markup rows, spread over the places their spans cover."""
     grid: list = []
     for index, row in enumerate(rows):
@@ -117,7 +153,10 @@ def _grid(rows) -> list:
                 column += 1
             value = {"text": " ".join("".join(cell["text"]).split()),
                      "header": cell["header"], "repeated": False}
-            for down in range(cell["rowspan"]):
+            # A rowspan of zero covers every row left in the group.
+            down_to = (len(rows) - index if cell["rowspan"] == TO_END_OF_GROUP
+                       else cell["rowspan"])
+            for down in range(down_to):
                 while len(grid) <= index + down:
                     grid.append([])
                 line = grid[index + down]
@@ -129,12 +168,8 @@ def _grid(rows) -> list:
                             {**value, "repeated": True}
             column += cell["colspan"]
     width = max((len(line) for line in grid), default=0)
-    return [[cell or {"text": "", "header": False, "repeated": False}
-             for cell in line + [None] * (width - len(line))] for line in grid]
+    padded = sum(width - len(line) for line in grid) + sum(
+        1 for line in grid for cell in line if cell is None)
+    return ([[cell or {"text": "", "header": False, "repeated": False}
+              for cell in line + [None] * (width - len(line))] for line in grid], padded)
 
-
-def _span(value) -> int:
-    try:
-        return max(1, min(MAX_SPAN, int(str(value))))
-    except (TypeError, ValueError):
-        return 1

@@ -10,7 +10,6 @@
   "dette": [
     "check-a-company-identification-number",
     "convert-messy-csv-to-clean-data",
-    "extract-a-table-from-a-web-page",
     "extract-amounts-and-currencies-from-text",
     "extract-links-from-a-page",
     "extract-tracking-numbers-from-an-email",

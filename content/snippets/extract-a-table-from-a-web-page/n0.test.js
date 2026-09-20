@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { MAX_SPAN, extractTables } from './n0.js';
+import { MAX_COLSPAN, MAX_ROWSPAN, extractTables } from './n0.js';
+
+// Les trois cas où le standard dit autre chose que ce que l'extrait faisait :
+// une portée en hauteur nulle, une portée au-delà du plafond de `colspan` mais
+// en dessous de celui de `rowspan`, et une cellule écrite après `</tr>`.
+const ROWSPAN_ZERO = '<table><tr><td rowspan="0">Groupe</td><td>a</td></tr>'
+  + '<tr><td>b</td></tr><tr><td>c</td></tr></table>';
+const ROWSPAN_DEUX_MILLE = '<table><tr><td rowspan="2000">y</td></tr></table>';
+const CELLULE_ORPHELINE = '<table><tr><td>a</td><td>b</td><td>c</td></tr>'
+  + '<td>orpheline</td></table>';
 
 // Un tableau de devis ordinaire : un entête groupé, une cellule fusionnée en
 // hauteur, et une ligne de total qui court sur toute la largeur.
@@ -80,16 +89,56 @@ test('les sections de tableau ne coupent pas les lignes', () => {
   assert.deepEqual(textes(SECTIONS), [['A'], ['1']]);
 });
 
-test('une portée absurde est plafonnée, pas crue', () => {
-  const rapport = extractTables('<table><tr><td colspan="99999">large</td></tr></table>');
-  assert.equal(rapport.tables[0].columns, MAX_SPAN);
+test('les deux plafonds de portée sont ceux du standard', () => {
+  // Commentaire : « colspan « must be greater than zero and less than or equal
+  // to 1000 », rowspan « must be greater than zero and less than or equal to
+  // 65534 ». » Les deux ne sont pas le même nombre.
+  assert.deepEqual([MAX_COLSPAN, MAX_ROWSPAN], [1000, 65534]);
+  const large = extractTables('<table><tr><td colspan="99999">large</td></tr></table>');
+  assert.equal(large.tables[0].columns, MAX_COLSPAN);
+  assert.equal(large.tables[0].capped, 1);
+  const haut = extractTables(ROWSPAN_DEUX_MILLE).tables[0];
+  assert.equal(haut.rows.length, 2000);
+  assert.equal(haut.capped, 0);
+  const tresHaut = extractTables('<table><tr><td rowspan="70000">z</td></tr></table>').tables[0];
+  assert.equal(tresHaut.rows.length, MAX_ROWSPAN);
+  assert.equal(tresHaut.capped, 1);
 });
 
-test('aucune entrée ne lève', () => {
+test('une portée en hauteur nulle couvre la fin du groupe', () => {
+  // Commentaire : « For this attribute, the value zero means that the cell is
+  // to span all the remaining rows in the row group. »
+  const table = extractTables(ROWSPAN_ZERO).tables[0];
+  assert.equal(table.columns, 2);
+  assert.deepEqual(table.rows.map((ligne) => ligne.map((c) => [c.text, c.repeated])), [
+    [['Groupe', false], ['a', false]],
+    [['Groupe', true], ['b', false]],
+    [['Groupe', true], ['c', false]],
+  ]);
+});
+
+test("une cellule écrite après la fin d'une ligne en ouvre une autre", () => {
+  // Commentaire : « « in table body »: a cell met outside a `tr` opens one.
+  // Adding it to the row that just closed would widen every row of the table. »
+  const table = extractTables(CELLULE_ORPHELINE).tables[0];
+  assert.equal(table.columns, 3);
+  assert.deepEqual(table.rows.map((ligne) => ligne.map((c) => c.text)), [
+    ['a', 'b', 'c'], ['orpheline', '', ''],
+  ]);
+  assert.equal(table.padded, 2);
+  const seule = extractTables('<table><td>sans tr</td></table>').tables[0];
+  assert.deepEqual(seule.rows.map((ligne) => ligne.map((c) => c.text)), [['sans tr']]);
+  assert.equal(seule.padded, 0);
+});
+
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(extractTables(null).reason, 'expected text, not object');
+  assert.equal(extractTables(42).reason, 'expected text, not number');
   for (const entree of [null, undefined, 42, [], {}, '']) {
     const rapport = extractTables(entree);
     assert.deepEqual(rapport.tables, []);
-    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text'));
+    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text, not '));
   }
 });
 

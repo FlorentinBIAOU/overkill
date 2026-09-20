@@ -4,7 +4,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from n0 import MAX_SPAN, extract_tables
+from n0 import MAX_COLSPAN, MAX_ROWSPAN, extract_tables
 
 ICI = Path(__file__).parent
 
@@ -22,7 +22,17 @@ IMBRIQUE = ('<table><tr><td>avant<table><tr><td>interne</td></tr></table>après<
 
 SECTIONS = "<table><thead><tr><th>A</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>"
 
+# Les trois cas où le standard dit autre chose que ce que l'extrait faisait :
+# une portée en hauteur nulle, une portée au-delà du plafond de `colspan` mais
+# en dessous de celui de `rowspan`, et une cellule écrite après `</tr>`.
+ROWSPAN_ZERO = ('<table><tr><td rowspan="0">Groupe</td><td>a</td></tr>'
+                "<tr><td>b</td></tr><tr><td>c</td></tr></table>")
+ROWSPAN_DEUX_MILLE = '<table><tr><td rowspan="2000">y</td></tr></table>'
+CELLULE_ORPHELINE = ("<table><tr><td>a</td><td>b</td><td>c</td></tr>"
+                     "<td>orpheline</td></table>")
+
 TOUS = [DEVIS, IMBRIQUE, SECTIONS, "<table><td>sans tr</td></table>",
+        ROWSPAN_ZERO, ROWSPAN_DEUX_MILLE, CELLULE_ORPHELINE,
         '<table><tr><td colspan="99999">large</td></tr></table>',
         "<table><tr><td>  espaces\n  multiples </td></tr></table>",
         "<p>pas de tableau</p>", "<table><tr><td>a</td></tr>", "<table></table>",
@@ -112,17 +122,77 @@ def test_les_sections_de_tableau_ne_coupent_pas_les_lignes():
     assert textes(SECTIONS) == [["A"], ["1"]]
 
 
-def test_une_portee_absurde_est_plafonnee_pas_crue():
-    grille = extract_tables('<table><tr><td colspan="99999">large</td></tr></table>')
-    assert grille["tables"][0]["columns"] == MAX_SPAN
+def test_les_deux_plafonds_de_portee_sont_ceux_du_standard():
+    """
+    Commentaire : « colspan « must be greater than zero and less than or equal
+    to 1000 », rowspan « must be greater than zero and less than or equal to
+    65534 ». »
+
+    Les deux plafonds ne sont pas le même nombre, et l'extrait appliquait mille
+    aux deux : un rowspan de deux mille, parfaitement légal, était ramené à
+    mille sans un mot, et la fiche attribuait ce plafond à la norme.
+    """
+    assert (MAX_COLSPAN, MAX_ROWSPAN) == (1000, 65534)
+    large = extract_tables('<table><tr><td colspan="99999">large</td></tr></table>')
+    assert large["tables"][0]["columns"] == MAX_COLSPAN
+    assert large["tables"][0]["capped"] == 1
+    # Deux mille lignes est en dessous du plafond de rowspan : c'est légal, et
+    # rien n'est ramené.
+    haut = extract_tables(ROWSPAN_DEUX_MILLE)["tables"][0]
+    assert len(haut["rows"]) == 2000
+    assert haut["capped"] == 0
+    # Et au-delà de 65534, le plafond s'applique et le rapport le dit.
+    tres_haut = extract_tables('<table><tr><td rowspan="70000">z</td></tr></table>')["tables"][0]
+    assert len(tres_haut["rows"]) == MAX_ROWSPAN
+    assert tres_haut["capped"] == 1
 
 
-def test_aucune_entree_ne_leve():
+def test_une_portee_en_hauteur_nulle_couvre_la_fin_du_groupe():
+    """
+    Commentaire : « For this attribute, the value zero means that the cell is
+    to span all the remaining rows in the row group. »
+
+    L'extrait la lisait comme 1, et « b » et « c » se retrouvaient dans la
+    colonne de « Groupe » au lieu de celle de « a » — le décalage silencieux
+    que le point de rupture dit vouloir éviter, produit par une valeur que la
+    norme définit.
+    """
+    table = extract_tables(ROWSPAN_ZERO)["tables"][0]
+    assert table["columns"] == 2
+    assert [[(c["text"], c["repeated"]) for c in ligne] for ligne in table["rows"]] == [
+        [("Groupe", False), ("a", False)],
+        [("Groupe", True), ("b", False)],
+        [("Groupe", True), ("c", False)],
+    ]
+
+
+def test_une_cellule_ecrite_apres_la_fin_dune_ligne_en_ouvre_une_autre():
+    """
+    Commentaire : « « in table body »: a cell met outside a `tr` opens one.
+    Adding it to the row that just closed would widen every row of the table. »
+    """
+    table = extract_tables(CELLULE_ORPHELINE)["tables"][0]
+    assert table["columns"] == 3
+    assert [[c["text"] for c in ligne] for ligne in table["rows"]] == [
+        ["a", "b", "c"], ["orpheline", "", ""]]
+    # Deux cellules vides ont été ajoutées par le remplissage, et le rapport
+    # le dit : `columns` seul ne dirait pas d'où vient la largeur.
+    assert table["padded"] == 2
+    # Témoin : le cas isolé, où il n'y a pas de ligne précédente.
+    seule = extract_tables("<table><td>sans tr</td></table>")["tables"][0]
+    assert [[c["text"] for c in ligne] for ligne in seule["rows"]] == [["sans tr"]]
+    assert seule["padded"] == 0
+
+
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """R14 : la raison dit ce que le code a constaté — le type reçu."""
+    assert extract_tables(None)["reason"] == "expected text, not NoneType"
+    assert extract_tables(b"octets")["reason"] == "expected text, not bytes"
     for entree in [None, 42, [], {}, b"octets", ""]:
         rapport = extract_tables(entree)
         assert rapport["tables"] == []
         if not isinstance(entree, str):
-            assert rapport["reason"].startswith("expected text")
+            assert rapport["reason"].startswith("expected text, not ")
 
 
 # ---------------------------------------------------------------------------

@@ -22,10 +22,21 @@
 
 import { parseHTML } from 'linkedom';
 
-// The largest span the HTML specification allows: « greater than zero and
-// less than or equal to 1000 ». A page can claim more than it draws, and past
-// this the claim is capped rather than believed.
-export const MAX_SPAN = 1000;
+// The largest spans the HTML specification allows, and they are not the same
+// number: colspan « must be greater than zero and less than or equal to 1000 »,
+// rowspan « must be greater than zero and less than or equal to 65534 ». The
+// grid-forming algorithm repeats both caps. A page can claim more than it
+// draws, and past these the claim is capped rather than believed — `capped` in
+// the report counts how often.
+export const MAX_COLSPAN = 1000;
+export const MAX_ROWSPAN = 65534;
+
+// « For this attribute, the value zero means that the cell is to span all the
+// remaining rows in the row group. » Kept as zero here and resolved in
+// `gridOf`, which is the only place that knows how many rows follow. Row
+// groups are not tracked, so « the row group » is read as « the table », which
+// is the same thing on a table with one `tbody` — the ordinary case.
+export const TO_END_OF_GROUP = 0;
 
 /**
  * Every table of `html`, as the rectangular grid a reader sees.
@@ -48,11 +59,18 @@ export function extractTables(html) {
   collect(document.body);
 
   const tables = found.map((table) => {
-    const grid = gridOf(rowsOf(table).map((row) => row.map(cellOf)));
+    const cells = rowsOf(table).map((row) => row.map(cellOf));
+    const { grid, padded } = gridOf(cells);
+    const capped = cells.flat().filter((cell) => cell.capped).length;
     const caption = ownCaption(table);
     return {
       rows: grid,
       columns: grid.length ? grid[0].length : 0,
+      // How many cells the rectangular padding added, and how many spans the
+      // caps cut back. Without them, `columns` says a width and never says
+      // where it came from.
+      padded,
+      capped,
       caption: caption ? caption.split(/\s+/).filter(Boolean).join(' ') : null,
       nested: table.querySelector('table') !== null,
     };
@@ -63,14 +81,18 @@ export function extractTables(html) {
 /** The rows of this table, and not those of a table inside it. */
 function rowsOf(table) {
   const rows = [];
+  // True while the last row opened is the implicit one a stray cell created.
+  let orphan = false;
   const walk = (node) => {
     for (const child of node.children) {
       if (child.tagName === 'TABLE') continue;
       if (child.tagName === 'TR') {
         rows.push([]);
+        orphan = false;
       } else if (child.tagName === 'TD' || child.tagName === 'TH') {
-        // A cell written with no row of its own: a browser puts one round it.
-        if (rows.length === 0) rows.push([]);
+        // « in table body »: a cell met outside a `tr` opens one. Adding it to
+        // the row that just closed would widen every row of the table.
+        if (rows.length === 0 || !orphan) { rows.push([]); orphan = true; }
         rows[rows.length - 1].push(child);
         continue;
       }
@@ -78,6 +100,7 @@ function rowsOf(table) {
         for (const cell of child.children) {
           if (cell.tagName === 'TD' || cell.tagName === 'TH') rows[rows.length - 1].push(cell);
         }
+        orphan = false;
       } else {
         walk(child);
       }
@@ -88,11 +111,14 @@ function rowsOf(table) {
 }
 
 function cellOf(cell) {
+  const colspan = span(cell.getAttribute('colspan'), MAX_COLSPAN);
+  const rowspan = span(cell.getAttribute('rowspan'), MAX_ROWSPAN, true);
   return {
     text: ownText(cell),
     header: cell.tagName === 'TH',
-    colspan: span(cell.getAttribute('colspan')),
-    rowspan: span(cell.getAttribute('rowspan')),
+    colspan: colspan.value,
+    rowspan: rowspan.value,
+    capped: colspan.capped || rowspan.capped,
   };
 }
 
@@ -129,7 +155,9 @@ function gridOf(rows) {
         header: cell.header,
         repeated: false,
       };
-      for (let down = 0; down < cell.rowspan; down += 1) {
+      // A rowspan of zero covers every row left in the group.
+      const downTo = cell.rowspan === TO_END_OF_GROUP ? rows.length - index : cell.rowspan;
+      for (let down = 0; down < downTo; down += 1) {
         while (grid.length <= index + down) grid.push([]);
         const line = grid[index + down];
         for (let across = 0; across < cell.colspan; across += 1) {
@@ -144,14 +172,21 @@ function gridOf(rows) {
     }
   });
   const width = grid.reduce((most, line) => Math.max(most, line.length), 0);
-  return grid.map((line) => {
-    const full = [...line];
-    while (full.length < width) full.push(null);
-    return full.map((cell) => cell ?? { text: '', header: false, repeated: false });
+  let padded = 0;
+  const full = grid.map((line) => {
+    const complete = [...line];
+    while (complete.length < width) complete.push(null);
+    padded += complete.filter((cell) => cell === null).length;
+    return complete.map((cell) => cell ?? { text: '', header: false, repeated: false });
   });
+  return { grid: full, padded };
 }
 
-function span(value) {
+/** One span attribute, read as the standard reads it. */
+function span(value, largest, zeroAllowed = false) {
   const number = Number.parseInt(String(value), 10);
-  return Number.isNaN(number) ? 1 : Math.max(1, Math.min(MAX_SPAN, number));
+  if (Number.isNaN(number)) return { value: 1, capped: false };
+  if (zeroAllowed && number === 0) return { value: TO_END_OF_GROUP, capped: false };
+  if (number > largest) return { value: largest, capped: true };
+  return { value: Math.max(1, number), capped: false };
 }
