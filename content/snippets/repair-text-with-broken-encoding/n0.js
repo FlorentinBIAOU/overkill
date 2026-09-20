@@ -10,11 +10,23 @@
  * variants: two rounds of the same accident, a Windows-1252 that should have
  * been Cyrillic, a UTF-8 read as UTF-16. There is no port of it in JavaScript,
  * so this file writes the main transformation itself, in about thirty lines.
- * The two agree on thirty-nine of this entry's forty-one strings; the two they
- * part on are the same rule of `ftfy`'s: « Ã » followed by an ordinary space is
- * read as the « à » whose non-breaking space was lost in transit. It repairs
- * one more real case and rewrites one more correct sentence, and this file
- * does neither.
+ *
+ * The two agree on thirty-nine of this entry's forty-seven strings, and they
+ * part in both directions.
+ *
+ * This file repairs four short strings that `ftfy` declines: « ÃŽle-de-France »,
+ * « ÃŽles Canaries », « ÃŽlot » and « Å’uvre ». `ftfy` weighs the whole string
+ * and refuses when what would come out is a short run opening on an accented
+ * capital — it repairs the same word inside « RÃ©gion ÃŽle-de-France ». Working
+ * run by run, this file has no such heuristic. It also leaves a text that
+ * already carries a replacement character alone, where `ftfy` reads that
+ * character as a byte and drops the one in front of it.
+ *
+ * In the other direction, `ftfy` carries one rule this file does not — « Ã »
+ * followed by an ordinary space is read as the « à » whose non-breaking space
+ * was lost in transit, which repairs one more real case and rewrites one more
+ * correct sentence — and it unwinds any depth of stacked accidents, where this
+ * file stops after ROUNDS.
  *
  * Two things this file does on purpose. It repairs only the encoding, and
  * leaves quotation marks alone: `ftfy`'s wider `fix_text` straightens them,
@@ -60,9 +72,10 @@ function byteOf(character) {
  * data, and it is wrong often enough — see this entry's breaking point — that
  * it must not happen in silence.
  *
- * `lossy` says the text already carries replacement characters. Those are
- * bytes a decoder threw away before this function ever saw the string, and
- * nothing here restores them.
+ * `lossy` says the text that comes back carries replacement characters. Those
+ * are bytes a decoder threw away before this function ever saw the string, and
+ * nothing here restores them: a `lossy` text is one to import again, not one to
+ * repair.
  *
  * @param {string} text
  */

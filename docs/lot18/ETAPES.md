@@ -10,3 +10,4 @@ Une ligne par contrôle écrit et par fiche corrigée, dans l'ordre où elles on
 | 3 | `check-chiffres-tenus` | tout nombre publié dans le frontmatter apparaît dans un test de la fiche ; dette de 9 fiches, décroissante |
 | 4 | `check-egress` | un extrait qui ouvre une connexion ne déclare pas `data_egress: none` ; dette d'une fiche, à vider dans ce lot |
 | 5 | fiche 5 `check-a-file-is-really-the-format-it-claims` | alias appliqués aux trois côtés : `photo.jpeg` et une liste blanche écrite `jpeg` concordent ; T3 exercée ; commentaire `HEAD` rectifié ; `except` nommé ; R11 |
+| 6 | fiche 7 `repair-text-with-broken-encoding` | parité republiée : 39 accords sur 47, huit écarts en trois familles, dans les deux sens ; corpus produit par l'accident et non écrit à la main ; `lossy` rectifié ; table de 256 octets tenue par un test ; R11 |

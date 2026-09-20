@@ -29,11 +29,34 @@ const CORRECTES = [
   'Boulogne-Billancourt',
 ];
 
+/**
+ * L'accident lui-même : des octets UTF-8 relus comme du Windows-1252 relâché.
+ * Les mojibakes ci-dessous sont produits par lui, pas écrits à la main.
+ */
+const W1252 = '€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008dŽ\u008f\u0090‘’“”•–—˜™š›œ\u009džŸ';
+const casser = (texte) => [...new TextEncoder().encode(texte)]
+  .map((b) => (b >= 0x80 && b <= 0x9f ? W1252[b - 0x80] : String.fromCharCode(b)))
+  .join('');
+
+// Ce que `ftfy` refuse de réparer et que ce fichier répare : une chaîne courte
+// dont la réparation ouvrirait sur une majuscule accentuée.
+const REFUSEES_PAR_FTFY = Object.fromEntries(
+  ['Île-de-France', 'Îles Canaries', 'Îlot', 'Œuvre'].map((m) => [casser(m), m]),
+);
+
+// Un texte qui porte déjà un caractère de remplacement : l'octet est parti en
+// amont, et ce fichier laisse la chaîne tranquille.
+const DEJA_PERDU = `Ã${REPLACEMENT}ambe`;
+
+// Cinq accidents empilés : ce fichier en défait ROUNDS = 4 et s'arrête.
+const QUINTUPLE = [1, 2, 3, 4, 5].reduce((texte) => casser(texte), 'été');
+
 // La phrase d'un ticket de bogue, qui cite le texte cassé au lieu d'en souffrir.
 const TICKET = 'Bug : on voit « Ã© » au lieu de « é » dans le PDF';
 const TICKET_ABIME = 'Bug : on voit « é » au lieu de « é » dans le PDF';
 
-// Le seul endroit où les deux extraits ne répondent pas la même chose.
+// Une des trois divergences entre les deux extraits : celle où ftfy en fait
+// plus. Les deux autres sont au-dessus, et ce sont celles où il en fait moins.
 const A_TILDE_ESPACE = 'Le caractère Ã se prononce a-tilde';
 
 // ---------------------------------------------------------------------------
@@ -52,6 +75,8 @@ test("point de rupture : le texte qui parle de l'encodage est réparé aussi", (
 });
 
 test('point de rupture : témoin, vingt chaînes correctes ressortent inchangées', () => {
+  // « Témoin dans le même test : vingt chaînes déjà correctes, dont
+  // « São Paulo » et « Ångström », ressortent inchangées. »
   assert.equal(CORRECTES.length, 20);
   for (const correcte of CORRECTES) {
     const rapport = repairEncoding(correcte);
@@ -105,18 +130,55 @@ test("rien n'est réparé en silence", () => {
 });
 
 test("un a-tilde suivi d'une espace n'est pas lu comme un a accent grave", () => {
-  // La seule divergence entre les deux extraits, dite ici : `ftfy` ajoute une
-  // règle que ce fichier n'a pas, et cet extrait laisse donc la phrase intacte.
+  // Une divergence entre les deux extraits, dite ici : `ftfy` ajoute une règle
+  // que ce fichier n'a pas, et cet extrait laisse donc la phrase intacte.
   assert.equal(repairEncoding(A_TILDE_ESPACE).text, A_TILDE_ESPACE);
   assert.equal(repairEncoding('Ã tout de suite').changed, false);
 });
 
-test('aucune entrée ne lève', () => {
+test('les chaînes courtes que ftfy refuse sont réparées ici', () => {
+  // Docstring : « This file repairs four short strings that `ftfy` declines ».
+  // C'est la forme d'une cellule de tableur et d'une colonne `region`, donc
+  // l'entrée ordinaire du public de cette fiche.
+  for (const [casse, attendu] of Object.entries(REFUSEES_PAR_FTFY)) {
+    const rapport = repairEncoding(casse);
+    assert.equal(rapport.text, attendu, casse);
+    assert.equal(rapport.changed, true, casse);
+  }
+  // Témoin : le même mot déjà correct ne bouge pas.
+  assert.equal(repairEncoding('Île-de-France').changed, false);
+});
+
+test('un texte qui porte déjà un caractère de remplacement est laissé tranquille', () => {
+  // Docstring : « It also leaves a text that already carries a replacement
+  // character alone, where `ftfy` reads that character as a byte and drops the
+  // one in front of it. »
+  const rapport = repairEncoding(DEJA_PERDU);
+  assert.equal(rapport.text, DEJA_PERDU);
+  assert.equal(rapport.changed, false);
+  assert.equal(rapport.lossy, true);
+  // Témoin : le même mot dont l'octet n'a pas été jeté se répare.
+  const intact = repairEncoding(casser('Ïambe'));
+  assert.deepEqual([intact.text, intact.lossy], ['Ïambe', false]);
+});
+
+test("au-delà de ROUNDS tours, ce qui reste n'est pas réparé", () => {
+  // Docstring : « it unwinds any depth of stacked accidents, where this file
+  // stops after ROUNDS ». Quatre tours passent, le cinquième reste.
+  const quadruple = [1, 2, 3, 4].reduce((texte) => casser(texte), 'été');
+  assert.equal(repairEncoding(quadruple).text, 'été');
+  assert.equal(repairEncoding(QUINTUPLE).text, 'Ã©tÃ©');
+});
+
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(repairEncoding(null).reason, 'text is expected, not null');
+  assert.equal(repairEncoding(0).reason, 'text is expected, not number');
+  assert.equal(repairEncoding([]).reason, 'text is expected, not object');
   for (const entree of [null, undefined, 0, 4.2, [], {}, Symbol('x')]) {
     const rapport = repairEncoding(entree);
     assert.equal(rapport.text, null);
-    assert.equal(typeof rapport.reason, 'string');
-    assert.ok(rapport.reason.length > 0);
+    assert.ok(rapport.reason.startsWith('text is expected, not '));
   }
 });
 

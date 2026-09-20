@@ -14,12 +14,30 @@ n0.py: |
   `ftfy` le fait en Python, et depuis dix ans. Il connaît aussi les variantes :
   deux tours du même accident, un Windows-1252 qui aurait dû être du
   cyrillique, un UTF-8 lu en UTF-16. Il n'en existe pas de portage en
-  JavaScript, si bien que l'extrait de ce langage écrit lui-même la transformation principale, en une trentaine de lignes. Les deux
-  s'accordent sur trente-neuf des quarante et une chaînes de cette fiche ; les
-  deux sur lesquelles ils se séparent relèvent de la même règle, celle de
-  `ftfy` : un « Ã » suivi d'une espace ordinaire est lu comme le « à » dont
-  l'espace insécable a été perdue en route. Elle répare un cas réel de plus, et
-  réécrit une phrase correcte de plus.
+  JavaScript, si bien que l'extrait de ce langage écrit lui-même la
+  transformation principale, en une trentaine de lignes.
+
+  Les deux s'accordent sur trente-neuf des quarante-sept chaînes de cette
+  fiche, et ils se séparent dans les deux sens.
+
+  `ftfy` pèse la chaîne entière avant de réparer, et renonce quand ce qui en
+  sortirait est une suite courte ouvrant sur une majuscule accentuée :
+  `fix_encoding` laisse « ÃŽle-de-France » exactement tel quel, et répare le
+  même mot à l'intérieur de « RÃ©gion ÃŽle-de-France ». « ÃŽles Canaries »,
+  « ÃŽlot » et « Å’uvre » échouent de la même façon — c'est la forme d'une
+  cellule de tableur et d'une colonne `region`, c'est-à-dire ce dont cette
+  fiche parle. L'extrait JavaScript n'a pas cette heuristique et répare les
+  quatre.
+
+  `ftfy` lit aussi un caractère de remplacement déjà présent comme un octet :
+  « Ã » + U+FFFD + « ambe » ressort en U+FFFD + « ambe », et le « Ã » a
+  disparu. L'extrait JavaScript laisse cette chaîne tranquille.
+
+  Dans l'autre sens, `ftfy` porte une règle que cet extrait n'a pas — un « Ã »
+  suivi d'une espace ordinaire est lu comme le « à » dont l'espace insécable a
+  été perdue en route, ce qui répare un cas réel de plus et réécrit une phrase
+  correcte de plus — et il défait n'importe quelle profondeur d'accidents
+  empilés, là où l'extrait JavaScript s'arrête après quatre tours.
 
   Deux choses que ce fichier fait exprès. Il appelle `fix_encoding` et non `fix_text` : le second redresse aussi les guillemets, ce qui transforme « L'été à Nice », déjà correct, en une version à apostrophe droite — une réécriture silencieuse de la typographie française. Et il rend
   `changed` au lieu de réparer en place, parce qu'une réparation que personne
@@ -37,12 +55,26 @@ n0.js: |
   `ftfy` le fait en Python, et depuis dix ans. Il connaît aussi les variantes :
   deux tours du même accident, un Windows-1252 qui aurait dû être du
   cyrillique, un UTF-8 lu en UTF-16. Il n'en existe pas de portage en
-  JavaScript, si bien que ce fichier écrit lui-même la transformation principale, en une trentaine de lignes. Les deux
-  s'accordent sur trente-neuf des quarante et une chaînes de cette fiche ; les
-  deux sur lesquelles ils se séparent relèvent de la même règle, celle de
-  `ftfy` : un « Ã » suivi d'une espace ordinaire est lu comme le « à » dont
-  l'espace insécable a été perdue en route. Elle répare un cas réel de plus, et
-  réécrit une phrase correcte de plus.
+  JavaScript, si bien que ce fichier écrit lui-même la transformation
+  principale, en une trentaine de lignes.
+
+  Les deux s'accordent sur trente-neuf des quarante-sept chaînes de cette
+  fiche, et ils se séparent dans les deux sens.
+
+  Ce fichier répare quatre chaînes courtes que `ftfy` refuse :
+  « ÃŽle-de-France », « ÃŽles Canaries », « ÃŽlot » et « Å’uvre ». `ftfy` pèse
+  la chaîne entière et renonce quand ce qui en sortirait est une suite courte
+  ouvrant sur une majuscule accentuée — il répare le même mot à l'intérieur de
+  « RÃ©gion ÃŽle-de-France ». En travaillant segment par segment, ce fichier
+  n'a pas cette heuristique. Il laisse aussi tranquille un texte qui porte déjà
+  un caractère de remplacement, là où `ftfy` lit ce caractère comme un octet et
+  supprime celui qui le précède.
+
+  Dans l'autre sens, `ftfy` porte une règle que ce fichier n'a pas — un « Ã »
+  suivi d'une espace ordinaire est lu comme le « à » dont l'espace insécable a
+  été perdue en route, ce qui répare un cas réel de plus et réécrit une phrase
+  correcte de plus — et il défait n'importe quelle profondeur d'accidents
+  empilés, là où ce fichier s'arrête après ROUNDS tours.
 
   Deux choses que ce fichier fait exprès. Il ne répare que l'encodage et laisse les guillemets tranquilles : le `fix_text` plus large de `ftfy` les redresse, ce qui transforme « L'été à Nice », déjà correct, en une version à apostrophe droite — une réécriture silencieuse de la typographie française. Et il rend
   `changed` au lieu de réparer en place, parce qu'une réparation que personne

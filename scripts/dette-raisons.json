@@ -25,7 +25,6 @@
     "extract-the-latest-reply-from-an-email-thread",
     "extract-tracking-numbers-from-an-email",
     "read-text-from-a-scanned-page",
-    "repair-text-with-broken-encoding",
     "validate-a-phone-number-and-its-country-code",
     "validate-an-api-payload-against-its-contract",
     "validate-an-email-address-without-sending-a-message"
