@@ -1,0 +1,49 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Contrôler un numéro d'identification d'entreprise française, hors ligne et
+  exactement.
+
+  Niveau N0. Un SIREN fait neuf chiffres, un SIRET quatorze, et le dernier
+  chiffre de chacun se calcule à partir des précédents. Le contrôler est de
+  l'arithmétique : la réponse est exacte, elle est la même à chaque fois, et
+  elle ne coûte rien.
+
+  Cette arithmétique n'est pas ce qu'on écrit. Une bibliothèque de numéros
+  normalisés la porte — `python-stdnum` ici, `stdnum-js` en JavaScript — et
+  avec elle l'exception qu'une clé de Luhn écrite à la main rate : tous les
+  établissements de La Poste partagent le SIREN 356000000, et leurs SIRET ne
+  satisfont pas Luhn. La règle que l'INSEE donne pour eux est que la somme
+  simple des quatorze chiffres soit un multiple de cinq. 35600000009075,
+  l'établissement de Rennes, échoue à Luhn et est valide.
+
+  Ce que la clé prouve est étroit, et le rapport dit laquelle a été appliquée
+  pour que l'appelant puisse le savoir. Un numéro peut être bien formé et
+  n'appartenir à personne : 000000000 passe. Savoir si l'entreprise existe, et
+  si elle est encore en activité, est une consultation du répertoire Sirene,
+  pas un calcul plus difficile.
+
+n0.js: |
+  Contrôler un numéro d'identification d'entreprise française, hors ligne et
+  exactement.
+
+  Niveau N0. Un SIREN fait neuf chiffres, un SIRET quatorze, et le dernier
+  chiffre de chacun se calcule à partir des précédents. Le contrôler est de
+  l'arithmétique : la réponse est exacte, elle est la même à chaque fois, et
+  elle ne coûte rien.
+
+  Cette arithmétique n'est pas ce qu'on écrit. Une bibliothèque de numéros
+  normalisés la porte — `stdnum-js` ici, `python-stdnum` en Python — et avec
+  elle l'exception qu'une clé de Luhn écrite à la main rate : tous les
+  établissements de La Poste partagent le SIREN 356000000, et leurs SIRET ne
+  satisfont pas Luhn. La règle que l'INSEE donne pour eux est que la somme
+  simple des quatorze chiffres soit un multiple de cinq. 35600000009075,
+  l'établissement de Rennes, échoue à Luhn et est valide.
+
+  Ce que la clé prouve est étroit, et le rapport dit laquelle a été appliquée
+  pour que l'appelant puisse le savoir. Un numéro peut être bien formé et
+  n'appartenir à personne : 000000000 passe. Savoir si l'entreprise existe, et
+  si elle est encore en activité, est une consultation du répertoire Sirene,
+  pas un calcul plus difficile.

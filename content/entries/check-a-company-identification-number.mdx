@@ -1,0 +1,102 @@
+---
+id: check-a-company-identification-number
+family: decide-validate
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Contrôler un numéro d’identification d’entreprise"
+  en: "Check a company identification number"
+
+need:
+  fr: "Vérifier qu’un SIREN ou un SIRET saisi dans un formulaire est bien formé, avant de l’enregistrer."
+  en: "Check that a SIREN or a SIRET typed into a form is well-formed, before storing it."
+
+scenario:
+  fr: "On voit passer chaque numéro d’entreprise saisi à un modèle généraliste, avec la consigne de dire s’il est valide. Le dernier chiffre d’un SIREN et d’un SIRET est pourtant calculé à partir des précédents, par une règle publiée : il existe une réponse exacte, et le modèle ne peut que la deviner. La question qui reste — ce numéro bien formé désigne-t-il une entreprise, et est-elle encore en activité — n’est pas non plus une question de modèle : c’est une consultation du répertoire Sirene, ouverte et sans clé."
+  en: "Sending every company number typed into a form to a general-purpose model, with instructions to say whether it is valid, is a common sight. Yet the last digit of a SIREN and of a SIRET is computed from the ones before it, by a published rule: there is an exact answer, and the model can only guess at it. The question that remains — does this well-formed number name a company, and is that company still trading — is not a model question either: it is a lookup in the Sirene register, open and key-free."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Clé de contrôle, par une bibliothèque de numéros normalisés"
+      en: "Check digit, through a standard-number library"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le numéro est contrôlé dans votre processus et n’est transmis à personne"
+          - "Le SIREN d’une entreprise individuelle identifie une personne physique : le contrôler localement ne le communique pas, l’interroger au répertoire le communique"
+        en:
+          - "No specific scope added: the number is checked inside your own process and is sent to nobody"
+          - "The SIREN of a sole trader identifies a natural person: checking it locally discloses nothing, looking it up in the register discloses it"
+    code:
+      python: snippets/check-a-company-identification-number/n0.py
+      javascript: snippets/check-a-company-identification-number/n0.js
+      verification: executed
+    breaking_point:
+      fr: "La clé dit qu’un numéro est bien formé, pas qu’il désigne une entreprise : 000000000 passe, et 382 209 401 saisi « 382 290 401 » passe aussi, parce que Luhn attrape toutes les fautes d’un seul chiffre mais pas l’inversion « 09 » → « 90 ». Le témoin est dans le même test : sur ces mêmes numéros, aucune faute d’un seul chiffre ne passe."
+      en: "The key says a number is well-formed, not that it names a company: 000000000 passes, and 382 209 401 typed as 382 290 401 passes too, because Luhn catches every single-digit error but not the 09 → 90 swap. The witness is in the same test: on those same numbers, no single-digit error gets through."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où il vous faut le nom, l’adresse ou l’état — active ou cessée — de l’entreprise derrière le numéro, la réponse est une consultation du répertoire Sirene, ouverte et sans clé, et elle fait sortir le numéro de votre infrastructure."
+      en: "There is no level above this one. The day you need the name, the address or the status — trading or closed — of the company behind the number, the answer is a lookup in the Sirene register, open and key-free, and it takes the number out of your infrastructure."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre. Le dernier chiffre est une fonction des huit ou des treize autres, et cette fonction est publiée ; un classifieur entraîné sur des numéros étiquetés approcherait une identité arithmétique qu’un modulo calcule exactement. Il manquerait de surcroît le cas que la bibliothèque traite — les SIRET de La Poste échouent à la clé de Luhn et sont valides —, parce qu’ils sont trop rares dans un échantillon pour qu’une règle s’en dégage."
+      en: "There is nothing to learn. The last digit is a function of the other eight or thirteen, and that function is published; a classifier trained on labelled numbers would approximate an arithmetic identity that a modulo computes exactly. It would also miss the case the library handles — La Poste’s SIRETs fail the Luhn key and are valid — because they are too rare in any sample for a rule to emerge from them."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec un service à tenir en plus. Charger un modèle spécialisé pour calculer une somme pondérée de neuf chiffres coûte un démarrage, de la mémoire et une version à suivre, pour une sortie moins sûre que celle d’une bibliothèque de quelques kilooctets. Et ce qu’on voudrait réellement au-dessus de la clé — l’existence de l’entreprise — ne se trouve pas dans un modèle, mais dans un répertoire."
+      en: "The same argument, with a service to keep running on top. Loading a specialised model to compute a weighted sum of nine digits costs a start-up, memory and a version to track, for an output less reliable than that of a library of a few kilobytes. And what you would really want above the key — whether the company exists — is not inside a model, it is inside a register."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un modèle généraliste rend une phrase sur un calcul qu’il n’exécute pas, et sa réponse ne se rejoue ni ne se justifie : elle n’expose aucune retenue qu’on pourrait relire. La question qui se pose au-dessus de la clé a une réponse publique et datée, le répertoire Sirene, qu’un modèle remplacerait par un souvenir d’entraînement dont il ne connaît pas la date de figement. Il resterait à lui confier la recherche d’un numéro noyé dans un contrat ou une mention légale, ce qui est un autre besoin que celui de cette fiche."
+      en: "A general-purpose model returns a sentence about a computation it does not perform, and its answer can neither be replayed nor justified: it shows no carry anyone could read back. The question that arises above the key has a public, dated answer — the Sirene register — which a model would replace with a training-time memory whose cut-off it does not know. What would be left for it is finding a number buried in a contract or a legal notice, which is a different need from this one."
+
+verdict_rationale:
+  fr: "N0, parce que le contrôle est une identité arithmétique : il n’y a pas d’approximation à améliorer, seulement une exception à connaître, et la bibliothèque la porte — sur 35600000009075, l’établissement de Rennes de La Poste, une clé de Luhn écrite à la main répond faux là où la bibliothèque répond vrai. Les trois niveaux au-dessus sont fermés pour la même raison : on n’apprend pas une fonction qu’on sait calculer. La sortie de cette fiche ne se fait donc pas par le haut de l’échelle ; elle se fait par le répertoire Sirene, qui répond à la question que la clé ne pose pas."
+  en: "N0, because the check is an arithmetic identity: there is no approximation to improve on, only an exception to know about, and the library carries it — on 35600000009075, La Poste’s Rennes establishment, a hand-written Luhn key answers no where the library answers yes. The three levels above are shut for the same reason: you do not learn a function you can compute. So the way out of this entry is not up the ladder; it is the Sirene register, which answers the question the key does not ask."
+
+further_reading:
+  - label: "INSEE — définition du numéro Siren"
+    url: "https://www.insee.fr/fr/metadonnees/definition/c2047"
+  - label: "INSEE — définition du numéro Siret"
+    url: "https://www.insee.fr/fr/metadonnees/definition/c1841"
+  - label: "API Recherche d’entreprises — documentation du point d’accès public"
+    url: "https://recherche-entreprises.api.gouv.fr/docs/"
+  - label: "python-stdnum — le module des numéros français"
+    url: "https://arthurdejong.org/python-stdnum/doc/2.2/stdnum.fr.siret.html"
+  - label: "stdnum-js — le portage JavaScript, dépôt du projet"
+    url: "https://github.com/koblas/stdnum-js"
+  - label: "Wikipédia — formule de Luhn, et les erreurs qu’elle ne détecte pas"
+    url: "https://fr.wikipedia.org/wiki/Formule_de_Luhn"
+
+sources:
+  - label: "python-stdnum sur PyPI (consulté) : version 2.2, publiée le 4 janvier 2026, licence LGPL v2 ou ultérieure"
+    url: "https://pypi.org/project/python-stdnum/"
+  - label: "python-stdnum, module stdnum.fr.siret (consulté) : « The Luhn checksum is used to validate the numbers (except for La Poste) »"
+    url: "https://arthurdejong.org/python-stdnum/doc/2.2/stdnum.fr.siret.html"
+  - label: "stdnum-js, dépôt du projet (consulté) : version 1.12.6 publiée le 1er août 2026, licence MIT, modules fr/siren et fr/siret, exception La Poste comprise"
+    url: "https://github.com/koblas/stdnum-js"
+  - label: "API Recherche d’entreprises sur data.gouv.fr (consulté) : « L’API étant totalement ouverte d’accès », sans clé, limite de sept appels par seconde"
+    url: "https://www.data.gouv.fr/dataservices/672cf684c3488a0c533f7094"
+  - label: "INSEE, définition du numéro Siren (consulté) : « Le numéro SIREN est un identifiant de neuf chiffres attribué à chaque unité légale »"
+    url: "https://www.insee.fr/fr/metadonnees/definition/c2047"
+  - label: "Wikipédia, système d’identification du répertoire des établissements (consulté) : l’exception de La Poste, dont les SIRET ont pour règle que la somme des quatorze chiffres soit un multiple de cinq"
+    url: "https://fr.wikipedia.org/wiki/Syst%C3%A8me_d%27identification_du_r%C3%A9pertoire_des_%C3%A9tablissements"
+---

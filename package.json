@@ -69,6 +69,7 @@
     "pagefind": "1.5.2",
     "pdfjs-dist": "5.4.149",
     "playwright": "^1.63.0",
+    "stdnum": "1.12.6",
     "tsx": "^4.23.13",
     "yaml": "^2.9.0"
   }
