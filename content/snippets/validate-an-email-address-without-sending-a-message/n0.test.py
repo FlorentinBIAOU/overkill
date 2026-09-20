@@ -6,7 +6,7 @@ from pathlib import Path
 
 from email_validator import EmailNotValidError, validate_email
 
-from n0 import MAX_ADDRESS, MAX_LOCAL, check_email_syntax
+from n0 import ASCII_WHITESPACE, MAX_ADDRESS, MAX_LOCAL, WHATWG, check_email_syntax
 
 ICI = Path(__file__).parent
 
@@ -136,6 +136,18 @@ def test_seul_le_domaine_est_mis_en_minuscules():
     assert rapport["domain"] == "exemple.fr"
 
 
+def test_routable_ne_dit_quune_chose_la_presence_dun_point():
+    """
+    Commentaire : « That is all this field says: `jean@1.2.3.4` has three dots
+    and comes back routable, because nothing here resolves anything. »
+    """
+    quatre_nombres = check_email_syntax("jean@1.2.3.4")
+    assert quatre_nombres["valid"] is True
+    assert quatre_nombres["routable"] is True
+    # Et le cas vedette de la fiche : une faute de frappe est routable aussi.
+    assert check_email_syntax("jean.dupont@gmial.com")["routable"] is True
+
+
 def test_un_domaine_sans_point_est_valide_et_non_routable():
     """
     Docstring : « `routable` is false for jean@localhost, which the HTML
@@ -160,19 +172,54 @@ def test_une_adresse_accentuee_est_refusee_comme_par_le_navigateur():
     assert check_email_syntax("jean@xn--xemple-9ua.fr")["valid"] is True
 
 
-def test_les_blancs_de_bord_sont_retires_comme_le_fait_le_navigateur():
+def test_lalgorithme_de_nettoyage_du_standard_est_applique_en_entier():
     """
-    Commentaire : « The HTML value sanitisation algorithm strips leading and
-    trailing whitespace from an email field ».
+    Commentaire : « Strip newlines from the value, then strip leading and
+    trailing ASCII whitespace from the value. » Les deux moitiés, et dans cet
+    ordre. La fiche tire toute son autorité de ce texte : en appliquer la
+    moitié, c'est refuser ce que le champ a accepté, ou l'inverse.
     """
+    # Les blancs de bord, comme avant.
     assert check_email_syntax("  contact@exemple.fr\n")["normalised"] == "contact@exemple.fr"
     assert par_email_validator("contact@exemple.fr\n") is False
-    # Témoin : un blanc à l'intérieur reste une faute.
+    # Première moitié : un saut de ligne AU MILIEU, ce que produit une adresse
+    # collée d'une signature ou d'un PDF coupé en deux lignes. Le navigateur le
+    # retire et valide.
+    coupee = check_email_syntax("jean@ex\nemple.fr")
+    assert coupee["valid"] is True
+    assert coupee["normalised"] == "jean@exemple.fr"
+    assert check_email_syntax("jean\r\n@exemple.fr")["normalised"] == "jean@exemple.fr"
+    # Seconde moitié : la tabulation verticale n'est PAS un blanc ASCII au sens
+    # du standard, donc le navigateur refuse, donc cet extrait refuse.
+    assert ASCII_WHITESPACE == "\t\n\f\r "
+    assert "\v" not in ASCII_WHITESPACE
+    verticale = check_email_syntax("jean@exemple.fr\x0b")
+    assert verticale["valid"] is False
+    assert verticale["reason"] == "does not match the HTML definition of an email address"
+    # Témoin : un blanc ordinaire à l'intérieur reste une faute.
     assert check_email_syntax("con tact@exemple.fr")["valid"] is False
 
 
-def test_aucune_entree_ne_leve():
-    """Docstring : « Nothing raises »."""
+def test_lexpression_du_standard_est_transcrite_caractere_pour_caractere():
+    """
+    Docstring : « transcribed character for character ». La fiche repose
+    entièrement là-dessus, donc la source est recopiée ici et comparée : le
+    jour où quelqu'un « améliore » l'expression, ce test tombe.
+    """
+    # html.spec.whatwg.org/multipage/input.html, section « E-mail state », au
+    # « \/ » près que le littéral JavaScript du standard impose.
+    du_standard = (
+        r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+"
+        r"@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+        r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+    )
+    assert WHATWG.pattern == du_standard
+
+
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """Docstring : « Nothing raises ». R14 : la raison dit le type reçu."""
+    assert check_email_syntax(None)["reason"] == "an address is text, not NoneType"
+    assert check_email_syntax(b"a@b.fr")["reason"] == "an address is text, not bytes"
     for entree in [None, 0, 4.2, b"a@b.fr", [], {}, object(), "", "x" * 10_000]:
         rapport = check_email_syntax(entree)
         assert rapport["valid"] is False
@@ -270,6 +317,9 @@ def test_python_et_javascript_rendent_le_meme_rapport():
         "a" * 63 + "@exemple.fr", "a" * 64 + "@exemple.fr", "a" * 66 + "@exemple.fr",
         "a@" + ".".join(["b" * 61] * 4), "con tact@exemple.fr", "jean@exemple.fr\t",
         "\tjean@exemple.fr", "jean@gmail.com",
+        # Les deux moitiés de l'algorithme de nettoyage, des deux côtés.
+        "jean@ex\nemple.fr", "jean\r\n@exemple.fr", "jean@exemple.fr\x0b",
+        "\x0bjean@exemple.fr",
     ]
     attendu = [check_email_syntax(e) for e in entrees]
     script = (

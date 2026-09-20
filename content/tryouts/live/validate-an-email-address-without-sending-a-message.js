@@ -7,7 +7,9 @@
  * Le verdict affiche trois choses, et c'est l'écart entre elles que l'essai
  * met en scène : la forme est-elle celle du standard HTML, l'adresse
  * normalisée — domaine en minuscules, partie locale intacte —, et le domaine
- * est-il seulement atteignable depuis l'internet public.
+ * porte-t-il un point, ce qui est tout ce que `routable` sait. Un point n'est
+ * pas une résolution : dire que le domaine « se résout sur l'internet public »
+ * contredirait le point de rupture de la fiche à deux centimètres de lui.
  */
 import { checkEmailSyntax } from '../../snippets/validate-an-email-address-without-sending-a-message/n0.js';
 
@@ -15,13 +17,13 @@ const T = {
   fr: {
     ok: 'Forme valide',
     ko: 'Refusé',
-    routable: (domaine) => `Normalisée en ${domaine}. Le domaine a un point : il se résout sur l’internet public.`,
+    routable: (domaine) => `Normalisée en ${domaine}. Le domaine porte un point : rien ici ne dit qu’il existe, seulement qu’il n’est pas un nom d’hôte local.`,
     locale: (domaine) => `Normalisée en ${domaine}. Le domaine n’a pas de point : aucun serveur de courrier public ne l’atteindra.`,
   },
   en: {
     ok: 'Valid shape',
     ko: 'Refused',
-    routable: (domaine) => `Normalised to ${domaine}. The domain has a dot: it resolves on the public internet.`,
+    routable: (domaine) => `Normalised to ${domaine}. The domain carries a dot: nothing here says it exists, only that it is not a local host name.`,
     locale: (domaine) => `Normalised to ${domaine}. The domain has no dot: no public mail server will reach it.`,
   },
 };

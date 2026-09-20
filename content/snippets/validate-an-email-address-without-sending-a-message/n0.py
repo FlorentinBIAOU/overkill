@@ -43,6 +43,10 @@ WHATWG = re.compile(
 # address itself once the angle brackets are counted.
 MAX_LOCAL, MAX_ADDRESS = 64, 254
 
+# The five characters the HTML standard calls ASCII whitespace. The vertical
+# tab is not one of them, and `str.strip()` with no argument would remove it.
+ASCII_WHITESPACE = "\t\n\f\r "
+
 
 def check_email_syntax(raw) -> dict:
     """
@@ -55,10 +59,15 @@ def check_email_syntax(raw) -> dict:
     if not isinstance(raw, str):
         return _report(False, None, f"an address is text, not {type(raw).__name__}")
 
-    # The HTML value sanitisation algorithm strips leading and trailing
-    # whitespace from an email field before the browser validates it. A server
-    # that does not do the same refuses what the browser accepted.
-    written = raw.strip(" \t\r\n\f\v")
+    # The HTML value sanitisation algorithm for an email field, in full: « Strip
+    # newlines from the value, then strip leading and trailing ASCII whitespace
+    # from the value. » Both halves matter, and in that order: an address pasted
+    # from a signature carries a newline in the middle, which the browser
+    # removes before validating; and the five ASCII whitespace characters do not
+    # include the vertical tab, which the browser therefore refuses. A server
+    # that does not do the same refuses what the browser accepted, or the other
+    # way round.
+    written = raw.replace("\n", "").replace("\r", "").strip(ASCII_WHITESPACE)
     if not WHATWG.match(written):
         return _report(False, None, "does not match the HTML definition of an email address")
 
@@ -81,7 +90,9 @@ def _report(valid: bool, normalised: str | None, reason: str | None) -> dict:
         "local": local or None,
         "domain": domain or None,
         # A domain with no dot is a host name on the local network. The HTML
-        # definition allows it; public mail does not reach it.
+        # definition allows it; public mail does not reach it. That is all this
+        # field says: `jean@1.2.3.4` has three dots and comes back routable,
+        # because nothing here resolves anything.
         "routable": bool(domain) and "." in domain,
         "reason": reason,
     }

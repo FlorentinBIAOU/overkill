@@ -36,6 +36,11 @@ export const WHATWG =
 // and fifty-six for the path, which leaves two hundred and fifty-four for the
 // address itself once the angle brackets are counted.
 export const MAX_LOCAL = 64;
+
+// The five characters the HTML standard calls ASCII whitespace. The vertical
+// tab is not one of them, and `String.prototype.trim` would remove it.
+const ASCII_WHITESPACE = /^[\t\n\f\r ]+|[\t\n\f\r ]+$/g;
+const NEWLINES = /[\n\r]/g;
 export const MAX_ADDRESS = 254;
 
 /**
@@ -52,10 +57,14 @@ export function checkEmailSyntax(raw) {
     return report(false, null, `an address is text, not ${kindOf(raw)}`);
   }
 
-  // The HTML value sanitisation algorithm strips leading and trailing
-  // whitespace from an email field before the browser validates it. A server
-  // that does not do the same refuses what the browser accepted.
-  const written = raw.replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, '');
+  // The HTML value sanitisation algorithm for an email field, in full: « Strip
+  // newlines from the value, then strip leading and trailing ASCII whitespace
+  // from the value. » Both halves matter, and in that order: an address pasted
+  // from a signature carries a newline in the middle, which the browser removes
+  // before validating; and the five ASCII whitespace characters do not include
+  // the vertical tab, which the browser therefore refuses. A server that does
+  // not do the same refuses what the browser accepted, or the other way round.
+  const written = raw.replace(NEWLINES, '').replace(ASCII_WHITESPACE, '');
   if (!WHATWG.test(written)) {
     return report(false, null, 'does not match the HTML definition of an email address');
   }
@@ -87,7 +96,9 @@ function report(valid, normalised, reason) {
     local,
     domain: domain || null,
     // A domain with no dot is a host name on the local network. The HTML
-    // definition allows it; public mail does not reach it.
+    // definition allows it; public mail does not reach it. That is all this
+    // field says: `jean@1.2.3.4` has three dots and comes back routable,
+    // because nothing here resolves anything.
     routable: Boolean(domain) && domain.includes('.'),
     reason,
   };

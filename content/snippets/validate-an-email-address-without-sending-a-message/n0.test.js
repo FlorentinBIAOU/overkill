@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import validator from 'validator';
 
-import { MAX_ADDRESS, MAX_LOCAL, checkEmailSyntax } from './n0.js';
+import {
+  MAX_ADDRESS, MAX_LOCAL, WHATWG, checkEmailSyntax,
+} from './n0.js';
 
 // Les trente-deux adresses sur lesquelles les trois définitions sont comparées.
 const BATTERIE = [
@@ -94,6 +96,15 @@ test('seul le domaine est mis en minuscules', () => {
   assert.equal(rapport.domain, 'exemple.fr');
 });
 
+test("routable ne dit qu'une chose : la présence d'un point", () => {
+  // Commentaire : « That is all this field says: `jean@1.2.3.4` has three dots
+  // and comes back routable, because nothing here resolves anything. »
+  const quatreNombres = checkEmailSyntax('jean@1.2.3.4');
+  assert.equal(quatreNombres.valid, true);
+  assert.equal(quatreNombres.routable, true);
+  assert.equal(checkEmailSyntax('jean.dupont@gmial.com').routable, true);
+});
+
 test('un domaine sans point est valide et non routable', () => {
   const rapport = checkEmailSyntax('jean@localhost');
   assert.equal(rapport.valid, true);
@@ -111,14 +122,46 @@ test('une adresse accentuée est refusée comme par le navigateur', () => {
   assert.equal(checkEmailSyntax('jean@xn--xemple-9ua.fr').valid, true);
 });
 
-test('les blancs de bord sont retirés comme le fait le navigateur', () => {
+test("l'algorithme de nettoyage du standard est appliqué en entier", () => {
+  // Commentaire : « Strip newlines from the value, then strip leading and
+  // trailing ASCII whitespace from the value. » Les deux moitiés, et dans cet
+  // ordre. La fiche tire toute son autorité de ce texte : en appliquer la
+  // moitié, c'est refuser ce que le champ a accepté, ou l'inverse.
   assert.equal(checkEmailSyntax('  contact@exemple.fr\n').normalised, 'contact@exemple.fr');
   assert.equal(validator.isEmail('contact@exemple.fr\n'), false);
-  // Témoin : un blanc à l'intérieur reste une faute.
+  // Première moitié : un saut de ligne AU MILIEU, ce que produit une adresse
+  // collée d'une signature ou d'un PDF coupé en deux lignes.
+  const coupee = checkEmailSyntax('jean@ex\nemple.fr');
+  assert.equal(coupee.valid, true);
+  assert.equal(coupee.normalised, 'jean@exemple.fr');
+  assert.equal(checkEmailSyntax('jean\r\n@exemple.fr').normalised, 'jean@exemple.fr');
+  // Seconde moitié : la tabulation verticale n'est PAS un blanc ASCII au sens
+  // du standard, donc le navigateur refuse, donc cet extrait refuse.
+  const verticale = checkEmailSyntax('jean@exemple.fr\u000b');
+  assert.equal(verticale.valid, false);
+  assert.equal(verticale.reason, 'does not match the HTML definition of an email address');
+  // Témoin : un blanc ordinaire à l'intérieur reste une faute.
   assert.equal(checkEmailSyntax('con tact@exemple.fr').valid, false);
 });
 
-test('aucune entrée ne lève', () => {
+test("l'expression du standard est transcrite caractère pour caractère", () => {
+  // Docstring : « transcribed character for character ». La fiche repose
+  // entièrement là-dessus, donc la source est recopiée ici et comparée : le
+  // jour où quelqu'un « améliore » l'expression, ce test tombe.
+  //
+  // html.spec.whatwg.org/multipage/input.html, section « E-mail state », au
+  // « \/ » près que le littéral du standard impose et que ce code n'a pas à
+  // porter.
+  const duStandard = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+"
+    + '@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?'
+    + '(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$';
+  assert.equal(WHATWG.source, duStandard);
+});
+
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // Docstring : « Nothing raises ». R14 : la raison dit le type reçu.
+  assert.equal(checkEmailSyntax(null).reason, 'an address is text, not null');
+  assert.equal(checkEmailSyntax(4.2).reason, 'an address is text, not number');
   for (const entree of [null, undefined, 0, 4.2, [], {}, Symbol('x'), '', 'x'.repeat(10_000)]) {
     const rapport = checkEmailSyntax(entree);
     assert.equal(rapport.valid, false);
