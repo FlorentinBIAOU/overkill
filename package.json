@@ -65,6 +65,7 @@
     "@axe-core/playwright": "^4.13.0",
     "chrono-node": "2.9.0",
     "fast-xml-parser": "5.2.5",
+    "file-type": "22.1.1",
     "gray-matter": "^4.0.3",
     "ibantools": "4.5.4",
     "libphonenumber-js": "1.13.13",

@@ -1,0 +1,59 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Décider ce qu'est un fichier téléversé d'après ses octets, et non d'après ce
+  qu'il prétend être.
+
+  Niveau N0. Les premiers octets d'un fichier sont son format : 89 50 4E 47
+  pour un PNG, %PDF- pour un PDF, PK pour tout ce qui est bâti sur une archive
+  ZIP. Ces signatures sont des tables publiées, et les lire est une
+  comparaison — aucun modèle n'intervient, et aucun ne le pourrait, parce que
+  la réponse est exacte.
+
+  D'où vient la réponse est tout l'intérêt de ce niveau. Le nom du fichier et
+  l'en-tête Content-Type voyagent avec le téléversement, autrement dit c'est le
+  client qui les a écrits : ce sont une affirmation, pas un fait. Cette
+  fonction les prend comme une affirmation, lit les octets de son côté, et dit
+  si les deux concordent.
+
+  `puremagic` porte la table des signatures ici, `file-type` en JavaScript. Une
+  différence entre les deux est traitée dans le fichier Python : tous les
+  formats bâtis sur ZIP commencent par PK, `file-type` ouvre l'archive pour
+  distinguer un .docx d'un .xlsx, et `puremagic` rend une demi-douzaine de
+  candidats au même score. Douze lignes de `zipfile` y lisent l'archive de la
+  même façon, pour que les deux langages répondent la même chose.
+
+  Ce qu'aucune table ne sait faire, c'est un format dont le fichier est du
+  texte. Un CSV, un JSON, un SVG et une note en clair n'ont aucun en-tête
+  binaire : ils reviennent non reconnus plutôt que devinés — et un fichier non
+  reconnu n'est jamais autorisé.
+
+n0.js: |
+  Décider ce qu'est un fichier téléversé d'après ses octets, et non d'après ce
+  qu'il prétend être.
+
+  Niveau N0. Les premiers octets d'un fichier sont son format : 89 50 4E 47
+  pour un PNG, %PDF- pour un PDF, PK pour tout ce qui est bâti sur une archive
+  ZIP. Ces signatures sont des tables publiées, et les lire est une
+  comparaison — aucun modèle n'intervient, et aucun ne le pourrait, parce que
+  la réponse est exacte.
+
+  D'où vient la réponse est tout l'intérêt de ce niveau. Le nom du fichier et
+  l'en-tête Content-Type voyagent avec le téléversement, autrement dit c'est le
+  client qui les a écrits : ce sont une affirmation, pas un fait. Cette
+  fonction les prend comme une affirmation, lit les octets de son côté, et dit
+  si les deux concordent.
+
+  `file-type` porte la table des signatures ici, `puremagic` en Python. Une
+  différence entre les deux est traitée dans le fichier Python : tous les
+  formats bâtis sur ZIP commencent par PK, `file-type` ouvre l'archive pour
+  distinguer un .docx d'un .xlsx, et `puremagic` rend une demi-douzaine de
+  candidats au même score. Douze lignes de `zipfile` y lisent l'archive de la
+  même façon, pour que les deux langages répondent la même chose.
+
+  Ce qu'aucune table ne sait faire, c'est un format dont le fichier est du
+  texte. Un CSV, un JSON, un SVG et une note en clair n'ont aucun en-tête
+  binaire : ils reviennent non reconnus plutôt que devinés — et un fichier non
+  reconnu n'est jamais autorisé.

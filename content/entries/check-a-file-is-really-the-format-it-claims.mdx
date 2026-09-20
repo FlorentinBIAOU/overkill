@@ -1,0 +1,92 @@
+---
+id: check-a-file-is-really-the-format-it-claims
+family: decide-validate
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Vérifier qu’un fichier est bien du type annoncé"
+  en: "Check a file is really the format it claims"
+
+need:
+  fr: "Savoir ce qu’un fichier téléversé contient vraiment, avant de l’accepter, de le stocker ou de le servir."
+  en: "Know what an uploaded file really holds, before accepting it, storing it or serving it back."
+
+scenario:
+  fr: "On voit des formulaires de téléversement se fier à l’extension du nom de fichier, ou à l’en-tête Content-Type, pour décider si une pièce jointe est une image ; et on voit désormais envoyer le fichier à un modèle pour qu’il le dise. Les deux premiers sont écrits par le client, donc par l’attaquant quand il y en a un ; le troisième fait sortir un fichier non contrôlé de votre infrastructure pour obtenir une réponse que ses seize premiers octets donnent déjà. La signature d’un format est une table publiée, et la lire est une comparaison."
+  en: "Upload forms are routinely seen trusting the file name’s extension, or the Content-Type header, to decide whether an attachment is an image; and now they are seen sending the file to a model so it can say. The first two are written by the client, which means by the attacker when there is one; the third takes an unvetted file out of your infrastructure to get an answer its first sixteen bytes already give. A format’s signature is a published table, and reading it is a comparison."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Signature des premiers octets, et l’archive ouverte pour les conteneurs ZIP"
+      en: "Signature in the first bytes, and the archive opened for ZIP containers"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le fichier est lu dans votre processus et n’est transmis à personne"
+          - "Ne dispense pas de l’analyse antivirale : reconnaître un format n’est pas examiner ce qu’il contient"
+        en:
+          - "No specific scope added: the file is read inside your own process and is sent to nobody"
+          - "Does not replace malware scanning: recognising a format is not examining what it holds"
+    code:
+      python: snippets/check-a-file-is-really-the-format-it-claims/n0.py
+      javascript: snippets/check-a-file-is-really-the-format-it-claims/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Un format dont le fichier est du texte n’a rien à lire : un CSV, un JSON, un SVG et une note en clair n’ont aucun en-tête binaire, et le rapport les rend non reconnus — donc non autorisés, y compris quand c’est bien ce qu’ils prétendent être. Le témoin est dans le même test : sur un PNG, un JPEG, un GIF, un PDF, un ZIP, un DOCX, un XLSX et un ODT, le bon type revient."
+      en: "A format whose file is text has nothing to read: a CSV, a JSON file, an SVG and a plain note have no binary header, and the report returns them unrecognised — so not allowed, even when that is exactly what they are. The witness is in the same test: on a PNG, a JPEG, a GIF, a PDF, a ZIP, a DOCX, an XLSX and an ODT, the right type comes back."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus pour cette question-là. Le jour où ce que vous voulez savoir n’est plus « quel format » mais « que contient-il » — une macro, un script dans un SVG, une charge utile —, c’est une analyse antivirale ou un bac à sable, pas une lecture de signature."
+      en: "There is no level above this one for that question. The day what you want to know stops being “which format” and becomes “what is inside it” — a macro, a script in an SVG, a payload —, that is malware scanning or a sandbox, not reading a signature."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il existe bien une technique classique pour cela — classer un fragment de fichier sur des statistiques d’octets, employée en analyse post-mortem quand il n’y a plus d’en-tête —, et elle est exactement ce qu’un contrôle de téléversement ne doit pas faire : elle rend un type probable là où la question appelle une réponse vérifiable. Sur un fichier qui porte sa signature, elle n’ajoute rien ; sur un fichier qui n’en porte pas, elle remplacerait un refus explicite par une supposition."
+      en: "There is a classic technique for this — classifying a file fragment from byte statistics, used in forensics when no header is left — and it is exactly what an upload check must not do: it returns a probable type where the question calls for a verifiable answer. On a file that carries its signature it adds nothing; on a file that does not, it would replace an explicit refusal with a guess."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, et une conséquence de plus : un modèle spécialisé auto-hébergé devrait lire le fichier entier pour valoir mieux qu’une lecture de seize octets, ce qui revient à faire passer chaque téléversement non contrôlé dans un composant beaucoup plus gros que celui qu’on protège. Un contrôle de sécurité gagne à être court et à échouer de façon prévisible."
+      en: "The same argument, with one extra consequence: a self-hosted specialised model would have to read the whole file to beat a sixteen-byte read, which means running every unvetted upload through a component far larger than the one being protected. A security check gains from being short and from failing predictably."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Ce niveau se disqualifie par ce qu’il demande de faire du fichier : l’envoyer chez un tiers. Un contrôle de sécurité dont la première action est de transmettre à l’extérieur le fichier non vérifié qu’on lui confie ne protège plus grand-chose, et il ajoute un coût par téléversement et une latence à un chemin où l’on attend une réponse immédiate — pour approcher une table de signatures que les deux bibliothèques nommées ici lisent hors ligne."
+      en: "This level disqualifies itself by what it asks you to do with the file: send it to a third party. A security check whose first action is to forward the unvetted file it was handed no longer protects much, and it adds a cost per upload and latency to a path where the answer is expected immediately — to approximate a signature table that both libraries named here read offline."
+
+verdict_rationale:
+  fr: "N0, parce que la question a une réponse exacte dans les premiers octets et que l’enjeu est de savoir d’où vient la réponse : le nom du fichier et l’en-tête Content-Type sont écrits par le client, le rapport les traite comme une affirmation à contredire et pas comme une donnée. Le code va une ligne plus loin que les bibliothèques quand il le faut : `file-type` ouvre une archive ZIP pour distinguer un .docx d’un .xlsx, `puremagic` ne le fait pas, et douze lignes de `zipfile` alignent le Python sur le JavaScript. Ce que ce niveau ne sait pas faire est dit plutôt que deviné — les formats texte reviennent non reconnus, et un fichier non reconnu n’est jamais autorisé."
+  en: "N0, because the question has an exact answer in the first bytes and what matters is where the answer comes from: the file name and the Content-Type header are written by the client, and the report treats them as a claim to be contradicted rather than as data. The code goes one line further than the libraries where it must: file-type opens a ZIP archive to tell a .docx from a .xlsx, puremagic does not, and twelve lines of zipfile bring the Python side in line with the JavaScript one. What this level cannot do is stated rather than guessed — text formats come back unrecognised, and an unrecognised file is never allowed."
+
+further_reading:
+  - label: "puremagic — la table de signatures en Python pur, dépôt du projet"
+    url: "https://github.com/cdgriffith/puremagic"
+  - label: "file-type — la table de signatures en JavaScript, dépôt du projet"
+    url: "https://github.com/sindresorhus/file-type"
+  - label: "OWASP — recommandations sur le téléversement de fichiers"
+    url: "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html"
+  - label: "ECMA-376 — le paquet Open Packaging Conventions, qui fait des .docx des archives ZIP"
+    url: "https://ecma-international.org/publications-and-standards/standards/ecma-376/"
+
+sources:
+  - label: "puremagic sur PyPI (consulté) : version 2.2.0, publiée le 8 avril 2026, licence MIT, aucune dépendance système"
+    url: "https://pypi.org/project/puremagic/"
+  - label: "file-type sur son dépôt (consulté) : version 22.1.1, publiée le 17 septembre 2026, licence MIT ; il ouvre les archives ZIP pour distinguer les formats bâtis dessus"
+    url: "https://github.com/sindresorhus/file-type"
+  - label: "OWASP, File Upload Cheat Sheet (consultée) : l’extension et le Content-Type sont fournis par le client et ne valent pas contrôle"
+    url: "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html"
+---

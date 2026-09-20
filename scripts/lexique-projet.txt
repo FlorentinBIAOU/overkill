@@ -539,3 +539,6 @@ réentraîne
 gmial
 gmail
 jéan
+docx
+xlsx
+puremagic
