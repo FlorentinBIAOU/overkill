@@ -1,0 +1,100 @@
+---
+id: check-bank-details-before-a-transfer
+family: decide-validate
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Contrôler des coordonnées bancaires avant un virement"
+  en: "Check bank details before a transfer"
+
+need:
+  fr: "Vérifier qu’un IBAN saisi ou collé est bien formé, avant d’émettre le virement."
+  en: "Check that an IBAN, typed or pasted, is well-formed, before the transfer goes out."
+
+scenario:
+  fr: "On voit des formulaires de paiement envoyer l’IBAN saisi à un modèle généraliste pour qu’il dise s’il est correct. Un IBAN porte pourtant ses propres chiffres de contrôle, calculés par ISO 13616, et le numéro de compte français en porte une seconde série : deux identités arithmétiques, deux réponses exactes. L’erreur, ici, coûte un virement parti au mauvais endroit — raison de plus pour que le contrôle donne toujours la même réponse sur la même entrée, ce qu’un appel de modèle ne garantit pas."
+  en: "Payment forms are routinely seen sending the IBAN someone typed to a general-purpose model, asking whether it is correct. An IBAN carries its own check digits, computed by ISO 13616, and the French account number carries a second set: two arithmetic identities, two exact answers. A mistake here costs a transfer that left for the wrong place — all the more reason for the check to give the same answer on the same input every time, which a model call does not promise."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Clés de contrôle ISO 13616 et clé RIB, sur le registre des IBAN"
+      en: "ISO 13616 check digits and the French RIB key, against the IBAN registry"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : l’IBAN est contrôlé dans votre processus et n’est transmis à personne"
+          - "Un IBAN est une donnée personnelle dès qu’il désigne un particulier : le contrôler localement ne le communique pas, l’envoyer à un service en ligne le communique"
+          - "Ne dispense pas de la vérification du bénéficiaire que votre prestataire de paiement doit vous proposer : c’est un service du prestataire, pas un contrôle que vous exécutez"
+        en:
+          - "No specific scope added: the IBAN is checked inside your own process and is sent to nobody"
+          - "An IBAN is personal data as soon as it names an individual: checking it locally discloses nothing, sending it to an online service discloses it"
+          - "Does not replace the payee verification your payment provider has to offer you: that is a service of the provider, not a check you run"
+    code:
+      python: snippets/check-bank-details-before-a-transfer/n0.py
+      javascript: snippets/check-bank-details-before-a-transfer/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Les deux clés disent qu’un numéro est bien formé, jamais à qui appartient le compte : FR76 3000 6000 0112 3456 7890 189 et FR76 3000 6000 0109 8765 4321 028 passent toutes les deux, même banque, même guichet, et c’est exactement la forme d’une facture au RIB changé. Le témoin est dans le même test : sur cent IBAN, aucune des vingt mille fautes d’un seul chiffre ne passe."
+      en: "The two keys say a number is well-formed, never who owns the account: FR76 3000 6000 0112 3456 7890 189 and FR76 3000 6000 0109 8765 4321 028 both pass, same bank, same branch, and that is exactly what a redirected-invoice fraud looks like. The witness is in the same test: across a hundred IBANs, not one of twenty thousand single-digit slips gets through."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où vous devez savoir que le compte est bien celui de votre fournisseur, la réponse est la vérification du bénéficiaire que tout prestataire de la zone euro doit proposer depuis le 9 octobre 2025, et elle se demande au prestataire, pas à un modèle."
+      en: "There is no level above this one. The day you need to know the account really is your supplier’s, the answer is the payee verification every euro-area provider has had to offer since 9 October 2025, and you ask the provider for it, not a model."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre. Les chiffres de contrôle d’un IBAN sont une fonction du reste du numéro, publiée par ISO 13616, et la clé RIB en est une seconde ; un classifieur entraîné sur des IBAN étiquetés approcherait deux identités que deux modulos calculent exactement. Il ne saurait de surcroît pas ce que le registre des IBAN contient, alors que ce registre change à chaque pays qui rejoint la liste, et que c’est une table, pas une régularité."
+      en: "There is nothing to learn. An IBAN’s check digits are a function of the rest of the number, published by ISO 13616, and the RIB key is a second one; a classifier trained on labelled IBANs would approximate two identities that two modulos compute exactly. Nor would it know what the IBAN registry holds, and that registry changes with every country that joins the list — it is a table, not a regularity."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec un service à tenir en plus. Et l’objection décisive tient à ce qu’on contrôle : un virement part une fois, et ce qu’on attend d’un contrôle avant émission, c’est qu’il donne toujours la même réponse et qu’il sache dire laquelle des deux clés a échoué. Un petit modèle spécialisé rend un score, pas une retenue qu’on puisse relire dans un journal d’audit."
+      en: "The same argument, with a service to keep running on top. And the decisive objection is about what is being checked: a transfer leaves once, and what is wanted from a pre-flight check is that it always gives the same answer and can say which of the two keys failed. A small specialised model returns a score, not a carry you can read back in an audit log."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un modèle généraliste rend une phrase sur un calcul qu’il n’exécute pas, et il l’envoie chez un tiers : sur un chemin de paiement, c’est un coût par virement, une latence ajoutée avant la confirmation, et une coordonnée bancaire sortie de votre infrastructure pour une réponse que deux modulos donnent hors ligne. La seule question qu’il resterait à poser — ce compte est-il celui du bon bénéficiaire — a une réponse réglementée depuis le 9 octobre 2025, et c’est le prestataire de paiement qui la donne."
+      en: "A general-purpose model returns a sentence about a computation it does not perform, and it sends that sentence to a third party: on a payment path, that is a cost per transfer, latency added before confirmation, and bank details leaving your infrastructure for an answer two modulos give offline. The only question left to ask — is this account the right payee’s — has had a regulated answer since 9 October 2025, and it is the payment provider who gives it."
+
+verdict_rationale:
+  fr: "N0, parce que le contrôle est deux identités arithmétiques et une table, et que l’enjeu — un virement qui part une fois — exige précisément ce que le déterminisme donne : la même réponse sur la même entrée, et la retenue qui dit laquelle des deux clés a échoué. La clé RIB n’est pas un ornement : sur cinq cents IBAN français, la clé ISO seule laisse passer 0,6 % des lettres sosies saisies à la place d’un chiffre, parce que le numéro de compte français est alphanumérique au registre, et la clé RIB ferme les 6 887 cas mesurés. Les trois niveaux au-dessus sont fermés pour la même raison, et la question qui reste — est-ce bien le compte de votre fournisseur — se pose désormais au prestataire de paiement, pas à un modèle."
+  en: "N0, because the check is two arithmetic identities and a table, and because what is at stake — a transfer that leaves once — needs exactly what determinism gives: the same answer on the same input, and the carry that says which of the two keys failed. The RIB key is not an ornament: across five hundred French IBANs, the ISO key alone lets 0.6 % of lookalike letters typed for a digit through, because the French account number is alphanumeric in the registry, and the RIB key closes all 6,887 measured cases. The three levels above are shut for the same reason, and the question that remains — is this really your supplier’s account — is now put to the payment provider, not to a model."
+
+further_reading:
+  - label: "Wikipédia — International Bank Account Number, structure et calcul de la clé"
+    url: "https://fr.wikipedia.org/wiki/International_Bank_Account_Number"
+  - label: "Wikipédia — relevé d’identité bancaire, et le calcul de la clé RIB"
+    url: "https://fr.wikipedia.org/wiki/Relev%C3%A9_d%27identit%C3%A9_bancaire"
+  - label: "python-stdnum — le module IBAN et le registre qu’il porte"
+    url: "https://arthurdejong.org/python-stdnum/doc/2.2/stdnum.iban.html"
+  - label: "ibantools — la bibliothèque JavaScript, dépôt du projet"
+    url: "https://github.com/Simplify/ibantools"
+  - label: "Règlement (UE) 2024/886 sur les virements instantanés, article 5 quater"
+    url: "https://eur-lex.europa.eu/eli/reg/2024/886/oj"
+
+sources:
+  - label: "Règlement (UE) 2024/886, article 5 quater (consulté) : le prestataire du payeur offre un service de vérification du bénéficiaire « immédiatement après que le payeur a fourni les informations pertinentes » ; applicable au 9 octobre 2025 dans les États membres de la zone euro, au 9 juillet 2027 dans les autres"
+    url: "https://eur-lex.europa.eu/eli/reg/2024/886/oj"
+  - label: "python-stdnum sur PyPI (consulté) : version 2.2, publiée le 4 janvier 2026, licence LGPL v2 ou ultérieure"
+    url: "https://pypi.org/project/python-stdnum/"
+  - label: "ibantools, dépôt du projet (consulté) : version 4.5.4 publiée le 10 avril 2026, licence MIT ou MPL 2.0, aucune dépendance"
+    url: "https://github.com/Simplify/ibantools"
+  - label: "python-stdnum, module stdnum.iban (consulté) : le registre des IBAN, la longueur et la structure par pays, et les modules nationaux optionnels"
+    url: "https://arthurdejong.org/python-stdnum/doc/2.2/stdnum.iban.html"
+  - label: "Wikipédia, relevé d’identité bancaire (consulté) : la table de conversion des lettres en chiffres et la clé RIB comme modulo 97 de la partie nationale"
+    url: "https://fr.wikipedia.org/wiki/Relev%C3%A9_d%27identit%C3%A9_bancaire"
+---

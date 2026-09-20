@@ -1,0 +1,71 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Contrôler un IBAN avant qu'un virement parte, hors ligne et exactement.
+
+  Niveau N0. ISO 13616 place deux chiffres de contrôle en troisième et
+  quatrième position de tout IBAN, calculés sur le reste du numéro par le
+  modulo 97 d'ISO 7064. Le code pays fixe la longueur — 27 caractères en
+  France, 22 en Allemagne, 16 en Belgique — et la forme de ce qui suit. Tout
+  cela est une table et une identité arithmétique : la réponse est exacte et
+  gratuite.
+
+  La table est la part qu'on n'écrit pas. `python-stdnum` ici et `ibantools`
+  en JavaScript portent tous deux le registre des IBAN, révisé à mesure que
+  des pays y entrent.
+
+  Par-dessus ISO 13616, plusieurs pays posent une seconde clé à l'intérieur de
+  la partie nationale, et les deux bibliothèques ne couvrent pas les mêmes
+  pays. Cet extrait ne s'appuie donc pas sur les leurs : il demande à la
+  bibliothèque les chiffres de contrôle, la longueur et le format du registre,
+  et calcule lui-même la clé RIB française, dans les deux langages. Ailleurs,
+  un numéro qui passe ici peut encore être refusé par la banque du
+  bénéficiaire.
+
+  Mesuré sur cinq cents IBAN français fabriqués : avec les deux clés, pas une
+  seule des vingt mille fautes d'un chiffre, des deux mille inversions de deux
+  caractères voisins ni des sept mille lettres sosies ne passe. La clé ISO
+  seule en laisse passer 0,6 % de ces dernières, parce que le numéro de compte
+  français est alphanumérique au registre et qu'un « I » y est un caractère
+  légal à la place d'un « 1 » ; c'est la clé RIB qui ferme cela.
+
+  Et rien de tout cela ne dit à qui appartient le compte. C'est le service de
+  vérification du bénéficiaire que tout prestataire de la zone euro doit
+  proposer depuis le 9 octobre 2025 qui répond à cette question-là, pas un
+  calcul plus long.
+
+n0.js: |
+  Contrôler un IBAN avant qu'un virement parte, hors ligne et exactement.
+
+  Niveau N0. ISO 13616 place deux chiffres de contrôle en troisième et
+  quatrième position de tout IBAN, calculés sur le reste du numéro par le
+  modulo 97 d'ISO 7064. Le code pays fixe la longueur — 27 caractères en
+  France, 22 en Allemagne, 16 en Belgique — et la forme de ce qui suit. Tout
+  cela est une table et une identité arithmétique : la réponse est exacte et
+  gratuite.
+
+  La table est la part qu'on n'écrit pas. `ibantools` ici et `python-stdnum`
+  en Python portent tous deux le registre des IBAN, révisé à mesure que des
+  pays y entrent.
+
+  Par-dessus ISO 13616, plusieurs pays posent une seconde clé à l'intérieur de
+  la partie nationale, et les deux bibliothèques ne couvrent pas les mêmes
+  pays. Cet extrait ne s'appuie donc pas sur les leurs : il demande à la
+  bibliothèque les chiffres de contrôle, la longueur et le format du registre,
+  et calcule lui-même la clé RIB française, dans les deux langages. Ailleurs,
+  un numéro qui passe ici peut encore être refusé par la banque du
+  bénéficiaire.
+
+  Mesuré sur cinq cents IBAN français fabriqués : avec les deux clés, pas une
+  seule des vingt mille fautes d'un chiffre, des deux mille inversions de deux
+  caractères voisins ni des sept mille lettres sosies ne passe. La clé ISO
+  seule en laisse passer 0,6 % de ces dernières, parce que le numéro de compte
+  français est alphanumérique au registre et qu'un « I » y est un caractère
+  légal à la place d'un « 1 » ; c'est la clé RIB qui ferme cela.
+
+  Et rien de tout cela ne dit à qui appartient le compte. C'est le service de
+  vérification du bénéficiaire que tout prestataire de la zone euro doit
+  proposer depuis le 9 octobre 2025 qui répond à cette question-là, pas un
+  calcul plus long.
