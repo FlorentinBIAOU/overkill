@@ -41,10 +41,11 @@ charte interdit les chiffres de performance. Il disparaît du
 **sous l'identité du document, jamais sous son contenu**, sans quoi fabriquer
 la clé coûte plus que la validation qu'elle épargne.
 
-**Reste ouvert, et c'est écrit dans le rapport de lot** : `check-figures` ne
-reconnaît toujours pas un facteur (`×N`, « N fois plus ») comme un chiffre de
-performance, ce que propose le § 3.5 de la synthèse. Deux figurent encore dans
-la fiche 8, qui a été acceptée et qui est hors du périmètre de ce lot.
+*Écrit ici avant que ce ne soit fait, et fait depuis :* `check-figures` ne
+reconnaissait pas un facteur comme un chiffre de performance, ce que demande le
+§ 3.5 de la synthèse. Il le reconnaît maintenant, dans ses quatre écritures, et
+les deux facteurs que la fiche 8 publiait encore ont laissé la place à leur
+ordre de grandeur.
 
 ## Les remarques non bloquantes
 
