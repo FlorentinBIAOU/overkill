@@ -1,0 +1,59 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Les termes sur lesquels un document revient, tirés du document seul.
+
+  Niveau N0. La méthode est celle que RAKE a rendue courante : les mots avec
+  lesquels une langue fabrique ses phrases — articles, prépositions,
+  auxiliaires — sont aussi ce qui sépare une idée de la suivante, si bien que
+  couper le texte à chaque mot vide laisse les candidats entiers. Chaque
+  candidat est ensuite noté d'après la fréquence de ses mots et la longueur des
+  phrases où ils apparaissent, ce qui favorise une expression répétée et
+  précise plutôt qu'un mot seulement fréquent.
+
+  La liste de mots vides n'est pas livrée ici, et c'est le sujet. Elle est tout
+  le travail, elle change avec chaque langue, et elle appartient à l'appelant,
+  qui sait dans quelle langue sont ses documents — c'est la position de la
+  fiche sur les articles voisins. Sans elle, les mots-clés de n'importe quel
+  texte français sont « de », « la » et « le » : une liste vide est donc
+  refusée plutôt que servie.
+
+  Ce que ce niveau ne sait pas faire est dans son énoncé : il lit un document,
+  donc il peut dire ce que ce document répète, jamais ce qui le distingue des
+  quatre cents autres du même dossier. Tous les contrats d'un dossier de
+  contrats disent « conditions générales de vente », et rien ici ne le sait. Le
+  niveau N1, si.
+
+  Les outils qui font cela en un appel : `yake` en Python, dont les listes de
+  mots vides couvrent une quarantaine de langues, et, en JavaScript,
+  `keyword-extractor`, dont le paquet publié ne déclare aucune licence.
+
+n1: |
+  Les termes qui distinguent ce document des autres du même dossier.
+
+  Niveau N1. Le niveau N0 lit un document et ne peut dire que ce qu'il répète.
+  Tous les contrats d'un dossier de contrats répètent « conditions générales de
+  vente », et relire ce contrat-là plus attentivement ne révélera jamais que
+  l'expression ne vaut rien : l'information est dans le dossier, pas dans le
+  document.
+
+  Les candidats sont donc les mêmes qu'au niveau N0 — même découpage, même
+  liste de mots vides — et seul le classement change. Chaque mot reçoit le
+  logarithme du nombre de documents divisé par le nombre de ceux qui le
+  contiennent, et une expression vaut la moyenne de ses mots, multipliée par le
+  nombre de fois où le document la dit. Un mot présent dans tous les documents
+  vaut alors exactement zéro, et c'est tout l'objet.
+
+  Une différence assumée avec la formule habituelle : `scikit-learn` lisse, et
+  plancher ce logarithme à un fait qu'un terme présent partout pèse encore
+  quelque chose. C'est juste quand les poids alimentent une similarité — la
+  fiche sur les articles voisins emploie la forme lissée pour cette raison.
+  C'est faux ici : un terme présent dans tous les documents de votre collection
+  n'est le mot-clé d'aucun d'eux, et l'arrondir à « un peu » le remettrait dans
+  la liste.
+
+  Le modèle, c'est la collection. Il s'ajuste en mémoire, en une passe, à
+  partir des documents que vous détenez déjà ; il n'y a rien à télécharger et
+  rien à envoyer.

@@ -1,0 +1,119 @@
+---
+id: extract-key-terms-from-a-document
+family: extract
+status: published
+verdict: N1
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Extraire les mots-clés d’un document"
+  en: "Extract the key terms of a document"
+
+need:
+  fr: "Dégager les termes qui caractérisent un document, pour l’indexer, l’étiqueter ou en donner un aperçu."
+  en: "Surface the terms that characterise a document, so it can be indexed, labelled or previewed."
+
+scenario:
+  fr: "On voit envoyer chaque document à un modèle généraliste pour qu’il en rende « les cinq mots-clés ». Le mot « caractérisent », dans l’énoncé, est pourtant celui qui décide de tout : caractériser, c’est distinguer, et distinguer demande quelque chose à quoi comparer. Un document lu seul ne peut dire que ce qu’il répète — et tous les contrats d’un dossier de contrats répètent les mêmes clauses. La question n’est donc pas quel outil lit le mieux un document, c’est si vous lui donnez le dossier."
+  en: "Sending every document to a general-purpose model to get back “the five key terms” is a common sight. But the word “characterise”, in the need above, is the one that decides everything: to characterise is to distinguish, and distinguishing needs something to compare against. A document read on its own can only say what it repeats — and every contract in a folder of contracts repeats the same clauses. So the question is not which tool reads a document best, it is whether you hand it the folder."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Candidats coupés aux mots vides, notés à l’intérieur du document"
+      en: "Candidates cut at the stop words, scored inside the document"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le document est lu dans votre processus et n’est transmis à personne"
+          - "Un contrat ou un courrier porte des données personnelles : ce niveau est celui qui les garde chez vous"
+        en:
+          - "No specific scope added: the document is read inside your own process and is sent to nobody"
+          - "A contract or a letter carries personal data: this is the level that keeps it at home"
+    code:
+      python: snippets/extract-key-terms-from-a-document/n0.py
+      javascript: snippets/extract-key-terms-from-a-document/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Un terme français construit sur une préposition est coupé en deux, parce que la préposition est dans la liste qui fait marcher la méthode : dans le test, « moulin à café » revient en « moulin » d’un côté et « café » de l’autre. Le témoin est dans le même test : « droit français », qui ne passe par aucune préposition, revient d’un seul tenant. Laisser un mot vide à l’intérieur d’un candidat sans l’accepter au bord est la réponse de `yake` ; elle rend les termes prépositionnels et fait entrer, avec eux, des candidats qui commencent par un verbe."
+      en: "A French term built on a preposition is cut in two, because the preposition is in the list that makes the method work: in the test, “moulin à café” comes back as “moulin” on one side and “café” on the other. The witness is in the same test: “droit français”, which goes through no preposition, comes back whole. Allowing a stop word inside a candidate but not at its edges is yake’s answer; it brings the prepositional terms back, and brings in candidates that start with a verb."
+    escalate_when:
+      fr: "Les mêmes termes reviennent en tête de tous vos documents : c’est le passe-partout de votre dossier, et ce niveau n’a aucun moyen de le savoir."
+      en: "The same terms come top on every one of your documents: that is your folder’s boilerplate, and this level has no way of knowing it."
+
+  - level: N1
+    available: true
+    name:
+      fr: "Les mêmes candidats, pesés contre le reste de la collection"
+      en: "The same candidates, weighed against the rest of the collection"
+    cost: nul
+    latency: "~100 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: low
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : la collection ne quitte pas votre infrastructure"
+          - "Aucun apprentissage préalable : la pondération est recalculée sur votre seule collection, à chaque passage"
+        en:
+          - "No specific scope added: the collection never leaves your infrastructure"
+          - "No prior training: the weighting is recomputed from your own collection alone, on every pass"
+    code:
+      python: snippets/extract-key-terms-from-a-document/n1.py
+      javascript: snippets/extract-key-terms-from-a-document/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Un terme présent dans tous les documents vaut exactement zéro, et le sujet d’une collection est justement dans tous ses documents : sur les quatre contrats du test, « conditions générales de vente » tombe à zéro, ce qui est voulu, mais une note dont le sujet est le délai de rétractation voit « rétractation » tomber à zéro aussi, et des mots de circonstance passer devant. Le témoin est dans le même test : le niveau N0, qui ne connaît pas la collection, fait bien remonter ce terme — il ne sait simplement pas distinguer un sujet partagé d’un passe-partout."
+      en: "A term present in every document is worth exactly zero, and a collection’s subject is precisely in all of its documents: over the four contracts of the test, “conditions générales de vente” falls to zero, which is the intent, but a note whose subject is the withdrawal period sees “rétractation” fall to zero too, and incidental words come ahead of it. The witness is in the same test: level N0, which knows nothing of the collection, does bring that term back up — it simply cannot tell a shared subject from boilerplate."
+    escalate_when:
+      fr: "Vos documents disent la même chose avec deux vocabulaires — deux langues, ou le jargon d’un rédacteur face aux mots courants d’un autre. Le comptage ne rapproche pas deux mots qui ne s’écrivent pas pareil."
+      en: "Your documents say the same thing in two vocabularies — two languages, or one writer’s jargon against another’s plain words. Counting does not bring together two words that are not spelled alike."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Un encodeur auto-hébergé classerait les mêmes candidats d’après leur proximité avec le document entier, ce que fait `KeyBERT`. Le gain porte sur la formulation, et le prix est un modèle résident par langue traitée. Surtout, il ne répond pas à la question de cette fiche : comme le niveau N0, il lit un document à la fois, donc il ignore ce que tous les documents du dossier ont en commun — et c’est cela, ici, qui sépare un mot-clé d’un passe-partout."
+      en: "A self-hosted encoder would rank the same candidates by how close they sit to the whole document, which is what KeyBERT does. The gain is on phrasing, and the price is a resident model per language handled. Above all it does not answer this entry’s question: like level N0, it reads one document at a time, so it knows nothing of what every document in the folder has in common — and that, here, is what separates a key term from boilerplate."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un modèle généraliste rend volontiers des termes qui ne sont pas dans le document. C’est un défaut pour un index — un lecteur qui cherche ce terme trouvera un document qui ne le contient pas — et c’est une facture par document pour un résultat qui ne se vérifie pas. Pour poser des étiquettes prises dans une liste de la maison, la fiche voisine sur l’étiquetage par thème traite le sujet, et elle s’appuie sur vos propres articles déjà étiquetés."
+      en: "A general-purpose model will happily return terms that are not in the document. That is a defect for an index — a reader searching for that term will find a document that does not contain it — and it is one bill per document for a result that cannot be checked. To attach labels taken from an in-house list, the neighbouring entry on tagging by topic covers the subject, and it leans on your own already-tagged articles."
+
+verdict_rationale:
+  fr: "N1, parce que « caractériser » veut dire « distinguer » et que distinguer demande une collection. Le test de la fiche met les deux niveaux côte à côte sur le même contrat : lu seul, il rend « conditions générales » et « présentes conditions générales » ; lu dans son dossier de quatre contrats, il rend « moulin » et « café », et le passe-partout tombe à zéro. Les deux niveaux partagent le même découpage et la même liste de mots vides ; seul le classement change. Trois décisions portent le reste. La liste de mots vides est exigée de l’appelant, parce qu’elle est propre à chaque langue et qu’elle est tout le travail. Le logarithme n’est pas planché à un comme le fait `scikit-learn` : un terme présent dans tous vos documents n’est le mot-clé d’aucun, et l’arrondir à « un peu » le remettrait dans la liste. Et les outils du domaine sont nommés sans être appelés : `yake` en Python est sous LGPL, et `keyword-extractor` en JavaScript publie un paquet sans licence déclarée."
+  en: "N1, because “characterise” means “distinguish”, and distinguishing needs a collection. This entry’s test puts the two levels side by side on the same contract: read alone it returns “conditions générales” and “présentes conditions générales”; read inside its folder of four contracts it returns “moulin” and “café”, and the boilerplate falls to zero. Both levels share the same cut and the same stop list; only the ranking changes. Three decisions carry the rest. The stop list is required of the caller, because it is specific to each language and because it is the whole job. The logarithm is not floored at one the way scikit-learn floors it: a term present in all your documents is the key term of none of them, and rounding it to “a little” would put it back in the list. And the tools in the field are named without being called: yake in Python is under the LGPL, and keyword-extractor in JavaScript publishes a package with no declared licence."
+
+further_reading:
+  - label: "yake — l’extracteur de mots-clés non supervisé, et ses listes de mots vides par langue"
+    url: "https://github.com/LIAAD/yake"
+  - label: "keyword-extractor — le module JavaScript, et ses listes de mots vides"
+    url: "https://github.com/michaeldelorenzo/keyword-extractor"
+  - label: "Étiqueter des articles par thème — la fiche qui traite la liste d’étiquettes de la maison"
+    url: "https://isitoverkill.dev/fr/fiches/tag-articles-by-topic"
+  - label: "Montrer des articles voisins — la fiche qui emploie la forme lissée du même calcul"
+    url: "https://isitoverkill.dev/fr/fiches/show-similar-articles"
+
+sources:
+  - label: "yake sur PyPI (consulté) : version 0.7.3, publiée le 9 février 2026, licence LGPLv3 ; six dépendances, dont numpy et networkx"
+    url: "https://pypi.org/project/yake/"
+  - label: "keyword-extractor sur npm (consulté) : version 0.3.0, publiée le 13 août 2026, aucun champ de licence dans le paquet publié ; le dépôt porte un fichier LICENSE daté de 2013"
+    url: "https://github.com/michaeldelorenzo/keyword-extractor"
+  - label: "rake-nltk sur PyPI (consulté) : version 1.0.6, publiée le 15 septembre 2021, licence MIT ; c’est la mise en œuvre de référence de la méthode employée au niveau N0"
+    url: "https://pypi.org/project/rake-nltk/"
+  - label: "retext-keywords sur npm (consulté) : version 8.0.2, publiée le 23 octobre 2024, licence MIT ; il dépend de `stemmer`, qui met en œuvre l’algorithme de Porter, écrit pour l’anglais"
+    url: "https://github.com/retextjs/retext-keywords"
+---
