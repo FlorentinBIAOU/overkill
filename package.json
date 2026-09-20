@@ -25,7 +25,7 @@
     "check:french": "bash scripts/check-french.sh",
     "fix:accents": ".venv-tools/bin/python scripts/fix-accents.py",
     "check:content": "node --import tsx scripts/check-content.mjs",
-    "test:schema": "node --import tsx --test tests/schema.test.mjs tests/check-content.test.mjs tests/snippets.test.mjs tests/check-longueur-rupture.test.mjs tests/check-raisons.test.mjs tests/check-chiffres-tenus.test.mjs tests/check-egress.test.mjs",
+    "test:schema": "node --import tsx --test tests/schema.test.mjs tests/check-content.test.mjs tests/snippets.test.mjs tests/check-longueur-rupture.test.mjs tests/check-raisons.test.mjs tests/check-chiffres-tenus.test.mjs tests/check-egress.test.mjs tests/check-figures.test.mjs",
     "test:snippets": "node scripts/test-snippets.mjs",
     "manifest": "node scripts/build-snippet-manifest.mjs",
     "test:components": "node --test tests/components.spec.mjs",

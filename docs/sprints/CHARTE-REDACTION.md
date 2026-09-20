@@ -243,6 +243,16 @@ chaque nombre publié apparaisse dans un test de la fiche.
 « 0,6 % » et « 6 887 » là où ses deux suites rendent 0,450 % et 6 882, avec des
 tests qui assertaient `0.002 < x < 0.02` — une fourchette large d'une décade.
 
+Un **facteur de performance** est un nombre comme les autres, et l'ordre de
+grandeur qui le remplace s'écrit sans nommer de nombre : « deux ordres de
+grandeur », et non « par cinquante-cinq ». Les quatre écritures — « ×55 »,
+« 55 fois plus rapide », « divise par 55 », « divise par cinquante-cinq » —
+sont refusées par `node scripts/check-figures.mjs`.
+*Ce qui l'a fait écrire :* `validate-an-imported-file-against-a-schema`
+publiait « ×55 » et « ×6 000 » quand le seul test voisin affirmait
+`garde * 5 < recompile` ; la fiche aurait pu annoncer trois ordres de grandeur
+de plus sans qu'un test bouge.
+
 **R13. Le titre anglais décrit le même besoin que `need`.** L'anglais est la version
 canonique.
 *Ce qui l'a fait écrire :* « Mask personal data » pour un besoin qui ne masque que le

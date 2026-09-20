@@ -17,8 +17,24 @@ import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 
-const RACINES = ['content'];
+const RACINES = [process.env.OVERKILL_CONTENU ?? 'content'];
 const EXTENSIONS = new Set(['.mdx', '.md', '.py', '.js', '.mjs', '.yaml']);
+
+/*
+ * Un nombre écrit en toutes lettres, tel qu'il apparaît dans un facteur :
+ * « cinquante-cinq », « six mille », et leurs équivalents anglais
+ * (`fifty-five`, `six thousand`).
+ *
+ * « un » et « une » n'y sont pas : « divisé par une expression régulière » se
+ * lirait comme un facteur, et un facteur de un ne se publie pas.
+ */
+const LETTRES_FR =
+  '(?:cinquante|quarante|soixante|quatorze|quinze|seize|treize|douze|onze|dix|deux|trois|quatre|cinq|six|sept|huit|neuf|vingt|trente|cents?|mille)'
+  + '(?:[-\\s](?:et[-\\s])?(?:un|cinquante|quarante|soixante|quatorze|quinze|seize|treize|douze|onze|dix|deux|trois|quatre|cinq|six|sept|huit|neuf|vingt|trente|cents?|mille))*';
+
+const LETTRES_EN =
+  '(?:fifty|sixty|seventy|eighty|ninety|twelve|eleven|twenty|thirty|forty|hundred|thousand|million|ten|two|three|four|five|six|seven|eight|nine)'
+  + '(?:[-\\s](?:and[-\\s])?(?:one|fifty|sixty|seventy|eighty|ninety|twelve|eleven|twenty|thirty|forty|hundred|thousand|million|ten|two|three|four|five|six|seven|eight|nine))*';
 
 /** Ce qu'on cherche, et pourquoi c'est interdit. */
 const MOTIFS = [
@@ -40,9 +56,33 @@ const MOTIFS = [
     raison: 'toute affirmation chiffrée sur l\'empreinte doit citer une méthodologie publiée',
   },
   {
+    /*
+     * Un facteur est un chiffre de performance. Le relevé du lot 17 l'a montré
+     * sur une fiche acceptée : « ×55 » et « ×6 000 » étaient publiés sur la
+     * page, et le seul test qui les approchait affirmait « garde × 5 <
+     * recompile ». La fiche aurait pu annoncer trois ordres de grandeur de
+     * plus sans qu'un test bouge.
+     *
+     * Les quatre écritures d'un facteur sont cherchées, en chiffres comme en
+     * lettres : « ×55 », « 55 fois plus rapide », « divise par 55 », et
+     * « divise le temps par cinquante-cinq ». Écrire le nombre en toutes
+     * lettres n'en fait pas un ordre de grandeur : « cinquante-cinq » est
+     * aussi précis que « 55 ». Ce que la section 4.5 autorise, c'est
+     * « deux ordres de grandeur », qui ne nomme aucun nombre.
+     */
     nom: 'performance non mesurée',
-    motif:
-      /\b(?:\d+(?:[.,]\d+)?)\s?(?:x|fois)\s+(?:plus|moins|faster|slower|cheaper)\b|\b(?:\d{2,3})\s?%\s+(?:de\s+)?(?:précision|exactitude|rappel|accuracy|precision|recall|f1)\b/gi,
+    motif: new RegExp(
+      [
+        `\\b\\d+(?:[.,]\\d+)?\\s?(?:x|fois)\\s+(?:plus|moins|faster|slower|cheaper|rapide|vite|lent)\\b`,
+        `(?<![\\w.,])×\\s?\\d`,
+        `\\bdivis(?:e|ent|é|ée|és|ées)\\b[^.]{0,40}?\\bpar\\s+(?:\\d|${LETTRES_FR})`,
+        `\\bmultipli(?:e|ent|é|ée|és|ées)\\b[^.]{0,40}?\\bpar\\s+(?:\\d|${LETTRES_FR})`,
+        `\\bdivides?\\b[^.]{0,40}?\\bby\\s+(?:\\d|${LETTRES_EN})`,
+        `\\bmultiplies?\\b[^.]{0,40}?\\bby\\s+(?:\\d|${LETTRES_EN})`,
+        `\\b\\d{2,3}\\s?%\\s+(?:de\\s+)?(?:précision|exactitude|rappel|accuracy|precision|recall|f1)\\b`,
+      ].join('|'),
+      'gi',
+    ),
     raison: 'un chiffre de performance exige un banc d\'essai réellement exécuté',
   },
   {
