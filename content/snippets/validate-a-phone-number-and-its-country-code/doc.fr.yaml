@@ -1,0 +1,47 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Contrôler un numéro de téléphone contre le plan de numérotation de son pays.
+
+  Niveau N0. Chaque pays publie les préfixes qui existent, la longueur d'un
+  numéro derrière chacun d'eux, et la nature de la ligne qu'il atteint. Google
+  rassemble ces plans dans libphonenumber et les republie à mesure qu'ils
+  changent — `phonenumbers` ici, `libphonenumber-js` en JavaScript. Dans les deux cas
+  c'est une consultation de table : pas de réseau, pas de clé, et la même
+  réponse deux fois.
+
+  La seule chose que ce code refuse de faire, c'est deviner. Un numéro écrit
+  06 12 34 56 78 n'est français que si quelqu'un le dit ; les mêmes chiffres
+  sont un numéro mobile valide dans plusieurs autres pays. La région est donc
+  soit écrite dans le numéro, sous la forme du + initial, soit déclarée par
+  l'appelant, soit le numéro est refusé — jamais supposée d'après l'endroit où
+  tourne le serveur.
+
+  Ce qui revient, c'est le numéro en E.164, la région à laquelle il appartient,
+  et la nature de la ligne. C'est la nature qui dit à un formulaire qu'un SMS
+  n'arrivera jamais : en France, un numéro qui commence par 01 est une ligne
+  fixe, et il est valide.
+
+n0.js: |
+  Contrôler un numéro de téléphone contre le plan de numérotation de son pays.
+
+  Niveau N0. Chaque pays publie les préfixes qui existent, la longueur d'un
+  numéro derrière chacun d'eux, et la nature de la ligne qu'il atteint. Google
+  rassemble ces plans dans libphonenumber et les republie à mesure qu'ils
+  changent — `libphonenumber-js` ici, `phonenumbers` en Python. Dans les deux cas
+  c'est une consultation de table : pas de réseau, pas de clé, et la même
+  réponse deux fois.
+
+  La seule chose que ce code refuse de faire, c'est deviner. Un numéro écrit
+  06 12 34 56 78 n'est français que si quelqu'un le dit ; les mêmes chiffres
+  sont un numéro mobile valide dans plusieurs autres pays. La région est donc
+  soit écrite dans le numéro, sous la forme du + initial, soit déclarée par
+  l'appelant, soit le numéro est refusé — jamais supposée d'après l'endroit où
+  tourne le serveur.
+
+  Ce qui revient, c'est le numéro en E.164, la région à laquelle il appartient,
+  et la nature de la ligne. C'est la nature qui dit à un formulaire qu'un SMS
+  n'arrivera jamais : en France, un numéro qui commence par 01 est une ligne
+  fixe, et il est valide.

@@ -67,6 +67,7 @@
     "fast-xml-parser": "5.2.5",
     "gray-matter": "^4.0.3",
     "ibantools": "4.5.4",
+    "libphonenumber-js": "1.13.13",
     "pagefind": "1.5.2",
     "pdfjs-dist": "5.4.149",
     "playwright": "^1.63.0",

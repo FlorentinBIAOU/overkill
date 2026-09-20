@@ -1,0 +1,94 @@
+---
+id: validate-a-phone-number-and-its-country-code
+family: decide-validate
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Vérifier un numéro de téléphone et son indicatif"
+  en: "Validate a phone number and its country code"
+
+need:
+  fr: "Savoir si un numéro saisi existe dans le plan de numérotation d’un pays, et de quelle sorte de ligne il s’agit."
+  en: "Tell whether a number someone typed exists in a country’s numbering plan, and what kind of line it is."
+
+scenario:
+  fr: "On voit des formulaires envoyer chaque numéro saisi à un modèle généraliste pour qu’il dise s’il est valide, et de quel pays. Les plans de numérotation sont pourtant publiés par les régulateurs, rassemblés par Google dans libphonenumber, et republiés à chaque changement : la réponse est dans une table. Le vrai piège n’est pas la validation, c’est la région — « 0470 12 34 56 » est une ligne fixe en France et un mobile en Belgique, et le code qui devine laquelle envoie un SMS à un poste fixe sans que personne le voie."
+  en: "Forms are routinely seen sending every number typed to a general-purpose model, asking whether it is valid and which country it belongs to. Numbering plans are published by regulators, collected by Google in libphonenumber, and republished whenever they change: the answer is in a table. The real trap is not validation, it is the region — 0470 12 34 56 is a fixed line in France and a mobile in Belgium, and code that guesses which one sends a text message to a landline with nobody the wiser."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Plan de numérotation de libphonenumber, région déclarée par l’appelant"
+      en: "libphonenumber’s numbering plans, with the region declared by the caller"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le numéro est contrôlé dans votre processus et n’est transmis à personne"
+          - "Un numéro de téléphone est une donnée personnelle : le valider localement ne le communique pas, l’envoyer à un service de vérification en ligne le communique"
+        en:
+          - "No specific scope added: the number is checked inside your own process and is sent to nobody"
+          - "A phone number is personal data: validating it locally discloses nothing, sending it to an online verification service discloses it"
+    code:
+      python: snippets/validate-a-phone-number-and-its-country-code/n0.py
+      javascript: snippets/validate-a-phone-number-and-its-country-code/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Un plan de numérotation est une donnée datée, pas une règle : « +229 97 12 34 56 » était un numéro béninois ordinaire avant le passage à dix chiffres, et la bibliothèque le refuse aujourd’hui — un préfixe ouvert après la version installée est refusé de la même façon, jusqu’à la mise à jour. Le témoin est dans le même test : « +229 01 97 12 34 56 », la forme actuelle, passe."
+      en: "A numbering plan is dated data, not a rule: +229 97 12 34 56 was an ordinary Benin number before the country moved to ten digits, and the library refuses it today — a prefix opened after the installed release is refused the same way, until the update lands. The witness is in the same test: +229 01 97 12 34 56, the current form, passes."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où il vous faut savoir que la ligne est attribuée et joignable, ou quel opérateur la porte après portabilité, la réponse est une interrogation de réseau facturée chez un opérateur, et elle fait sortir le numéro de votre infrastructure."
+      en: "There is no level above this one. The day you need to know the line is actually allocated and reachable, or which operator holds it after portability, the answer is a billed network lookup at a carrier, and it takes the number out of your infrastructure."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre, et l’argument se retourne contre le modèle. Ce qu’un classifieur entraîné sur des numéros étiquetés approcherait, c’est une table publiée par des régulateurs — et le seul défaut de cette table, qu’elle vieillit, deviendrait pire : une bibliothèque se met à jour d’une commande, un modèle appris se réentraîne et se redéploie."
+      en: "There is nothing to learn, and the argument turns against the model. What a classifier trained on labelled numbers would approximate is a table published by regulators — and that table’s only flaw, that it ages, would get worse: a library updates with one command, a trained model has to be retrained and redeployed."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec un service à tenir en plus, et une objection propre à ce besoin : la validation d’un numéro est un contrôle de formulaire, appelé à chaque frappe ou à chaque soumission. Ce qu’on y cherche est une réponse immédiate et rejouable, pas un score qui demande un modèle en mémoire et une inférence par appel."
+      en: "The same argument, with a service to keep running on top, and one objection specific to this need: validating a number is a form check, called on every keystroke or every submission. What is wanted there is an immediate, replayable answer, not a score that needs a model in memory and an inference per call."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "La seule chose qu’un modèle généraliste ajouterait serait de deviner la région manquante d’après le contexte — l’adresse, la langue, le reste du formulaire. C’est exactement ce que cette fiche refuse : une région supposée fait entrer un numéro belge dans le plan français, la sortie est bien formée, et personne ne voit l’erreur. Sa connaissance des plans est en outre figée à son entraînement, sans qu’il puisse dire à quelle date, là où une bibliothèque annonce sa version."
+      en: "The one thing a general-purpose model would add is guessing the missing region from context — the address, the language, the rest of the form. That is exactly what this entry refuses: an assumed region files a Belgian number under the French plan, the output is well-formed, and nobody sees the mistake. Its knowledge of the plans is also frozen at training time, with no way for it to say as of when, where a library states its version."
+
+verdict_rationale:
+  fr: "N0, parce que la réponse est dans une table publiée, et que la difficulté réelle n’est pas de la lire mais de ne pas inventer ce qui manque. L’extrait refuse un numéro sans indicatif quand l’appelant n’a déclaré aucune région, au lieu de supposer la vôtre : « 0470 12 34 56 » ressort en ligne fixe française ou en mobile belge selon ce qu’on déclare, et les deux sont valides. Le prix de ce niveau est visible et il se paie une fois par an : la table vieillit — un numéro béninois d’avant le passage à dix chiffres est refusé —, et on la met à jour comme n’importe quelle dépendance."
+  en: "N0, because the answer is in a published table, and the real difficulty is not reading it but refusing to invent what is missing. The snippet turns down a number with no country code when the caller has declared no region, instead of assuming yours: 0470 12 34 56 comes back as a French fixed line or a Belgian mobile depending on what is declared, and both are valid. This level’s price is visible and paid about once a year: the table ages — a Benin number from before the move to ten digits is refused — and you update it like any other dependency."
+
+further_reading:
+  - label: "libphonenumber — la bibliothèque de Google et les plans qu’elle porte"
+    url: "https://github.com/google/libphonenumber"
+  - label: "phonenumbers — le portage Python, dépôt du projet"
+    url: "https://github.com/daviddrysdale/python-phonenumbers"
+  - label: "libphonenumber-js — le portage JavaScript, dépôt du projet"
+    url: "https://gitlab.com/catamphetamine/libphonenumber-js"
+  - label: "UIT-T E.164 — le plan de numérotation international"
+    url: "https://www.itu.int/rec/T-REC-E.164"
+
+sources:
+  - label: "phonenumbers sur PyPI (consulté) : version 9.0.39, publiée le 10 septembre 2026, licence Apache 2.0"
+    url: "https://pypi.org/project/phonenumbers/"
+  - label: "libphonenumber-js, dépôt du projet (consulté) : version 1.13.13, publiée le 10 septembre 2026, licence MIT, aucune dépendance ; le lot « max » est celui qui porte les natures de ligne"
+    url: "https://gitlab.com/catamphetamine/libphonenumber-js"
+  - label: "libphonenumber, dépôt du projet (consulté) : les métadonnées par pays et leur rythme de publication"
+    url: "https://github.com/google/libphonenumber"
+  - label: "ARCEP Bénin (consulté) : « À partir du 30 novembre 2024, les numéros de téléphone au Bénin passent de 08 à 10 chiffres », avec le préfixe 01 — c’est ce changement qui fait refuser l’ancienne forme"
+    url: "https://arcep.bj/a-partir-de-30-novembre-2024-les-numeros-de-telephone-au-benin-passent-de-08-a-10-chiffres/"
+---
