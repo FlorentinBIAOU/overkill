@@ -1,0 +1,92 @@
+---
+id: extract-fields-from-a-log-line
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Découper des lignes de journal en champs"
+  en: "Split log lines into fields"
+
+need:
+  fr: "Tirer d’une ligne de journal l’adresse, la date, le code de réponse et le reste, pour les compter ou les stocker."
+  en: "Pull the address, the date, the status code and the rest out of a log line, to count them or store them."
+
+scenario:
+  fr: "On voit passer chaque ligne d’un journal à un modèle généraliste pour qu’il en sorte les champs. Une ligne de journal a pourtant été écrite par un programme, dans un format que ce programme a fixé et qu’une norme décrit souvent : il n’y a rien à inférer, la forme est connue avant la première ligne. Et le volume rend l’argument sans appel — un journal d’accès produit des millions de lignes par jour, là où l’expression régulière en découpe cent mille en une fraction de seconde, sur la machine qui les reçoit."
+  en: "Passing every line of a log to a general-purpose model to get its fields out is a common sight. But a log line was written by a program, in a format that program fixed and that a standard often describes: there is nothing to infer, the shape is known before the first line arrives. And volume settles the argument — an access log produces millions of lines a day, where the regular expression cuts a hundred thousand of them in a fraction of a second, on the machine that receives them."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Motifs nommés à la façon de Grok, et journal des lignes rejetées"
+      en: "Named patterns in the Grok style, with a log of the rejected lines"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : la ligne est découpée dans votre processus et n’est transmise à personne"
+          - "Un journal d’accès porte des adresses IP, qui sont des données personnelles : ce niveau est celui qui les garde chez vous"
+        en:
+          - "No specific scope added: the line is split inside your own process and is sent to nobody"
+          - "An access log carries IP addresses, which are personal data: this is the level that keeps them at home"
+    code:
+      python: snippets/extract-fields-from-a-log-line/n0.py
+      javascript: snippets/extract-fields-from-a-log-line/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Un motif trop lâche découpe faux sans rien signaler : sur « <34>Oct 10 13:55:36 serveur1 sshd[1234]: … », décrire l’horodatage par « %{DATA:timestamp} » rend timestamp « Oct », host « 10 » et tag « 13:55:36 serveur1 sshd[1234] », et la ligne n’est pas rejetée. Le témoin est dans le même test : le motif de la fiche, qui décrit la date comme une date, rend les quatre champs justes."
+      en: "A pattern that is too loose splits the line wrongly and says nothing: on “<34>Oct 10 13:55:36 serveur1 sshd[1234]: …”, describing the timestamp as “%{DATA:timestamp}” returns timestamp “Oct”, host “10” and tag “13:55:36 serveur1 sshd[1234]”, and the line is not rejected. The witness is in the same test: this entry’s pattern, which describes the date as a date, returns all four fields correctly."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où la liste des lignes rejetées grossit, ce n’est pas un modèle qu’il faut : c’est lire ces lignes, qui sont d’un format que vous n’aviez pas prévu, et écrire le motif qui leur correspond."
+      en: "There is no level above this one. The day the list of rejected lines grows, a model is not what you need: it is reading those lines, which are in a format you had not planned for, and writing the pattern that fits them."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : le format est écrit dans le code du programme qui produit le journal, et il est publié pour les formats courants. Un modèle appris sur un échantillon apprendrait la forme des lignes déjà vues, alors que la seule chose intéressante dans un journal est la ligne qu’on n’a jamais vue. Le motif, lui, la rejette et la montre."
+      en: "There is nothing to learn: the format is written in the code of the program that produces the log, and it is published for the common formats. A model learned on a sample would learn the shape of the lines already seen, while the only interesting thing in a log is the line nobody has seen before. The pattern, for its part, rejects it and shows it."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec le budget en plus. Ce traitement est appelé une fois par ligne sur un flux qui se compte en millions par jour ; la mesure de cette fiche le situe à quelques microsecondes la ligne. Un modèle, même petit, même local, coûte des ordres de grandeur de plus par ligne, pour retrouver un découpage que le format donne exactement."
+      en: "The same argument, with budget on top. This runs once per line over a stream counted in millions a day; this entry measures it at a few microseconds per line. A model, however small and however local, costs orders of magnitude more per line, to recover a split the format gives exactly."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un appel de modèle par ligne de journal est l’exemple que ce site existe pour nommer : au volume d’un journal d’accès, c’est une facture par ligne, une latence par ligne, et l’envoi chez un tiers d’adresses IP et de chemins d’URL qui sont vos données et celles de vos visiteurs. Le format, lui, est écrit dans la documentation du serveur qui l’a produit."
+      en: "One model call per log line is the example this site exists to name: at the volume of an access log, that is a bill per line, latency per line, and the sending to a third party of IP addresses and URL paths that are your data and your visitors’. The format, meanwhile, is written in the documentation of the server that produced it."
+
+verdict_rationale:
+  fr: "N0, parce que le format est connu d’avance et que le volume ne laisse pas le choix : quelques microsecondes par ligne contre un appel réseau, sur des millions de lignes par jour. Ce que la fiche apporte au-delà de l’expression régulière tient en trois choses. La notation nommée à la façon de Grok, d’abord, qui permet d’écrire le motif une seule fois pour les deux langages — Python et JavaScript n’orthographient pas le groupe nommé de la même façon. Le journal des rejets ensuite : une ligne qui ne correspond pas n’est jamais perdue, et c’est elle qui vous apprendra que le format a changé. Et le refus de transformer l’horodatage en date quand le format ne porte ni l’année ni le fuseau, ce qui est le cas du syslog de la RFC 3164."
+  en: "N0, because the format is known in advance and volume leaves no choice: a few microseconds per line against a network call, over millions of lines a day. What this entry adds beyond the regular expression comes down to three things. The Grok-style named notation first, which lets the pattern be written once for both languages — Python and JavaScript do not spell a named group the same way. The rejects log next: a line that does not match is never lost, and it is the one that will tell you the format changed. And the refusal to turn the timestamp into a date when the format carries neither the year nor the time zone, which is the case of RFC 3164 syslog."
+
+further_reading:
+  - label: "Grok — la notation des motifs nommés, dans la documentation de Logstash"
+    url: "https://www.elastic.co/docs/reference/logstash/plugins/plugins-filters-grok"
+  - label: "Apache — le format de journal combiné"
+    url: "https://httpd.apache.org/docs/current/logs.html#combined"
+  - label: "RFC 3164 — le format historique de syslog, sans année ni fuseau"
+    url: "https://www.rfc-editor.org/rfc/rfc3164#section-4.1.2"
+  - label: "RFC 5424 — le format qui lui succède, avec un horodatage complet"
+    url: "https://www.rfc-editor.org/rfc/rfc5424#section-6.2.3"
+
+sources:
+  - label: "RFC 3164, section 4.1.2 (consultée) : l’horodatage est « Mmm dd hh:mm:ss », sans année et sans indication de fuseau horaire"
+    url: "https://www.rfc-editor.org/rfc/rfc3164#section-4.1.2"
+  - label: "Apache, documentation des journaux (consultée) : la définition du format combiné, et le tiret écrit à la place d’une taille absente"
+    url: "https://httpd.apache.org/docs/current/logs.html#combined"
+  - label: "Logstash, filtre grok (consulté) : la notation %{SYNTAXE:nom} et la bibliothèque de motifs livrée avec"
+    url: "https://www.elastic.co/docs/reference/logstash/plugins/plugins-filters-grok"
+---

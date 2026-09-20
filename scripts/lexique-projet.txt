@@ -555,3 +555,7 @@ réentraîné
 binarise
 tions
 gouttières
+host
+syslog
+sshd
+timestamp

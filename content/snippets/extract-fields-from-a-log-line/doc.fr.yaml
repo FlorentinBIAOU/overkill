@@ -1,0 +1,27 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Découper une ligne de journal en champs, avec un motif nommé.
+
+  Niveau N0. Une ligne de journal n'est pas du texte libre : elle a été écrite
+  par un programme, dans un format fixé par ce programme, et souvent par une
+  norme. Il n'y a rien à deviner — la forme est connue avant la première ligne,
+  ce qui est exactement la situation pour laquelle une expression régulière a
+  été inventée.
+
+  Ce qui fait la différence au volume n'est pas l'expression mais le
+  vocabulaire autour d'elle. Grok, la notation que Logstash a rendue courante,
+  nomme les morceaux une fois — `%{IP:client}`, `%{INT:status}` — et permet de
+  décrire une ligne par ses champs plutôt que par un mur de crochets. La
+  douzaine de lignes ci-dessous, c'est cette idée, avec les morceaux dont cette
+  fiche a besoin ; les vraies bibliothèques en livrent quelques centaines.
+
+  Deux règles pour lesquelles le reste de ce fichier existe. Une ligne qui ne
+  correspond pas n'est jamais jetée : elle revient dans `rejected`, avec son
+  numéro, parce qu'un analyseur de journal qui perd en silence une ligne sur
+  vingt est pire qu'un analyseur qui n'en lit aucune. Et l'horodatage est rendu
+  tel qu'il est écrit, pas comme une date : le format syslog de la RFC 3164 ne
+  porte ni année ni fuseau, et faire de « Oct 10 13:55:36 » un instant, c'est
+  inventer les deux.
