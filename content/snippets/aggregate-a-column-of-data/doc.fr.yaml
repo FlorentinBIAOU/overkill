@@ -1,0 +1,29 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Additionner une colonne d'un fichier, exactement, et dire ce qui a été laissé.
+
+  Niveau N0. Additionner est ce qu'un ordinateur a su faire avant tout le
+  reste : l'intéressant, dans ce travail, est donc partout sauf dans
+  l'addition.
+
+  C'est dans l'arithmétique, d'abord. Une colonne d'argent additionnée en
+  nombres à virgule flottante dérive : le test de cette fiche additionne six
+  montants ordinaires et montre que le résultat n'est pas celui qu'imprime la
+  facture. Rien ici ne devient donc un flottant. Une valeur est lue comme les
+  chiffres qui ont été écrits, toutes les valeurs sont alignées sur le même
+  nombre de décimales, et la somme est une addition d'entiers — exacte, quelle
+  que soit la longueur de la colonne.
+
+  C'est dans ce qui n'est pas un nombre, ensuite. Une vraie colonne porte une
+  cellule vide, un « n/a », une ligne de total, une valeur avec un symbole
+  monétaire. Les passer en silence, c'est ainsi qu'une moyenne finit par porter
+  sur huit cents lignes sur mille sans que personne ne le remarque. Toute
+  valeur qui n'a pas pu être lue revient avec son numéro de ligne et sa raison.
+
+  Et c'est dans la moyenne, le seul résultat qui puisse demander un arrondi :
+  elle est rendue deux décimales au-delà des données, arrondie en s'éloignant
+  de zéro, et la somme exacte comme le compte reviennent à côté d'elle pour
+  qu'un appelant puisse arrondir autrement.

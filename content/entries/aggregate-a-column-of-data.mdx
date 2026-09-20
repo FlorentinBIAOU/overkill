@@ -1,0 +1,94 @@
+---
+id: aggregate-a-column-of-data
+family: transform
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Faire la somme ou la moyenne d’une colonne"
+  en: "Sum or average a column of data"
+
+need:
+  fr: "Additionner, compter ou moyenner une colonne d’un fichier, sans qu’une ligne illisible fausse le total en silence."
+  en: "Add up, count or average a column of a file, without one unreadable row quietly skewing the total."
+
+scenario:
+  fr: "On voit joindre un fichier à un modèle généraliste et lui demander « quel est le total ». Un modèle ne compte pas, il complète : il rend un nombre qui a la forme d’un total. Or additionner est ce qu’un ordinateur a su faire avant tout le reste. Ce qui mérite vraiment de l’attention est ailleurs, et à deux endroits que cette fiche mesure : l’arithmétique à virgule flottante, qui ne rend pas la somme qu’imprime la facture, et les lignes qu’un fichier réel contient et qui ne sont pas des nombres."
+  en: "Attaching a file to a general-purpose model and asking “what is the total” is a common sight. A model does not count, it completes: it returns a number shaped like a total. But adding is what a computer could do before anything else. What genuinely deserves attention is elsewhere, in two places this entry measures: floating-point arithmetic, which does not return the sum the invoice prints, and the rows a real file holds that are not numbers."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Une addition d’entiers sur les chiffres écrits, et le compte de ce qui a été laissé"
+      en: "An integer addition over the digits written, and a count of what was left out"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : la colonne est lue dans votre processus et n’est transmise à personne"
+          - "Un fichier de chiffres d’affaires ou de salaires reste chez vous, ce qui est la seule chose que ce niveau demande"
+        en:
+          - "No specific scope added: the column is read inside your own process and is sent to nobody"
+          - "A file of turnover or of salaries stays with you, which is the only thing this level asks"
+    code:
+      python: snippets/aggregate-a-column-of-data/n0.py
+      javascript: snippets/aggregate-a-column-of-data/n0.js
+      verification: executed
+    breaking_point:
+      fr: "La moyenne porte sur les lignes lues, pas sur les lignes du fichier : dans le test, trois des sept lignes de la colonne ne sont pas des nombres, et la moyenne rendue est celle des quatre autres. Rien ne peut le deviner à votre place — une ligne vide est peut-être un zéro, peut-être une donnée manquante, et les deux ne donnent pas la même moyenne. Le témoin est dans le même test : chaque ligne écartée revient avec son numéro et sa raison, et le compte des lignes lues est rendu à côté de la moyenne ; une moyenne publiée sans ce compte est une moyenne dont on ne sait pas sur quoi elle porte."
+      en: "The mean covers the rows read, not the rows of the file: in the test, three of the column’s seven rows are not numbers, and the mean returned is that of the other four. Nothing can guess this for you — an empty row may be a zero, it may be a missing value, and the two do not give the same mean. The witness is in the same test: every skipped row comes back with its number and its reason, and the count of rows read is returned beside the mean; a mean published without that count is a mean nobody knows the base of."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où la colonne ne tient plus en mémoire, ce n’est pas un modèle qu’il faut, c’est la même addition faite par la base de données qui détient déjà les lignes."
+      en: "There is no level above this one. The day the column no longer fits in memory, a model is not what you need: it is the same addition, done by the database that already holds the rows."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre, et il n’y a rien à approcher : une somme a une valeur exacte, et un modèle qui l’estimerait à un pour cent près serait faux de la première ligne à la dernière. La seule décision de cette fiche — que faire d’une ligne qui n’est pas un nombre — n’est pas une décision statistique : elle appartient à la personne qui sait ce que ce fichier contient."
+      en: "There is nothing to learn, and nothing to approximate: a sum has an exact value, and a model estimating it to within one per cent would be wrong from the first row to the last. The one decision on this page — what to do with a row that is not a number — is not a statistical decision: it belongs to the person who knows what that file holds."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec le budget en plus. Charger un modèle résident pour additionner une colonne reviendrait à payer une machine pour refaire, moins bien, l’opération que le processeur exécute en une instruction."
+      en: "The same argument, with budget on top. Loading a resident model to add up a column would mean paying for a machine to redo, less well, the operation the processor performs in a single instruction."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "C’est le cas d’école de ce site. Un modèle généraliste rend un nombre qui ressemble à un total, sans l’avoir calculé, et la seule façon de vérifier sa réponse est de faire la somme — c’est-à-dire de faire ce qu’on voulait lui confier. S’y ajoute l’envoi du fichier lui-même, qui est souvent le fichier qu’on ne voulait pas envoyer."
+      en: "This is the textbook case for this site. A general-purpose model returns a number that looks like a total, without having computed it, and the only way to check its answer is to do the sum — that is, to do the very thing you wanted to hand over. Add to that sending the file itself, which is often the file you did not want to send."
+
+verdict_rationale:
+  fr: "N0, et la seule chose qui mérite d’être écrite est ce qu’on met autour de l’addition. Les chiffres sont lus comme ils sont écrits, alignés sur le plus grand nombre de décimales de la colonne, et additionnés comme des entiers : la somme est exacte sur dix mille lignes comme sur six. La comparaison est dans le test — sur six montants de facture ordinaires, l’addition en flottants rend 244.98000000000002 quand la facture imprime 244,98. Et la réponse classique à ce problème, la somme compensée de Kahan ou le `fsum` de Python, rend exactement la même valeur fausse : l’erreur n’est pas dans l’accumulation, elle est dans la représentation, puisque « 83.87 » n’est déjà pas 83,87 en binaire. Le reste est de la discipline de compte : toute ligne qui n’est pas un nombre revient avec son numéro et sa raison, une colonne sans aucun nombre ne rend pas zéro mais rien, et la moyenne — seul résultat qui puisse demander un arrondi — est rendue avec la règle d’arrondi annoncée, la somme exacte et le compte à côté d’elle."
+  en: "N0, and the only thing worth writing is what goes around the addition. The digits are read as written, lined up on the column’s largest number of decimals, and added as integers: the sum is exact over ten thousand rows as over six. The comparison is in the test — over six ordinary invoice amounts, adding in floats returns 244.98000000000002 where the invoice prints 244.98. And the classic answer to that problem, Kahan’s compensated sum or Python’s fsum, returns exactly the same wrong value: the error is not in the accumulation, it is in the representation, since “83.87” is already not 83.87 in binary. The rest is discipline about counting: every row that is not a number comes back with its number and its reason, a column with no number at all returns nothing rather than zero, and the mean — the only result that can need rounding — is returned with the rounding rule stated, the exact sum and the count beside it."
+
+further_reading:
+  - label: "Python — « Floating-Point Arithmetic: Issues and Limitations », la page qui explique pourquoi 0,1 n’est pas 0,1"
+    url: "https://docs.python.org/3/tutorial/floatingpoint.html"
+  - label: "Python — le module decimal, la réponse de la bibliothèque standard"
+    url: "https://docs.python.org/3/library/decimal.html"
+  - label: "TC39 — la proposition Decimal pour JavaScript, qui n’a pas encore de type décimal"
+    url: "https://github.com/tc39/proposal-decimal"
+  - label: "Extraire les montants d’un texte — la fiche qui lit « 1 250,00 » avant que celle-ci ne l’additionne"
+    url: "https://isitoverkill.dev/fr/fiches/extract-amounts-and-currencies-from-text"
+
+sources:
+  - label: "Python, module decimal (consulté) : « Decimal numbers can be represented exactly » — la bibliothèque standard décrit elle-même ce que le binaire ne fait pas"
+    url: "https://docs.python.org/3/library/decimal.html"
+  - label: "Python, math.fsum (consulté) : « Return an accurate floating-point sum of values » — la somme compensée corrige l’accumulation, et la mesure de cette fiche montre qu’elle ne corrige pas la représentation"
+    url: "https://docs.python.org/3/library/math.html#math.fsum"
+  - label: "TC39, proposition Decimal (consultée) : JavaScript n’a pas de type décimal, ce qui est la raison pour laquelle l’extrait additionne des `BigInt` plutôt que d’emprunter un type"
+    url: "https://github.com/tc39/proposal-decimal"
+  - label: "MDN, Number.MAX_SAFE_INTEGER (consulté) : au-delà de 2^53, un entier n’est plus représentable exactement en nombre JavaScript ordinaire, d’où les `BigInt`"
+    url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER"
+---
