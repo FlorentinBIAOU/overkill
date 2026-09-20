@@ -27,3 +27,11 @@ n0: |
   d'appels à partir duquel la facture atteint le coût unique de ce que l'appel
   remplacerait. C'est ce nombre-là, et non le prix par million, qui dit si
   l'appel vaut la peine.
+
+  L'arrondi n'a lieu qu'une fois, à la fin. Le coût d'un appel est un petit
+  nombre — quelques dix-millièmes — et l'arrondir avant de le multiplier par le
+  nombre d'appels multiplie l'arrondi avec lui : à deux décimales, cent mille
+  appels qui coûtent 36 revenaient à 0,00. Le calcul est mené à une échelle
+  plus fine que celle demandée, le total y est calculé, et seul ce qui est
+  affiché est arrondi. C'est la discipline de la fiche voisine sur la somme
+  d'une colonne, appliquée à la fiche qui la cite.

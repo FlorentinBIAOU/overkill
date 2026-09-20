@@ -34,12 +34,24 @@ export const PER = 1_000_000;
 // How many decimals the amounts come back with, unless the prices carry more.
 export const DECIMALS = 6;
 
+// Decimals the arithmetic keeps beyond the ones asked for. Nine is far more
+// than any price and any token count needs — the exact value of a call at a
+// price per million has at most six decimals more than the price — so the
+// amounts below are exact, and rounding happens once, on the way out.
+export const WORKING_DECIMALS = 9;
+
 /**
  * The tokens a job will use and what it will cost, in your own unit.
  *
  * `tokensIn` and `tokensOut` are either a whole number of tokens — counted
  * with your provider's tokeniser — or a pair `{characters,
  * characters_per_token}`, which is an estimate and is reported as one.
+ *
+ * `reason` says why something is missing: the whole report, when an argument
+ * is unusable; or `break_even_items` alone, when the call costs nothing at
+ * these prices and no number of calls reaches the alternative's cost. With no
+ * alternative declared, `break_even_items` is null and `reason` stays null:
+ * there was no question to answer.
  */
 export function estimateCost(items, tokensIn, tokensOut, priceIn, priceOut, options = {}) {
   const { per = PER, fixedAlternative = null, decimals = DECIMALS } = options;
@@ -70,31 +82,54 @@ export function estimateCost(items, tokensIn, tokensOut, priceIn, priceOut, opti
   }
 
   const scale = Math.max(decimals, prices.in[1], prices.out[1]);
+  const work = scale + WORKING_DECIMALS;
+  // Everything is computed at `work` decimals, including the total, and only
+  // the two rendered amounts are brought back to `scale`.
   const perItem = ['in', 'out']
-    .reduce((sum, name) => sum + amountOf(counts[name], prices[name], per, scale), 0n);
+    .reduce((sum, name) => sum + amountOf(counts[name], prices[name], per, work), 0n);
   const total = perItem * BigInt(items);
 
   let breakEven = null;
+  let reason = null;
   if (fixedAlternative !== null && fixedAlternative !== undefined) {
     const fixed = parseNumber(fixedAlternative);
     if (fixed === null) {
       return report(null, null, null, "the alternative's cost must be written in digits");
     }
     if (perItem > 0n) {
-      const fixedScaled = fixed[0] * 10n ** BigInt(scale - fixed[1]);
-      // The first call whose bill reaches the alternative's cost.
+      const fixedScaled = fixed[0] * 10n ** BigInt(work - fixed[1]);
+      // A ceiling: the first call whose bill reaches the fixed cost.
       breakEven = Number((fixedScaled + perItem - 1n) / perItem);
+    } else {
+      reason = 'the call costs nothing at these prices: '
+        + "no number of calls reaches the alternative's cost";
     }
   }
 
+  // A count declared at zero does not weigh in the verdict: an estimate of
+  // nothing beside a count of nothing is not a mixed report.
+  const weighing = new Set(['in', 'out']
+    .filter((name) => counts[name] > 0)
+    .map((name) => sources[name === 'in' ? 0 : 1]));
   const tokens = {
     in: counts.in,
     out: counts.out,
     total: counts.in + counts.out,
-    source: sources[0] === sources[1] ? sources[0] : 'mixed',
+    source: weighing.size === 1 ? [...weighing][0] : (weighing.size > 1 ? 'mixed' : 'counted'),
   };
-  const cost = { per_item: asText(perItem, scale), total: asText(total, scale), decimals: scale };
-  return report(tokens, cost, breakEven, null);
+  const cost = {
+    per_item: asText(roundDown(perItem, work - scale), scale),
+    total: asText(roundDown(total, work - scale), scale),
+    decimals: scale,
+  };
+  return report(tokens, cost, breakEven, reason);
+}
+
+/** A scaled integer brought down by `places` decimals, half away from zero. */
+function roundDown(digits, places) {
+  if (places <= 0) return digits;
+  const unit = 10n ** BigInt(places);
+  return (2n * digits + unit) / (2n * unit);
 }
 
 /** A counted number of tokens, or an estimate from a number of characters. */
@@ -114,6 +149,7 @@ function tokensOf(value) {
   return [null, null];
 }
 
+/** What these tokens cost at this price, as an integer of `scale` decimals. */
 function amountOf(tokens, price, per, scale) {
   const [digits, places] = price;
   const numerator = BigInt(tokens) * digits * 10n ** BigInt(scale - places);

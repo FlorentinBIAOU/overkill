@@ -28,7 +28,15 @@ TOUS = [[ITEMS, PAGE_COMPTEE, 300, PRIX_ENTREE, PRIX_SORTIE, {}],
         [1000, 500, 500, "1", "1", {"per": 1000}],
         [1, 1, 1, "1", "1", {"per": 0}],
         [3, 1_000_000, 0, "2.50", "0", {"fixedAlternative": "7.5"}],
-        [1, {"characters": 0, "characters_per_token": "4"}, 0, "1", "1", {"fixedAlternative": "0"}]]
+        [1, {"characters": 0, "characters_per_token": "4"}, 0, "1", "1", {"fixedAlternative": "0"}],
+        # La campagne de cent mille appels, aux trois précisions : c'est elle
+        # qui revenait à 0,00 quand l'arrondi précédait la multiplication.
+        [100_000, 1200, 300, "0.15", "0.60", {"decimals": 6}],
+        [100_000, 1200, 300, "0.15", "0.60", {"decimals": 4}],
+        [100_000, 1200, 300, "0.15", "0.60", {"decimals": 2}],
+        [1, 1200, 300, "0.15", "0.60", {"decimals": 2, "fixedAlternative": "40"}],
+        # Une sortie déclarée à zéro, à côté d'une entrée estimée.
+        [1, {"characters": 4800, "characters_per_token": "4"}, 0, "0.15", "0.60", {}]]
 
 
 # ---------------------------------------------------------------------------
@@ -101,16 +109,73 @@ def test_le_calcul_est_exact_et_ne_passe_par_aucun_flottant():
     assert isinstance(rapport["cost"]["total"], str)
 
 
-def test_le_seuil_de_bascule_est_le_premier_appel_qui_depasse():
+def test_le_seuil_de_bascule_est_le_premier_appel_dont_la_facture_atteint_le_cout_fixe():
+    """
+    Commentaire : « A ceiling: the first call whose bill reaches the fixed
+    cost. » Ce n'est pas le premier qui le dépasse : au troisième appel à 2,50,
+    la facture vaut exactement 7,50.
+    """
     rapport = estimate_cost(1, 1_000_000, 0, "2.50", "0", fixed_alternative="7.5")
-    # 2,50 par appel : le troisième atteint 7,50.
     assert rapport["break_even_items"] == 3
     assert estimate_cost(1, 1_000_000, 0, "2.50", "0",
                          fixed_alternative="7.51")["break_even_items"] == 4
+    # Le cas du commentaire de l'avis : cent d'un côté, dix par appel.
+    assert estimate_cost(1, 10, 0, "1", "0", per=1,
+                         fixed_alternative="100")["break_even_items"] == 10
 
 
-def test_un_appel_gratuit_na_pas_de_seuil_de_bascule():
-    assert estimate_cost(1, 0, 0, "0", "0", fixed_alternative="800")["break_even_items"] is None
+def test_un_appel_gratuit_na_pas_de_seuil_de_bascule_et_le_rapport_le_dit():
+    """
+    Docstring : « `reason` says why something is missing […] or
+    `break_even_items` alone, when the call costs nothing at these prices. »
+    """
+    gratuit = estimate_cost(1, 0, 0, "0", "0", fixed_alternative="800")
+    assert gratuit["break_even_items"] is None
+    assert gratuit["reason"] == ("the call costs nothing at these prices: "
+                                 "no number of calls reaches the alternative's cost")
+    # Sans alternative déclarée, il n'y avait pas de question : pas de raison.
+    sans = estimate_cost(1, 0, 0, "0", "0")
+    assert (sans["break_even_items"], sans["reason"]) == (None, None)
+
+
+def test_point_de_rupture_larrondi_ne_precede_jamais_la_multiplication():
+    """
+    Docstring : « Rounding happens once, at the end […] at two decimals, a
+    hundred thousand calls that cost 36 came back as 0,00. »
+
+    Cent mille appels de 1 200 jetons en entrée et 300 en sortie, aux prix 0,15
+    et 0,60 par million : le total exact est 36. Les trois précisions le
+    rendent, chacune dans la sienne.
+    """
+    for decimales, par_appel, total in [(6, "0.000360", "36.000000"),
+                                        (4, "0.0004", "36.0000"),
+                                        (2, "0.00", "36.00")]:
+        cout = estimate_cost(100_000, 1200, 300, "0.15", "0.60",
+                             decimals=decimales)["cost"]
+        assert (cout["per_item"], cout["total"]) == (par_appel, total), decimales
+    # Et le seuil de bascule ne disparaît plus avec l'arrondi : à deux
+    # décimales, il vaut toujours ce qu'il vaut.
+    rapport = estimate_cost(1, 1200, 300, "0.15", "0.60", decimals=2,
+                            fixed_alternative="40")
+    assert rapport["break_even_items"] == 111_112
+    assert rapport["reason"] is None
+
+
+def test_une_sortie_declaree_a_zero_ne_pese_pas_dans_le_verdict_de_source():
+    """
+    Commentaire : « A count declared at zero does not weigh in the verdict: an
+    estimate of nothing beside a count of nothing is not a mixed report. »
+    """
+    estime = estimate_cost(1, {"characters": 4800, "characters_per_token": "4"}, 0,
+                           "0.15", "0.60")
+    assert estime["tokens"]["source"] == "estimated"
+    assert estime["tokens"]["out"] == 0
+    # Témoin : dès que la sortie compte pour quelque chose, le rapport est mixte.
+    mixte = estimate_cost(1, {"characters": 4800, "characters_per_token": "4"}, 300,
+                          "0.15", "0.60")
+    assert mixte["tokens"]["source"] == "mixed"
+    # Et deux comptes à zéro, quels qu'ils soient, ne sont pas mixtes.
+    assert estimate_cost(1, 0, 0, "1", "1")["tokens"]["source"] == "counted"
 
 
 def test_une_fraction_de_jeton_est_facturee_comme_un_jeton():
@@ -132,12 +197,21 @@ def test_les_decimales_suivent_les_prix_donnes():
 
 
 def test_chaque_entree_impossible_est_nommee():
-    assert estimate_cost(-1, 1, 1, "1", "1")["reason"].startswith("items must be")
-    assert estimate_cost(1, 1, 1, "abc", "1")["reason"].startswith("the in price")
-    assert estimate_cost(1, "x", 1, "1", "1")["reason"].startswith("the in tokens")
-    assert estimate_cost(1, 1, 1, "1", "1", per=0)["reason"].startswith("the price unit")
-    assert estimate_cost(1, 1, 1, "1", "1",
-                         fixed_alternative="beaucoup")["reason"].startswith("the alternative")
+    """R14 : cinq situations que le code distingue, cinq raisons, citées ici."""
+    assert estimate_cost(-1, 1, 1, "1", "1")["reason"] == (
+        "items must be a whole number, zero or more")
+    assert estimate_cost(1, 1, 1, "abc", "1")["reason"] == (
+        "the in price must be written in digits")
+    assert estimate_cost(1, 1, 1, "1", "abc")["reason"] == (
+        "the out price must be written in digits")
+    assert estimate_cost(1, "x", 1, "1", "1")["reason"] == (
+        "the in tokens are neither a count nor an estimate")
+    assert estimate_cost(1, 1, "x", "1", "1")["reason"] == (
+        "the out tokens are neither a count nor an estimate")
+    assert estimate_cost(1, 1, 1, "1", "1", per=0)["reason"] == (
+        "the price unit must be a whole number of tokens")
+    assert estimate_cost(1, 1, 1, "1", "1", fixed_alternative="beaucoup")["reason"] == (
+        "the alternative's cost must be written in digits")
 
 
 def test_aucune_entree_ne_leve():

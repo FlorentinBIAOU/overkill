@@ -21,6 +21,14 @@ And it answers the question that decides: `break_even_items` is the number of
 calls at which the bill reaches the one-off cost of the thing the call would
 replace. That number, not the price per million, is what says whether the call
 is worth making.
+
+Rounding happens once, at the end. The cost of one call is a small number — a
+few ten-thousandths — and rounding it before multiplying by the number of calls
+multiplies the rounding with it: at two decimals, a hundred thousand calls that
+cost 36 came back as 0,00. The arithmetic is carried at a finer scale than the
+one asked for, the total is computed there, and only what is rendered is
+rounded. It is the discipline of the neighbouring entry on summing a column,
+applied to the entry that cites it.
 """
 
 from __future__ import annotations
@@ -38,6 +46,12 @@ PER = 1_000_000
 # How many decimals the amounts come back with, unless the prices carry more.
 DECIMALS = 6
 
+# Decimals the arithmetic keeps beyond the ones asked for. Nine is far more
+# than any price and any token count needs — the exact value of a call at a
+# price per million has at most six decimals more than the price — so the
+# amounts below are exact, and rounding happens once, on the way out.
+WORKING_DECIMALS = 9
+
 
 def estimate_cost(items, tokens_in, tokens_out, price_in, price_out, *,
                   per: int = PER, fixed_alternative=None, decimals: int = DECIMALS) -> dict:
@@ -47,6 +61,12 @@ def estimate_cost(items, tokens_in, tokens_out, price_in, price_out, *,
     `tokens_in` and `tokens_out` are either a whole number of tokens — counted
     with your provider's tokeniser — or a pair `{"characters": n,
     "characters_per_token": "4"}`, which is an estimate and is reported as one.
+
+    `reason` says why something is missing: the whole report, when an argument
+    is unusable; or `break_even_items` alone, when the call costs nothing at
+    these prices and no number of calls reaches the alternative's cost. With no
+    alternative declared, `break_even_items` is None and `reason` stays None:
+    there was no question to answer.
     """
     if not isinstance(items, int) or isinstance(items, bool) or items < 0:
         return _report(None, None, None, "items must be a whole number, zero or more")
@@ -67,24 +87,44 @@ def estimate_cost(items, tokens_in, tokens_out, price_in, price_out, *,
         counts[name], _ = count, sources.append(source)
 
     scale = max(decimals, prices["in"][1], prices["out"][1])
-    per_item = sum(_amount(counts[name], prices[name], per, scale) for name in ("in", "out"))
+    work = scale + WORKING_DECIMALS
+    # Everything is computed at `work` decimals, including the total, and only
+    # the two rendered amounts are brought back to `scale`.
+    per_item = sum(_amount(counts[name], prices[name], per, work) for name in ("in", "out"))
     total = per_item * items
 
-    break_even = None
+    break_even, reason = None, None
     if fixed_alternative is not None:
         fixed = _parse(fixed_alternative)
         if fixed is None:
             return _report(None, None, None, "the alternative's cost must be written in digits")
         if per_item > 0:
-            fixed_scaled = fixed[0] * 10 ** (scale - fixed[1])
-            break_even = -(-fixed_scaled // per_item)  # the first call that costs more
+            fixed_scaled = fixed[0] * 10 ** (work - fixed[1])
+            # A ceiling: the first call whose bill reaches the fixed cost.
+            break_even = -(-fixed_scaled // per_item)
+        else:
+            reason = ("the call costs nothing at these prices: "
+                      "no number of calls reaches the alternative's cost")
 
+    # A count declared at zero does not weigh in the verdict: an estimate of
+    # nothing beside a count of nothing is not a mixed report.
+    weighing = {source for name, source in zip(("in", "out"), sources) if counts[name] > 0}
     tokens = {"in": counts["in"], "out": counts["out"],
               "total": counts["in"] + counts["out"],
-              "source": sources[0] if sources[0] == sources[1] else "mixed"}
-    cost = {"per_item": _text(per_item, scale), "total": _text(total, scale),
+              "source": weighing.pop() if len(weighing) == 1 else
+                        ("mixed" if weighing else "counted")}
+    cost = {"per_item": _text(_round(per_item, work - scale), scale),
+            "total": _text(_round(total, work - scale), scale),
             "decimals": scale}
-    return _report(tokens, cost, break_even, None)
+    return _report(tokens, cost, break_even, reason)
+
+
+def _round(digits: int, places: int) -> int:
+    """A scaled integer brought down by `places` decimals, half away from zero."""
+    if places <= 0:
+        return digits
+    unit = 10 ** places
+    return (2 * digits + unit) // (2 * unit)
 
 
 def _tokens(value):
@@ -102,6 +142,7 @@ def _tokens(value):
 
 
 def _amount(tokens: int, price, per: int, scale: int) -> int:
+    """What these tokens cost at this price, as an integer of `scale` decimals."""
     digits, places = price
     numerator = tokens * digits * 10 ** (scale - places)
     return (2 * numerator + per) // (2 * per)  # rounded away from zero on a half

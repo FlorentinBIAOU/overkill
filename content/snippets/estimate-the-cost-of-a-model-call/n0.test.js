@@ -66,15 +66,55 @@ test("le calcul est exact et ne passe par aucun flottant", () => {
   assert.equal(typeof rapport.cost.total, 'string');
 });
 
-test("le seuil de bascule est le premier appel qui dépasse", () => {
+test("le seuil de bascule est le premier appel dont la facture atteint le coût fixe", () => {
+  // Commentaire : « A ceiling: the first call whose bill reaches the fixed
+  // cost. » Ce n'est pas le premier qui le dépasse : au troisième appel à
+  // 2,50, la facture vaut exactement 7,50.
   assert.equal(estimateCost(1, 1_000_000, 0, '2.50', '0',
     { fixedAlternative: '7.5' }).break_even_items, 3);
   assert.equal(estimateCost(1, 1_000_000, 0, '2.50', '0',
     { fixedAlternative: '7.51' }).break_even_items, 4);
+  assert.equal(estimateCost(1, 10, 0, '1', '0',
+    { per: 1, fixedAlternative: '100' }).break_even_items, 10);
 });
 
-test("un appel gratuit n'a pas de seuil de bascule", () => {
-  assert.equal(estimateCost(1, 0, 0, '0', '0', { fixedAlternative: '800' }).break_even_items, null);
+test("point de rupture : l'arrondi ne précède jamais la multiplication", () => {
+  // Docstring : « Rounding happens once, at the end […] at two decimals, a
+  // hundred thousand calls that cost 36 came back as 0,00. »
+  for (const [decimales, parAppel, total] of [[6, '0.000360', '36.000000'],
+    [4, '0.0004', '36.0000'], [2, '0.00', '36.00']]) {
+    const cout = estimateCost(100_000, 1200, 300, '0.15', '0.60', { decimals: decimales }).cost;
+    assert.deepEqual([cout.per_item, cout.total], [parAppel, total], String(decimales));
+  }
+  const rapport = estimateCost(1, 1200, 300, '0.15', '0.60',
+    { decimals: 2, fixedAlternative: '40' });
+  assert.equal(rapport.break_even_items, 111_112);
+  assert.equal(rapport.reason, null);
+});
+
+test('une sortie déclarée à zéro ne pèse pas dans le verdict de source', () => {
+  // Commentaire : « A count declared at zero does not weigh in the verdict: an
+  // estimate of nothing beside a count of nothing is not a mixed report. »
+  const estime = estimateCost(1, { characters: 4800, characters_per_token: '4' }, 0,
+    '0.15', '0.60');
+  assert.equal(estime.tokens.source, 'estimated');
+  assert.equal(estime.tokens.out, 0);
+  const mixte = estimateCost(1, { characters: 4800, characters_per_token: '4' }, 300,
+    '0.15', '0.60');
+  assert.equal(mixte.tokens.source, 'mixed');
+  assert.equal(estimateCost(1, 0, 0, '1', '1').tokens.source, 'counted');
+});
+
+test("un appel gratuit n'a pas de seuil de bascule, et le rapport le dit", () => {
+  // Docstring : « `reason` says why something is missing […] or
+  // `break_even_items` alone, when the call costs nothing at these prices. »
+  const gratuit = estimateCost(1, 0, 0, '0', '0', { fixedAlternative: '800' });
+  assert.equal(gratuit.break_even_items, null);
+  assert.equal(gratuit.reason, 'the call costs nothing at these prices: '
+    + "no number of calls reaches the alternative's cost");
+  // Sans alternative déclarée, il n'y avait pas de question : pas de raison.
+  const sans = estimateCost(1, 0, 0, '0', '0');
+  assert.deepEqual([sans.break_even_items, sans.reason], [null, null]);
 });
 
 test("une fraction de jeton est facturée comme un jeton", () => {
@@ -93,12 +133,21 @@ test('les décimales suivent les prix donnés', () => {
 });
 
 test('chaque entrée impossible est nommée', () => {
-  assert.ok(estimateCost(-1, 1, 1, '1', '1').reason.startsWith('items must be'));
-  assert.ok(estimateCost(1, 1, 1, 'abc', '1').reason.startsWith('the in price'));
-  assert.ok(estimateCost(1, 'x', 1, '1', '1').reason.startsWith('the in tokens'));
-  assert.ok(estimateCost(1, 1, 1, '1', '1', { per: 0 }).reason.startsWith('the price unit'));
-  assert.ok(estimateCost(1, 1, 1, '1', '1', { fixedAlternative: 'beaucoup' }).reason
-    .startsWith('the alternative'));
+  // R14 : cinq situations que le code distingue, cinq raisons, citées ici.
+  assert.equal(estimateCost(-1, 1, 1, '1', '1').reason,
+    'items must be a whole number, zero or more');
+  assert.equal(estimateCost(1, 1, 1, 'abc', '1').reason,
+    'the in price must be written in digits');
+  assert.equal(estimateCost(1, 1, 1, '1', 'abc').reason,
+    'the out price must be written in digits');
+  assert.equal(estimateCost(1, 'x', 1, '1', '1').reason,
+    'the in tokens are neither a count nor an estimate');
+  assert.equal(estimateCost(1, 1, 'x', '1', '1').reason,
+    'the out tokens are neither a count nor an estimate');
+  assert.equal(estimateCost(1, 1, 1, '1', '1', { per: 0 }).reason,
+    'the price unit must be a whole number of tokens');
+  assert.equal(estimateCost(1, 1, 1, '1', '1', { fixedAlternative: 'beaucoup' }).reason,
+    "the alternative's cost must be written in digits");
 });
 
 test('aucune entrée ne lève', () => {
