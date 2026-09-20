@@ -63,11 +63,26 @@ export function extractKeyTermsInCorpus(documents, stopWords, { top = 8 } = {}) 
       text: term.text,
       key: term.key,
       count: term.count,
+      first: term.first,
       score: rounded(term.count * mean(term.key, idf)),
     }));
+    // Equal scores are the ordinary case, not the exception: on a short
+    // document every phrase appears once and in no other document, so every
+    // one of them scores log(N). What breaks the tie has to mean something —
+    // the longer phrase first, because it says more, then the one that appears
+    // earliest, because a document states its subject early. The key comes
+    // last, and only so that two languages answer in the same order.
+    const mots = (term) => term.key.split(' ').length;
     terms.sort((a, b) => b.score - a.score || b.count - a.count
+      || mots(b) - mots(a) || a.first - b.first
       || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
-    return { index, terms: terms.slice(0, top) };
+    const kept = terms.slice(0, top);
+    // How many terms outside the cut share the score of the last one kept: a
+    // caller that reads « the top five » of twelve equals should know.
+    const tiedAtCut = kept.length > 0 && terms.length > kept.length
+      ? terms.slice(kept.length).filter((term) => term.score === kept.at(-1).score).length
+      : 0;
+    return { index, terms: kept, tied_at_cut: tiedAtCut };
   });
   return { documents: ranked, reason: null };
 }

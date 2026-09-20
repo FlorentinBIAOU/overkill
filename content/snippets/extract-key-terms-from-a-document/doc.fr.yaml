@@ -46,6 +46,23 @@ n1: |
   nombre de fois où le document la dit. Un mot présent dans tous les documents
   vaut alors exactement zéro, et c'est tout l'objet.
 
+  Les égalités sont le cas ordinaire, pas l'exception. Sur un document court,
+  chaque expression apparaît une fois et dans aucun autre document : elles
+  valent toutes log(N), et sur un compte rendu de conseil municipal, neuf
+  termes partagent le même score. Ce qui les départage doit donc vouloir dire
+  quelque chose — l'expression la plus longue d'abord, parce qu'elle en dit
+  plus, puis celle qui apparaît le plus tôt, parce qu'un document annonce son
+  sujet tôt. La chaîne ne vient qu'en dernier, et seulement pour que les deux
+  langages répondent dans le même ordre : classer par l'alphabet mettait le
+  sujet du document là où tombe son initiale. Et `tied_at_cut` dit combien de
+  termes restés dehors partagent le score du dernier retenu, pour qu'un
+  appelant qui lit « les cinq meilleurs » de douze équivalents le sache.
+
+  Deux documents ne sont pas une collection : avec deux, log(2/1) vaut 0,69 et
+  log(2/2) vaut zéro, si bien que le classement est binaire — présent chez
+  l'autre, ou non. Le plancher est à deux parce qu'en dessous il n'y a rien à
+  comparer, pas parce que deux suffisent.
+
   Une différence assumée avec la formule habituelle : `scikit-learn` lisse, et
   plancher ce logarithme à un fait qu'un terme présent partout pèse encore
   quelque chose. C'est juste quand les poids alimentent une similarité — la

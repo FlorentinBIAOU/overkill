@@ -115,12 +115,15 @@ def test_le_classement_ne_depend_pas_de_lordre_des_egalites():
     assert premier == inverse == ["alpha bravo", "charlie foxtrot", "delta echo"]
 
 
-def test_aucune_entree_ne_leve():
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """R14 : la raison dit ce que le code a constaté — le type reçu."""
+    assert extract_key_terms(None, VIDES_FR)["reason"] == "expected text, not NoneType"
+    assert extract_key_terms(b"octets", VIDES_FR)["reason"] == "expected text, not bytes"
     for entree in [None, 42, [], {}, b"octets", ""]:
         rapport = extract_key_terms(entree, VIDES_FR)
         assert rapport["terms"] == []
         if not isinstance(entree, str):
-            assert rapport["reason"].startswith("expected text")
+            assert rapport["reason"].startswith("expected text, not ")
 
 
 # ---------------------------------------------------------------------------

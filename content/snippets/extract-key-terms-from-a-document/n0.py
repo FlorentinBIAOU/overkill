@@ -67,7 +67,13 @@ def extract_key_terms(text, stop_words, *, top: int = 8) -> dict:
     seen = {}
     for words in candidates:
         key = " ".join(_fold(word) for word in words)
+        # `first` is the rank of the phrase's first appearance in the document.
+        # It is what rung N1 uses to break a tie by something that means
+        # something: on a short document every phrase scores the same, and
+        # ordering equals by their spelling puts the subject wherever its
+        # initial falls in the alphabet.
         entry = seen.setdefault(key, {"text": " ".join(words), "key": key, "count": 0,
+                                      "first": len(seen),
                                       "score": sum(degree[_fold(w)] / frequency[_fold(w)]
                                                    for w in words)})
         entry["count"] += 1

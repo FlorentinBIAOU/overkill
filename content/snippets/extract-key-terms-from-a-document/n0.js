@@ -70,7 +70,14 @@ export function extractKeyTerms(text, stopWords, { top = 8 } = {}) {
     const key = words.map(fold).join(' ');
     if (!seen.has(key)) {
       const score = words.reduce((sum, w) => sum + degree.get(fold(w)) / frequency.get(fold(w)), 0);
-      seen.set(key, { text: words.join(' '), key, count: 0, score });
+      // `first` is the rank of the phrase's first appearance in the document.
+      // It is what rung N1 uses to break a tie by something that means
+      // something: on a short document every phrase scores the same, and
+      // ordering equals by their spelling puts the subject wherever its
+      // initial falls in the alphabet.
+      seen.set(key, {
+        text: words.join(' '), key, count: 0, first: seen.size, score,
+      });
     }
     seen.get(key).count += 1;
   }

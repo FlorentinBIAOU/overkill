@@ -22,6 +22,24 @@ const CORPUS = [
   cgv('des casques audio', 'Le casque audio est garanti deux ans.'),
 ];
 
+// Un second corpus, hors du jeu de contrats de cette fiche : quatre comptes
+// rendus de conseil municipal, courts, où les égalités de score dominent.
+// C'est R4 et T4 — confronter le verdict à des données qu'il n'a pas choisies.
+const CONSEIL = [
+  'Le conseil municipal a approuvé le budget de la nouvelle médiathèque, rue des'
+  + ' Frères-Lumière. Les travaux commenceront au printemps. Le maire a rappelé que la'
+  + ' salle de lecture accueillera les scolaires.',
+  "Le conseil municipal a voté la création d'une piste cyclable le long du canal. La"
+  + ' piste cyclable reliera la gare au parc des sports, et sa mise en service est'
+  + ' prévue pour septembre.',
+  "Le conseil municipal a décidé d'étendre le stationnement payant au centre-ville. Le"
+  + " stationnement payant s'appliquera du lundi au samedi, et les riverains garderont"
+  + ' leur abonnement annuel.',
+  "Le conseil municipal a validé la rénovation de l'école élémentaire Jean-Moulin."
+  + " L'école accueillera deux classes de plus à la rentrée, et la cantine de l'école"
+  + ' sera agrandie.',
+];
+
 const textes = (rapport, index = 0) => rapport.documents[index].terms.map((t) => t.text);
 
 // ---------------------------------------------------------------------------
@@ -58,7 +76,71 @@ test('verdict : le corpus fait remonter ce qui distingue le document', () => {
 test('verdict : chaque document de la collection a son propre sujet', () => {
   const rapport = extractKeyTermsInCorpus(CORPUS, VIDES_FR);
   const premiers = [0, 1, 2, 3].map((index) => textes(rapport, index)[0].toLowerCase());
-  assert.deepEqual(premiers, ['café', 'batterie', 'cartouche laser', 'casque audio']);
+  assert.deepEqual(premiers, ['moulins', 'vélos électriques', 'imprimantes laser',
+    'casques audio']);
+  // Les trois premiers de chaque document sont à égalité de score : c'est la
+  // règle de départage qui les ordonne, et le rapport dit combien d'autres
+  // partagent le score du dernier retenu.
+  assert.deepEqual([0, 1, 2, 3].map((i) => textes(rapport, i).slice(0, 3)), [
+    ['moulins', 'café', 'moulin'],
+    ['vélos électriques', 'batterie', 'vélo'],
+    ['imprimantes laser', 'cartouche laser', 'garantie six mois'],
+    ['casques audio', 'casque audio', 'garanti deux ans'],
+  ]);
+  assert.deepEqual(rapport.documents.map((d) => d.tied_at_cut), [10, 10, 9, 9]);
+});
+
+test("verdict : un second corpus de documents courts, où les égalités dominent", () => {
+  // R4 et T4 : le verdict confronté à des données qu'il n'a pas choisies.
+  // Ce que N1 gagne : « conseil municipal » ouvre les quatre comptes rendus,
+  // donc il n'est le sujet d'aucun. N0 le garde dans les trois premiers termes
+  // des quatre documents ; N1 le fait disparaître partout.
+  const vides = [...VIDES_FR, 'sera', 'seront', 'été', 'étaient', 'était'];
+  const parN1 = extractKeyTermsInCorpus(CONSEIL, vides, { top: 3 });
+  const premiers = parN1.documents.map((d) => d.terms.map((t) => t.text));
+  assert.deepEqual(premiers, [
+    ['nouvelle médiathèque', 'travaux commenceront', 'approuvé'],
+    ['piste cyclable reliera', 'piste cyclable', 'voté'],
+    ['stationnement payant', 'riverains garderont', 'abonnement annuel'],
+    ['école élémentaire Jean-Moulin', 'validé', 'rénovation'],
+  ]);
+  const parN0 = CONSEIL.map((texte) => extractKeyTerms(texte, vides, { top: 3 })
+    .terms.map((t) => t.text));
+  assert.ok(parN0.every((termes) => termes.includes('conseil municipal')));
+  assert.ok(!premiers.some((termes) => termes.includes('conseil municipal')));
+
+  // Et ce que N1 ne gagne pas, dit ici plutôt que tu : sur ces documents
+  // courts, un terme présent une fois dans son document et nulle part ailleurs
+  // vaut log(4), comme tous ses voisins.
+  const logQuatre = Math.floor(Math.log(4) * 10000 + 0.5) / 10000;
+  assert.deepEqual(parN1.documents[0].terms.map((t) => t.score),
+    [logQuatre, logQuatre, logQuatre]);
+  assert.equal(parN1.documents[0].tied_at_cut, 8);
+});
+
+test("une égalité se départage par le sens, pas par l'alphabet", () => {
+  // Commentaire : « What breaks the tie has to mean something — the longer
+  // phrase first […] then the one that appears earliest. »
+  const vides = [...VIDES_FR, 'sera', 'seront', 'été', 'étaient', 'était'];
+  const termes = extractKeyTermsInCorpus(CONSEIL, vides, { top: 12 }).documents[0].terms;
+  const logQuatre = Math.floor(Math.log(4) * 10000 + 0.5) / 10000;
+  const aEgalite = termes.filter((t) => t.score === logQuatre);
+  assert.ok(aEgalite.length >= 9);
+  assert.equal(aEgalite[0].text, 'nouvelle médiathèque');
+  assert.equal(aEgalite[0].key.split(' ').length, 2);
+  const unMot = aEgalite.filter((t) => t.key.split(' ').length === 1);
+  assert.deepEqual(unMot.map((t) => t.first), [...unMot.map((t) => t.first)].sort((a, b) => a - b));
+  const ordre = aEgalite.map((t) => t.text);
+  assert.ok(ordre.indexOf('nouvelle médiathèque') < ordre.indexOf('approuvé'));
+});
+
+test('le rapport dit combien de termes sont à égalité avec le dernier retenu', () => {
+  // Commentaire : « How many terms outside the cut share the score of the last
+  // one kept: a caller that reads « the top five » of twelve equals should
+  // know. »
+  const vides = [...VIDES_FR, 'sera', 'seront', 'été', 'étaient', 'était'];
+  assert.equal(extractKeyTermsInCorpus(CONSEIL, vides, { top: 3 }).documents[0].tied_at_cut, 8);
+  assert.equal(extractKeyTermsInCorpus(CONSEIL, vides, { top: 100 }).documents[0].tied_at_cut, 0);
 });
 
 // ---------------------------------------------------------------------------
@@ -97,11 +179,14 @@ test("le classement ne dépend pas de l'ordre des égalités", () => {
     ['bravo', 'charlie', 'alpha']);
 });
 
-test('aucune entrée ne lève', () => {
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(extractKeyTermsInCorpus(null, VIDES_FR).reason, 'expected a list, not object');
+  assert.equal(extractKeyTermsInCorpus('texte', VIDES_FR).reason, 'expected a list, not string');
   for (const entree of [null, undefined, 42, 'texte', {}]) {
     const rapport = extractKeyTermsInCorpus(entree, VIDES_FR);
     assert.deepEqual(rapport.documents, []);
-    assert.ok(rapport.reason.startsWith('expected a list'));
+    assert.ok(rapport.reason.startsWith('expected a list, not '));
   }
 });
 
@@ -140,7 +225,8 @@ test('production : valeurs aux limites', () => {
 test("production : un document illisible n'empêche pas de lire les autres", () => {
   const rapport = extractKeyTermsInCorpus([CORPUS[0], null, CORPUS[1]], VIDES_FR);
   assert.deepEqual(rapport.documents[1].terms, []);
-  assert.equal(textes(rapport, 0)[0].toLowerCase(), 'café');
+  assert.deepEqual(textes(rapport, 0).slice(0, 3), ['moulins', 'café', 'moulin']);
+  assert.deepEqual(textes(rapport, 2).slice(0, 3), ['vélos électriques', 'batterie', 'vélo']);
 });
 
 test('production : la lecture tient la classe de latence annoncée', () => {

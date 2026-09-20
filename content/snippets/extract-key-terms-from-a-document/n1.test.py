@@ -32,6 +32,25 @@ CORPUS = [
 ]
 
 
+# Un second corpus, hors du jeu de contrats de cette fiche : quatre comptes
+# rendus de conseil municipal, courts, où les égalités de score dominent.
+# C'est R4 et T4 — confronter le verdict à des données qu'il n'a pas choisies.
+CONSEIL = [
+    "Le conseil municipal a approuvé le budget de la nouvelle médiathèque, rue des"
+    " Frères-Lumière. Les travaux commenceront au printemps. Le maire a rappelé que la"
+    " salle de lecture accueillera les scolaires.",
+    "Le conseil municipal a voté la création d'une piste cyclable le long du canal. La"
+    " piste cyclable reliera la gare au parc des sports, et sa mise en service est"
+    " prévue pour septembre.",
+    "Le conseil municipal a décidé d'étendre le stationnement payant au centre-ville. Le"
+    " stationnement payant s'appliquera du lundi au samedi, et les riverains garderont"
+    " leur abonnement annuel.",
+    "Le conseil municipal a validé la rénovation de l'école élémentaire Jean-Moulin."
+    " L'école accueillera deux classes de plus à la rentrée, et la cantine de l'école"
+    " sera agrandie.",
+]
+
+
 def textes(rapport, index=0):
     return [terme["text"] for terme in rapport["documents"][index]["terms"]]
 
@@ -85,7 +104,18 @@ def test_verdict_le_corpus_fait_remonter_ce_qui_distingue_le_document():
 def test_verdict_chaque_document_de_la_collection_a_son_propre_sujet():
     rapport = extract_key_terms_in_corpus(CORPUS, VIDES_FR)
     premiers = [textes(rapport, index)[0].lower() for index in range(4)]
-    assert premiers == ["café", "batterie", "cartouche laser", "casque audio"]
+    assert premiers == ["moulins", "vélos électriques", "imprimantes laser",
+                        "casques audio"]
+    # Les trois premiers de chaque document sont à égalité de score : c'est la
+    # règle de départage qui les ordonne, et le rapport dit combien d'autres
+    # partagent le score du dernier retenu.
+    assert [textes(rapport, i)[:3] for i in range(4)] == [
+        ["moulins", "café", "moulin"],
+        ["vélos électriques", "batterie", "vélo"],
+        ["imprimantes laser", "cartouche laser", "garantie six mois"],
+        ["casques audio", "casque audio", "garanti deux ans"],
+    ]
+    assert [d["tied_at_cut"] for d in rapport["documents"]] == [10, 10, 9, 9]
 
 
 # ---------------------------------------------------------------------------
@@ -128,11 +158,89 @@ def test_le_classement_ne_depend_pas_de_lordre_des_egalites():
     assert premier == ["bravo", "charlie", "alpha"]
 
 
-def test_aucune_entree_ne_leve():
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """R14 : la raison dit ce que le code a constaté — le type reçu."""
+    assert extract_key_terms_in_corpus(None, VIDES_FR)["reason"] == (
+        "expected a list, not NoneType")
+    assert extract_key_terms_in_corpus("texte", VIDES_FR)["reason"] == (
+        "expected a list, not str")
     for entree in [None, 42, "texte", {}]:
         rapport = extract_key_terms_in_corpus(entree, VIDES_FR)
         assert rapport["documents"] == []
-        assert rapport["reason"].startswith("expected a list")
+        assert rapport["reason"].startswith("expected a list, not ")
+
+
+def test_verdict_un_second_corpus_de_documents_courts_ou_les_egalites_dominent():
+    """
+    R4 et T4 : le verdict confronté à des données qu'il n'a pas choisies. Le
+    jeu de contrats de cette fiche est taillé pour la démonstration ; celui-ci
+    ne l'est pas, et il montre les deux côtés.
+
+    Ce que N1 gagne : « conseil municipal » ouvre les quatre comptes rendus,
+    donc il n'est le sujet d'aucun. N0 le garde dans les trois premiers termes
+    des quatre documents ; N1 le fait disparaître partout.
+    """
+    vides = VIDES_FR + ["sera", "seront", "été", "étaient", "était"]
+    par_n1 = extract_key_terms_in_corpus(CONSEIL, vides, top=3)
+    premiers = [[t["text"] for t in d["terms"]] for d in par_n1["documents"]]
+    assert premiers == [
+        ["nouvelle médiathèque", "travaux commenceront", "approuvé"],
+        ["piste cyclable reliera", "piste cyclable", "voté"],
+        ["stationnement payant", "riverains garderont", "abonnement annuel"],
+        ["école élémentaire Jean-Moulin", "validé", "rénovation"],
+    ]
+    par_n0 = [[t["text"] for t in extract_key_terms(texte, vides, top=3)["terms"]]
+              for texte in CONSEIL]
+    assert all("conseil municipal" in termes for termes in par_n0)
+    assert not any("conseil municipal" in termes for termes in premiers)
+
+    # Et ce que N1 ne gagne pas, dit ici plutôt que tu : sur ces documents
+    # courts, un terme présent une fois dans son document et nulle part
+    # ailleurs vaut log(4), comme tous ses voisins. Le premier document en
+    # porte neuf à ce score, et l'ordre entre eux vient de la règle de
+    # départage, pas du score.
+    scores = [t["score"] for t in par_n1["documents"][0]["terms"]]
+    assert scores == [round(math.log(4), 4)] * 3
+    assert par_n1["documents"][0]["tied_at_cut"] == 8
+
+
+def test_une_egalite_se_departage_par_le_sens_pas_par_lalphabet():
+    """
+    Commentaire : « What breaks the tie has to mean something — the longer
+    phrase first, because it says more, then the one that appears earliest,
+    because a document states its subject early. »
+
+    C'était le défaut : le tri final était `(-score, -count, key)`, donc à
+    égalité de score, c'est la lettre initiale qui décidait si le sujet du
+    document entrait dans les huit termes retenus.
+    """
+    vides = VIDES_FR + ["sera", "seront", "été", "étaient", "était"]
+    termes = extract_key_terms_in_corpus(CONSEIL, vides, top=12)["documents"][0]["terms"]
+    a_egalite = [t for t in termes if t["score"] == round(math.log(4), 4)]
+    assert len(a_egalite) >= 9
+    # La phrase la plus longue d'abord.
+    assert a_egalite[0]["text"] == "nouvelle médiathèque"
+    assert len(a_egalite[0]["key"].split(" ")) == 2
+    # Puis, à nombre de mots égal, celle qui apparaît le plus tôt.
+    un_mot = [t for t in a_egalite if len(t["key"].split(" ")) == 1]
+    assert [t["first"] for t in un_mot] == sorted(t["first"] for t in un_mot)
+    # L'alphabet ne décide plus : « approuvé » vient après « médiathèque ».
+    ordre = [t["text"] for t in a_egalite]
+    assert ordre.index("nouvelle médiathèque") < ordre.index("approuvé")
+
+
+def test_le_rapport_dit_combien_de_termes_sont_a_egalite_avec_le_dernier_retenu():
+    """
+    Commentaire : « How many terms outside the cut share the score of the last
+    one kept: a caller that reads « the top five » of twelve equals should
+    know. »
+    """
+    vides = VIDES_FR + ["sera", "seront", "été", "étaient", "était"]
+    coupe = extract_key_terms_in_corpus(CONSEIL, vides, top=3)["documents"][0]
+    assert coupe["tied_at_cut"] == 8
+    # Témoin : quand rien n'est coupé, il n'y a personne à égalité dehors.
+    entier = extract_key_terms_in_corpus(CONSEIL, vides, top=100)["documents"][0]
+    assert entier["tied_at_cut"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +282,8 @@ def test_production_un_document_illisible_nempeche_pas_de_lire_les_autres():
     """T8 : un élément qui n'est pas du texte ne fait pas tomber la collection."""
     rapport = extract_key_terms_in_corpus([CORPUS[0], None, CORPUS[1]], VIDES_FR)
     assert rapport["documents"][1]["terms"] == []
-    assert textes(rapport, 0)[0].lower() == "café"
+    assert textes(rapport, 0)[:3] == ["moulins", "café", "moulin"]
+    assert textes(rapport, 2)[:3] == ["vélos électriques", "batterie", "vélo"]
 
 
 def test_production_la_lecture_tient_la_classe_de_latence_annoncee():

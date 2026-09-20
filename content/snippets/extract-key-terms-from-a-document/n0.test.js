@@ -91,11 +91,14 @@ test("le classement ne dépend pas de l'ordre des égalités", () => {
   assert.deepEqual(premier, ['alpha bravo', 'charlie foxtrot', 'delta echo']);
 });
 
-test('aucune entrée ne lève', () => {
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(extractKeyTerms(null, VIDES_FR).reason, 'expected text, not object');
+  assert.equal(extractKeyTerms(42, VIDES_FR).reason, 'expected text, not number');
   for (const entree of [null, undefined, 42, [], {}, '']) {
     const rapport = extractKeyTerms(entree, VIDES_FR);
     assert.deepEqual(rapport.terms, []);
-    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text'));
+    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text, not '));
   }
 });
 

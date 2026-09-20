@@ -62,10 +62,25 @@ def extract_key_terms_in_corpus(documents, stop_words, *, top: int = 8) -> dict:
         counted = extract_key_terms(text if isinstance(text, str) else "", stop,
                                     top=len(per_document[index]) or 1)["terms"]
         terms = [{"text": term["text"], "key": term["key"], "count": term["count"],
+                  "first": term["first"],
                   "score": _rounded(term["count"] * _mean(term["key"], idf))}
                  for term in counted]
-        terms.sort(key=lambda t: (-t["score"], -t["count"], t["key"]))
-        ranked.append({"index": index, "terms": terms[:top]})
+        # Equal scores are the ordinary case, not the exception: on a short
+        # document every phrase appears once and in no other document, so every
+        # one of them scores log(N). What breaks the tie has to mean something
+        # — the longer phrase first, because it says more, then the one that
+        # appears earliest, because a document states its subject early. The
+        # key comes last, and only so that two languages answer in the same
+        # order.
+        terms.sort(key=lambda t: (-t["score"], -t["count"],
+                                  -len(t["key"].split(" ")), t["first"], t["key"]))
+        kept = terms[:top]
+        # How many terms outside the cut share the score of the last one kept:
+        # a caller that reads « the top five » of twelve equals should know.
+        tied = 0
+        if kept and len(terms) > len(kept):
+            tied = sum(1 for term in terms[len(kept):] if term["score"] == kept[-1]["score"])
+        ranked.append({"index": index, "terms": kept, "tied_at_cut": tied})
     return {"documents": ranked, "reason": None}
 
 
