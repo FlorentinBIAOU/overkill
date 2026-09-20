@@ -60,3 +60,13 @@ Rien.
 Rien. Les deux extraits rendent une raison sur un fichier illisible et ne
 lèvent pas. Un PDF tronqué à quatre endroits différents est traité sans
 exception.
+
+## Ajout de fin de lot : le test de parité
+
+Cette fiche était la seule du lot sans test de parité entre ses deux extraits.
+Il a été ajouté à la relecture finale, et il passe : sur les sept documents des
+fixtures, `pypdf` et `pdf.js` comptent les mêmes caractères et rangent les
+mêmes pages du même côté. Le seul écart mesuré porte sur un fichier qui n'est
+pas un PDF — le rapport y cite le message du lecteur, et les deux lecteurs ne
+le formulent pas de la même façon. Le second test le dit et borne l'accord :
+mêmes pages, même liste de pages lisibles, même début de raison.

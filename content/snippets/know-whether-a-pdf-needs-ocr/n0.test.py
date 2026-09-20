@@ -1,8 +1,15 @@
+import base64
 import io
+import json
+import shutil
+import subprocess
 import time
+from pathlib import Path
 
 from fixtures import (ENTETE_SCAN, MIXTE, MOJIBAKE, NUMERIQUE, NUMERO_PAGE, SCAN, VIDE)
 from n0 import MIN_CHARACTERS, triage_pages
+
+ICI = Path(__file__).parent
 
 
 def pages_de(pdf: bytes) -> list[str]:
@@ -173,3 +180,58 @@ def test_production_le_tri_tient_la_classe_de_latence_annoncee():
     for _ in range(100):
         triage_pages(MIXTE)
     assert time.perf_counter() - debut < 60.0
+
+
+# ---------------------------------------------------------------------------
+# Parité entre les deux langages
+# ---------------------------------------------------------------------------
+
+
+def test_python_et_javascript_rendent_le_meme_plan():
+    """
+    La fiche montre les deux extraits : elle affirme la même chose des deux.
+
+    Les deux lecteurs — `pypdf` et `pdf.js` — n'extraient pas le texte par le
+    même chemin ; sur les sept documents des fixtures, ils comptent pourtant
+    les mêmes caractères et rangent les mêmes pages du même côté. Le seul
+    écart est sur un fichier qui n'est pas un PDF : le rapport y cite le
+    message du lecteur, et les deux lecteurs ne le formulent pas pareil.
+    """
+    documents = [ENTETE_SCAN, MIXTE, MOJIBAKE, NUMERIQUE, NUMERO_PAGE, SCAN, VIDE]
+    attendu = [triage_pages(document) for document in documents]
+    assert _par_node(documents) == attendu
+
+
+def test_sur_un_fichier_qui_nest_pas_un_pdf_seule_la_fin_du_message_differe():
+    """L'écart mesuré, et la part du rapport sur laquelle les deux s'accordent."""
+    casses = [b"pas un PDF", b""]
+    ici = [triage_pages(document) for document in casses]
+    la_bas = _par_node(casses)
+    for python, javascript in zip(ici, la_bas):
+        assert python["pages"] == javascript["pages"] == []
+        assert python["readable"] == javascript["readable"] == []
+        debut = "this file could not be opened as a PDF: "
+        assert python["reason"].startswith(debut)
+        assert javascript["reason"].startswith(debut)
+        # Et la suite est le message du lecteur, qui n'est pas le même.
+        assert python["reason"] != javascript["reason"]
+
+
+def _par_node(documents):
+    """Le plan que l'extrait JavaScript rend sur les mêmes octets."""
+    node = shutil.which("node")
+    assert node, "node est requis pour comparer les deux implémentations"
+    script = (
+        f"import {{ triagePages }} from {json.dumps((ICI / 'n0.js').as_uri())};"
+        "let d='';process.stdin.on('data',c=>d+=c).on('end',async()=>{"
+        "const docs=JSON.parse(d).map((b)=>new Uint8Array(Buffer.from(b,'base64')));"
+        "const out=[];for(const doc of docs) out.push(await triagePages(doc));"
+        "process.stdout.write('@@'+JSON.stringify(out));});"
+    )
+    sortie = subprocess.run([node, "--input-type=module", "-e", script],
+                            input=json.dumps([base64.b64encode(d).decode()
+                                              for d in documents]),
+                            capture_output=True, text=True, timeout=120, check=True)
+    # `pdf.js` écrit ses avertissements sur la sortie standard ; le rapport
+    # commence au marqueur.
+    return json.loads(sortie.stdout[sortie.stdout.index("@@") + 2:])
