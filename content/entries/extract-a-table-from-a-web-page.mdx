@@ -1,0 +1,94 @@
+---
+id: extract-a-table-from-a-web-page
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Transformer un tableau HTML en données"
+  en: "Turn an HTML table into data"
+
+need:
+  fr: "Récupérer les lignes et les colonnes d’un tableau publié dans une page web, cellules fusionnées comprises."
+  en: "Get the rows and the columns of a table published in a web page, merged cells included."
+
+scenario:
+  fr: "On voit envoyer une page entière à un modèle avec la consigne « rends-moi ce tableau en CSV ». Les lignes et les cellules sont pourtant des éléments que la norme HTML nomme, et les lire est une analyse syntaxique. La difficulté est ailleurs, et elle tient en un mot : une cellule peut en couvrir plusieurs, et la grille du balisage n’est alors pas la grille des données. C’est exactement ce qu’un modèle tranche sans le dire, et exactement ce qu’une grille rectangulaire peut rendre en le disant."
+  en: "Sending a whole page to a model with the instruction “give me this table as CSV” is a common sight. But the rows and the cells are elements the HTML specification names, and reading them is parsing. The difficulty is elsewhere, and it fits in one word: a cell can cover several, and the markup grid is then not the data grid. That is exactly what a model settles without saying so, and exactly what a rectangular grid can return while saying so."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "La grille que le lecteur voit, les fusions déployées et marquées"
+      en: "The grid the reader sees, with the spans spread out and flagged"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : la page est lue dans votre processus et n’est transmise à personne"
+          - "L’aspiration d’un site tiers relève de ses conditions d’utilisation et du droit applicable, que la technique employée ne change pas"
+        en:
+          - "No specific scope added: the page is read inside your own process and is sent to nobody"
+          - "Scraping a third-party site is a matter of its terms of use and of applicable law, which the technique used does not change"
+    code:
+      python: snippets/extract-a-table-from-a-web-page/n0.py
+      javascript: snippets/extract-a-table-from-a-web-page/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Déployer une fusion, c’est répéter une valeur que la page n’a écrite qu’une fois : dans le test, « Total » écrit sur trois colonnes revient trois fois, et un appelant qui additionne la colonne compterait trois fois le même montant. Chaque répétition porte un drapeau, et c’est la seule chose qui la distingue de la valeur d’origine. Le témoin est dans le même test : une ligne sans fusion porte les mêmes textes distincts et ne lève aucun drapeau — et l’autre choix possible, laisser des trous, décalerait toutes les colonnes après la fusion sans rien signaler du tout."
+      en: "Spreading a span out means repeating a value the page wrote only once: in the test, “Total” written over three columns comes back three times, and a caller adding up that column would count the same amount three times. Every repeat carries a flag, and that is the only thing telling it from the original. The witness is in the same test: a row with no span carries the same distinct texts and raises no flag — and the other possible choice, leaving holes, would shift every column after the span with no warning at all."
+    escalate_when:
+      fr: "Le tableau de votre page n’est pas un tableau : c’est une suite de `div` mis en colonnes par la feuille de style, ou une image. Dans le premier cas il n’y a pas de norme à lire et les sélecteurs de la page font foi ; dans le second, la question devient la reconnaissance de caractères, et c’est une autre fiche."
+      en: "Your page’s table is not a table: it is a run of `div` elements laid out in columns by the stylesheet, or an image. In the first case there is no specification to read and the page’s own selectors are the authority; in the second, the question becomes character recognition, and that is another entry."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : `tr`, `td`, `th`, `colspan` et `rowspan` sont nommés par la norme HTML, et l’algorithme qui en tire une grille y est écrit. Un modèle appris sur des pages annotées retrouverait, au mieux, ce que cet algorithme donne exactement, et il se tromperait sur les mises en page que son échantillon ne contenait pas."
+      en: "There is nothing to learn: tr, td, th, colspan and rowspan are named by the HTML specification, and the algorithm that turns them into a grid is written there. A model trained on annotated pages would recover, at best, what that algorithm gives exactly, and it would be wrong on the layouts its sample did not contain."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Les modèles de reconnaissance de structure de tableau existent, et ils servent — sur des images. C’est le sujet de la fiche sur les tableaux d’un PDF, où il n’y a parfois aucune structure à lire. Ici la structure est écrite : rendre la page en image pour la faire relire par un modèle reviendrait à jeter ce que la page déclare pour le deviner de nouveau."
+      en: "Table structure recognition models exist, and they are useful — on images. That is the subject of the entry on tables in a PDF, where there is sometimes no structure to read at all. Here the structure is written down: rendering the page to an image to have a model read it back would mean throwing away what the page declares in order to guess it again."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un modèle généraliste rend un tableau qui ressemble à celui de la page, et la ressemblance se paie précisément là où cette fiche fait attention : sur les cellules fusionnées, il choisit — répéter, ou laisser vide — sans le dire. S’y ajoutent une facture par page et une sortie de données, pour un travail que l’analyseur de votre langage fait en quelques millisecondes."
+      en: "A general-purpose model returns a table that resembles the page’s, and the resemblance is paid for exactly where this entry is careful: on merged cells it chooses — repeat, or leave blank — without saying so. Add to that one bill per page and one data egress, for work your language’s parser does in a few milliseconds."
+
+verdict_rationale:
+  fr: "N0, parce que la norme HTML nomme les éléments et décrit l’algorithme qui en tire une grille. Le travail de la fiche est d’appliquer cet algorithme et de dire ce qu’il coûte. Une cellule fusionnée est déployée sur les places qu’elle couvre, et chaque répétition est marquée : c’est la seule façon de garder les colonnes alignées sans faire croire que la page a écrit trois fois ce qu’elle a écrit une fois. Un tableau à l’intérieur d’une cellule est rendu à part, son texte ne coule pas dans la cellule qui le porte, et celle-ci est signalée — le piège classique de l’aspiration de tableaux. Une portée est plafonnée à mille, qui est le maximum que la norme autorise et non un chiffre choisi ici. Et la légende revient avec la grille, parce que c’est souvent elle qui dit ce que les colonnes veulent dire."
+  en: "N0, because the HTML specification names the elements and describes the algorithm that turns them into a grid. This entry’s work is to apply that algorithm and to say what it costs. A merged cell is spread over the places it covers, and every repeat is flagged: it is the only way to keep the columns aligned without suggesting the page wrote three times what it wrote once. A table inside a cell is returned separately, its text does not flow into the cell holding it, and that cell is flagged — the classic table-scraping trap. A span is capped at a thousand, which is the maximum the specification allows and not a number chosen here. And the caption comes back with the grid, because it is often the caption that says what the columns mean."
+
+further_reading:
+  - label: "HTML Standard — l’algorithme qui forme un tableau à partir du balisage"
+    url: "https://html.spec.whatwg.org/multipage/tables.html#forming-a-table"
+  - label: "HTML Standard — les attributs colspan et rowspan, et leur maximum"
+    url: "https://html.spec.whatwg.org/multipage/tables.html#attr-tdth-colspan"
+  - label: "Extraire les tableaux d’un PDF — la même question, là où la structure n’est pas écrite"
+    url: "https://isitoverkill.dev/fr/fiches/extract-tables-from-a-pdf"
+  - label: "linkedom — le moteur de document léger employé côté JavaScript"
+    url: "https://github.com/WebReflection/linkedom"
+
+sources:
+  - label: "HTML Standard, « forming a table » (consulté) : l’algorithme qui déploie les portées sur une grille, et qui traite un tableau imbriqué comme un tableau à part"
+    url: "https://html.spec.whatwg.org/multipage/tables.html#forming-a-table"
+  - label: "HTML Standard, attributs de td et th (consulté) : `colspan` « must be a valid non-negative integer greater than zero and less than or equal to 1000 » — d’où le plafond employé ici"
+    url: "https://html.spec.whatwg.org/multipage/tables.html#attr-tdth-colspan"
+  - label: "Python, module html.parser (consulté) : l’analyseur de la bibliothèque standard employé côté Python ; il ne construit pas d’arbre, ce que ce niveau fait lui-même pour les seuls éléments de tableau"
+    url: "https://docs.python.org/3/library/html.parser.html"
+  - label: "linkedom sur son dépôt (consulté) : version 0.18.13, licence ISC ; il fournit le document dont l’extrait JavaScript a besoin hors navigateur"
+    url: "https://github.com/WebReflection/linkedom"
+---

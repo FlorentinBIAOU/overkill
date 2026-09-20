@@ -1,0 +1,27 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Un tableau publié dans une page web, ramené à une grille rectangulaire.
+
+  Niveau N0. Les lignes et les cellules sont des éléments que la norme HTML
+  nomme : les lire, c'est analyser. Ce qui n'est pas de l'analyse, c'est la
+  seule chose qui rend les tableaux difficiles : une cellule peut couvrir
+  plusieurs colonnes ou plusieurs lignes, et la grille du balisage n'est alors
+  pas la grille des données. « Total » écrit une fois au-dessus de trois
+  colonnes est une cellule dans la source et trois cellules dans le tableau
+  que le lecteur voit.
+
+  Ce niveau construit la grille que le lecteur voit. Une cellule fusionnée est
+  répétée sur les places qu'elle couvre, et chaque répétition est marquée — un
+  appelant qui additionne une colonne compterait sinon deux fois le même
+  montant sans le savoir. L'autre choix, laisser des trous, décale toutes les
+  colonnes après la fusion, ce qui est pire parce que rien ne vous le dit.
+
+  Deux autres choses sont signalées plutôt qu'aplanies. Un tableau à
+  l'intérieur d'une cellule d'un autre tableau est un tableau à part entière :
+  son texte ne coule pas dans la cellule qui le porte, et celle-ci est
+  signalée. Et la légende, quand la page en a écrit une, revient avec la
+  grille, parce que c'est souvent elle qui dit ce que les colonnes veulent
+  dire.
