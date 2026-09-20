@@ -24,7 +24,20 @@ n0.py: |
   Laquelle des deux lectures a répondu figure dans le rapport, parce que
   l'appelant ne devrait pas avoir à se le demander : `strategy` vaut « lines »
   quand la page disait où étaient les cellules, et « text » quand c'est le code
-  qui a décidé.
+  qui a décidé. Seul le Python peut répondre « lines » : aucun paquet
+  JavaScript ne lit les filets d'un PDF, donc ce côté-là devine toujours.
+
+  Le devinement porte sur toute la page, pas sur le tableau : les colonnes
+  viennent de tous les bords gauches vus sur la page, bloc adresse et pied de
+  page compris. C'est pourquoi une lecture devinée ne garde que les lignes à au
+  moins deux cellules remplies — « SARL Le Moulin » seule sur sa ligne est
+  l'en-tête de la lettre, pas une ligne du tableau. Ce qu'elle écarte n'est pas
+  jeté : `dropped_lines` porte le texte de chaque ligne refusée, si bien que
+  rien de ce qui a été lu sur la page n'est perdu, et que ce qui n'est pas une
+  ligne est nommé plutôt que rendu comme telle. Sans cette règle, les quatre
+  lignes d'en-tête d'une facture reçue par courriel ressortent en quatre lignes
+  à trois cellules vides, et un appelant qui parcourt `rows[1:]` lit une adresse
+  de rue comme une référence d'article.
 
 n0.js: |
   Lire les tableaux d'un PDF, et dire comment ils ont été lus.
@@ -42,10 +55,21 @@ n0.js: |
 
   La conséquence est mesurée dans le test, et c'est la raison pour laquelle
   cette fiche rend la stratégie employée : sur un tableau tracé dont la
-  désignation se replie sur deux lignes, l'extrait Python rend trois lignes
-  avec les deux dans la même case, et celui-ci en rend quatre avec la seconde
-  ligne toute seule.
+  désignation se replie sur deux lignes, l'extrait Python garde les deux
+  moitiés dans la même case, et celui-ci sort la seconde du tableau — elle
+  n'a qu'une cellule remplie, donc elle est nommée dans `dropped_lines`.
 
   Le regroupement plus bas est le même code dans les deux langages, pour que
   sur un tableau sans filets — le cas ordinaire d'une facture reçue par
   courriel — les deux répondent exactement la même chose.
+
+  Ce devinement porte sur toute la page, pas sur le tableau : les colonnes
+  viennent de tous les bords gauches vus sur la page, bloc adresse et pied de
+  page compris. C'est pourquoi la lecture ne garde que les lignes à au moins
+  deux cellules remplies — « SARL Le Moulin » seule sur sa ligne est l'en-tête
+  de la lettre, pas une ligne du tableau. Ce qu'elle écarte n'est pas jeté :
+  `dropped_lines` porte le texte de chaque ligne refusée, si bien que rien de
+  ce qui a été lu sur la page n'est perdu. Sans cette règle, les quatre lignes
+  d'en-tête d'une facture reçue par courriel ressortent en quatre lignes à
+  trois cellules vides, et un appelant qui parcourt `rows.slice(1)` lit une
+  adresse de rue comme une référence d'article.

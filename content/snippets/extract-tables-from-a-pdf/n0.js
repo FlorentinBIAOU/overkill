@@ -20,6 +20,17 @@
  * The grouping below is the same code in both languages, so that on a table
  * with no rules — the common case in an emailed invoice — the two answer
  * exactly the same thing.
+ *
+ * That guess is made from the whole page, not from the table: the columns come
+ * from every left edge seen on the page, address block and footer included.
+ * That is why the reading keeps only the lines with at least two filled cells
+ * — « SARL Le Moulin » alone on its line is the letterhead, not a row. What it
+ * left out is not thrown away: `dropped_lines` holds the text of every line it
+ * refused, so nothing read on the page is lost, and what is not a row is named
+ * rather than silently rendered as one. Without that rule, the four lines of
+ * letterhead of an emailed invoice come back as four rows with three empty
+ * cells, and a caller iterating over `rows.slice(1)` reads a street address as
+ * a part number.
  */
 
 // Two words are on the same line if their baselines are within this many
@@ -34,6 +45,15 @@ export const SAME_CELL = 10.0;
 
 // Two cells are in the same column when their left edges are within this.
 export const SAME_COLUMN = 12.0;
+
+// A line with fewer filled cells than this is not a row of the table: it is
+// the letterhead, the invoice number, a page footer, a paragraph of prose, or
+// the second half of a designation that wrapped. All of them go to
+// `dropped_lines`, with their text.
+export const MIN_FILLED_CELLS = 2;
+
+/** How many cells of this line carry text. */
+const filled = (row) => row.filter((cell) => cell).length;
 
 /**
  * Every table of the document, page by page, with the reading that found it.
@@ -64,7 +84,12 @@ export async function readTables(pdfBytes, { pages, load } = {}) {
           y: item.transform[5],
         }));
       const rows = groupIntoRows(words);
-      if (rows.length > 0) found.push({ page: number, strategy: 'text', rows });
+      const kept = rows.filter((row) => filled(row) >= MIN_FILLED_CELLS);
+      const dropped = rows.filter((row) => filled(row) < MIN_FILLED_CELLS)
+        .map((row) => row.filter((cell) => cell).join(' '));
+      if (kept.length > 0) {
+        found.push({ page: number, strategy: 'text', rows: kept, dropped_lines: dropped });
+      }
     }
   } catch (error) {
     return { tables: [], reason: `this file could not be opened as a PDF: ${error.message}` };

@@ -6,7 +6,8 @@ import time
 import zlib
 from pathlib import Path
 
-from n0 import SAME_CELL, SAME_COLUMN, SAME_LINE, group_into_rows, read_tables
+from n0 import (MIN_FILLED_CELLS, SAME_CELL, SAME_COLUMN, SAME_LINE, group_into_rows,
+                read_tables)
 
 ICI = Path(__file__).parent
 
@@ -16,7 +17,7 @@ def _pdf(*morceaux: str) -> bytes:
     return zlib.decompress(base64.b64decode("".join(morceaux)))
 
 
-# Six documents minimaux, tous de vrais PDF. Le test JavaScript porte
+# Sept documents minimaux, tous de vrais PDF. Le test JavaScript porte
 # exactement les mêmes octets.
 TABLEAU = _pdf(
     "eNptlN9u2jAUxu/zFOcGaZNoYyd2/khVpdGCKm3VGETaRbWLFBzqKthTYja2l9zFXmDabpa3mGNsMmoARYff"
@@ -77,6 +78,19 @@ DEUX_PAGES = _pdf(
     "1qLhrT26K/GdQ2kORCkN6HfZ6brVdo9YpkU0Gp2+n0T/AK4CFZc=")
 
 
+# Une facture reçue par courriel : un bloc adresse, un numéro de facture, un
+# tableau à quatre colonnes sans un seul filet, et un pied de page. C'est
+# l'entrée qui a fait tomber cette fiche à la relecture.
+FACTURE_SANS_FILETS = _pdf(
+    "eNptVNFumzAUfecr7kukTSrDNoYGqarUtEWVlqhZwlu1B5c4mSNiT8ZU2b5+18CapC5CiJx7zj3H5jqT5UMZ0288okDAvO6jmxtI"
+    "qj+/JST3wonG7CBZip1sgSFhBbe3kdQbT2SBYOAl39WmhZfU039iF9NpB/RMmH4q9E8rkTr4JAu5UWJmjvBCEMiKDKacYb+VbE1n"
+    "azTy+tKgon+hkI0B/Y222mG3FviH2PzMfS71zv2CPOWe0DorxSGaVZHvRglU235XCKa/JnA9ReQAX9Z3qznMJSxM1yj9Far9BSvP"
+    "exZlYDsJG8xZWmllG8+7g8KXQJCxXlAwSgjMsKnZaRnPVNMIXeNSXaBgvFeUonadlaChvIsZYXlMONpuOsDnXug3tAOPf2yQjytZ"
+    "yS0G0vVlJnrGeJCt2mnhlLlcaJqeOD86oZ1yl034GWFp1RGeqiBFPpQX9zHPCA0z/K/3+wwCarGVYYqRxUL7sUKLq4IE5vzdvCCE"
+    "hOZjHb8Hfgij7CfOI4WGzmMl5VckdCbjrviZp9B2FoYOj5Uf0XEIx2HNgqPSD3yy7l5d/9ODFJKZaOVQeZLNm3SqFmcjf7RyG6Fz"
+    "RN4vyLMszWALJ6yAoaJPWDYNMEqzAGOcBljB8hPmrFCNtP0y1uqvhBzPsTH+b2E8nK0T1vU5iyKPJpPH5zL6BzDKI3I=")
+
+
 LIGNES = [["Référence", "Désignation", "Quantité", "Prix HT"],
           ["MC-4501", "Moulin à café", "2", "19,90"],
           ["MC-9000", "Bouilloire", "1", "34,00"],
@@ -98,6 +112,37 @@ REPLIEE_SANS_FILETS = [["Référence", "Désignation", "Quantité", "Prix HT"],
 # ---------------------------------------------------------------------------
 
 
+def test_point_de_rupture_lhabillage_de_la_page_nest_pas_une_ligne_du_tableau():
+    """
+    « Sur une facture sans filets, la grille est déduite de toute la page : le
+    bloc adresse, le numéro de facture et le pied de page tombent dans la
+    première colonne. Les lignes à moins de deux cellules remplies ne sont pas
+    rendues, et `dropped_lines` dit combien il y en avait. »
+    """
+    table = read_tables(FACTURE_SANS_FILETS)["tables"][0]
+    assert table["strategy"] == "text"
+    # Trois lignes rendues : l'en-tête du tableau et ses deux articles.
+    assert table["rows"] == [
+        ["Reference", "Designation", "Quantite", "Prix HT"],
+        ["MC-4501", "Moulin a cafe", "2", "19,90"],
+        ["MC-9000", "Bouilloire", "1", "34,00"],
+    ]
+    # Cinq écartées, et nommées : le bloc adresse, le numéro, le pied de page.
+    assert table["dropped_lines"] == [
+        "SARL Le Moulin",
+        "12 rue des Freres-Lumiere",
+        "92100 Boulogne-Billancourt",
+        "Facture n FA-2026-0412 du 12 janvier 2026",
+        "Page 1 sur 1",
+    ]
+    # Le témoin de ce que le filtre évite : sans lui, la grille brute porte
+    # bien « 12 rue des Freres-Lumiere » comme référence d'article.
+    brute = group_into_rows(_mots(FACTURE_SANS_FILETS))
+    assert len(brute) == 8
+    assert brute[1] == ["12 rue des Freres-Lumiere", "", "", ""]
+    assert MIN_FILLED_CELLS == 2
+
+
 def test_point_de_rupture_la_lecture_devinee_coupe_une_cellule_repliee():
     """
     « Le tableau tracé rend trois lignes et met « Moulin à café Lumière » et
@@ -113,12 +158,29 @@ def test_point_de_rupture_la_lecture_devinee_coupe_une_cellule_repliee():
     par_le_texte = group_into_rows(_mots(CELLULE_REPLIEE))
     assert par_le_texte == REPLIEE_SANS_FILETS
     assert len(par_le_texte) == 4
+    # Et ce que la lecture devinée en rend : trois lignes, la seconde moitié de
+    # la désignation étant nommée dans `dropped_lines` plutôt que rendue comme
+    # une ligne du tableau — ce qui la sort de la case où elle devrait être.
+    devine = _lecture_devinee(CELLULE_REPLIEE)
+    assert len(devine["rows"]) == 3
+    assert devine["dropped_lines"] == ["modèle 2026, édition limitée"]
 
 
 def test_point_de_rupture_temoin_le_rapport_dit_laquelle_des_deux_lectures_a_repondu():
     """« Le témoin : c'est le même document, et `strategy` dit laquelle des deux lectures a répondu. »"""
     assert read_tables(TABLEAU)["tables"][0]["strategy"] == "lines"
     assert read_tables(SANS_FILETS)["tables"][0]["strategy"] == "text"
+
+
+def _lecture_devinee(pdf: bytes) -> dict:
+    """Ce que la lecture devinée rend d'un document, filtre compris."""
+    from n0 import MIN_FILLED_CELLS as seuil
+
+    lignes = group_into_rows(_mots(pdf))
+    rempli = lambda ligne: sum(1 for c in ligne if c)  # noqa: E731
+    return {"rows": [l for l in lignes if rempli(l) >= seuil],
+            "dropped_lines": [" ".join(c for c in l if c)
+                              for l in lignes if rempli(l) < seuil]}
 
 
 def _mots(pdf: bytes) -> list:
@@ -170,14 +232,17 @@ def test_les_mots_dune_meme_cellule_sont_rassembles():
 
 def test_une_page_sans_tableau_ne_rend_pas_un_tableau_invente():
     """
-    Une page de prose n'a ni filets ni colonnes : ce que la lecture de repli en
-    tire est une ligne par ligne de texte, et une seule colonne.
+    Une page de prose n'a ni filets ni colonnes : chaque ligne y porte une
+    seule cellule remplie, donc aucune n'est une ligne de tableau, et rien
+    n'est rendu.
     """
-    tables = read_tables(PROSE)["tables"]
-    assert tables[0]["strategy"] == "text"
-    assert all(len(ligne) == 1 for ligne in tables[0]["rows"])
-    # Une page d'image ne rend rien du tout.
+    assert read_tables(PROSE)["tables"] == []
+    # La grille brute, elle, existe bien : c'est le filtre qui la refuse.
+    assert all(len(ligne) == 1 for ligne in group_into_rows(_mots(PROSE)))
+    # Une page d'image ne rend rien du tout, et pour une autre raison : elle ne
+    # porte aucun mot.
     assert read_tables(SCAN)["tables"] == []
+    assert _mots(SCAN) == []
 
 
 def test_chaque_page_est_lue_et_lappelant_peut_en_choisir():
@@ -248,8 +313,8 @@ def test_production_valeurs_aux_limites():
 
 def test_production_une_page_sans_tableau_nempeche_pas_de_lire_les_autres():
     """T8 : une page sale ne fait pas tomber le document."""
-    lot = [TABLEAU, b"pas un PDF", SANS_FILETS, SCAN]
-    assert [len(read_tables(p)["tables"]) for p in lot] == [1, 0, 1, 0]
+    lot = [TABLEAU, b"pas un PDF", SANS_FILETS, SCAN, FACTURE_SANS_FILETS]
+    assert [len(read_tables(p)["tables"]) for p in lot] == [1, 0, 1, 0, 1]
 
 
 def test_production_la_lecture_tient_la_classe_de_latence_annoncee():
@@ -273,7 +338,8 @@ def test_sans_filets_les_deux_langages_rendent_la_meme_grille_avec_filets_non():
     node = shutil.which("node")
     assert node, "node est requis pour comparer les deux implémentations"
     documents = {"TABLEAU": TABLEAU, "SANS_FILETS": SANS_FILETS,
-                 "CELLULE_REPLIEE": CELLULE_REPLIEE, "PROSE": PROSE, "SCAN": SCAN}
+                 "CELLULE_REPLIEE": CELLULE_REPLIEE, "PROSE": PROSE, "SCAN": SCAN,
+                 "FACTURE_SANS_FILETS": FACTURE_SANS_FILETS}
     script = (
         f"import {{ readTables }} from {json.dumps((ICI / 'n0.js').as_uri())};"
         "let d='';process.stdin.on('data',c=>d+=c).on('end',async()=>{"
@@ -291,12 +357,25 @@ def test_sans_filets_les_deux_langages_rendent_la_meme_grille_avec_filets_non():
 
     # Sans filets, les deux rendent exactement la même grille.
     assert par_js["SANS_FILETS"]["tables"][0]["rows"] == LIGNES
-    assert par_js["PROSE"]["tables"][0]["rows"] == read_tables(PROSE)["tables"][0]["rows"]
+    # Et sur la facture qui porte son habillage, la même grille et le même
+    # décompte de lignes écartées.
+    assert (par_js["FACTURE_SANS_FILETS"]["tables"][0]
+            == read_tables(FACTURE_SANS_FILETS)["tables"][0])
+    assert par_js["FACTURE_SANS_FILETS"]["tables"][0]["dropped_lines"][0] == "SARL Le Moulin"
+    # Une page de prose ne rend un tableau dans aucun des deux langages.
+    assert par_js["PROSE"]["tables"] == []
+    assert read_tables(PROSE)["tables"] == []
     assert par_js["SCAN"]["tables"] == []
     # Avec filets, le JavaScript lit quand même, par la stratégie de repli.
     assert par_js["TABLEAU"]["tables"][0]["rows"] == LIGNES
     assert par_js["TABLEAU"]["tables"][0]["strategy"] == "text"
     assert read_tables(TABLEAU)["tables"][0]["strategy"] == "lines"
-    # Et sur la cellule repliée, c'est là que les deux diffèrent.
-    assert par_js["CELLULE_REPLIEE"]["tables"][0]["rows"] == REPLIEE_SANS_FILETS
+    # Et sur la cellule repliée, c'est là que les deux diffèrent : le Python
+    # lit les filets et garde les deux lignes dans la même case ; le JavaScript
+    # devine, et la seconde moitié de la désignation sort du tableau.
+    assert par_js["CELLULE_REPLIEE"]["tables"][0]["rows"] == REPLIEE_AVEC_FILETS[:1] + [
+        ["MC-4501", "Moulin à café Lumière", "2", "19,90"],
+        ["MC-9000", "Bouilloire", "1", "34,00"]]
+    assert par_js["CELLULE_REPLIEE"]["tables"][0]["dropped_lines"] == [
+        "modèle 2026, édition limitée"]
     assert read_tables(CELLULE_REPLIEE)["tables"][0]["rows"] == REPLIEE_AVEC_FILETS

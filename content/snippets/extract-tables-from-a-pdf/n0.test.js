@@ -2,12 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import zlib from 'node:zlib';
 
-import { SAME_CELL, SAME_COLUMN, SAME_LINE, groupIntoRows, readTables } from './n0.js';
+import {
+  MIN_FILLED_CELLS, SAME_CELL, SAME_COLUMN, SAME_LINE, groupIntoRows, readTables,
+} from './n0.js';
 
 /** Les PDF de ce test, fabriqués pour lui, compressés pour tenir dans le fichier. */
 const pdf = (...morceaux) => zlib.inflateSync(Buffer.from(morceaux.join(''), 'base64'));
 
-// Six documents minimaux, tous de vrais PDF. Le test Python porte exactement
+// Sept documents minimaux, tous de vrais PDF. Le test Python porte exactement
 // les mêmes octets.
 const TABLEAU = pdf(
   'eNptlN9u2jAUxu/zFOcGaZNoYyd2/khVpdGCKm3VGETaRbWLFBzqKthTYja2l9zFXmDabpa3mGNsMmoARYff'
@@ -67,6 +69,18 @@ const DEUX_PAGES = pdf(
   + '/pON/LmzUTxTNvKd2cieZOOh5fOIQBmRzQUZYymDOWwYmvzajhxYRgOGSR6wEsunDAlmAUOaBCwPfbHARzrd'
   + '1qLhrT26K/GdQ2kORCkN6HfZ6brVdo9YpkU0Gp2+n0T/AK4CFZc=');
 
+// Une facture reçue par courriel : un bloc adresse, un numéro de facture, un
+// tableau à quatre colonnes sans un seul filet, et un pied de page. C'est
+// l'entrée qui a fait tomber cette fiche à la relecture.
+const FACTURE_SANS_FILETS = pdf(
+  'eNptVNFumzAUfecr7kukTSrDNoYGqarUtEWVlqhZwlu1B5c4mSNiT8ZU2b5+18CapC5CiJx7zj3H5jqT5UMZ0288okDAvO6jmxtI'
+  + 'qj+/JST3wonG7CBZip1sgSFhBbe3kdQbT2SBYOAl39WmhZfU039iF9NpB/RMmH4q9E8rkTr4JAu5UWJmjvBCEMiKDKacYb+VbE1n'
+  + 'azTy+tKgon+hkI0B/Y222mG3FviH2PzMfS71zv2CPOWe0DorxSGaVZHvRglU235XCKa/JnA9ReQAX9Z3qznMJSxM1yj9Far9BSvP'
+  + 'exZlYDsJG8xZWmllG8+7g8KXQJCxXlAwSgjMsKnZaRnPVNMIXeNSXaBgvFeUonadlaChvIsZYXlMONpuOsDnXug3tAOPf2yQjytZ'
+  + 'yS0G0vVlJnrGeJCt2mnhlLlcaJqeOD86oZ1yl034GWFp1RGeqiBFPpQX9zHPCA0z/K/3+wwCarGVYYqRxUL7sUKLq4IE5vzdvCCE'
+  + 'hOZjHb8Hfgij7CfOI4WGzmMl5VckdCbjrviZp9B2FoYOj5Uf0XEIx2HNgqPSD3yy7l5d/9ODFJKZaOVQeZLNm3SqFmcjf7RyG6Fz'
+  + 'RN4vyLMszWALJ6yAoaJPWDYNMEqzAGOcBljB8hPmrFCNtP0y1uqvhBzPsTH+b2E8nK0T1vU5iyKPJpPH5zL6BzDKI3I=');
+
 const LIGNES = [['Référence', 'Désignation', 'Quantité', 'Prix HT'],
   ['MC-4501', 'Moulin à café', '2', '19,90'],
   ['MC-9000', 'Bouilloire', '1', '34,00'],
@@ -81,14 +95,44 @@ const REPLIEE_SANS_FILETS = [['Référence', 'Désignation', 'Quantité', 'Prix 
 // Point de rupture
 // ---------------------------------------------------------------------------
 
-test('point de rupture : la lecture devinée coupe une cellule repliée', async () => {
+test("point de rupture : l'habillage de la page n'est pas une ligne du tableau", async () => {
+  // « Sur une facture sans filets, la grille est déduite de toute la page : le
+  // bloc adresse, le numéro de facture et le pied de page tombent dans la
+  // première colonne. Les lignes à moins de deux cellules remplies ne sont pas
+  // rendues, et `dropped_lines` dit lesquelles. »
+  const table = (await readTables(FACTURE_SANS_FILETS)).tables[0];
+  assert.equal(table.strategy, 'text');
+  assert.deepEqual(table.rows, [
+    ['Reference', 'Designation', 'Quantite', 'Prix HT'],
+    ['MC-4501', 'Moulin a cafe', '2', '19,90'],
+    ['MC-9000', 'Bouilloire', '1', '34,00'],
+  ]);
+  assert.deepEqual(table.dropped_lines, [
+    'SARL Le Moulin',
+    '12 rue des Freres-Lumiere',
+    '92100 Boulogne-Billancourt',
+    'Facture n FA-2026-0412 du 12 janvier 2026',
+    'Page 1 sur 1',
+  ]);
+  assert.equal(MIN_FILLED_CELLS, 2);
+});
+
+test('point de rupture : la lecture devinée sort une cellule repliée du tableau', async () => {
   // Faute de détection des filets en JavaScript, c'est toujours la lecture
-  // devinée qui répond ici : quatre lignes, et la seconde ligne de la
-  // désignation laissée seule. L'extrait Python, lui, en rend trois.
+  // devinée qui répond ici. La seconde ligne de la désignation n'a qu'une
+  // cellule remplie : elle est nommée dans `dropped_lines` plutôt que rendue
+  // comme une ligne du tableau, donc elle sort de la case où elle devrait
+  // être. L'extrait Python lit les filets et la garde dans la case.
   const table = (await readTables(CELLULE_REPLIEE)).tables[0];
   assert.equal(table.strategy, 'text');
-  assert.deepEqual(table.rows, REPLIEE_SANS_FILETS);
-  assert.equal(table.rows.length, 4);
+  assert.deepEqual(table.rows, [
+    ['Référence', 'Désignation', 'Quantité', 'Prix HT'],
+    ['MC-4501', 'Moulin à café Lumière', '2', '19,90'],
+    ['MC-9000', 'Bouilloire', '1', '34,00'],
+  ]);
+  assert.deepEqual(table.dropped_lines, ['modèle 2026, édition limitée']);
+  // La grille brute, avant le filtre, porte bien les quatre lignes.
+  assert.equal(REPLIEE_SANS_FILETS.length, 4);
 });
 
 test("point de rupture : témoin, le rapport dit laquelle des deux lectures a répondu", async () => {
@@ -117,9 +161,9 @@ test("les mots d'une même cellule sont rassemblés", async () => {
 });
 
 test("une page sans tableau ne rend pas un tableau inventé", async () => {
-  const { tables } = await readTables(PROSE);
-  assert.equal(tables[0].strategy, 'text');
-  assert.ok(tables[0].rows.every((ligne) => ligne.length === 1));
+  // Une page de prose n'a ni filets ni colonnes : chaque ligne y porte une
+  // seule cellule remplie, donc aucune n'est une ligne de tableau.
+  assert.deepEqual((await readTables(PROSE)).tables, []);
   assert.deepEqual((await readTables(SCAN)).tables, []);
 });
 
@@ -182,10 +226,10 @@ test('production : valeurs aux limites', () => {
 });
 
 test("production : une page sans tableau n'empêche pas de lire les autres", async () => {
-  const lot = [TABLEAU, Buffer.from('pas un PDF'), SANS_FILETS, SCAN];
+  const lot = [TABLEAU, Buffer.from('pas un PDF'), SANS_FILETS, SCAN, FACTURE_SANS_FILETS];
   const vus = [];
   for (const p of lot) vus.push((await readTables(p)).tables.length);
-  assert.deepEqual(vus, [1, 0, 1, 0]);
+  assert.deepEqual(vus, [1, 0, 1, 0, 1]);
 });
 
 test('production : la lecture tient la classe de latence annoncée', async () => {

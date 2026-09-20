@@ -17,7 +17,18 @@ fallback cuts a cell wider than its column, turning « Prix HT » into « Prix H
 
 Which reading was used is in the report, because the caller should not have to
 wonder: `strategy` is « lines » when the page said where the cells were, and
-« text » when the code decided.
+« text » when the code decided. Only Python can answer « lines »: there is no
+JavaScript package that reads the rules of a PDF, so that side always guesses.
+
+The guess is made from the whole page, not from the table: the columns come
+from every left edge seen on the page, address block and footer included. That
+is why a guessed reading keeps only the lines with at least two filled cells —
+« SARL Le Moulin » alone on its line is the letterhead, not a row. What it left
+out is not thrown away: `dropped_lines` holds the text of every line it
+refused, so nothing read on the page is lost, and what is not a row is named
+rather than silently rendered as one. Without that rule, the four lines of
+letterhead of an emailed invoice come back as four rows with three empty cells,
+and a caller iterating over `rows[1:]` reads a street address as a part number.
 """
 
 from __future__ import annotations
@@ -36,6 +47,12 @@ SAME_CELL = 10.0
 
 # Two cells are in the same column when their left edges are within this.
 SAME_COLUMN = 12.0
+
+# In a guessed reading, a line with fewer filled cells than this is not a row
+# of the table: it is the letterhead, the invoice number, a page footer, a
+# paragraph of prose, or the second half of a designation that wrapped. All of
+# them go to `dropped_lines`, with their text.
+MIN_FILLED_CELLS = 2
 
 
 def read_tables(pdf_bytes, *, pages=None) -> dict:
@@ -59,15 +76,25 @@ def read_tables(pdf_bytes, *, pages=None) -> dict:
                 continue
             ruled = page.extract_tables()
             if ruled:
-                found.extend({"page": number, "strategy": "lines", "rows": rows}
+                found.extend({"page": number, "strategy": "lines", "rows": rows,
+                              "dropped_lines": []}
                              for rows in ruled)
                 continue
             words = [{"text": w["text"], "x": w["x0"], "end": w["x1"], "y": -w["top"]}
                      for w in page.extract_words()]
             rows = group_into_rows(words)
-            if rows:
-                found.append({"page": number, "strategy": "text", "rows": rows})
+            kept = [row for row in rows if _filled(row) >= MIN_FILLED_CELLS]
+            dropped = [" ".join(c for c in row if c)
+                       for row in rows if _filled(row) < MIN_FILLED_CELLS]
+            if kept:
+                found.append({"page": number, "strategy": "text", "rows": kept,
+                              "dropped_lines": dropped})
     return {"tables": found, "reason": None}
+
+
+def _filled(row) -> int:
+    """How many cells of this line carry text."""
+    return sum(1 for cell in row if cell)
 
 
 def group_into_rows(words) -> list:

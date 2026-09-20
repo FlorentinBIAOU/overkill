@@ -22,8 +22,8 @@ rungs:
   - level: N0
     available: true
     name:
-      fr: "Les filets quand la page en a, la position des mots sinon"
-      en: "The rules where the page has them, the position of the words otherwise"
+      fr: "Les filets en Python quand la page en a, la position des mots dans les deux langages"
+      en: "The rules in Python where the page has them, the position of the words in both languages"
     cost: nul
     latency: "~10 ms"
     risks:
@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/extract-tables-from-a-pdf/n0.js
       verification: executed
     breaking_point:
-      fr: "La lecture devinée coupe une cellule repliée : sur la même facture, le tableau tracé rend trois lignes en gardant « Moulin à café Lumière » et « modèle 2026, édition limitée » dans la même case, quand la lecture sans filets en rend quatre et laisse la seconde ligne toute seule. Le témoin est dans le même test : c’est le même document, et `strategy` dit laquelle des deux lectures a répondu."
-      en: "The guessed reading cuts a wrapped cell in two: on the same invoice, the ruled table returns three rows keeping “Moulin à café Lumière” and “modèle 2026, édition limitée” in one cell, while the reading without rules returns four and leaves the second line on its own. The witness is in the same test: it is the same document, and `strategy` says which of the two readings answered."
+      fr: "Sans filets, la grille vient de toute la page : sur une facture reçue par courriel, le bloc adresse, le numéro et le pied tombent dans la première colonne, et seules les lignes à deux cellules remplies sont rendues — les cinq autres sont nommées dans `dropped_lines`. Témoin dans le même test : les trois lignes du tableau, elles, sortent entières."
+      en: "Without rules the grid comes from the whole page: on an emailed invoice the address block, the invoice number and the footer fall into the first column, and only lines with two filled cells are returned — the other five are named in `dropped_lines`. Witness in the same test: the three rows of the table do come out whole."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus dans cette fiche. Le jour où le PDF ne porte plus de texte du tout — un relevé scanné —, la question n’est plus la grille mais la reconnaissance de caractères, et c’est une autre fiche."
       en: "There is no level above this one on this page. The day the PDF carries no text at all — a scanned statement — the question is no longer the grid but character recognition, and that is another entry."
