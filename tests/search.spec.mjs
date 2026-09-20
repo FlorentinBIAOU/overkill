@@ -1,13 +1,26 @@
 /**
- * Recherche et filtres du catalogue (lot 05), éprouvés sur le jeu de 200
- * fiches de test que demande la section 6.2 du CDC.
+ * Recherche et filtres du catalogue (lot 05), éprouvés sur le jeu de fiches de
+ * test que demande la section 6.2 du CDC — au moins deux cents.
+ *
+ * Le jeu est dérivé de la feuille de route, une fiche par intitulé : son
+ * cardinal est donc celui de `content/roadmap.yaml`, et il est lu ici plutôt
+ * qu'écrit en dur, sans quoi tout intitulé ajouté ferait échouer ce fichier.
  *
  * Prérequis : OVERKILL_FIXTURES=1 npm run build:dev
  */
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import { parse as parseYaml } from 'yaml';
 import { serve } from '../scripts/shot.mjs';
+
+const INTITULES = parseYaml(readFileSync('content/roadmap.yaml', 'utf8'));
+/** Le nombre de fiches de test, et le minimum que le CDC demande. */
+const TOTAL = INTITULES.length;
+assert.ok(TOTAL >= 200, `le jeu de test doit porter au moins 200 fiches, il en a ${TOTAL}`);
+/** Le nombre de fiches de la famille la plus employée par le jeu de test. */
+const PAR_FAMILLE = INTITULES.filter((i) => i.family === 'extract').length;
 
 const serveur = await serve();
 const BASE = `http://127.0.0.1:${serveur.address().port}`;
@@ -36,16 +49,16 @@ async function chercher(page, texte) {
   await page.waitForTimeout(400);
 }
 
-test('le catalogue rend les 200 fiches de test, paginées', async () => {
+test('le catalogue rend toutes les fiches de test, paginées', async () => {
   const { page, erreurs } = await catalogue();
   assert.deepEqual(erreurs, []);
   // Les deux cents cartes sont dans le HTML — c'est ce qui permet aux filtres
   // de porter sur tout le catalogue — mais seule la page demandée s'affiche.
-  assert.equal(await page.locator('[data-entry]').count(), 200);
+  assert.equal(await page.locator('[data-entry]').count(), TOTAL);
   const n = await visibles(page);
   assert.ok(n >= 24 && n <= 30, `${n} cartes visibles, 24 à 30 attendues`);
   // Le compteur, lui, annonce le catalogue entier.
-  assert.equal((await page.locator('[data-count]').textContent()).trim(), '200');
+  assert.equal((await page.locator('[data-count]').textContent()).trim(), String(TOTAL));
   assert.match(await page.locator('[data-pagination]').innerText(), /Page 1 sur 9/);
   await page.close();
 });
@@ -54,7 +67,7 @@ test('la recherche cherche dès deux caractères et trouve', async () => {
   const { page } = await catalogue();
   await chercher(page, 'facture');
   const n = await visibles(page);
-  assert.ok(n > 0 && n < 200, `attendu un sous-ensemble, obtenu ${n}`);
+  assert.ok(n > 0 && n < TOTAL, `attendu un sous-ensemble, obtenu ${n}`);
   const titres = await page.locator('[data-entry]:not([hidden]) .card__title').allTextContents();
   assert.ok(titres.some((t) => /facture/i.test(t)), `aucun titre pertinent : ${titres.slice(0, 5)}`);
   await page.close();
@@ -73,7 +86,7 @@ test('la recherche est insensible aux accents et à la casse', async () => {
     e.map((n) => n.dataset.entryId),
   );
   assert.ok(avecAccent.length > 0, 'la recherche accentuée doit trouver quelque chose');
-  assert.ok(avecAccent.length < 200, 'elle doit tout de même filtrer');
+  assert.ok(avecAccent.length < TOTAL, 'elle doit tout de même filtrer');
   assert.deepEqual(sansAccent, avecAccent);
   await page.close();
 });
@@ -106,8 +119,8 @@ test('une recherche en français ne remonte aucune fiche anglaise, et réciproqu
   // Chaque langue a son index : le cloisonnement est structurel.
   const fr = await (await fetch(`${BASE}/fr/search-index.json`)).json();
   const en = await (await fetch(`${BASE}/en/search-index.json`)).json();
-  assert.equal(fr.length, 200);
-  assert.equal(en.length, 200);
+  assert.equal(fr.length, TOTAL);
+  assert.equal(en.length, TOTAL);
 
   const texteFr = fr.map((e) => e.t).join(' ');
   const texteEn = en.map((e) => e.t).join(' ');
@@ -123,7 +136,8 @@ test('les quatre filtres se combinent et le compteur suit', async () => {
   await page.selectOption('[data-filter="family"]', 'extract');
   await page.waitForTimeout(100);
   const parFamille = await visibles(page);
-  assert.equal(parFamille, 20, `une famille compte 20 fiches, obtenu ${parFamille}`);
+  assert.equal(parFamille, PAR_FAMILLE,
+    `la famille « extract » compte ${PAR_FAMILLE} fiches, obtenu ${parFamille}`);
 
   await page.selectOption('[data-filter="verdict"]', 'N0');
   await page.waitForTimeout(100);
@@ -174,7 +188,7 @@ test('la recherche est aussi reprise depuis l\'URL', async () => {
   await page.waitForTimeout(400);
   assert.equal(await page.locator('[data-search-input]').inputValue(), 'facture');
   const n = await visibles(page);
-  assert.ok(n > 0 && n < 200, `attendu un sous-ensemble, obtenu ${n}`);
+  assert.ok(n > 0 && n < TOTAL, `attendu un sous-ensemble, obtenu ${n}`);
   await page.close();
 });
 
@@ -194,7 +208,7 @@ test('sans JavaScript, la liste est complète et les filtres passent par le form
   });
   await page.goto(`${BASE}/fr/catalogue`, { waitUntil: 'load' });
 
-  assert.equal(await page.locator('[data-entry]').count(), 200);
+  assert.equal(await page.locator('[data-entry]').count(), TOTAL);
   assert.ok(await page.locator('[data-catalogue-form] button[type=submit]').isVisible());
   assert.ok(await page.locator('.catalogue__nojs').isVisible(), 'le message de dégradation doit être visible');
   await page.close();
