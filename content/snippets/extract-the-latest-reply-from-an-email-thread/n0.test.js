@@ -108,6 +108,15 @@ Bien à vous,
 Jean Dupont
 `;
 
+// La ligne d'attribution de Gmail, qui fait soixante-neuf caractères : c'est
+// elle qui était comptée comme du texte écrit sous la citation, si bien que
+// toute réponse plus courte qu'elle déclenchait le signal.
+const ATTRIBUTION = 'Le 10 octobre 2026 à 13:55, Marie Martin <marie@exemple.fr> a écrit :';
+
+/** Le fil ordinaire, avec la réponse qu'on veut au-dessus de la citation. */
+const filAvec = (reponse) => `${reponse}\n\n${ATTRIBUTION}\n> Bonjour Jean,\n`
+  + '> Pouvez-vous confirmer le devis DV-2026-118 avant vendredi ?\n> Marie\n';
+
 // ---------------------------------------------------------------------------
 // Point de rupture
 // ---------------------------------------------------------------------------
@@ -120,6 +129,46 @@ test("point de rupture : une réponse écrite dans la citation n'est pas au-dess
   assert.equal(rapport.reason, 'more text was written under the quote than above it');
   assert.equal(extractReply(FIL_SOUS).reply, '');
   assert.notEqual(extractReply(FIL_SOUS).reason, null);
+});
+
+test("une réponse courte n'est pas du texte écrit sous la citation", () => {
+  // Docstring : « What the attribution line itself holds is not counted as
+  // text written under the quote — it is the dressing of the quote, and it is
+  // sixty-nine characters long, which is longer than most business replies. »
+  //
+  // C'est ce qui a fait tomber cette fiche : une réponse d'affaires courte
+  // déclenchait le signal qui envoie le fil au niveau N3, c'est-à-dire à un
+  // appel facturé par message.
+  assert.equal(ATTRIBUTION.length, 69);
+  for (const reponse of ['Oui.', "Oui, c'est signé.", "C'est noté, merci."]) {
+    const rapport = extractReply(filAvec(reponse));
+    assert.equal(rapport.reply, reponse, reponse);
+    assert.equal(rapport.reason, null, reponse);
+  }
+});
+
+test('valeurs aux limites du signal de texte sous la citation', () => {
+  for (const longueur of [1, ATTRIBUTION.length - 1, ATTRIBUTION.length, ATTRIBUTION.length + 1]) {
+    const rapport = extractReply(filAvec('a'.repeat(longueur)));
+    assert.equal(rapport.reply, 'a'.repeat(longueur), String(longueur));
+    assert.equal(rapport.reason, null, String(longueur));
+  }
+  const sous = `${filAvec('Oui.').replace(/\n+$/, '')}\n\nJe confirme aussi la livraison de lundi.`;
+  const rapport = extractReply(sous);
+  assert.equal(rapport.reply, 'Oui.');
+  assert.equal(rapport.reason, 'more text was written under the quote than above it');
+});
+
+test("une phrase qui commence par « Le » et finit par « a écrit : » n'est pas un marqueur", () => {
+  // Commentaire : « Every mail client writes a date or an address in that
+  // line. Requiring one keeps « Le client a écrit : », which is a sentence and
+  // not a marker, from cutting the message at its first line. »
+  const message = 'Le client a écrit :\n« merci pour le devis »\n\n'
+    + 'Je confirme la commande.\n\nJean';
+  const rapport = extractReply(message);
+  assert.equal(rapport.reply, message.trim());
+  assert.equal(rapport.quoted_from_line, null);
+  assert.equal(extractReply(filAvec('Oui.')).quoted_from_line, 2);
 });
 
 test('point de rupture : témoin, le fil ordinaire revient entier', () => {
@@ -182,11 +231,15 @@ test("sous un bloc recopié, rien ne distingue une réponse de l'ancien message"
   assert.equal(extractReply(sousOutlook).reason, null); // et personne ne le sait
 });
 
-test('aucune entrée ne lève', () => {
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(extractReply(null).reason, 'expected text, not object');
+  assert.equal(extractReply(42).reason, 'expected text, not number');
+  assert.equal(extractReply(undefined).reason, 'expected text, not undefined');
   for (const entree of [null, undefined, 42, [], {}, '']) {
     const rapport = extractReply(entree);
     assert.equal(rapport.reply, '');
-    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text'));
+    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text, not '));
   }
 });
 

@@ -49,6 +49,11 @@ ATTRIBUTION_OPENS = re.compile(r"^\s*(Le|On)\s+\S")
 ATTRIBUTION_CLOSES = re.compile(r"(a écrit|wrote)\s*:\s*$")
 ATTRIBUTION_LINES = 3
 
+# Every mail client writes a date or an address in that line. Requiring one
+# keeps « Le client a écrit : », which is a sentence and not a marker, from
+# cutting the message at its first line.
+ATTRIBUTION_DATES = re.compile(r"\d|@")
+
 LINE_END = re.compile(r"\r\n|\r|\n")
 
 # Characters the two languages do not class alike: a byte-order mark is a space
@@ -64,7 +69,15 @@ def extract_reply(message) -> dict:
 
     `reason` is set when the reply looks like it was written under the quote or
     inside it: the cut then returns almost nothing, and « almost nothing » must
-    not be handed back as « the reply was empty ».
+    not be handed back as « the reply was empty ». What the attribution line
+    itself holds is not counted as text written under the quote — it is the
+    dressing of the quote, and it is sixty-nine characters long, which is
+    longer than most business replies.
+
+    `quoted_from_line` counts lines in the message split on CR, LF and CRLF,
+    and on those only — not the way `str.splitlines()` or `String.split` would
+    do it. A caller that uses the number splits the same way, with the regular
+    expression named below.
     """
     if not isinstance(message, str):
         return _report("", None, f"expected text, not {type(message).__name__}")
@@ -73,28 +86,35 @@ def extract_reply(message) -> dict:
     # str.splitlines() also cuts on a form feed and on U+2028, which the
     # JavaScript side does not, and the two would stop answering alike.
     lines = LINE_END.split(ODD_SPACES.sub("", message))
-    cut, kind = _first_marker(lines)
+    cut, kind, dressing = _first_marker(lines)
     if cut is None:
         return _report(message.strip(), None, None)
 
     reply = "\n".join(lines[:cut]).strip()
-    if kind == "quoted" and _unquoted_under(lines[cut:]) > len(reply):
+    if kind == "quoted" and _unquoted_under(lines[cut + dressing:]) > len(reply):
         return _report(reply, cut, "more text was written under the quote than above it")
     return _report(reply, cut, None)
 
 
 def _first_marker(lines):
-    """Where the quoted thread begins, and how the old message is marked."""
+    """
+    Where the quoted thread begins, how the old message is marked, and how many
+    lines the marker itself takes.
+
+    The third number is what keeps the attribution out of the count of what was
+    written under the quote: a `>` prefix is already dropped by the filter, an
+    attribution is not.
+    """
     for index, line in enumerate(lines):
         for kind, marker in MARKERS:
             if marker.search(line):
-                return index, kind
+                return index, kind, 0
         if ATTRIBUTION_OPENS.match(line):
             for length in range(1, ATTRIBUTION_LINES + 1):
                 window = " ".join(lines[index:index + length]).rstrip()
-                if ATTRIBUTION_CLOSES.search(window):
-                    return index, "quoted"
-    return None, None
+                if ATTRIBUTION_CLOSES.search(window) and ATTRIBUTION_DATES.search(window):
+                    return index, "quoted", length
+    return None, None, 0
 
 
 def _unquoted_under(lines) -> int:

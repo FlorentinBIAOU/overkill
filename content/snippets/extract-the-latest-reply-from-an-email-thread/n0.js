@@ -44,6 +44,11 @@ const ATTRIBUTION_OPENS = /^\s*(Le|On)\s+\S/;
 const ATTRIBUTION_CLOSES = /(a écrit|wrote)\s*:\s*$/;
 const ATTRIBUTION_LINES = 3;
 
+// Every mail client writes a date or an address in that line. Requiring one
+// keeps « Le client a écrit : », which is a sentence and not a marker, from
+// cutting the message at its first line.
+const ATTRIBUTION_DATES = /\d|@/;
+
 const LINE_END = /\r\n|\r|\n/;
 
 // Characters the two languages do not class alike: a byte-order mark is a
@@ -57,7 +62,15 @@ const ODD_SPACES = /[\ufeff\x1c-\x1f\x85]/g;
  *
  * `reason` is set when the reply looks like it was written under the quote or
  * inside it: the cut then returns almost nothing, and « almost nothing » must
- * not be handed back as « the reply was empty ».
+ * not be handed back as « the reply was empty ». What the attribution line
+ * itself holds is not counted as text written under the quote — it is the
+ * dressing of the quote, and it is sixty-nine characters long, which is
+ * longer than most business replies.
+ *
+ * `quoted_from_line` counts lines in the message split on CR, LF and CRLF, and
+ * on those only — not the way `String.prototype.split(/\s/)` or Python's
+ * `str.splitlines()` would do it. A caller that uses the number splits the
+ * same way, with the regular expression named below.
  */
 export function extractReply(message) {
   if (typeof message !== 'string') {
@@ -65,30 +78,39 @@ export function extractReply(message) {
   }
 
   const lines = message.replace(ODD_SPACES, '').split(LINE_END);
-  const [cut, kind] = firstMarker(lines);
+  const [cut, kind, dressing] = firstMarker(lines);
   if (cut === null) return report(message.trim(), null, null);
 
   const reply = lines.slice(0, cut).join('\n').trim();
-  if (kind === 'quoted' && unquotedUnder(lines.slice(cut)) > reply.length) {
+  if (kind === 'quoted' && unquotedUnder(lines.slice(cut + dressing)) > reply.length) {
     return report(reply, cut, 'more text was written under the quote than above it');
   }
   return report(reply, cut, null);
 }
 
-/** Where the quoted thread begins, and how the old message is marked. */
+/**
+ * Where the quoted thread begins, how the old message is marked, and how many
+ * lines the marker itself takes.
+ *
+ * The third number is what keeps the attribution out of the count of what was
+ * written under the quote: a `>` prefix is already dropped by the filter, an
+ * attribution is not.
+ */
 function firstMarker(lines) {
   for (let index = 0; index < lines.length; index += 1) {
     for (const [kind, marker] of MARKERS) {
-      if (marker.test(lines[index])) return [index, kind];
+      if (marker.test(lines[index])) return [index, kind, 0];
     }
     if (ATTRIBUTION_OPENS.test(lines[index])) {
       for (let length = 1; length <= ATTRIBUTION_LINES; length += 1) {
         const window = lines.slice(index, index + length).join(' ').replace(/\s+$/, '');
-        if (ATTRIBUTION_CLOSES.test(window)) return [index, 'quoted'];
+        if (ATTRIBUTION_CLOSES.test(window) && ATTRIBUTION_DATES.test(window)) {
+          return [index, 'quoted', length];
+        }
       }
     }
   }
-  return [null, null];
+  return [null, null, 0];
 }
 
 /** How much text under the cut carries no quote prefix. */
