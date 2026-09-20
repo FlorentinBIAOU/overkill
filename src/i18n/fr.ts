@@ -297,7 +297,7 @@ export default {
   pageCta: {
     methodology: {
       heading: 'La méthode à l’œuvre',
-      body: 'Vingt-cinq besoins, leur verdict, le code qui va avec, et une zone d’essai qui le fait tourner devant vous.',
+      body: 'Cinquante besoins, leur verdict, le code qui va avec, et une zone d’essai qui le fait tourner devant vous.',
       action: 'Parcourir le catalogue',
     },
     contribute: {

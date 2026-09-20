@@ -286,7 +286,7 @@ export default {
   pageCta: {
     methodology: {
       heading: 'The method at work',
-      body: 'Twenty-five needs, their verdict, the code that goes with them, and a try zone that runs it in front of you.',
+      body: 'Fifty needs, their verdict, the code that goes with them, and a try zone that runs it in front of you.',
       action: 'Browse the catalogue',
     },
     contribute: {
