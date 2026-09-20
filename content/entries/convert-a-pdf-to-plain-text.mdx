@@ -1,0 +1,92 @@
+---
+id: convert-a-pdf-to-plain-text
+family: transform
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Récupérer le texte d’un PDF"
+  en: "Convert a PDF to plain text"
+
+need:
+  fr: "Obtenir le texte d’un document PDF, page par page, dans l’ordre où il se lit."
+  en: "Get the text of a PDF document, page by page, in the order it reads."
+
+scenario:
+  fr: "On voit envoyer un PDF entier à un modèle généraliste avec la consigne « donne-moi le texte », sans avoir essayé de le lire. Les caractères sont pourtant dans le fichier, exactement : un PDF numérique range les instructions pour les dessiner, et une bibliothèque les rend sans rien reconnaître ni rien inventer. Le seul vrai problème est ailleurs, et un modèle ne le résout pas mieux : le fichier dit où chaque mot est posé, jamais dans quel ordre on le lit."
+  en: "Sending a whole PDF to a general-purpose model with the instruction “give me the text”, without having tried to read it, is a common sight. Yet the characters are in the file, exactly: a born-digital PDF stores the instructions for drawing them, and a library returns them without recognising or inventing anything. The only real problem is elsewhere, and a model does not solve it better: the file says where each word sits, never in which order it is read."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Le texte du fichier, lu colonne par colonne"
+      en: "The file’s own text, read column by column"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le document est lu dans votre processus et n’est transmis à personne"
+          - "Un contrat, une facture ou un courrier porte des données personnelles : ce niveau est celui qui les garde chez vous"
+        en:
+          - "No specific scope added: the document is read inside your own process and is sent to nobody"
+          - "A contract, an invoice or a letter carries personal data: this is the level that keeps it at home"
+    code:
+      python: snippets/convert-a-pdf-to-plain-text/n0.py
+      javascript: snippets/convert-a-pdf-to-plain-text/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Le texte extrait est le texte imprimé, pas le texte écrit : « quatre généra- » et « tions de clients », coupés en fin de ligne, restent deux morceaux. Le témoin est dans le même test, et c’est la raison de ne pas les recoller : « Boulogne- » et « Billancourt » sont coupés de la même façon sur la même page, et ce sont deux mots."
+      en: "The extracted text is the printed text, not the written one: “quatre généra-” and “tions de clients”, cut at the end of a line, stay two pieces. The witness is in the same test, and it is the reason not to glue them: “Boulogne-” and “Billancourt” are cut the same way on the same page, and they are two words."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où le rapport rend zéro colonne et un texte vide, le PDF ne porte pas de texte du tout : c’est un scan, et la question devient la reconnaissance de caractères."
+      en: "There is no level above this one. The day the report returns zero columns and an empty text, the PDF carries no text at all: it is a scan, and the question becomes character recognition."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre du contenu : les caractères sont écrits dans le fichier, et aucun modèle ne les rendra plus exacts. La seule décision de cette fiche — où sont les colonnes — se prend sur une projection des positions des mots, c’est-à-dire sur une bande vide de vingt-cinq points ; un classifieur entraîné sur des mises en page annotées donnerait la même réponse avec un jeu de données à constituer."
+      en: "There is nothing to learn from the content: the characters are written in the file, and no model will make them more exact. The one decision this entry takes — where the columns are — comes from projecting the words’ positions, that is, from an empty band twenty-five points wide; a classifier trained on annotated layouts would give the same answer with a dataset to assemble first."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Les modèles d’analyse de mise en page existent, et ils servent sur des pages dont l’ordre de lecture est réellement difficile : un journal, un formulaire, une affiche. Ils demandent de rendre la page en image, ce qui coûte plus cher que tout ce que fait cette fiche, et ils ne changent rien au texte lui-même, qui est déjà exact. Le gain se limiterait aux mises en page que la recherche de gouttières manque, et le prix est un modèle résident sur chaque machine qui lit un PDF."
+      en: "Layout analysis models exist, and they are useful on pages whose reading order is genuinely hard: a newspaper, a form, a poster. They require rendering the page to an image, which costs more than everything this entry does, and they change nothing about the text itself, which is already exact. The gain would be limited to layouts the gutter search misses, and the price is a resident model on every machine that reads a PDF."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un modèle généraliste rend un texte qui ressemble à celui du document : sur un contrat ou une facture, la différence entre « ressemble » et « est » porte un nom. Le fichier contient le texte exact, et la lecture se vérifie — chaque caractère rendu se retrouve dans le flux de contenu. S’y ajoutent une sortie de données par document et une facture par page, pour un travail que la même machine fait en quelques millisecondes."
+      en: "A general-purpose model returns a text that resembles the document’s: on a contract or an invoice, the difference between “resembles” and “is” has a name. The file holds the exact text, and the reading can be checked — every character returned is found in the content stream. Add to that one data egress per document and a bill per page, for work the same machine does in milliseconds."
+
+verdict_rationale:
+  fr: "N0, parce que le texte est dans le fichier et qu’aucune reconnaissance n’a lieu : ce que rend la bibliothèque est ce que le document contient, au caractère près. Le seul travail à faire est l’ordre de lecture, et il se fait sans modèle : une page à deux colonnes, dessinée ligne par ligne comme l’exportent beaucoup de traitements de texte, donne « La boulangerie Martin fête Clémentine Martin a repris » quand on la lit naïvement, et la recherche des gouttières la remet dans l’ordre. Ce que la fiche refuse de faire est aussi important : un mot coupé en fin de ligne reste coupé, parce que le recoller ferait de « Boulogne- » et « Billancourt » un seul mot une fois sur deux."
+  en: "N0, because the text is in the file and no recognition takes place: what the library returns is what the document holds, character for character. The only work left is the reading order, and it needs no model: a two-column page, drawn line by line as many word processors export it, reads as “La boulangerie Martin fête Clémentine Martin a repris” when taken naïvely, and the gutter search puts it back in order. What this entry refuses to do matters as much: a word cut at the end of a line stays cut, because gluing it back would make “Boulogne-” and “Billancourt” one word every other time."
+
+further_reading:
+  - label: "pypdf — la bibliothèque Python, et ses modes d’extraction de texte"
+    url: "https://pypdf.readthedocs.io/en/stable/user/extract-text.html"
+  - label: "pdftotext — l’outil en ligne de commande de Poppler"
+    url: "https://poppler.freedesktop.org/"
+  - label: "pdf.js — la bibliothèque de Mozilla, et son contenu textuel"
+    url: "https://mozilla.github.io/pdf.js/"
+  - label: "Savoir si un PDF a besoin d’OCR — la fiche qui traite l’étape d’avant"
+    url: "https://isitoverkill.dev/fr/fiches/know-whether-a-pdf-needs-ocr"
+
+sources:
+  - label: "pypdf, documentation de l’extraction de texte (consultée) : ce que rend la bibliothèque, et le mode « layout » qui conserve les positions au prix d’un remplissage par des espaces"
+    url: "https://pypdf.readthedocs.io/en/stable/user/extract-text.html"
+  - label: "pdfplumber sur son dépôt (consulté) : version 0.11.10, publiée le 15 juin 2026, licence MIT ; c’est lui qui fournit ici les mots et leurs coordonnées"
+    url: "https://github.com/jsvine/pdfplumber"
+  - label: "pdf.js, API getTextContent (consultée) : chaque élément de texte porte sa matrice de transformation, d’où sortent l’abscisse et la largeur employées ici"
+    url: "https://mozilla.github.io/pdf.js/api/draft/module-pdfjsLib-PDFPageProxy.html"
+---

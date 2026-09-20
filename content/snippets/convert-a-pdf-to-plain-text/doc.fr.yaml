@@ -1,0 +1,45 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Sortir le texte d'un PDF, dans l'ordre où il se lit.
+
+  Niveau N0. Un PDF ne range pas un texte : il range des instructions pour
+  dessiner des glyphes à des coordonnées. Les lire est ce que font `pypdf` et `pdftotext`, et
+  `pdf.js` en JavaScript — aucun n'a besoin d'un modèle, puisque les caractères
+  sont dans le fichier, exactement, et qu'aucune reconnaissance n'a lieu.
+
+  Ce qu'ils ne font pas, c'est décider dans quel ordre ces caractères se
+  lisent. Un traitement de texte qui exporte deux colonnes les dessine souvent
+  ligne par ligne, la gauche puis la droite, si bien que la lecture naïve donne
+  « La boulangerie Martin fête Clémentine Martin a repris ». Les colonnes sont
+  donc cherchées ici, par les gouttières — les bandes de la page où aucun mot
+  ne se trouve — et chacune est lue de haut en bas avant que la suivante
+  commence.
+
+  Une chose est laissée telle quelle, délibérément : un mot coupé en fin de
+  ligne reste coupé. Recoller « généra- » et « tions » tient en une ligne de
+  code, et recollerait aussi « Boulogne- » et « Billancourt », qui est une
+  autre ville. L'appelant connaît son corpus ; cette fonction ne devine pas.
+
+n0.js: |
+  Sortir le texte d'un PDF, dans l'ordre où il se lit.
+
+  Niveau N0. Un PDF ne range pas un texte : il range des instructions pour
+  dessiner des glyphes à des coordonnées. Les lire est ce que font `pdf.js`, et
+  `pypdf` ou `pdftotext` en Python — aucun n'a besoin d'un modèle, puisque les caractères
+  sont dans le fichier, exactement, et qu'aucune reconnaissance n'a lieu.
+
+  Ce qu'ils ne font pas, c'est décider dans quel ordre ces caractères se
+  lisent. Un traitement de texte qui exporte deux colonnes les dessine souvent
+  ligne par ligne, la gauche puis la droite, si bien que la lecture naïve donne
+  « La boulangerie Martin fête Clémentine Martin a repris ». Les colonnes sont
+  donc cherchées ici, par les gouttières — les bandes de la page où aucun mot
+  ne se trouve — et chacune est lue de haut en bas avant que la suivante
+  commence.
+
+  Une chose est laissée telle quelle, délibérément : un mot coupé en fin de
+  ligne reste coupé. Recoller « généra- » et « tions » tient en une ligne de
+  code, et recollerait aussi « Boulogne- » et « Billancourt », qui est une
+  autre ville. L'appelant connaît son corpus ; cette fonction ne devine pas.
