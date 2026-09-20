@@ -9,7 +9,6 @@
   ],
   "dette": [
     "check-a-password-against-a-policy",
-    "check-bank-details-before-a-transfer",
     "forecast-weekly-sales",
     "fuzzy-match-company-names",
     "know-whether-a-pdf-needs-ocr",

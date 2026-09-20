@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { isValidIBAN } from 'ibantools';
 
 import {
   MAX_CHARACTERS,
@@ -15,6 +16,14 @@ import {
 // numéro ne dit lequel est le vôtre.
 const ATTENDU = 'FR7630006000011234567890189';
 const SUBSTITUE = 'FR7630006000010987654321028';
+
+// Un numéro dont la clé ISO 13616 est juste et dont la seule clé RIB est
+// fausse : c'est le cas qu'il faut pour démontrer que l'extrait ajoute bien
+// quelque chose à la bibliothèque.
+const CLE_RIB_SEULE_FAUSSE = 'FR0630006000011234567890188';
+
+// Deux IBAN monégasques : Monaco emploie la même clé que la France.
+const MONEGASQUES = ['MC5811222000010123456789030', 'MC1112739000700011111000H79'];
 
 // Les six confusions de saisie entre un chiffre et une lettre qui lui ressemble.
 const SOSIES = { 0: 'O', 1: 'I', 2: 'Z', 5: 'S', 6: 'G', 8: 'B' };
@@ -102,7 +111,9 @@ test("point de rupture : témoin, aucune faute d'un chiffre ne passe", () => {
       }
     }
   }
-  assert.ok(essais > 20_000);
+  // Le générateur est à graine fixe (3), donc le décompte est reproductible à
+  // l'unité : il est asserté à l'égalité, pas dans une fourchette.
+  assert.equal(essais, 20_700); // 100 IBAN × 23 positions × 9 autres chiffres
   assert.equal(passees, 0);
 });
 
@@ -122,13 +133,16 @@ test('aucune transposition de deux caractères voisins ne passe', () => {
       if (checkBankDetails(permute).valid) passees += 1;
     }
   }
-  assert.ok(essais > 1_900);
+  // Docstring : « nor one of their 2 000 adjacent transpositions ».
+  assert.equal(essais, 2_000);
   assert.equal(passees, 0);
 });
 
 test('la clé RIB ferme ce que la clé ISO laisse passer', () => {
-  // Docstring : « The ISO key alone lets 0.6 % of the last kind pass […] the
-  // RIB key is what closes that ». Les deux contrôles sur les mêmes entrées.
+  // Docstring : « The ISO key alone lets 32 of those 6 892 pass — 0.46 % […]
+  // the RIB key is what closes that ». Les deux contrôles sur les mêmes
+  // entrées, et les trois chiffres publiés assertés à l'égalité : le
+  // générateur est à graine fixe (3), donc rien n'autorise une fourchette.
   let seuleIso = 0;
   let ensemble = 0;
   let passees = 0;
@@ -144,9 +158,10 @@ test('la clé RIB ferme ce que la clé ISO laisse passer', () => {
       if (rapport.valid) passees += 1;
     }
   }
-  assert.ok(ensemble > 6_000);
+  assert.equal(ensemble, 6_892);
+  assert.equal(seuleIso, 32);
   assert.equal(passees, 0);
-  assert.ok(seuleIso / ensemble > 0.002 && seuleIso / ensemble < 0.02);
+  assert.equal(Math.round((100 * seuleIso) / ensemble * 100) / 100, 0.46);
 });
 
 test('la clé RIB est celle de la norme bancaire française', () => {
@@ -157,9 +172,26 @@ test('la clé RIB est celle de la norme bancaire française', () => {
   );
   assert.equal(nationalKeyOk('FR', ATTENDU.slice(4)), true);
   assert.equal(nationalKeyOk('FR', SUBSTITUE.slice(4)), true);
-  const fausse = ATTENDU.slice(0, -2) + (ATTENDU.slice(-2) === '88' ? '77' : '88');
-  const rapport = checkBankDetails(fausse);
-  assert.ok(rapport.national_key === false || rapport.reason.startsWith('ISO 13616'));
+  // Un numéro qui passe la clé ISO et échoue à la seule clé RIB : c'est
+  // celui-là qu'il faut, sans « ou ». `ibantools` le refuse aussi, ce que la
+  // docstring dit et ce que ce test vérifie.
+  assert.equal(isValidIBAN(CLE_RIB_SEULE_FAUSSE), false);
+  const rapport = checkBankDetails(CLE_RIB_SEULE_FAUSSE);
+  assert.equal(rapport.valid, false);
+  assert.equal(rapport.national_key, false);
+  assert.equal(rapport.reason, 'the RIB key inside the account number does not match');
+});
+
+test('Monaco porte la même clé que la France', () => {
+  // Commentaire : « Monaco uses the French banking standard: its national part
+  // is twenty-three characters too and satisfies the same modulo 97. »
+  for (const numero of MONEGASQUES) {
+    const rapport = checkBankDetails(numero);
+    assert.equal(rapport.country, 'MC', numero);
+    assert.equal(rapport.national_key, true, numero);
+    assert.equal(rapport.valid, true, numero);
+  }
+  assert.equal(checkBankDetails('DE89370400440532013000').national_key, null);
 });
 
 test("la clé nationale n'est pas calculée hors de France", () => {
@@ -193,7 +225,12 @@ test('le numéro est rendu groupé par quatre', () => {
   assert.equal(checkBankDetails(ATTENDU).printed, 'FR76 3000 6000 0112 3456 7890 189');
 });
 
-test('aucune entrée ne lève', () => {
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // Docstring : « Nothing raises ». R14 : la raison dit ce que le code a
+  // constaté — le type reçu.
+  assert.equal(checkBankDetails(null).reason, 'an IBAN is text, not null');
+  assert.equal(checkBankDetails(76.3).reason, 'an IBAN is text, not number');
+  assert.equal(checkBankDetails([]).reason, 'an IBAN is text, not object');
   for (const entree of [null, undefined, 0, 76.3, [], {}, Symbol('x'), '', 'x'.repeat(10_000)]) {
     const rapport = checkBankDetails(entree);
     assert.equal(rapport.valid, false);

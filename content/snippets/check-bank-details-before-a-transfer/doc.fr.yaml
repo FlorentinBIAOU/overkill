@@ -18,18 +18,23 @@ n0.py: |
 
   Par-dessus ISO 13616, plusieurs pays posent une seconde clé à l'intérieur de
   la partie nationale, et les deux bibliothèques ne couvrent pas les mêmes
-  pays. Cet extrait ne s'appuie donc pas sur les leurs : il demande à la
-  bibliothèque les chiffres de contrôle, la longueur et le format du registre,
-  et calcule lui-même la clé RIB française, dans les deux langages. Ailleurs,
+  pays — mesuré, pas supposé : `python-stdnum` n'a pas de module français, donc
+  `iban.is_valid` ne contrôle que la clé ISO et le format du registre, tandis
+  qu'`ibantools` refuse bien `FR0630006000011234567890188`, dont la clé RIB est
+  fausse. Deux bibliothèques qui répondent différemment sur le même numéro,
+  ce sont deux extraits qui répondraient différemment sur la même page : cet
+  extrait calcule donc lui-même la clé RIB, dans les deux langages. Ailleurs,
   un numéro qui passe ici peut encore être refusé par la banque du
   bénéficiaire.
 
-  Mesuré sur cinq cents IBAN français fabriqués : avec les deux clés, pas une
-  seule des vingt mille fautes d'un chiffre, des deux mille inversions de deux
-  caractères voisins ni des sept mille lettres sosies ne passe. La clé ISO
-  seule en laisse passer 0,6 % de ces dernières, parce que le numéro de compte
-  français est alphanumérique au registre et qu'un « I » y est un caractère
-  légal à la place d'un « 1 » ; c'est la clé RIB qui ferme cela.
+  Mesuré, chaque chiffre sur son propre jeu : aucune des 20 700 fautes d'un
+  chiffre de cent IBAN français fabriqués ne passe, ni aucune de leurs 1 973
+  inversions de deux caractères voisins, ni aucune des 6 882 lettres sosies de
+  cinq cents d'entre eux. La clé ISO seule en laisse passer 31 sur ces 6 882 —
+  0,45 % —, parce que le numéro de compte français est alphanumérique au
+  registre et qu'un « I » y est un caractère légal à la place d'un « 1 » ;
+  c'est la clé RIB qui ferme cela. L'extrait JavaScript fabrique ses propres
+  numéros et mesure 32 sur 6 892, soit 0,46 %.
 
   Et rien de tout cela ne dit à qui appartient le compte. C'est le service de
   vérification du bénéficiaire que tout prestataire de la zone euro doit
@@ -52,18 +57,23 @@ n0.js: |
 
   Par-dessus ISO 13616, plusieurs pays posent une seconde clé à l'intérieur de
   la partie nationale, et les deux bibliothèques ne couvrent pas les mêmes
-  pays. Cet extrait ne s'appuie donc pas sur les leurs : il demande à la
-  bibliothèque les chiffres de contrôle, la longueur et le format du registre,
-  et calcule lui-même la clé RIB française, dans les deux langages. Ailleurs,
+  pays — mesuré, pas supposé : `python-stdnum` n'a pas de module français, donc
+  `iban.is_valid` ne contrôle que la clé ISO et le format du registre, tandis
+  qu'`ibantools` refuse bien `FR0630006000011234567890188`, dont la clé RIB est
+  fausse. Deux bibliothèques qui répondent différemment sur le même numéro,
+  ce sont deux extraits qui répondraient différemment sur la même page : cet
+  extrait calcule donc lui-même la clé RIB, dans les deux langages. Ailleurs,
   un numéro qui passe ici peut encore être refusé par la banque du
   bénéficiaire.
 
-  Mesuré sur cinq cents IBAN français fabriqués : avec les deux clés, pas une
-  seule des vingt mille fautes d'un chiffre, des deux mille inversions de deux
-  caractères voisins ni des sept mille lettres sosies ne passe. La clé ISO
-  seule en laisse passer 0,6 % de ces dernières, parce que le numéro de compte
-  français est alphanumérique au registre et qu'un « I » y est un caractère
-  légal à la place d'un « 1 » ; c'est la clé RIB qui ferme cela.
+  Mesuré, chaque chiffre sur son propre jeu : aucune des 20 700 fautes d'un
+  chiffre de cent IBAN français fabriqués ne passe, ni aucune de leurs 2 000
+  inversions de deux caractères voisins, ni aucune des 6 892 lettres sosies de
+  cinq cents d'entre eux. La clé ISO seule en laisse passer 32 sur ces 6 892 —
+  0,46 % —, parce que le numéro de compte français est alphanumérique au
+  registre et qu'un « I » y est un caractère légal à la place d'un « 1 » ;
+  c'est la clé RIB qui ferme cela. L'extrait Python fabrique ses propres
+  numéros et mesure 31 sur 6 882, soit 0,45 %.
 
   Et rien de tout cela ne dit à qui appartient le compte. C'est le service de
   vérification du bénéficiaire que tout prestataire de la zone euro doit

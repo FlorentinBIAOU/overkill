@@ -11,18 +11,22 @@ The table is the part you do not write. `python-stdnum` here and `ibantools` in
 JavaScript both carry the IBAN registry, revised as countries join.
 
 On top of ISO 13616, several countries put a second key inside the national
-part, and the two libraries do not cover the same countries. So this snippet
-does not rely on theirs: it asks the library for the check digits, the length
-and the registry format, and computes the French RIB key itself, in both
+part, and the two libraries do not cover the same ones — measured, not assumed:
+`python-stdnum` carries no French module, so `iban.is_valid` checks the ISO key
+and the registry format and nothing else, while `ibantools` does refuse
+`FR0630006000011234567890188`, whose RIB key is wrong. Two libraries that
+answer differently on the same number are two snippets that would answer
+differently on the same page, so this one computes the RIB key itself, in both
 languages. Elsewhere, a number that passes here can still be refused by the
 receiving bank.
 
-Measured on five hundred generated French IBANs: with both keys, not one of
-twenty thousand digit-for-digit slips, two thousand adjacent transpositions or
-seven thousand lookalike-letter slips gets through. The ISO key alone lets
-0.6 % of the last kind pass, because the French account number is alphanumeric
-by registry and `I` for `1` is a legal character there; the RIB key is what
-closes that.
+Measured, each on its own set: not one of the 20 700 digit-for-digit slips of a
+hundred generated French IBANs gets through, nor one of their 1 973 adjacent
+transpositions, nor one of the 6 882 lookalike-letter slips of five hundred of
+them. The ISO key alone lets 31 of those 6 882 pass — 0.45 % — because the
+French account number is alphanumeric by registry and `I` for `1` is a legal
+character there; the RIB key is what closes that. The JavaScript side generates
+its own numbers and measures 32 of 6 892, which is 0.46 %.
 
 And none of it says whose account it is. That question is answered by the payee
 verification service every euro-area provider has had to offer since 9 October
@@ -45,6 +49,11 @@ SEPARATORS = "    -‐‑–"
 MIN_LENGTH, MAX_LENGTH = 15, 34
 MAX_CHARACTERS = 64
 
+# The countries whose national part carries the RIB key. Monaco uses the French
+# banking standard: its national part is twenty-three characters too and
+# satisfies the same modulo 97.
+RIB_COUNTRIES = ("FR", "MC")
+
 # The letter-to-digit table of the French RIB key, from the French banking
 # standard: A and J are 1, B, K and S are 2, and so on to I, R and Z at 9.
 RIB_LETTERS = {c: str((i % 9) + 1) for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ".replace("S", ""))}
@@ -54,10 +63,11 @@ RIB_LETTERS.update({c: str(i + 2) for i, c in enumerate("STUVWXYZ")})
 def national_key_ok(country: str, bban: str) -> bool | None:
     """
     The country's own key inside the account number, or None when this snippet
-    has none for that country. France: letters become digits, and the whole
-    twenty-three-digit national part, key included, is a multiple of 97.
+    has none for that country. France and Monaco: letters become digits, and
+    the whole twenty-three-character national part, key included, is a multiple
+    of 97.
     """
-    if country != "FR":
+    if country not in RIB_COUNTRIES:
         return None
     digits = "".join(RIB_LETTERS.get(c, c) for c in bban)
     return int(digits) % 97 == 0
@@ -112,7 +122,7 @@ def check_bank_details(raw, *, expected_country: str | None = None) -> dict:
     key = national_key_ok(country, compact[4:])
     if key is False:
         return _report(False, country, compact, key,
-                       "the French RIB key inside the account number does not match")
+                       "the RIB key inside the account number does not match")
     return _report(True, country, compact, key, None)
 
 

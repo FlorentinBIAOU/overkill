@@ -1,0 +1,928 @@
+
+> overkill@1.0.0 check:fast
+> npm run check:chain && npm run check:content && npm run check:marquages && npm run check:rupture && npm run check:raisons && npm run check:chiffres && npm run check:egress && npm run check:adaptateur && npm run test:schema && npm run test:harness && npm run test:routes && npm run check:colour && npm run check:illustrations && npm run check:figures && npm run check:fonts && npm run check:contrast && npm run check:french && npm run build && npm run check:links && npm run check:seo && npm run check:weight
+
+
+> overkill@1.0.0 check:chain
+> node scripts/check-chain.mjs
+
+check-chain : OK — 34 étape(s) enchaînée(s), 4 exemption(s) écrite(s)
+
+> overkill@1.0.0 check:content
+> node --import tsx scripts/check-content.mjs
+
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+
+check-content : OK — 50 fiche(s) (50 publiée(s), 0 brouillon(s)), 10 famille(s), 205 intitulé(s) de feuille de route, 49 essai(s)
+
+
+> overkill@1.0.0 check:marquages
+> node scripts/check-marquages.mjs
+
+check-marquages : OK — 50 fiche(s) lue(s), aucun marquage sur une fiche publiée
+
+> overkill@1.0.0 check:rupture
+> node scripts/check-longueur-rupture.mjs
+
+check-longueur-rupture : OK — 208 point(s) de rupture, 151 encore en dette, aucun nouveau dépassement
+
+> overkill@1.0.0 check:raisons
+> node scripts/check-raisons.mjs
+
+check-raisons : OK — 170 raison(s) rendue(s) par les extraits, toutes citées par un test ; 12 fiche(s) encore en dette
+
+> overkill@1.0.0 check:chiffres
+> node scripts/check-chiffres-tenus.mjs
+
+check-chiffres-tenus : OK — 71 nombre(s) publié(s), tous présents dans un test ; 8 fiche(s) encore en dette
+
+> overkill@1.0.0 check:egress
+> node scripts/check-egress.mjs
+
+check-egress : OK — 68 niveau(x) déclarent « data_egress: none » ; 1 fiche(s) encore en dette
+
+> overkill@1.0.0 check:adaptateur
+> node scripts/check-adaptateur.mjs
+
+check-adaptateur : OK — 38 adaptateur(s) N3 exercé(s) contre le double du harnais
+
+> overkill@1.0.0 test:schema
+> node --import tsx --test tests/schema.test.mjs tests/check-content.test.mjs tests/snippets.test.mjs tests/check-longueur-rupture.test.mjs tests/check-raisons.test.mjs tests/check-chiffres-tenus.test.mjs tests/check-egress.test.mjs
+
+TAP version 13
+# Subtest: les deux conventions de séparateur donnent le même nombre
+ok 1 - les deux conventions de séparateur donnent le même nombre
+  ---
+  duration_ms: 0.63321
+  ...
+# Subtest: un pourcentage, un facteur, une décimale et un grand entier sont des mesures
+ok 2 - un pourcentage, un facteur, une décimale et un grand entier sont des mesures
+  ---
+  duration_ms: 1.059377
+  ...
+# Subtest: une année et un numéro de norme ne sont pas des mesures
+ok 3 - une année et un numéro de norme ne sont pas des mesures
+  ---
+  duration_ms: 0.124979
+  ...
+# Subtest: le chiffre d’un nom de niveau n’ouvre pas un nombre
+ok 4 - le chiffre d’un nom de niveau n’ouvre pas un nombre
+  ---
+  duration_ms: 0.081966
+  ...
+# Subtest: un nombre écrit avec un séparateur se cherche aussi sans lui
+ok 5 - un nombre écrit avec un séparateur se cherche aussi sans lui
+  ---
+  duration_ms: 0.256301
+  ...
+# Subtest: un nombre publié qu’aucun test ne porte fait échouer
+ok 6 - un nombre publié qu’aucun test ne porte fait échouer
+  ---
+  duration_ms: 53.796963
+  ...
+# Subtest: le même nombre écrit sans séparateur dans le test suffit
+ok 7 - le même nombre écrit sans séparateur dans le test suffit
+  ---
+  duration_ms: 91.757005
+  ...
+# Subtest: une fiche en dette ne fait pas échouer
+ok 8 - une fiche en dette ne fait pas échouer
+  ---
+  duration_ms: 68.127441
+  ...
+# Subtest: une fiche en dette dont tous les nombres sont tenus fait échouer
+ok 9 - une fiche en dette dont tous les nombres sont tenus fait échouer
+  ---
+  duration_ms: 55.90948
+  ...
+# Subtest: une fiche valide accompagnée de ses tests passe
+ok 10 - une fiche valide accompagnée de ses tests passe
+  ---
+  duration_ms: 298.278401
+  ...
+# Subtest: un fichier de code absent du disque est refusé
+ok 11 - un fichier de code absent du disque est refusé
+  ---
+  duration_ms: 196.942377
+  ...
+# Subtest: une fiche publiée dont un extrait n'a pas de test est refusée
+ok 12 - une fiche publiée dont un extrait n'a pas de test est refusée
+  ---
+  duration_ms: 211.525434
+  ...
+# Subtest: la même fiche en brouillon ne produit qu'un avertissement
+ok 13 - la même fiche en brouillon ne produit qu'un avertissement
+  ---
+  duration_ms: 206.574132
+  ...
+# Subtest: un nom de fichier qui ne correspond pas à l'identifiant est refusé
+ok 14 - un nom de fichier qui ne correspond pas à l'identifiant est refusé
+  ---
+  duration_ms: 248.476522
+  ...
+# Subtest: deux fiches partageant un identifiant sont refusées
+ok 15 - deux fiches partageant un identifiant sont refusées
+  ---
+  duration_ms: 225.053848
+  ...
+# Subtest: une famille manquante est refusée dès qu'il y a des familles
+ok 16 - une famille manquante est refusée dès qu'il y a des familles
+  ---
+  duration_ms: 186.589214
+  ...
+# Subtest: une adresse de service tiers est une sortie
+ok 17 - une adresse de service tiers est une sortie
+  ---
+  duration_ms: 1.249509
+  ...
+# Subtest: les primitives réseau des deux langages sont des sorties
+ok 18 - les primitives réseau des deux langages sont des sorties
+  ---
+  duration_ms: 0.291952
+  ...
+# Subtest: un espace de noms XML n’est pas une connexion
+ok 19 - un espace de noms XML n’est pas une connexion
+  ---
+  duration_ms: 0.089842
+  ...
+# Subtest: un domaine d’exemple réservé par la RFC 2606 n’est pas une connexion
+ok 20 - un domaine d’exemple réservé par la RFC 2606 n’est pas une connexion
+  ---
+  duration_ms: 0.122276
+  ...
+# Subtest: un mot qui contient « socket » n’est pas un import de socket
+ok 21 - un mot qui contient « socket » n’est pas un import de socket
+  ---
+  duration_ms: 0.062674
+  ...
+# Subtest: « none » sur un niveau qui appelle un service fait échouer
+ok 22 - « none » sur un niveau qui appelle un service fait échouer
+  ---
+  duration_ms: 62.215182
+  ...
+# Subtest: « third-party » sur le même code passe
+ok 23 - « third-party » sur le même code passe
+  ---
+  duration_ms: 73.778397
+  ...
+# Subtest: « none » sur un niveau qui n’ouvre rien passe
+ok 24 - « none » sur un niveau qui n’ouvre rien passe
+  ---
+  duration_ms: 60.470597
+  ...
+# Subtest: une fiche en dette ne fait pas échouer, et sa dette périme quand elle est en règle
+ok 25 - une fiche en dette ne fait pas échouer, et sa dette périme quand elle est en règle
+  ---
+  duration_ms: 118.076713
+  ...
+# Subtest: R11 est bien deux phrases et soixante mots
+ok 26 - R11 est bien deux phrases et soixante mots
+  ---
+  duration_ms: 0.555515
+  ...
+# Subtest: une phrase sans point final compte pour une
+ok 27 - une phrase sans point final compte pour une
+  ---
+  duration_ms: 0.186357
+  ...
+# Subtest: deux phrases séparées par un point comptent pour deux
+ok 28 - deux phrases séparées par un point comptent pour deux
+  ---
+  duration_ms: 0.099628
+  ...
+# Subtest: l’abréviation « M. » entre guillemets ne coupe pas la phrase
+ok 29 - l’abréviation « M. » entre guillemets ne coupe pas la phrase
+  ---
+  duration_ms: 0.249723
+  ...
+# Subtest: un point de suspension en fin de citation compte une fin de phrase
+ok 30 - un point de suspension en fin de citation compte une fin de phrase
+  ---
+  duration_ms: 0.10735
+  ...
+# Subtest: le tiret cadratin isolé n’est pas un mot
+ok 31 - le tiret cadratin isolé n’est pas un mot
+  ---
+  duration_ms: 2.137321
+  ...
+# Subtest: les guillemets français collés au mot ne le dédoublent pas
+ok 32 - les guillemets français collés au mot ne le dédoublent pas
+  ---
+  duration_ms: 0.144607
+  ...
+# Subtest: pointsDeRupture lit les deux langues de chaque niveau disponible
+ok 33 - pointsDeRupture lit les deux langues de chaque niveau disponible
+  ---
+  duration_ms: 0.46936
+  ...
+# Subtest: un dépassement absent de la dette fait échouer
+ok 34 - un dépassement absent de la dette fait échouer
+  ---
+  duration_ms: 59.606282
+  ...
+# Subtest: un dépassement déclaré dans la dette passe
+ok 35 - un dépassement déclaré dans la dette passe
+  ---
+  duration_ms: 69.701092
+  ...
+# Subtest: une ligne de dette dont le point de rupture est rentré dans la limite fait échouer
+ok 36 - une ligne de dette dont le point de rupture est rentré dans la limite fait échouer
+  ---
+  duration_ms: 57.898834
+  ...
+# Subtest: une ligne de dette qui ne désigne plus rien fait échouer
+ok 37 - une ligne de dette qui ne désigne plus rien fait échouer
+  ---
+  duration_ms: 58.886348
+  ...
+# Subtest: une fiche en brouillon n’est pas regardée
+ok 38 - une fiche en brouillon n’est pas regardée
+  ---
+  duration_ms: 61.47574
+  ...
+# Subtest: trois phrases courtes font échouer, même sous soixante mots
+ok 39 - trois phrases courtes font échouer, même sous soixante mots
+  ---
+  duration_ms: 61.505609
+  ...
+# Subtest: les six champs de sortie sont ceux que le relecteur nomme
+ok 40 - les six champs de sortie sont ceux que le relecteur nomme
+  ---
+  duration_ms: 3.019759
+  ...
+# Subtest: une apostrophe dans un commentaire JavaScript ne déséquilibre pas le découpage
+ok 41 - une apostrophe dans un commentaire JavaScript ne déséquilibre pas le découpage
+  ---
+  duration_ms: 0.311904
+  ...
+# Subtest: une apostrophe dans un commentaire Python ne déséquilibre pas le découpage
+ok 42 - une apostrophe dans un commentaire Python ne déséquilibre pas le découpage
+  ---
+  duration_ms: 0.086271
+  ...
+# Subtest: une expression régulière qui contient un guillemet n’est pas lue comme une chaîne
+ok 43 - une expression régulière qui contient un guillemet n’est pas lue comme une chaîne
+  ---
+  duration_ms: 0.123618
+  ...
+# Subtest: une division ne passe pas pour une expression régulière
+ok 44 - une division ne passe pas pour une expression régulière
+  ---
+  duration_ms: 0.073969
+  ...
+# Subtest: un gabarit imbriqué dans une interpolation ne coupe pas la chaîne
+ok 45 - un gabarit imbriqué dans une interpolation ne coupe pas la chaîne
+  ---
+  duration_ms: 0.100504
+  ...
+# Subtest: une docstring Python n’est pas une chaîne du code
+ok 46 - une docstring Python n’est pas une chaîne du code
+  ---
+  duration_ms: 0.103871
+  ...
+# Subtest: fragments rend les morceaux constants, sans les trous d’interpolation
+ok 47 - fragments rend les morceaux constants, sans les trous d’interpolation
+  ---
+  duration_ms: 0.140601
+  ...
+# Subtest: estProse écarte les motifs, les clés et les chemins
+ok 48 - estProse écarte les motifs, les clés et les chemins
+  ---
+  duration_ms: 0.431048
+  ...
+# Subtest: porteurs reconnaît un passe-plat dont un paramètre est un champ de sortie
+ok 49 - porteurs reconnaît un passe-plat dont un paramètre est un champ de sortie
+  ---
+  duration_ms: 0.629671
+  ...
+# Subtest: une raison passée par un passe-plat est reconnue
+ok 50 - une raison passée par un passe-plat est reconnue
+  ---
+  duration_ms: 0.547865
+  ...
+# Subtest: un message d’exception n’est pas une raison
+ok 51 - un message d’exception n’est pas une raison
+  ---
+  duration_ms: 0.157463
+  ...
+# Subtest: une raison qu’aucun test ne cite fait échouer
+ok 52 - une raison qu’aucun test ne cite fait échouer
+  ---
+  duration_ms: 43.477366
+  ...
+# Subtest: une raison citée mot pour mot par un test passe
+ok 53 - une raison citée mot pour mot par un test passe
+  ---
+  duration_ms: 27.12502
+  ...
+# Subtest: une fiche en dette ne fait pas échouer
+ok 54 - une fiche en dette ne fait pas échouer
+  ---
+  duration_ms: 41.591238
+  ...
+# Subtest: une fiche en dette dont toutes les raisons sont testées fait échouer
+ok 55 - une fiche en dette dont toutes les raisons sont testées fait échouer
+  ---
+  duration_ms: 36.099404
+  ...
+# Subtest: une fiche conforme est acceptée
+ok 56 - une fiche conforme est acceptée
+  ---
+  duration_ms: 8.901942
+  ...
+# Subtest: fiche rejetée : invalide-verdict-barreau-absent
+ok 57 - fiche rejetée : invalide-verdict-barreau-absent
+  ---
+  duration_ms: 1.162101
+  ...
+# Subtest: fiche rejetée : invalide-cout-hors-vocabulaire
+ok 58 - fiche rejetée : invalide-cout-hors-vocabulaire
+  ---
+  duration_ms: 0.904354
+  ...
+# Subtest: fiche rejetée : invalide-latence-hors-classes
+ok 59 - fiche rejetée : invalide-latence-hors-classes
+  ---
+  duration_ms: 0.565042
+  ...
+# Subtest: fiche rejetée : invalide-langue-manquante
+ok 60 - fiche rejetée : invalide-langue-manquante
+  ---
+  duration_ms: 0.597374
+  ...
+# Subtest: fiche rejetée : invalide-barreau-sans-raison
+ok 61 - fiche rejetée : invalide-barreau-sans-raison
+  ---
+  duration_ms: 2.765059
+  ...
+# Subtest: fiche rejetée : invalide-date-future
+ok 62 - fiche rejetée : invalide-date-future
+  ---
+  duration_ms: 0.924926
+  ...
+# Subtest: fiche rejetée : invalide-barreaux-desordre
+ok 63 - fiche rejetée : invalide-barreaux-desordre
+  ---
+  duration_ms: 1.169582
+  ...
+# Subtest: toutes les fixtures invalides du dossier sont couvertes par un test
+ok 64 - toutes les fixtures invalides du dossier sont couvertes par un test
+  ---
+  duration_ms: 0.654364
+  ...
+# Subtest: le schéma de famille exige les dix identifiants connus
+ok 65 - le schéma de famille exige les dix identifiants connus
+  ---
+  duration_ms: 1.631357
+  ...
+# Subtest: un intitulé de feuille de route exige ses deux langues
+ok 66 - un intitulé de feuille de route exige ses deux langues
+  ---
+  duration_ms: 0.783858
+  ...
+# Subtest: la docstring Python est remplacée, le code ne bouge pas
+ok 67 - la docstring Python est remplacée, le code ne bouge pas
+  ---
+  duration_ms: 0.664265
+  ...
+# Subtest: la docstring JavaScript est remplacée avec ses étoiles
+ok 68 - la docstring JavaScript est remplacée avec ses étoiles
+  ---
+  duration_ms: 0.16781
+  ...
+# Subtest: un extrait sans docstring d’en-tête est rendu tel quel
+ok 69 - un extrait sans docstring d’en-tête est rendu tel quel
+  ---
+  duration_ms: 0.060113
+  ...
+# Subtest: la langue anglaise ne cherche aucune traduction
+ok 70 - la langue anglaise ne cherche aucune traduction
+  ---
+  duration_ms: 0.088062
+  ...
+# Subtest: sur un extrait réel, seule la docstring change
+ok 71 - sur un extrait réel, seule la docstring change
+  ---
+  duration_ms: 6.889796
+  ...
+1..71
+# tests 71
+# suites 0
+# pass 71
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1796.866785
+
+> overkill@1.0.0 test:harness
+> node --test tests/harness.test.mjs
+
+TAP version 13
+# Subtest: le hachage stable donne les mêmes valeurs dans les deux langages
+ok 1 - le hachage stable donne les mêmes valeurs dans les deux langages
+  ---
+  duration_ms: 15.580374
+  ...
+# Subtest: les deux hachages du harnais sont le même
+ok 2 - les deux hachages du harnais sont le même
+  ---
+  duration_ms: 0.18132
+  ...
+# Subtest: l'encodeur factice donne les mêmes vecteurs dans les deux langages
+ok 3 - l'encodeur factice donne les mêmes vecteurs dans les deux langages
+  ---
+  duration_ms: 22.975056
+  ...
+# Subtest: le double de modèle généraliste enregistre ce qu'on lui demande
+ok 4 - le double de modèle généraliste enregistre ce qu'on lui demande
+  ---
+  duration_ms: 0.150688
+  ...
+# Subtest: le double simule un échec de fournisseur autant de fois que demandé
+ok 5 - le double simule un échec de fournisseur autant de fois que demandé
+  ---
+  duration_ms: 0.252943
+  ...
+# Subtest: le double proteste s'il n'a jamais été appelé
+ok 6 - le double proteste s'il n'a jamais été appelé
+  ---
+  duration_ms: 0.184791
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 72.722685
+
+> overkill@1.0.0 test:routes
+> node --import tsx --test tests/routes.test.mjs
+
+TAP version 13
+# Subtest: les routes se construisent avec le préfixe de langue
+ok 1 - les routes se construisent avec le préfixe de langue
+  ---
+  duration_ms: 0.423868
+  ...
+# Subtest: le changement de langue conserve la page, y compris sur une fiche
+ok 2 - le changement de langue conserve la page, y compris sur une fiche
+  ---
+  duration_ms: 0.08916
+  ...
+# Subtest: un chemin sans préfixe de langue mène à la racine de la langue visée
+ok 3 - un chemin sans préfixe de langue mène à la racine de la langue visée
+  ---
+  duration_ms: 0.053833
+  ...
+# Subtest: la locale se lit dans le chemin
+ok 4 - la locale se lit dans le chemin
+  ---
+  duration_ms: 0.065914
+  ...
+# Subtest: les segments de premier niveau sont tous déclarés
+ok 5 - les segments de premier niveau sont tous déclarés
+  ---
+  duration_ms: 0.395708
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 117.367201
+
+> overkill@1.0.0 check:colour
+> node scripts/check-colour-usage.mjs
+
+check-colour-usage: OK
+
+> overkill@1.0.0 check:illustrations
+> node scripts/check-illustrations.mjs
+
+
+check-illustrations — 13 fichier(s), budget 8 Ko l'unité
+
+   0.67 Ko   0.37 Ko gz  empty-state.svg
+   0.68 Ko   0.41 Ko gz  family-classify-route.svg
+   0.79 Ko   0.44 Ko gz  family-decide-validate.svg
+   0.87 Ko   0.40 Ko gz  family-detect-filter.svg
+   0.65 Ko   0.41 Ko gz  family-extract.svg
+   0.74 Ko   0.47 Ko gz  family-generate.svg
+   0.87 Ko   0.48 Ko gz  family-predict.svg
+   1.09 Ko   0.53 Ko gz  family-recognize-transcribe.svg
+   0.87 Ko   0.44 Ko gz  family-recommend.svg
+   0.91 Ko   0.42 Ko gz  family-search.svg
+   0.95 Ko   0.46 Ko gz  family-transform.svg
+   1.15 Ko   0.50 Ko gz  hero.svg
+   0.73 Ko   0.40 Ko gz  not-found.svg
+
+check-illustrations : contraintes respectées
+
+
+> overkill@1.0.0 check:figures
+> node scripts/check-figures.mjs
+
+check-figures : OK — aucun prix absolu, aucune empreinte chiffrée, aucun banc d'essai affirmé
+
+> overkill@1.0.0 check:fonts
+> node scripts/check-fonts.mjs
+
+    22.9 Ko  bricolage-grotesque-display.woff2
+    16.1 Ko  jetbrains-mono-400.woff2
+    12.8 Ko  inter-600.woff2
+    12.3 Ko  inter-400.woff2
+  ----------------------------------------
+    64.1 Ko  total (budget 90 Ko) — OK
+
+> overkill@1.0.0 check:contrast
+> node scripts/check-contrast.mjs
+
+
+  Mode clair
+    ok    18.21:1 (min 4.5) texte courant — #16130E sur #FFFDF7
+    ok    16.14:1 (min 4.5) texte sur fond secondaire — #16130E sur #F4EFE2
+    ok     5.91:1 (min 4.5) texte secondaire — #6B6252 sur #FFFDF7
+    ok     5.23:1 (min 4.5) texte secondaire sur fond secondaire — #6B6252 sur #F4EFE2
+    ok    18.21:1 (min 4.5) texte sur aplat sombre — #FFFDF7 sur #16130E
+    ok    15.01:1 (min 4.5) texte sur N0 — #16130E sur #EDE7D7
+    ok     9.83:1 (min 4.5) texte sur N1 — #16130E sur #C8BC9E
+    ok     4.52:1 (min 4.5) texte sur N2 — #16130E sur #8A7C5C
+    ok     9.47:1 (min 4.5) texte sur N3 — #FFFDF7 sur #4C4432
+    ok    12.42:1 (min 3) display sur aplat de marque — #16130E sur #FFCE00
+    ok     4.65:1 (min 3) réponse N0 sur la carte de verdict — #1B7A4B sur #F4EFE2
+    ok     5.13:1 (min 3) réponse N1 sur la carte de verdict — #17706B sur #F4EFE2
+    ok     5.40:1 (min 3) réponse N2 sur la carte de verdict — #8A5510 sur #F4EFE2
+    ok     5.94:1 (min 3) réponse N3 sur la carte de verdict — #9A3E1E sur #F4EFE2
+    ok     5.25:1 (min 3) réponse N0 du questionnaire — #1B7A4B sur #FFFDF7
+    ok     6.09:1 (min 3) réponse N2 du questionnaire — #8A5510 sur #FFFDF7
+    ok     5.79:1 (min 4.5) titre « quand passer au niveau suivant » — #17706B sur #FFFDF7
+    ok     6.70:1 (min 4.5) titre « point de rupture » — #9A3E1E sur #FFFDF7
+    ok     5.25:1 (min 4.5) badge « recommandé » — #1B7A4B sur #FFFDF7
+    ok     4.65:1 (min 4.5) badge « recommandé » sur fond secondaire — #1B7A4B sur #F4EFE2
+    ok     5.25:1 (min 4.5) étiquette sur l'aplat de recommandation — #FFFDF7 sur #1B7A4B
+    ok    12.42:1 (min 4.5) texte courant sur aplat de marque — #16130E sur #FFCE00
+    ok    18.21:1 (min 4.5) bouton sombre sur aplat de marque — #FFFDF7 sur #16130E
+    ok    18.21:1 (min 3) anneau de focus — #16130E sur #FFFDF7
+    ok    16.14:1 (min 3) anneau de focus sur fond secondaire — #16130E sur #F4EFE2
+    ok    15.28:1 (min 4.5) code sur fond de bloc — #EFEADC sur #17140F
+    ok     7.42:1 (min 4.5) code secondaire sur fond de bloc — #ADA48F sur #17140F
+    ok     6.70:1 (min 4.5) barre du bloc de code — #ADA48F sur #221E17
+    ok    13.80:1 (min 4.5) bouton copier — #EFEADC sur #221E17
+
+  Mode sombre
+    ok    16.45:1 (min 4.5) texte courant — #F5F0E4 sur #14120E
+    ok    14.75:1 (min 4.5) texte sur fond secondaire — #F5F0E4 sur #211D16
+    ok     7.05:1 (min 4.5) texte secondaire — #A79E8C sur #14120E
+    ok     6.32:1 (min 4.5) texte secondaire sur fond secondaire — #A79E8C sur #211D16
+    ok    16.45:1 (min 4.5) texte sur aplat sombre — #14120E sur #F5F0E4
+    ok    12.90:1 (min 4.5) texte sur N0 — #F5F0E4 sur #2C2820
+    ok     9.30:1 (min 4.5) texte sur N1 — #F5F0E4 sur #453E30
+    ok     4.56:1 (min 4.5) texte sur N2 — #14120E sur #8A7C5C
+    ok     7.37:1 (min 4.5) texte sur N3 — #14120E sur #B0A184
+    ok    12.42:1 (min 3) display sur aplat de marque — #16130E sur #FFCE00
+    ok     7.23:1 (min 3) réponse N0 sur la carte de verdict — #4FBE87 sur #211D16
+    ok     6.63:1 (min 3) réponse N1 sur la carte de verdict — #46B3AC sur #211D16
+    ok     7.57:1 (min 3) réponse N2 sur la carte de verdict — #E0A33F sur #211D16
+    ok     5.57:1 (min 3) réponse N3 sur la carte de verdict — #E0784F sur #211D16
+    ok     8.06:1 (min 3) réponse N0 du questionnaire — #4FBE87 sur #14120E
+    ok     8.44:1 (min 3) réponse N2 du questionnaire — #E0A33F sur #14120E
+    ok     7.40:1 (min 4.5) titre « quand passer au niveau suivant » — #46B3AC sur #14120E
+    ok     6.21:1 (min 4.5) titre « point de rupture » — #E0784F sur #14120E
+    ok     8.05:1 (min 4.5) badge « recommandé » — #4FBE85 sur #14120E
+    ok     7.22:1 (min 4.5) badge « recommandé » sur fond secondaire — #4FBE85 sur #211D16
+    ok     8.05:1 (min 4.5) étiquette sur l'aplat de recommandation — #14120E sur #4FBE85
+    ok    12.42:1 (min 4.5) texte courant sur aplat de marque — #16130E sur #FFCE00
+    ok    18.21:1 (min 4.5) bouton sombre sur aplat de marque — #FFFDF7 sur #16130E
+    ok    12.54:1 (min 3) anneau de focus — #FFCE00 sur #14120E
+    ok    11.25:1 (min 3) anneau de focus sur fond secondaire — #FFCE00 sur #211D16
+    ok    15.28:1 (min 4.5) code sur fond de bloc — #EFEADC sur #17140F
+    ok     7.42:1 (min 4.5) code secondaire sur fond de bloc — #ADA48F sur #17140F
+    ok     6.70:1 (min 4.5) barre du bloc de code — #ADA48F sur #221E17
+    ok    13.80:1 (min 4.5) bouton copier — #EFEADC sur #221E17
+
+  Coloration syntaxique — thème github-dark-high-contrast sur #17140F
+    ok    12.71:1 (min 4.5) #72F088
+    ok    10.66:1 (min 4.5) #91CBFF
+    ok    12.64:1 (min 4.5) #ADDCFF
+    ok    10.44:1 (min 4.5) #BDC4CC
+    ok    10.70:1 (min 4.5) #DBB7FF
+    ok    16.49:1 (min 4.5) #F0F3F6
+    ok     8.66:1 (min 4.5) #FF9492
+    ok    10.64:1 (min 4.5) #FFB757
+    ok   8 couleur(s) émise(s) sur 210 extraits, la plus faible à 8.66:1
+
+  Tous les couples testés atteignent le seuil AA.
+
+> overkill@1.0.0 check:french
+> bash scripts/check-french.sh
+
+check-french : OK (410 fichiers)
+
+> overkill@1.0.0 build
+> astro build && node scripts/compute-page-weight.mjs && node scripts/strip-dev-pages.mjs
+
+[astro] `markdown.remarkPlugins`, `markdown.rehypePlugins`, and `markdown.remarkRehype` are deprecated. Pass them to `unified({...})` from `@astrojs/markdown-remark` directly instead.
+13:34:25 [content] Syncing content
+13:34:25 [content] Synced content
+13:34:25 [types] Generated 426ms
+13:34:25 [build] output: "static"
+13:34:25 [build] mode: "static"
+13:34:25 [build] directory: /home/florentin/overkill/dist/
+13:34:25 [build] Collecting build info...
+13:34:25 [build] ✓ Completed in 463ms.
+13:34:25 [build] Building static entrypoints...
+13:34:26 [vite] ✓ built in 855ms
+13:34:26 [vite] ✓ built in 44ms
+13:34:26 [build] Rearranging server assets...
+
+ generating static routes 
+13:34:26   ├─ /dev/catalogue/index.html (+10ms) 
+13:34:27   ├─ /dev/components/index.html (+293ms) 
+13:34:27   ├─ /dev/editorial/index.html (+8ms) 
+13:34:27   ├─ /dev/entry/index.html (+61ms) 
+13:34:27   ├─ /dev/entry-draft/index.html (+52ms) 
+13:34:27   ├─ /dev/famille/index.html (+3ms) 
+13:34:27   ├─ /dev/tokens/index.html (+3ms) 
+13:34:27   ├─ /en/404/index.html (+2ms) 
+13:34:27   ├─ /fr/404/index.html (+2ms) 
+13:34:27   ├─ /en/catalogue/index.html (+3ms) 
+13:34:27   ├─ /en/catalogue/2/index.html (+2ms) 
+13:34:27   ├─ /en/catalogue/3/index.html (+3ms) 
+13:34:27   ├─ /fr/catalogue/index.html (+3ms) 
+13:34:27   ├─ /fr/catalogue/2/index.html (+4ms) 
+13:34:27   ├─ /fr/catalogue/3/index.html (+2ms) 
+13:34:27   ├─ /en/dernieres-fiches/index.html (+3ms) 
+13:34:27   ├─ /fr/dernieres-fiches/index.html (+2ms) 
+13:34:27   ├─ /en/familles/detect-filter/index.html (+2ms) 
+13:34:27   ├─ /en/familles/extract/index.html (+2ms) 
+13:34:27   ├─ /en/familles/classify-route/index.html (+1ms) 
+13:34:27   ├─ /en/familles/search/index.html (+1ms) 
+13:34:27   ├─ /en/familles/recommend/index.html (+1ms) 
+13:34:27   ├─ /en/familles/predict/index.html (+1ms) 
+13:34:27   ├─ /en/familles/generate/index.html (+1ms) 
+13:34:27   ├─ /en/familles/transform/index.html (+4ms) 
+13:34:27   ├─ /en/familles/recognize-transcribe/index.html (+1ms) 
+13:34:27   ├─ /en/familles/decide-validate/index.html (+1ms) 
+13:34:27   ├─ /fr/familles/detect-filter/index.html (+1ms) 
+13:34:27   ├─ /fr/familles/extract/index.html (+1ms) 
+13:34:27   ├─ /fr/familles/classify-route/index.html (+1ms) 
+13:34:27   ├─ /fr/familles/search/index.html (+1ms) 
+13:34:27   ├─ /fr/familles/recommend/index.html (+7ms) 
+13:34:27   ├─ /fr/familles/predict/index.html (+2ms) 
+13:34:27   ├─ /fr/familles/generate/index.html (+1ms) 
+13:34:27   ├─ /fr/familles/transform/index.html (+8ms) 
+13:34:27   ├─ /fr/familles/recognize-transcribe/index.html (+2ms) 
+13:34:27   ├─ /fr/familles/decide-validate/index.html (+1ms) 
+13:34:27   ├─ /en/familles/index.html (+3ms) 
+13:34:27   ├─ /fr/familles/index.html (+2ms) 
+13:34:27   ├─ /en/fiches/add-autocomplete-to-a-search-bar/index.html (+26ms) 
+13:34:27   ├─ /en/fiches/check-a-company-identification-number/index.html (+21ms) 
+13:34:27   ├─ /en/fiches/check-a-file-is-really-the-format-it-claims/index.html (+23ms) 
+13:34:27   ├─ /en/fiches/check-a-password-against-a-policy/index.html (+13ms) 
+13:34:27   ├─ /en/fiches/check-bank-details-before-a-transfer/index.html (+16ms) 
+13:34:27   ├─ /en/fiches/extract-links-from-a-page/index.html (+24ms) 
+13:34:27   ├─ /en/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+155ms) 
+13:34:27   ├─ /en/fiches/detect-language-of-text/index.html (+46ms) 
+13:34:27   ├─ /en/fiches/estimate-the-cost-of-a-model-call/index.html (+23ms) 
+13:34:27   ├─ /en/fiches/extract-amounts-and-currencies-from-text/index.html (+77ms) 
+13:34:27   ├─ /en/fiches/extract-dates-from-text/index.html (+44ms) 
+13:34:27   ├─ /en/fiches/extract-fields-from-invoice/index.html (+63ms) 
+13:34:28   ├─ /en/fiches/extract-key-terms-from-a-document/index.html (+27ms) 
+13:34:28   ├─ /en/fiches/extract-main-content-from-a-web-page/index.html (+25ms) 
+13:34:28   ├─ /en/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+27ms) 
+13:34:28   ├─ /en/fiches/find-duplicate-records/index.html (+45ms) 
+13:34:28   ├─ /en/fiches/extract-people-and-companies-from-an-article/index.html (+36ms) 
+13:34:28   ├─ /en/fiches/forecast-weekly-sales/index.html (+21ms) 
+13:34:28   ├─ /en/fiches/extract-product-data-from-a-shop-page/index.html (+39ms) 
+13:34:28   ├─ /en/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+24ms) 
+13:34:28   ├─ /en/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+34ms) 
+13:34:28   ├─ /en/fiches/mask-personal-data-in-chat/index.html (+36ms) 
+13:34:28   ├─ /en/fiches/fuzzy-match-company-names/index.html (+25ms) 
+13:34:28   ├─ /en/fiches/moderate-user-comments/index.html (+43ms) 
+13:34:28   ├─ /en/fiches/parse-address-into-fields/index.html (+57ms) 
+13:34:28   ├─ /en/fiches/generate-placeholder-images/index.html (+15ms) 
+13:34:28   ├─ /en/fiches/generate-test-data/index.html (+92ms) 
+13:34:28   ├─ /en/fiches/rank-products-by-relevance/index.html (+33ms) 
+13:34:28   ├─ /en/fiches/extract-metadata-from-a-file/index.html (+21ms) 
+13:34:28   ├─ /en/fiches/read-text-from-a-scanned-page/index.html (+32ms) 
+13:34:28   ├─ /en/fiches/repair-text-with-broken-encoding/index.html (+11ms) 
+13:34:28   ├─ /en/fiches/route-support-tickets/index.html (+41ms) 
+13:34:28   ├─ /en/fiches/search-in-your-own-documents/index.html (+56ms) 
+13:34:28   ├─ /en/fiches/show-similar-articles/index.html (+32ms) 
+13:34:28   ├─ /en/fiches/extract-fields-from-a-log-line/index.html (+15ms) 
+13:34:28   ├─ /en/fiches/extract-tracking-numbers-from-an-email/index.html (+14ms) 
+13:34:28   ├─ /en/fiches/detect-anomalies-in-metrics/index.html (+24ms) 
+13:34:28   ├─ /en/fiches/detect-spam-in-contact-form/index.html (+30ms) 
+13:34:28   ├─ /en/fiches/aggregate-a-column-of-data/index.html (+18ms) 
+13:34:28   ├─ /en/fiches/summarise-a-long-document/index.html (+51ms) 
+13:34:28   ├─ /en/fiches/tag-articles-by-topic/index.html (+50ms) 
+13:34:29   ├─ /en/fiches/translate-interface-strings/index.html (+41ms) 
+13:34:29   ├─ /en/fiches/convert-messy-csv-to-clean-data/index.html (+73ms) 
+13:34:29   ├─ /en/fiches/extract-a-table-from-a-web-page/index.html (+21ms) 
+13:34:29   ├─ /en/fiches/validate-a-form-server-side/index.html (+12ms) 
+13:34:29   ├─ /en/fiches/validate-a-phone-number-and-its-country-code/index.html (+15ms) 
+13:34:29   ├─ /en/fiches/validate-an-api-payload-against-its-contract/index.html (+46ms) 
+13:34:29   ├─ /en/fiches/validate-an-email-address-without-sending-a-message/index.html (+10ms) 
+13:34:29   ├─ /en/fiches/validate-an-imported-file-against-a-schema/index.html (+34ms) 
+13:34:29   ├─ /en/fiches/write-product-descriptions/index.html (+57ms) 
+13:34:29   ├─ /fr/fiches/add-autocomplete-to-a-search-bar/index.html (+20ms) 
+13:34:29   ├─ /fr/fiches/check-a-company-identification-number/index.html (+11ms) 
+13:34:29   ├─ /fr/fiches/check-a-file-is-really-the-format-it-claims/index.html (+17ms) 
+13:34:29   ├─ /fr/fiches/check-a-password-against-a-policy/index.html (+12ms) 
+13:34:29   ├─ /fr/fiches/check-bank-details-before-a-transfer/index.html (+16ms) 
+13:34:29   ├─ /fr/fiches/extract-links-from-a-page/index.html (+15ms) 
+13:34:29   ├─ /fr/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+28ms) 
+13:34:29   ├─ /fr/fiches/detect-language-of-text/index.html (+39ms) 
+13:34:29   ├─ /fr/fiches/estimate-the-cost-of-a-model-call/index.html (+23ms) 
+13:34:29   ├─ /fr/fiches/extract-amounts-and-currencies-from-text/index.html (+41ms) 
+13:34:29   ├─ /fr/fiches/extract-dates-from-text/index.html (+41ms) 
+13:34:29   ├─ /fr/fiches/extract-fields-from-invoice/index.html (+53ms) 
+13:34:29   ├─ /fr/fiches/extract-key-terms-from-a-document/index.html (+25ms) 
+13:34:29   ├─ /fr/fiches/extract-main-content-from-a-web-page/index.html (+17ms) 
+13:34:29   ├─ /fr/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+32ms) 
+13:34:29   ├─ /fr/fiches/find-duplicate-records/index.html (+47ms) 
+13:34:29   ├─ /fr/fiches/extract-people-and-companies-from-an-article/index.html (+36ms) 
+13:34:29   ├─ /fr/fiches/forecast-weekly-sales/index.html (+22ms) 
+13:34:29   ├─ /fr/fiches/extract-product-data-from-a-shop-page/index.html (+33ms) 
+13:34:29   ├─ /fr/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+25ms) 
+13:34:29   ├─ /fr/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+32ms) 
+13:34:29   ├─ /fr/fiches/mask-personal-data-in-chat/index.html (+45ms) 
+13:34:29   ├─ /fr/fiches/fuzzy-match-company-names/index.html (+25ms) 
+13:34:29   ├─ /fr/fiches/moderate-user-comments/index.html (+42ms) 
+13:34:30   ├─ /fr/fiches/parse-address-into-fields/index.html (+60ms) 
+13:34:30   ├─ /fr/fiches/generate-placeholder-images/index.html (+13ms) 
+13:34:30   ├─ /fr/fiches/generate-test-data/index.html (+44ms) 
+13:34:30   ├─ /fr/fiches/rank-products-by-relevance/index.html (+29ms) 
+13:34:30   ├─ /fr/fiches/extract-metadata-from-a-file/index.html (+19ms) 
+13:34:30   ├─ /fr/fiches/read-text-from-a-scanned-page/index.html (+33ms) 
+13:34:30   ├─ /fr/fiches/repair-text-with-broken-encoding/index.html (+10ms) 
+13:34:30   ├─ /fr/fiches/route-support-tickets/index.html (+43ms) 
+13:34:30   ├─ /fr/fiches/search-in-your-own-documents/index.html (+55ms) 
+13:34:30   ├─ /fr/fiches/show-similar-articles/index.html (+32ms) 
+13:34:30   ├─ /fr/fiches/extract-fields-from-a-log-line/index.html (+12ms) 
+13:34:30   ├─ /fr/fiches/extract-tracking-numbers-from-an-email/index.html (+14ms) 
+13:34:30   ├─ /fr/fiches/detect-anomalies-in-metrics/index.html (+33ms) 
+13:34:30   ├─ /fr/fiches/detect-spam-in-contact-form/index.html (+32ms) 
+13:34:30   ├─ /fr/fiches/aggregate-a-column-of-data/index.html (+17ms) 
+13:34:30   ├─ /fr/fiches/summarise-a-long-document/index.html (+50ms) 
+13:34:30   ├─ /fr/fiches/tag-articles-by-topic/index.html (+51ms) 
+13:34:30   ├─ /fr/fiches/translate-interface-strings/index.html (+40ms) 
+13:34:30   ├─ /fr/fiches/convert-messy-csv-to-clean-data/index.html (+73ms) 
+13:34:30   ├─ /fr/fiches/extract-a-table-from-a-web-page/index.html (+20ms) 
+13:34:30   ├─ /fr/fiches/validate-a-form-server-side/index.html (+12ms) 
+13:34:30   ├─ /fr/fiches/validate-a-phone-number-and-its-country-code/index.html (+13ms) 
+13:34:30   ├─ /fr/fiches/validate-an-api-payload-against-its-contract/index.html (+23ms) 
+13:34:30   ├─ /fr/fiches/validate-an-email-address-without-sending-a-message/index.html (+9ms) 
+13:34:30   ├─ /fr/fiches/validate-an-imported-file-against-a-schema/index.html (+14ms) 
+13:34:30   ├─ /fr/fiches/write-product-descriptions/index.html (+49ms) 
+13:34:30   ├─ /en/par-ou-commencer/index.html (+4ms) 
+13:34:30   ├─ /fr/par-ou-commencer/index.html (+3ms) 
+13:34:30   ├─ /en/rss.xml (+5ms) 
+13:34:30   ├─ /fr/rss.xml (+2ms) 
+13:34:30   ├─ /en/search-index.json (+2ms) 
+13:34:30   ├─ /fr/search-index.json (+1ms) 
+13:34:30   ├─ /en/a-propos/index.html (+6ms) 
+13:34:30   ├─ /fr/a-propos/index.html (+3ms) 
+13:34:30   ├─ /en/contribuer/index.html (+2ms) 
+13:34:30   ├─ /fr/contribuer/index.html (+3ms) 
+13:34:30   ├─ /en/credits/index.html (+3ms) 
+13:34:30   ├─ /fr/credits/index.html (+3ms) 
+13:34:30   ├─ /en/accompagnement/index.html (+3ms) 
+13:34:30   ├─ /fr/accompagnement/index.html (+3ms) 
+13:34:30   ├─ /en/mentions-legales/index.html (+2ms) 
+13:34:30   ├─ /fr/mentions-legales/index.html (+2ms) 
+13:34:30   ├─ /en/methodologie/index.html (+6ms) 
+13:34:30   ├─ /fr/methodologie/index.html (+4ms) 
+13:34:30   ├─ /en/confidentialite/index.html (+5ms) 
+13:34:30   ├─ /fr/confidentialite/index.html (+4ms) 
+13:34:30   ├─ /en/index.html (+13ms) 
+13:34:30   ├─ /fr/index.html (+12ms) 
+13:34:30   ├─ /index.html (+2ms) 
+13:34:30 ✓ Completed in 4.34s.
+
+13:34:30 [build] ✓ Completed in 5.28s.
+13:34:30 [@astrojs/sitemap] `sitemap-index.xml` created at `dist`
+13:34:30 [build] 158 page(s) built in 5.76s
+13:34:30 [build] Complete!
+
+compute-page-weight — 155 page(s) mesurée(s), moyenne 75.2 Ko, la plus lourde 112.2 Ko (en/fiches/write-product-descriptions/index.html)
+  3 page(s) sans emplacement de poids, laissées telles quelles.
+
+strip-dev-pages: 7 page(s) de contrôle retirée(s) de dist/
+
+> overkill@1.0.0 check:links
+> node scripts/check-links.mjs
+
+
+check-links — 5207 lien(s) interne(s), 491 lien(s) externe(s) distinct(s)
+
+  Liens externes non vérifiés. Ajouter --external pour les tester.
+
+check-links : aucun lien interne mort
+
+
+> overkill@1.0.0 check:seo
+> node scripts/check-seo.mjs
+
+
+check-seo — 151 page(s), 248 bloc(s) de données structurées, 72 ms
+
+check-seo : titres et descriptions uniques, canoniques et hreflang en place
+
+
+> overkill@1.0.0 check:weight
+> node scripts/check-weight.mjs
+
+
+check-weight — budgets de la section 12
+
+  ok       64.1 Ko /  90 Ko  polices, total sur le site
+  ok        0.4 Ko /   8 Ko  illustration empty-state.svg
+  ok        0.4 Ko /   8 Ko  illustration family-classify-route.svg
+  ok        0.4 Ko /   8 Ko  illustration family-decide-validate.svg
+  ok        0.4 Ko /   8 Ko  illustration family-detect-filter.svg
+  ok        0.4 Ko /   8 Ko  illustration family-extract.svg
+  ok        0.5 Ko /   8 Ko  illustration family-generate.svg
+  ok        0.5 Ko /   8 Ko  illustration family-predict.svg
+  ok        0.5 Ko /   8 Ko  illustration family-recognize-transcribe.svg
+  ok        0.4 Ko /   8 Ko  illustration family-recommend.svg
+  ok        0.4 Ko /   8 Ko  illustration family-search.svg
+  ok        0.5 Ko /   8 Ko  illustration family-transform.svg
+  ok        0.5 Ko /   8 Ko  illustration hero.svg
+  ok        0.4 Ko /   8 Ko  illustration not-found.svg
+  ok       90.5 Ko / 120 Ko  fiche la plus lourde, hors illustrations (fr/fiches/convert-messy-csv-to-clean-data/index.html)
+  ok        8.1 Ko /  15 Ko  JavaScript, fiche la plus chargée (fr/fiches/tag-articles-by-topic/index.html)
+  ok       81.3 Ko / 120 Ko  page la plus lourde hors fiche et accueil (fr/par-ou-commencer/index.html)
+  ok       57.2 Ko / 250 Ko  accueil en/index.html
+  ok       57.7 Ko / 250 Ko  accueil fr/index.html
+  ok        2.5 Ko /  25 Ko  JavaScript du catalogue en/catalogue/index.html
+  ok        2.6 Ko /  25 Ko  JavaScript du catalogue fr/catalogue/index.html
+
+check-weight : tous les budgets sont respectés
+

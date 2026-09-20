@@ -9,7 +9,6 @@
   ],
   "dette": [
     "check-a-company-identification-number",
-    "check-bank-details-before-a-transfer",
     "convert-messy-csv-to-clean-data",
     "extract-a-table-from-a-web-page",
     "extract-amounts-and-currencies-from-text",

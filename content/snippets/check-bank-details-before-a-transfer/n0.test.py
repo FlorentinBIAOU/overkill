@@ -19,6 +19,14 @@ ICI = Path(__file__).parent
 ATTENDU = "FR7630006000011234567890189"
 SUBSTITUE = "FR7630006000010987654321028"
 
+# Un numéro dont la clé ISO 13616 est juste et dont la seule clé RIB est
+# fausse : c'est le cas qu'il faut pour démontrer que l'extrait ajoute bien
+# quelque chose à la bibliothèque.
+CLE_RIB_SEULE_FAUSSE = "FR0630006000011234567890188"
+
+# Deux IBAN monégasques : Monaco emploie la même clé que la France.
+MONEGASQUES = ["MC5811222000010123456789030", "MC1112739000700011111000H79"]
+
 # Les six confusions de saisie entre un chiffre et une lettre qui lui ressemble.
 SOSIES = {"0": "O", "1": "I", "2": "Z", "5": "S", "6": "G", "8": "B"}
 
@@ -86,8 +94,10 @@ def test_point_de_rupture_deux_comptes_du_meme_etablissement_passent_tous_les_de
 
 def test_point_de_rupture_temoin_aucune_faute_dun_chiffre_ne_passe():
     """
-    « Le témoin : aucune faute d'un seul chiffre ne passe » — plus de vingt
-    mille essais sur cent IBAN, mesurés ici même.
+    « Le témoin : aucune faute d'un seul chiffre ne passe » — les 20 700
+    essais de cent IBAN, mesurés ici même. Le générateur est à graine fixe
+    (3), donc le décompte est reproductible à l'unité : il est asserté à
+    l'égalité, pas dans une fourchette.
     """
     passees = essais = 0
     for numero in ibans_francais(100):
@@ -98,7 +108,7 @@ def test_point_de_rupture_temoin_aucune_faute_dun_chiffre_ne_passe():
                 essais += 1
                 if check_bank_details(numero[:rang] + chiffre + numero[rang + 1:])["valid"]:
                     passees += 1
-    assert essais > 20_000
+    assert essais == 20_700  # 100 IBAN × 23 positions × 9 autres chiffres
     assert passees == 0
 
 
@@ -108,7 +118,10 @@ def test_point_de_rupture_temoin_aucune_faute_dun_chiffre_ne_passe():
 
 
 def test_aucune_transposition_de_deux_caracteres_voisins_ne_passe():
-    """Docstring : « two thousand adjacent transpositions […] gets through »."""
+    """
+    Docstring : « nor one of their 1 973 adjacent transpositions ». Le
+    décompte est celui du générateur à graine 3, asserté à l'égalité.
+    """
     passees = essais = 0
     for numero in ibans_francais(100):
         for rang in range(4, len(numero) - 1):
@@ -118,14 +131,16 @@ def test_aucune_transposition_de_deux_caracteres_voisins_ne_passe():
             permute = numero[:rang] + numero[rang + 1] + numero[rang] + numero[rang + 2:]
             if check_bank_details(permute)["valid"]:
                 passees += 1
-    assert essais > 1_900
+    assert essais == 1_973
     assert passees == 0
 
 
 def test_la_cle_rib_ferme_ce_que_la_cle_iso_laisse_passer():
     """
-    Docstring : « The ISO key alone lets 0.6 % of the last kind pass […] the
-    RIB key is what closes that ». Les deux contrôles sur les mêmes entrées.
+    Docstring : « The ISO key alone lets 31 of those 6 882 pass — 0.45 % […]
+    the RIB key is what closes that ». Les deux contrôles sur les mêmes
+    entrées, et les trois chiffres publiés assertés à l'égalité : le générateur
+    est à graine fixe (3), donc rien n'autorise une fourchette.
     """
     seule_iso = ensemble = passees = 0
     for numero in ibans_francais(500):
@@ -139,9 +154,10 @@ def test_la_cle_rib_ferme_ce_que_la_cle_iso_laisse_passer():
                 seule_iso += 1
             if check_bank_details(faute)["valid"]:
                 passees += 1
-    assert ensemble > 6_000
+    assert ensemble == 6_882
+    assert seule_iso == 31
     assert passees == 0
-    assert 0.002 < seule_iso / ensemble < 0.02
+    assert round(100 * seule_iso / ensemble, 2) == 0.45
 
 
 def test_la_cle_rib_est_celle_de_la_norme_bancaire_francaise():
@@ -150,10 +166,29 @@ def test_la_cle_rib_est_celle_de_la_norme_bancaire_francaise():
         "12345678912345678923456789")
     assert national_key_ok("FR", ATTENDU[4:]) is True
     assert national_key_ok("FR", SUBSTITUE[4:]) is True
-    # Une clé RIB fausse, et rien d'autre de changé.
-    fausse = ATTENDU[:-2] + ("88" if ATTENDU[-2:] != "88" else "77")
-    rapport = check_bank_details(fausse)
-    assert rapport["national_key"] is False or rapport["reason"].startswith("ISO 13616")
+    # Un numéro qui passe la clé ISO et échoue à la seule clé RIB : c'est
+    # celui-là qu'il faut, sans « ou ». L'ancienne version fabriquait la
+    # fausse clé en changeant les deux derniers chiffres, ce qui casse d'abord
+    # la clé ISO, et son assertion s'accommodait du mauvais chemin.
+    assert registre.is_valid(CLE_RIB_SEULE_FAUSSE), "la clé ISO, elle, est bonne"
+    rapport = check_bank_details(CLE_RIB_SEULE_FAUSSE)
+    assert rapport["valid"] is False
+    assert rapport["national_key"] is False
+    assert rapport["reason"] == "the RIB key inside the account number does not match"
+
+
+def test_monaco_porte_la_meme_cle_que_la_france():
+    """
+    Commentaire : « Monaco uses the French banking standard: its national part
+    is twenty-three characters too and satisfies the same modulo 97. »
+    """
+    for numero in MONEGASQUES:
+        rapport = check_bank_details(numero)
+        assert rapport["country"] == "MC", numero
+        assert rapport["national_key"] is True, numero
+        assert rapport["valid"] is True, numero
+    # Témoin : un pays sans clé nationale connue ici rend toujours None.
+    assert check_bank_details("DE89370400440532013000")["national_key"] is None
 
 
 def test_la_cle_nationale_nest_pas_calculee_hors_de_france():
@@ -193,8 +228,14 @@ def test_le_numero_est_rendu_groupe_par_quatre():
     assert check_bank_details(ATTENDU)["printed"] == "FR76 3000 6000 0112 3456 7890 189"
 
 
-def test_aucune_entree_ne_leve():
-    """Docstring : « Nothing raises »."""
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """
+    Docstring : « Nothing raises ». R14 : la raison dit ce que le code a
+    constaté — le type reçu.
+    """
+    assert check_bank_details(None)["reason"] == "an IBAN is text, not NoneType"
+    assert check_bank_details(b"FR76")["reason"] == "an IBAN is text, not bytes"
+    assert check_bank_details(76.3)["reason"] == "an IBAN is text, not float"
     for entree in [None, 0, 76.3, b"FR76", [], {}, object(), "", "x" * 10_000]:
         rapport = check_bank_details(entree)
         assert rapport["valid"] is False

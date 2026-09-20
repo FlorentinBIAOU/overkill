@@ -1,0 +1,2586 @@
+
+> overkill@1.0.0 check:slow
+> npm run test:snippets && npm run check:third-party && npm run build:dev && npm run test:components && npm run test:pages && npm run check:a11y && npm run check:overflow && npm run build && npm run test:tryout && npm run test:guide && npm run test:catalogue && npm run fixtures && npm run build:fixtures && npm run test:search && npm run build
+
+
+> overkill@1.0.0 test:snippets
+> node scripts/test-snippets.mjs
+
+
+test-snippets — 50 fiche(s), 208 extrait(s)
+
+  ok        add-autocomplete-to-a-search-bar   2 py, 2 js
+  ok        aggregate-a-column-of-data         1 py, 1 js
+  ok        check-a-company-identification-number 1 py, 1 js
+  ok        check-a-file-is-really-the-format-it-claims 1 py, 1 js
+  ok        check-a-password-against-a-policy  1 py, 1 js
+  ok        check-bank-details-before-a-transfer 1 py, 1 js
+  ok        convert-a-pdf-to-plain-text        1 py, 1 js
+  ok        convert-messy-csv-to-clean-data    3 py, 3 js
+  ok        detect-anomalies-in-metrics        2 py, 2 js
+  ok        detect-language-of-text            4 py, 4 js
+  ok        detect-spam-in-contact-form        3 py, 3 js
+  ok        estimate-the-cost-of-a-model-call  1 py, 1 js
+  ok        extract-a-table-from-a-web-page    1 py, 1 js
+  ok        extract-amounts-and-currencies-from-text 2 py, 2 js
+  ok        extract-dates-from-text            3 py, 3 js
+  ok        extract-fields-from-a-log-line     1 py, 1 js
+  ok        extract-fields-from-invoice        3 py, 3 js
+  ok        extract-key-terms-from-a-document  2 py, 2 js
+  ok        extract-links-from-a-page          1 py, 1 js
+  ok        extract-main-content-from-a-web-page 1 py, 1 js
+  ok        extract-metadata-from-a-file       1 py, 1 js
+  ok        extract-people-and-companies-from-an-article 2 py, 2 js
+  ok        extract-product-data-from-a-shop-page 2 py, 2 js
+  ok        extract-tables-from-a-pdf          1 py, 1 js
+  ok        extract-the-latest-reply-from-an-email-thread 2 py, 2 js
+  ok        extract-tracking-numbers-from-an-email 1 py, 1 js
+  ok        find-duplicate-records             3 py, 3 js
+  ok        forecast-weekly-sales              2 py, 2 js
+  ok        fuzzy-match-company-names          2 py, 2 js
+  ok        generate-placeholder-images        1 py, 1 js
+  ok        generate-test-data                 3 py, 3 js
+  ok        know-whether-a-pdf-needs-ocr       2 py, 2 js
+  ok        mask-personal-data-in-chat         3 py, 3 js
+  ok        moderate-user-comments             4 py, 4 js
+  ok        parse-address-into-fields          4 py, 4 js
+  ok        rank-products-by-relevance         2 py, 2 js
+  ok        read-text-from-a-scanned-page      3 py, 3 js
+  ok        repair-text-with-broken-encoding   1 py, 1 js
+  ok        route-support-tickets              4 py, 4 js
+  ok        search-in-your-own-documents       4 py, 4 js
+  ok        show-similar-articles              3 py, 3 js
+  ok        summarise-a-long-document          4 py, 4 js
+  ok        tag-articles-by-topic              4 py, 4 js
+  ok        translate-interface-strings        3 py, 3 js
+  ok        validate-a-form-server-side        1 py, 1 js
+  ok        validate-a-phone-number-and-its-country-code 1 py, 1 js
+  ok        validate-an-api-payload-against-its-contract 1 py, 1 js
+  ok        validate-an-email-address-without-sending-a-message 1 py, 1 js
+  ok        validate-an-imported-file-against-a-schema 1 py, 1 js
+  ok        write-product-descriptions         3 py, 3 js
+
+test-snippets : OK — 208 extrait(s) exécuté(s), aucun échec
+
+
+> overkill@1.0.0 check:third-party
+> node scripts/check-third-party.mjs /fr /en /fr/catalogue /fr/fiches/mask-personal-data-in-chat /fr/familles/detect-filter /fr/methodologie /fr/contribuer /fr/credits
+
+
+check-third-party — 8 page(s), 67 requête(s) observée(s)
+
+check-third-party : aucune requête vers un domaine tiers
+
+
+> overkill@1.0.0 build:dev
+> OVERKILL_DEV_PAGES=1 astro build && node scripts/compute-page-weight.mjs
+
+[astro] `markdown.remarkPlugins`, `markdown.rehypePlugins`, and `markdown.remarkRehype` are deprecated. Pass them to `unified({...})` from `@astrojs/markdown-remark` directly instead.
+13:36:35 [content] Syncing content
+13:36:35 [content] Synced content
+13:36:35 [types] Generated 390ms
+13:36:35 [build] output: "static"
+13:36:35 [build] mode: "static"
+13:36:35 [build] directory: /home/florentin/overkill/dist/
+13:36:35 [build] Collecting build info...
+13:36:35 [build] ✓ Completed in 425ms.
+13:36:35 [build] Building static entrypoints...
+13:36:36 [vite] ✓ built in 813ms
+13:36:36 [vite] ✓ built in 37ms
+13:36:36 [build] Rearranging server assets...
+
+ generating static routes 
+13:36:36   ├─ /dev/catalogue/index.html (+9ms) 
+13:36:36   ├─ /dev/components/index.html (+291ms) 
+13:36:37   ├─ /dev/editorial/index.html (+7ms) 
+13:36:37   ├─ /dev/entry/index.html (+57ms) 
+13:36:37   ├─ /dev/entry-draft/index.html (+45ms) 
+13:36:37   ├─ /dev/famille/index.html (+3ms) 
+13:36:37   ├─ /dev/tokens/index.html (+2ms) 
+13:36:37   ├─ /en/404/index.html (+2ms) 
+13:36:37   ├─ /fr/404/index.html (+2ms) 
+13:36:37   ├─ /en/catalogue/index.html (+2ms) 
+13:36:37   ├─ /en/catalogue/2/index.html (+2ms) 
+13:36:37   ├─ /en/catalogue/3/index.html (+3ms) 
+13:36:37   ├─ /fr/catalogue/index.html (+2ms) 
+13:36:37   ├─ /fr/catalogue/2/index.html (+3ms) 
+13:36:37   ├─ /fr/catalogue/3/index.html (+2ms) 
+13:36:37   ├─ /en/dernieres-fiches/index.html (+3ms) 
+13:36:37   ├─ /fr/dernieres-fiches/index.html (+2ms) 
+13:36:37   ├─ /en/familles/detect-filter/index.html (+1ms) 
+13:36:37   ├─ /en/familles/extract/index.html (+1ms) 
+13:36:37   ├─ /en/familles/classify-route/index.html (+1ms) 
+13:36:37   ├─ /en/familles/search/index.html (+1ms) 
+13:36:37   ├─ /en/familles/recommend/index.html (+1ms) 
+13:36:37   ├─ /en/familles/predict/index.html (+1ms) 
+13:36:37   ├─ /en/familles/generate/index.html (+1ms) 
+13:36:37   ├─ /en/familles/transform/index.html (+2ms) 
+13:36:37   ├─ /en/familles/recognize-transcribe/index.html (+1ms) 
+13:36:37   ├─ /en/familles/decide-validate/index.html (+1ms) 
+13:36:37   ├─ /fr/familles/detect-filter/index.html (+1ms) 
+13:36:37   ├─ /fr/familles/extract/index.html (+1ms) 
+13:36:37   ├─ /fr/familles/classify-route/index.html (+1ms) 
+13:36:37   ├─ /fr/familles/search/index.html (+1ms) 
+13:36:37   ├─ /fr/familles/recommend/index.html (+6ms) 
+13:36:37   ├─ /fr/familles/predict/index.html (+1ms) 
+13:36:37   ├─ /fr/familles/generate/index.html (+1ms) 
+13:36:37   ├─ /fr/familles/transform/index.html (+6ms) 
+13:36:37   ├─ /fr/familles/recognize-transcribe/index.html (+1ms) 
+13:36:37   ├─ /fr/familles/decide-validate/index.html (+1ms) 
+13:36:37   ├─ /en/familles/index.html (+3ms) 
+13:36:37   ├─ /fr/familles/index.html (+1ms) 
+13:36:37   ├─ /en/fiches/add-autocomplete-to-a-search-bar/index.html (+23ms) 
+13:36:37   ├─ /en/fiches/check-a-company-identification-number/index.html (+17ms) 
+13:36:37   ├─ /en/fiches/check-a-file-is-really-the-format-it-claims/index.html (+21ms) 
+13:36:37   ├─ /en/fiches/check-a-password-against-a-policy/index.html (+13ms) 
+13:36:37   ├─ /en/fiches/check-bank-details-before-a-transfer/index.html (+15ms) 
+13:36:37   ├─ /en/fiches/extract-links-from-a-page/index.html (+18ms) 
+13:36:37   ├─ /en/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+147ms) 
+13:36:37   ├─ /en/fiches/detect-language-of-text/index.html (+42ms) 
+13:36:37   ├─ /en/fiches/estimate-the-cost-of-a-model-call/index.html (+22ms) 
+13:36:37   ├─ /en/fiches/extract-amounts-and-currencies-from-text/index.html (+78ms) 
+13:36:37   ├─ /en/fiches/extract-dates-from-text/index.html (+44ms) 
+13:36:37   ├─ /en/fiches/extract-fields-from-invoice/index.html (+59ms) 
+13:36:37   ├─ /en/fiches/extract-key-terms-from-a-document/index.html (+25ms) 
+13:36:37   ├─ /en/fiches/extract-main-content-from-a-web-page/index.html (+25ms) 
+13:36:37   ├─ /en/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+26ms) 
+13:36:37   ├─ /en/fiches/find-duplicate-records/index.html (+46ms) 
+13:36:37   ├─ /en/fiches/extract-people-and-companies-from-an-article/index.html (+37ms) 
+13:36:37   ├─ /en/fiches/forecast-weekly-sales/index.html (+20ms) 
+13:36:37   ├─ /en/fiches/extract-product-data-from-a-shop-page/index.html (+37ms) 
+13:36:37   ├─ /en/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+23ms) 
+13:36:37   ├─ /en/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+32ms) 
+13:36:38   ├─ /en/fiches/mask-personal-data-in-chat/index.html (+36ms) 
+13:36:38   ├─ /en/fiches/fuzzy-match-company-names/index.html (+24ms) 
+13:36:38   ├─ /en/fiches/moderate-user-comments/index.html (+40ms) 
+13:36:38   ├─ /en/fiches/parse-address-into-fields/index.html (+54ms) 
+13:36:38   ├─ /en/fiches/generate-placeholder-images/index.html (+14ms) 
+13:36:38   ├─ /en/fiches/generate-test-data/index.html (+92ms) 
+13:36:38   ├─ /en/fiches/rank-products-by-relevance/index.html (+41ms) 
+13:36:38   ├─ /en/fiches/extract-metadata-from-a-file/index.html (+21ms) 
+13:36:38   ├─ /en/fiches/read-text-from-a-scanned-page/index.html (+30ms) 
+13:36:38   ├─ /en/fiches/repair-text-with-broken-encoding/index.html (+10ms) 
+13:36:38   ├─ /en/fiches/route-support-tickets/index.html (+39ms) 
+13:36:38   ├─ /en/fiches/search-in-your-own-documents/index.html (+53ms) 
+13:36:38   ├─ /en/fiches/show-similar-articles/index.html (+31ms) 
+13:36:38   ├─ /en/fiches/extract-fields-from-a-log-line/index.html (+15ms) 
+13:36:38   ├─ /en/fiches/extract-tracking-numbers-from-an-email/index.html (+13ms) 
+13:36:38   ├─ /en/fiches/detect-anomalies-in-metrics/index.html (+23ms) 
+13:36:38   ├─ /en/fiches/detect-spam-in-contact-form/index.html (+30ms) 
+13:36:38   ├─ /en/fiches/aggregate-a-column-of-data/index.html (+17ms) 
+13:36:38   ├─ /en/fiches/summarise-a-long-document/index.html (+50ms) 
+13:36:38   ├─ /en/fiches/tag-articles-by-topic/index.html (+48ms) 
+13:36:38   ├─ /en/fiches/translate-interface-strings/index.html (+38ms) 
+13:36:38   ├─ /en/fiches/convert-messy-csv-to-clean-data/index.html (+72ms) 
+13:36:38   ├─ /en/fiches/extract-a-table-from-a-web-page/index.html (+21ms) 
+13:36:38   ├─ /en/fiches/validate-a-form-server-side/index.html (+10ms) 
+13:36:38   ├─ /en/fiches/validate-a-phone-number-and-its-country-code/index.html (+14ms) 
+13:36:38   ├─ /en/fiches/validate-an-api-payload-against-its-contract/index.html (+44ms) 
+13:36:38   ├─ /en/fiches/validate-an-email-address-without-sending-a-message/index.html (+9ms) 
+13:36:38   ├─ /en/fiches/validate-an-imported-file-against-a-schema/index.html (+32ms) 
+13:36:38   ├─ /en/fiches/write-product-descriptions/index.html (+53ms) 
+13:36:38   ├─ /fr/fiches/add-autocomplete-to-a-search-bar/index.html (+19ms) 
+13:36:39   ├─ /fr/fiches/check-a-company-identification-number/index.html (+11ms) 
+13:36:39   ├─ /fr/fiches/check-a-file-is-really-the-format-it-claims/index.html (+16ms) 
+13:36:39   ├─ /fr/fiches/check-a-password-against-a-policy/index.html (+11ms) 
+13:36:39   ├─ /fr/fiches/check-bank-details-before-a-transfer/index.html (+14ms) 
+13:36:39   ├─ /fr/fiches/extract-links-from-a-page/index.html (+15ms) 
+13:36:39   ├─ /fr/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+26ms) 
+13:36:39   ├─ /fr/fiches/detect-language-of-text/index.html (+37ms) 
+13:36:39   ├─ /fr/fiches/estimate-the-cost-of-a-model-call/index.html (+23ms) 
+13:36:39   ├─ /fr/fiches/extract-amounts-and-currencies-from-text/index.html (+41ms) 
+13:36:39   ├─ /fr/fiches/extract-dates-from-text/index.html (+40ms) 
+13:36:39   ├─ /fr/fiches/extract-fields-from-invoice/index.html (+51ms) 
+13:36:39   ├─ /fr/fiches/extract-key-terms-from-a-document/index.html (+24ms) 
+13:36:39   ├─ /fr/fiches/extract-main-content-from-a-web-page/index.html (+17ms) 
+13:36:39   ├─ /fr/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+30ms) 
+13:36:39   ├─ /fr/fiches/find-duplicate-records/index.html (+45ms) 
+13:36:39   ├─ /fr/fiches/extract-people-and-companies-from-an-article/index.html (+34ms) 
+13:36:39   ├─ /fr/fiches/forecast-weekly-sales/index.html (+22ms) 
+13:36:39   ├─ /fr/fiches/extract-product-data-from-a-shop-page/index.html (+32ms) 
+13:36:39   ├─ /fr/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+23ms) 
+13:36:39   ├─ /fr/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+27ms) 
+13:36:39   ├─ /fr/fiches/mask-personal-data-in-chat/index.html (+37ms) 
+13:36:39   ├─ /fr/fiches/fuzzy-match-company-names/index.html (+23ms) 
+13:36:39   ├─ /fr/fiches/moderate-user-comments/index.html (+40ms) 
+13:36:39   ├─ /fr/fiches/parse-address-into-fields/index.html (+56ms) 
+13:36:39   ├─ /fr/fiches/generate-placeholder-images/index.html (+13ms) 
+13:36:39   ├─ /fr/fiches/generate-test-data/index.html (+41ms) 
+13:36:39   ├─ /fr/fiches/rank-products-by-relevance/index.html (+27ms) 
+13:36:39   ├─ /fr/fiches/extract-metadata-from-a-file/index.html (+17ms) 
+13:36:39   ├─ /fr/fiches/read-text-from-a-scanned-page/index.html (+31ms) 
+13:36:39   ├─ /fr/fiches/repair-text-with-broken-encoding/index.html (+10ms) 
+13:36:39   ├─ /fr/fiches/route-support-tickets/index.html (+40ms) 
+13:36:39   ├─ /fr/fiches/search-in-your-own-documents/index.html (+53ms) 
+13:36:39   ├─ /fr/fiches/show-similar-articles/index.html (+30ms) 
+13:36:39   ├─ /fr/fiches/extract-fields-from-a-log-line/index.html (+13ms) 
+13:36:39   ├─ /fr/fiches/extract-tracking-numbers-from-an-email/index.html (+12ms) 
+13:36:39   ├─ /fr/fiches/detect-anomalies-in-metrics/index.html (+32ms) 
+13:36:40   ├─ /fr/fiches/detect-spam-in-contact-form/index.html (+33ms) 
+13:36:40   ├─ /fr/fiches/aggregate-a-column-of-data/index.html (+18ms) 
+13:36:40   ├─ /fr/fiches/summarise-a-long-document/index.html (+49ms) 
+13:36:40   ├─ /fr/fiches/tag-articles-by-topic/index.html (+49ms) 
+13:36:40   ├─ /fr/fiches/translate-interface-strings/index.html (+37ms) 
+13:36:40   ├─ /fr/fiches/convert-messy-csv-to-clean-data/index.html (+72ms) 
+13:36:40   ├─ /fr/fiches/extract-a-table-from-a-web-page/index.html (+20ms) 
+13:36:40   ├─ /fr/fiches/validate-a-form-server-side/index.html (+12ms) 
+13:36:40   ├─ /fr/fiches/validate-a-phone-number-and-its-country-code/index.html (+11ms) 
+13:36:40   ├─ /fr/fiches/validate-an-api-payload-against-its-contract/index.html (+21ms) 
+13:36:40   ├─ /fr/fiches/validate-an-email-address-without-sending-a-message/index.html (+9ms) 
+13:36:40   ├─ /fr/fiches/validate-an-imported-file-against-a-schema/index.html (+14ms) 
+13:36:40   ├─ /fr/fiches/write-product-descriptions/index.html (+49ms) 
+13:36:40   ├─ /en/par-ou-commencer/index.html (+4ms) 
+13:36:40   ├─ /fr/par-ou-commencer/index.html (+3ms) 
+13:36:40   ├─ /en/rss.xml (+5ms) 
+13:36:40   ├─ /fr/rss.xml (+2ms) 
+13:36:40   ├─ /en/search-index.json (+2ms) 
+13:36:40   ├─ /fr/search-index.json (+1ms) 
+13:36:40   ├─ /en/a-propos/index.html (+6ms) 
+13:36:40   ├─ /fr/a-propos/index.html (+2ms) 
+13:36:40   ├─ /en/contribuer/index.html (+2ms) 
+13:36:40   ├─ /fr/contribuer/index.html (+2ms) 
+13:36:40   ├─ /en/credits/index.html (+2ms) 
+13:36:40   ├─ /fr/credits/index.html (+2ms) 
+13:36:40   ├─ /en/accompagnement/index.html (+3ms) 
+13:36:40   ├─ /fr/accompagnement/index.html (+2ms) 
+13:36:40   ├─ /en/mentions-legales/index.html (+2ms) 
+13:36:40   ├─ /fr/mentions-legales/index.html (+2ms) 
+13:36:40   ├─ /en/methodologie/index.html (+5ms) 
+13:36:40   ├─ /fr/methodologie/index.html (+3ms) 
+13:36:40   ├─ /en/confidentialite/index.html (+4ms) 
+13:36:40   ├─ /fr/confidentialite/index.html (+3ms) 
+13:36:40   ├─ /en/index.html (+12ms) 
+13:36:40   ├─ /fr/index.html (+12ms) 
+13:36:40   ├─ /index.html (+2ms) 
+13:36:40 ✓ Completed in 4.13s.
+
+13:36:40 [build] ✓ Completed in 5.01s.
+13:36:40 [@astrojs/sitemap] `sitemap-index.xml` created at `dist`
+13:36:40 [build] 158 page(s) built in 5.46s
+13:36:40 [build] Complete!
+
+compute-page-weight — 155 page(s) mesurée(s), moyenne 75.2 Ko, la plus lourde 112.2 Ko (en/fiches/write-product-descriptions/index.html)
+  3 page(s) sans emplacement de poids, laissées telles quelles.
+
+
+> overkill@1.0.0 test:components
+> node --test tests/components.spec.mjs
+
+TAP version 13
+# Subtest: la page se rend sans erreur de console
+ok 1 - la page se rend sans erreur de console
+  ---
+  duration_ms: 615.767074
+  ...
+# Subtest: les onglets de code répondent aux flèches et annoncent la sélection
+ok 2 - les onglets de code répondent aux flèches et annoncent la sélection
+  ---
+  duration_ms: 703.993468
+  ...
+# Subtest: le bouton copier confirme et annonce le résultat
+ok 3 - le bouton copier confirme et annonce le résultat
+  ---
+  duration_ms: 703.47066
+  ...
+# Subtest: sans JavaScript, les deux langages restent lisibles
+ok 4 - sans JavaScript, les deux langages restent lisibles
+  ---
+  duration_ms: 123.035115
+  ...
+# Subtest: le focus est visible tout au long du parcours au clavier
+ok 5 - le focus est visible tout au long du parcours au clavier
+  ---
+  duration_ms: 677.066764
+  ...
+# Subtest: un seul h1, et aucune hiérarchie de titres sautée
+ok 6 - un seul h1, et aucune hiérarchie de titres sautée
+  ---
+  duration_ms: 616.438068
+  ...
+# Subtest: l'adresse d'accompagnement est cliquable et absente en clair du HTML
+ok 7 - l'adresse d'accompagnement est cliquable et absente en clair du HTML
+  ---
+  duration_ms: 657.969902
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4441.829353
+
+> overkill@1.0.0 test:pages
+> node --test tests/pages.spec.mjs
+
+TAP version 13
+# Subtest: gabarit fiche : rendu sans erreur, un seul h1, hiérarchie sans saut
+ok 1 - gabarit fiche : rendu sans erreur, un seul h1, hiérarchie sans saut
+  ---
+  duration_ms: 670.876051
+  ...
+# Subtest: gabarit fiche : lisible sans JavaScript
+ok 2 - gabarit fiche : lisible sans JavaScript
+  ---
+  duration_ms: 86.855454
+  ...
+# Subtest: gabarit fiche en brouillon : rendu sans erreur, un seul h1, hiérarchie sans saut
+ok 3 - gabarit fiche en brouillon : rendu sans erreur, un seul h1, hiérarchie sans saut
+  ---
+  duration_ms: 607.483958
+  ...
+# Subtest: gabarit fiche en brouillon : lisible sans JavaScript
+ok 4 - gabarit fiche en brouillon : lisible sans JavaScript
+  ---
+  duration_ms: 108.2395
+  ...
+# Subtest: gabarit catalogue : rendu sans erreur, un seul h1, hiérarchie sans saut
+ok 5 - gabarit catalogue : rendu sans erreur, un seul h1, hiérarchie sans saut
+  ---
+  duration_ms: 586.452549
+  ...
+# Subtest: gabarit catalogue : lisible sans JavaScript
+ok 6 - gabarit catalogue : lisible sans JavaScript
+  ---
+  duration_ms: 105.0583
+  ...
+# Subtest: gabarit famille : rendu sans erreur, un seul h1, hiérarchie sans saut
+ok 7 - gabarit famille : rendu sans erreur, un seul h1, hiérarchie sans saut
+  ---
+  duration_ms: 575.177563
+  ...
+# Subtest: gabarit famille : lisible sans JavaScript
+ok 8 - gabarit famille : lisible sans JavaScript
+  ---
+  duration_ms: 78.367875
+  ...
+# Subtest: gabarit éditorial : rendu sans erreur, un seul h1, hiérarchie sans saut
+ok 9 - gabarit éditorial : rendu sans erreur, un seul h1, hiérarchie sans saut
+  ---
+  duration_ms: 574.278486
+  ...
+# Subtest: gabarit éditorial : lisible sans JavaScript
+ok 10 - gabarit éditorial : lisible sans JavaScript
+  ---
+  duration_ms: 91.132214
+  ...
+# Subtest: gabarit fiche : aucun identifiant en double
+ok 11 - gabarit fiche : aucun identifiant en double
+  ---
+  duration_ms: 614.150268
+  ...
+# Subtest: gabarit fiche en brouillon : aucun identifiant en double
+ok 12 - gabarit fiche en brouillon : aucun identifiant en double
+  ---
+  duration_ms: 605.670331
+  ...
+# Subtest: gabarit catalogue : aucun identifiant en double
+ok 13 - gabarit catalogue : aucun identifiant en double
+  ---
+  duration_ms: 584.819771
+  ...
+# Subtest: gabarit famille : aucun identifiant en double
+ok 14 - gabarit famille : aucun identifiant en double
+  ---
+  duration_ms: 556.886568
+  ...
+# Subtest: gabarit éditorial : aucun identifiant en double
+ok 15 - gabarit éditorial : aucun identifiant en double
+  ---
+  duration_ms: 571.002117
+  ...
+# Subtest: la fiche affiche le verdict deux fois : en réponse et sur la carte
+ok 16 - la fiche affiche le verdict deux fois : en réponse et sur la carte
+  ---
+  duration_ms: 655.041377
+  ...
+# Subtest: la fiche ancre chaque barreau et le sommaire y mène
+ok 17 - la fiche ancre chaque barreau et le sommaire y mène
+  ---
+  duration_ms: 647.43499
+  ...
+# Subtest: le sommaire est collant au-delà de 900 px et ne l'est pas en dessous
+ok 18 - le sommaire est collant au-delà de 900 px et ne l'est pas en dessous
+  ---
+  duration_ms: 1338.222263
+  ...
+# Subtest: la fiche en brouillon le dit visiblement
+ok 19 - la fiche en brouillon le dit visiblement
+  ---
+  duration_ms: 665.380773
+  ...
+# Subtest: le catalogue rend sa liste complète sans JavaScript
+ok 20 - le catalogue rend sa liste complète sans JavaScript
+  ---
+  duration_ms: 76.972144
+  ...
+# Subtest: une famille sans illustration le montre au lieu de laisser un trou
+ok 21 - une famille sans illustration le montre au lieu de laisser un trou
+  ---
+  duration_ms: 598.526125
+  ...
+# Subtest: chaque page déclare hreflang dans les deux sens et une canonique
+ok 22 - chaque page déclare hreflang dans les deux sens et une canonique
+  ---
+  duration_ms: 612.629894
+  ...
+# Subtest: aucune ressource tierce n'est chargée à l'exécution
+ok 23 - aucune ressource tierce n'est chargée à l'exécution
+  ---
+  duration_ms: 606.057866
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 12008.073394
+
+> overkill@1.0.0 check:a11y
+> node scripts/check-a11y.mjs /fr /en /fr/catalogue /en/catalogue /fr/familles/detect-filter /en/familles/detect-filter /fr/fiches/mask-personal-data-in-chat /en/fiches/mask-personal-data-in-chat /fr/methodologie /en/methodologie /fr/par-ou-commencer /en/par-ou-commencer /fr/fiches/generate-placeholder-images
+
+
+check-a11y — 13 page(s), 26 analyse(s) axe, clair et sombre, 13 contrôle(s) structurel(s)
+
+check-a11y : aucune violation sérieuse ni critique
+
+
+> overkill@1.0.0 check:overflow
+> node scripts/check-overflow.mjs /fr /en /fr/catalogue /fr/catalogue/2 /en/catalogue /fr/familles /fr/familles/detect-filter /fr/fiches/mask-personal-data-in-chat /en/fiches/mask-personal-data-in-chat /fr/fiches/summarise-a-long-document /fr/fiches/extract-fields-from-invoice /fr/fiches/parse-address-into-fields /fr/par-ou-commencer /en/par-ou-commencer /fr/dernieres-fiches /fr/methodologie /en/methodologie /fr/contribuer /fr/credits /fr/confidentialite /fr/mentions-legales /fr/a-propos /fr/accompagnement /fr/404 /dev/entry /dev/entry-draft /dev/catalogue /dev/famille /dev/editorial /dev/components /dev/tokens
+
+  ok /fr à 360 px
+  ok /fr à 600 px
+  ok /fr à 900 px
+  ok /fr à 1440 px
+  ok /en à 360 px
+  ok /en à 600 px
+  ok /en à 900 px
+  ok /en à 1440 px
+  ok /fr/catalogue à 360 px
+  ok /fr/catalogue à 600 px
+  ok /fr/catalogue à 900 px
+  ok /fr/catalogue à 1440 px
+  ok /fr/catalogue/2 à 360 px
+  ok /fr/catalogue/2 à 600 px
+  ok /fr/catalogue/2 à 900 px
+  ok /fr/catalogue/2 à 1440 px
+  ok /en/catalogue à 360 px
+  ok /en/catalogue à 600 px
+  ok /en/catalogue à 900 px
+  ok /en/catalogue à 1440 px
+  ok /fr/familles à 360 px
+  ok /fr/familles à 600 px
+  ok /fr/familles à 900 px
+  ok /fr/familles à 1440 px
+  ok /fr/familles/detect-filter à 360 px
+  ok /fr/familles/detect-filter à 600 px
+  ok /fr/familles/detect-filter à 900 px
+  ok /fr/familles/detect-filter à 1440 px
+  ok /fr/fiches/mask-personal-data-in-chat à 360 px
+  ok /fr/fiches/mask-personal-data-in-chat à 600 px
+  ok /fr/fiches/mask-personal-data-in-chat à 900 px
+  ok /fr/fiches/mask-personal-data-in-chat à 1440 px
+  ok /en/fiches/mask-personal-data-in-chat à 360 px
+  ok /en/fiches/mask-personal-data-in-chat à 600 px
+  ok /en/fiches/mask-personal-data-in-chat à 900 px
+  ok /en/fiches/mask-personal-data-in-chat à 1440 px
+  ok /fr/fiches/summarise-a-long-document à 360 px
+  ok /fr/fiches/summarise-a-long-document à 600 px
+  ok /fr/fiches/summarise-a-long-document à 900 px
+  ok /fr/fiches/summarise-a-long-document à 1440 px
+  ok /fr/fiches/extract-fields-from-invoice à 360 px
+  ok /fr/fiches/extract-fields-from-invoice à 600 px
+  ok /fr/fiches/extract-fields-from-invoice à 900 px
+  ok /fr/fiches/extract-fields-from-invoice à 1440 px
+  ok /fr/fiches/parse-address-into-fields à 360 px
+  ok /fr/fiches/parse-address-into-fields à 600 px
+  ok /fr/fiches/parse-address-into-fields à 900 px
+  ok /fr/fiches/parse-address-into-fields à 1440 px
+  ok /fr/par-ou-commencer à 360 px
+  ok /fr/par-ou-commencer à 600 px
+  ok /fr/par-ou-commencer à 900 px
+  ok /fr/par-ou-commencer à 1440 px
+  ok /en/par-ou-commencer à 360 px
+  ok /en/par-ou-commencer à 600 px
+  ok /en/par-ou-commencer à 900 px
+  ok /en/par-ou-commencer à 1440 px
+  ok /fr/dernieres-fiches à 360 px
+  ok /fr/dernieres-fiches à 600 px
+  ok /fr/dernieres-fiches à 900 px
+  ok /fr/dernieres-fiches à 1440 px
+  ok /fr/methodologie à 360 px
+  ok /fr/methodologie à 600 px
+  ok /fr/methodologie à 900 px
+  ok /fr/methodologie à 1440 px
+  ok /en/methodologie à 360 px
+  ok /en/methodologie à 600 px
+  ok /en/methodologie à 900 px
+  ok /en/methodologie à 1440 px
+  ok /fr/contribuer à 360 px
+  ok /fr/contribuer à 600 px
+  ok /fr/contribuer à 900 px
+  ok /fr/contribuer à 1440 px
+  ok /fr/credits à 360 px
+  ok /fr/credits à 600 px
+  ok /fr/credits à 900 px
+  ok /fr/credits à 1440 px
+  ok /fr/confidentialite à 360 px
+  ok /fr/confidentialite à 600 px
+  ok /fr/confidentialite à 900 px
+  ok /fr/confidentialite à 1440 px
+  ok /fr/mentions-legales à 360 px
+  ok /fr/mentions-legales à 600 px
+  ok /fr/mentions-legales à 900 px
+  ok /fr/mentions-legales à 1440 px
+  ok /fr/a-propos à 360 px
+  ok /fr/a-propos à 600 px
+  ok /fr/a-propos à 900 px
+  ok /fr/a-propos à 1440 px
+  ok /fr/accompagnement à 360 px
+  ok /fr/accompagnement à 600 px
+  ok /fr/accompagnement à 900 px
+  ok /fr/accompagnement à 1440 px
+  ok /fr/404 à 360 px
+  ok /fr/404 à 600 px
+  ok /fr/404 à 900 px
+  ok /fr/404 à 1440 px
+  ok /dev/entry à 360 px
+  ok /dev/entry à 600 px
+  ok /dev/entry à 900 px
+  ok /dev/entry à 1440 px
+  ok /dev/entry-draft à 360 px
+  ok /dev/entry-draft à 600 px
+  ok /dev/entry-draft à 900 px
+  ok /dev/entry-draft à 1440 px
+  ok /dev/catalogue à 360 px
+  ok /dev/catalogue à 600 px
+  ok /dev/catalogue à 900 px
+  ok /dev/catalogue à 1440 px
+  ok /dev/famille à 360 px
+  ok /dev/famille à 600 px
+  ok /dev/famille à 900 px
+  ok /dev/famille à 1440 px
+  ok /dev/editorial à 360 px
+  ok /dev/editorial à 600 px
+  ok /dev/editorial à 900 px
+  ok /dev/editorial à 1440 px
+  ok /dev/components à 360 px
+  ok /dev/components à 600 px
+  ok /dev/components à 900 px
+  ok /dev/components à 1440 px
+  ok /dev/tokens à 360 px
+  ok /dev/tokens à 600 px
+  ok /dev/tokens à 900 px
+  ok /dev/tokens à 1440 px
+
+check-overflow : aucun débordement, aucune cible tactile trop petite
+
+
+> overkill@1.0.0 build
+> astro build && node scripts/compute-page-weight.mjs && node scripts/strip-dev-pages.mjs
+
+[astro] `markdown.remarkPlugins`, `markdown.rehypePlugins`, and `markdown.remarkRehype` are deprecated. Pass them to `unified({...})` from `@astrojs/markdown-remark` directly instead.
+13:38:47 [content] Syncing content
+13:38:47 [content] Synced content
+13:38:47 [types] Generated 431ms
+13:38:47 [build] output: "static"
+13:38:47 [build] mode: "static"
+13:38:47 [build] directory: /home/florentin/overkill/dist/
+13:38:47 [build] Collecting build info...
+13:38:47 [build] ✓ Completed in 469ms.
+13:38:47 [build] Building static entrypoints...
+13:38:48 [vite] ✓ built in 861ms
+13:38:48 [vite] ✓ built in 50ms
+13:38:48 [build] Rearranging server assets...
+
+ generating static routes 
+13:38:49   ├─ /dev/catalogue/index.html (+11ms) 
+13:38:49   ├─ /dev/components/index.html (+304ms) 
+13:38:49   ├─ /dev/editorial/index.html (+6ms) 
+13:38:49   ├─ /dev/entry/index.html (+61ms) 
+13:38:49   ├─ /dev/entry-draft/index.html (+58ms) 
+13:38:49   ├─ /dev/famille/index.html (+3ms) 
+13:38:49   ├─ /dev/tokens/index.html (+3ms) 
+13:38:49   ├─ /en/404/index.html (+2ms) 
+13:38:49   ├─ /fr/404/index.html (+2ms) 
+13:38:49   ├─ /en/catalogue/index.html (+3ms) 
+13:38:49   ├─ /en/catalogue/2/index.html (+2ms) 
+13:38:49   ├─ /en/catalogue/3/index.html (+4ms) 
+13:38:49   ├─ /fr/catalogue/index.html (+2ms) 
+13:38:49   ├─ /fr/catalogue/2/index.html (+4ms) 
+13:38:49   ├─ /fr/catalogue/3/index.html (+2ms) 
+13:38:49   ├─ /en/dernieres-fiches/index.html (+4ms) 
+13:38:49   ├─ /fr/dernieres-fiches/index.html (+2ms) 
+13:38:49   ├─ /en/familles/detect-filter/index.html (+2ms) 
+13:38:49   ├─ /en/familles/extract/index.html (+1ms) 
+13:38:49   ├─ /en/familles/classify-route/index.html (+1ms) 
+13:38:49   ├─ /en/familles/search/index.html (+1ms) 
+13:38:49   ├─ /en/familles/recommend/index.html (+1ms) 
+13:38:49   ├─ /en/familles/predict/index.html (+1ms) 
+13:38:49   ├─ /en/familles/generate/index.html (+1ms) 
+13:38:49   ├─ /en/familles/transform/index.html (+3ms) 
+13:38:49   ├─ /en/familles/recognize-transcribe/index.html (+2ms) 
+13:38:49   ├─ /en/familles/decide-validate/index.html (+1ms) 
+13:38:49   ├─ /fr/familles/detect-filter/index.html (+1ms) 
+13:38:49   ├─ /fr/familles/extract/index.html (+1ms) 
+13:38:49   ├─ /fr/familles/classify-route/index.html (+1ms) 
+13:38:49   ├─ /fr/familles/search/index.html (+1ms) 
+13:38:49   ├─ /fr/familles/recommend/index.html (+10ms) 
+13:38:49   ├─ /fr/familles/predict/index.html (+1ms) 
+13:38:49   ├─ /fr/familles/generate/index.html (+1ms) 
+13:38:49   ├─ /fr/familles/transform/index.html (+7ms) 
+13:38:49   ├─ /fr/familles/recognize-transcribe/index.html (+1ms) 
+13:38:49   ├─ /fr/familles/decide-validate/index.html (+3ms) 
+13:38:49   ├─ /en/familles/index.html (+2ms) 
+13:38:49   ├─ /fr/familles/index.html (+1ms) 
+13:38:49   ├─ /en/fiches/add-autocomplete-to-a-search-bar/index.html (+27ms) 
+13:38:49   ├─ /en/fiches/check-a-company-identification-number/index.html (+21ms) 
+13:38:49   ├─ /en/fiches/check-a-file-is-really-the-format-it-claims/index.html (+23ms) 
+13:38:49   ├─ /en/fiches/check-a-password-against-a-policy/index.html (+13ms) 
+13:38:49   ├─ /en/fiches/check-bank-details-before-a-transfer/index.html (+17ms) 
+13:38:49   ├─ /en/fiches/extract-links-from-a-page/index.html (+19ms) 
+13:38:49   ├─ /en/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+155ms) 
+13:38:50   ├─ /en/fiches/detect-language-of-text/index.html (+47ms) 
+13:38:50   ├─ /en/fiches/estimate-the-cost-of-a-model-call/index.html (+23ms) 
+13:38:50   ├─ /en/fiches/extract-amounts-and-currencies-from-text/index.html (+78ms) 
+13:38:50   ├─ /en/fiches/extract-dates-from-text/index.html (+45ms) 
+13:38:50   ├─ /en/fiches/extract-fields-from-invoice/index.html (+74ms) 
+13:38:50   ├─ /en/fiches/extract-key-terms-from-a-document/index.html (+26ms) 
+13:38:50   ├─ /en/fiches/extract-main-content-from-a-web-page/index.html (+27ms) 
+13:38:50   ├─ /en/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+25ms) 
+13:38:50   ├─ /en/fiches/find-duplicate-records/index.html (+47ms) 
+13:38:50   ├─ /en/fiches/extract-people-and-companies-from-an-article/index.html (+36ms) 
+13:38:50   ├─ /en/fiches/forecast-weekly-sales/index.html (+21ms) 
+13:38:50   ├─ /en/fiches/extract-product-data-from-a-shop-page/index.html (+39ms) 
+13:38:50   ├─ /en/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+25ms) 
+13:38:50   ├─ /en/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+34ms) 
+13:38:50   ├─ /en/fiches/mask-personal-data-in-chat/index.html (+37ms) 
+13:38:50   ├─ /en/fiches/fuzzy-match-company-names/index.html (+25ms) 
+13:38:50   ├─ /en/fiches/moderate-user-comments/index.html (+42ms) 
+13:38:50   ├─ /en/fiches/parse-address-into-fields/index.html (+56ms) 
+13:38:50   ├─ /en/fiches/generate-placeholder-images/index.html (+14ms) 
+13:38:50   ├─ /en/fiches/generate-test-data/index.html (+95ms) 
+13:38:50   ├─ /en/fiches/rank-products-by-relevance/index.html (+34ms) 
+13:38:50   ├─ /en/fiches/extract-metadata-from-a-file/index.html (+21ms) 
+13:38:50   ├─ /en/fiches/read-text-from-a-scanned-page/index.html (+32ms) 
+13:38:51   ├─ /en/fiches/repair-text-with-broken-encoding/index.html (+12ms) 
+13:38:51   ├─ /en/fiches/route-support-tickets/index.html (+41ms) 
+13:38:51   ├─ /en/fiches/search-in-your-own-documents/index.html (+55ms) 
+13:38:51   ├─ /en/fiches/show-similar-articles/index.html (+32ms) 
+13:38:51   ├─ /en/fiches/extract-fields-from-a-log-line/index.html (+15ms) 
+13:38:51   ├─ /en/fiches/extract-tracking-numbers-from-an-email/index.html (+15ms) 
+13:38:51   ├─ /en/fiches/detect-anomalies-in-metrics/index.html (+24ms) 
+13:38:51   ├─ /en/fiches/detect-spam-in-contact-form/index.html (+31ms) 
+13:38:51   ├─ /en/fiches/aggregate-a-column-of-data/index.html (+17ms) 
+13:38:51   ├─ /en/fiches/summarise-a-long-document/index.html (+57ms) 
+13:38:51   ├─ /en/fiches/tag-articles-by-topic/index.html (+54ms) 
+13:38:51   ├─ /en/fiches/translate-interface-strings/index.html (+39ms) 
+13:38:51   ├─ /en/fiches/convert-messy-csv-to-clean-data/index.html (+75ms) 
+13:38:51   ├─ /en/fiches/extract-a-table-from-a-web-page/index.html (+22ms) 
+13:38:51   ├─ /en/fiches/validate-a-form-server-side/index.html (+12ms) 
+13:38:51   ├─ /en/fiches/validate-a-phone-number-and-its-country-code/index.html (+14ms) 
+13:38:51   ├─ /en/fiches/validate-an-api-payload-against-its-contract/index.html (+46ms) 
+13:38:51   ├─ /en/fiches/validate-an-email-address-without-sending-a-message/index.html (+9ms) 
+13:38:51   ├─ /en/fiches/validate-an-imported-file-against-a-schema/index.html (+37ms) 
+13:38:51   ├─ /en/fiches/write-product-descriptions/index.html (+54ms) 
+13:38:51   ├─ /fr/fiches/add-autocomplete-to-a-search-bar/index.html (+20ms) 
+13:38:51   ├─ /fr/fiches/check-a-company-identification-number/index.html (+11ms) 
+13:38:51   ├─ /fr/fiches/check-a-file-is-really-the-format-it-claims/index.html (+16ms) 
+13:38:51   ├─ /fr/fiches/check-a-password-against-a-policy/index.html (+13ms) 
+13:38:51   ├─ /fr/fiches/check-bank-details-before-a-transfer/index.html (+15ms) 
+13:38:51   ├─ /fr/fiches/extract-links-from-a-page/index.html (+17ms) 
+13:38:51   ├─ /fr/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+27ms) 
+13:38:51   ├─ /fr/fiches/detect-language-of-text/index.html (+40ms) 
+13:38:51   ├─ /fr/fiches/estimate-the-cost-of-a-model-call/index.html (+22ms) 
+13:38:51   ├─ /fr/fiches/extract-amounts-and-currencies-from-text/index.html (+77ms) 
+13:38:51   ├─ /fr/fiches/extract-dates-from-text/index.html (+42ms) 
+13:38:51   ├─ /fr/fiches/extract-fields-from-invoice/index.html (+56ms) 
+13:38:52   ├─ /fr/fiches/extract-key-terms-from-a-document/index.html (+28ms) 
+13:38:52   ├─ /fr/fiches/extract-main-content-from-a-web-page/index.html (+19ms) 
+13:38:52   ├─ /fr/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+34ms) 
+13:38:52   ├─ /fr/fiches/find-duplicate-records/index.html (+45ms) 
+13:38:52   ├─ /fr/fiches/extract-people-and-companies-from-an-article/index.html (+37ms) 
+13:38:52   ├─ /fr/fiches/forecast-weekly-sales/index.html (+24ms) 
+13:38:52   ├─ /fr/fiches/extract-product-data-from-a-shop-page/index.html (+33ms) 
+13:38:52   ├─ /fr/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+25ms) 
+13:38:52   ├─ /fr/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+29ms) 
+13:38:52   ├─ /fr/fiches/mask-personal-data-in-chat/index.html (+39ms) 
+13:38:52   ├─ /fr/fiches/fuzzy-match-company-names/index.html (+25ms) 
+13:38:52   ├─ /fr/fiches/moderate-user-comments/index.html (+43ms) 
+13:38:52   ├─ /fr/fiches/parse-address-into-fields/index.html (+58ms) 
+13:38:52   ├─ /fr/fiches/generate-placeholder-images/index.html (+14ms) 
+13:38:52   ├─ /fr/fiches/generate-test-data/index.html (+46ms) 
+13:38:52   ├─ /fr/fiches/rank-products-by-relevance/index.html (+28ms) 
+13:38:52   ├─ /fr/fiches/extract-metadata-from-a-file/index.html (+20ms) 
+13:38:52   ├─ /fr/fiches/read-text-from-a-scanned-page/index.html (+33ms) 
+13:38:52   ├─ /fr/fiches/repair-text-with-broken-encoding/index.html (+11ms) 
+13:38:52   ├─ /fr/fiches/route-support-tickets/index.html (+41ms) 
+13:38:52   ├─ /fr/fiches/search-in-your-own-documents/index.html (+55ms) 
+13:38:52   ├─ /fr/fiches/show-similar-articles/index.html (+32ms) 
+13:38:52   ├─ /fr/fiches/extract-fields-from-a-log-line/index.html (+13ms) 
+13:38:52   ├─ /fr/fiches/extract-tracking-numbers-from-an-email/index.html (+13ms) 
+13:38:52   ├─ /fr/fiches/detect-anomalies-in-metrics/index.html (+33ms) 
+13:38:52   ├─ /fr/fiches/detect-spam-in-contact-form/index.html (+33ms) 
+13:38:52   ├─ /fr/fiches/aggregate-a-column-of-data/index.html (+18ms) 
+13:38:52   ├─ /fr/fiches/summarise-a-long-document/index.html (+50ms) 
+13:38:52   ├─ /fr/fiches/tag-articles-by-topic/index.html (+51ms) 
+13:38:52   ├─ /fr/fiches/translate-interface-strings/index.html (+39ms) 
+13:38:52   ├─ /fr/fiches/convert-messy-csv-to-clean-data/index.html (+74ms) 
+13:38:53   ├─ /fr/fiches/extract-a-table-from-a-web-page/index.html (+20ms) 
+13:38:53   ├─ /fr/fiches/validate-a-form-server-side/index.html (+13ms) 
+13:38:53   ├─ /fr/fiches/validate-a-phone-number-and-its-country-code/index.html (+12ms) 
+13:38:53   ├─ /fr/fiches/validate-an-api-payload-against-its-contract/index.html (+22ms) 
+13:38:53   ├─ /fr/fiches/validate-an-email-address-without-sending-a-message/index.html (+15ms) 
+13:38:53   ├─ /fr/fiches/validate-an-imported-file-against-a-schema/index.html (+16ms) 
+13:38:53   ├─ /fr/fiches/write-product-descriptions/index.html (+49ms) 
+13:38:53   ├─ /en/par-ou-commencer/index.html (+4ms) 
+13:38:53   ├─ /fr/par-ou-commencer/index.html (+4ms) 
+13:38:53   ├─ /en/rss.xml (+6ms) 
+13:38:53   ├─ /fr/rss.xml (+3ms) 
+13:38:53   ├─ /en/search-index.json (+2ms) 
+13:38:53   ├─ /fr/search-index.json (+1ms) 
+13:38:53   ├─ /en/a-propos/index.html (+6ms) 
+13:38:53   ├─ /fr/a-propos/index.html (+2ms) 
+13:38:53   ├─ /en/contribuer/index.html (+3ms) 
+13:38:53   ├─ /fr/contribuer/index.html (+2ms) 
+13:38:53   ├─ /en/credits/index.html (+2ms) 
+13:38:53   ├─ /fr/credits/index.html (+3ms) 
+13:38:53   ├─ /en/accompagnement/index.html (+2ms) 
+13:38:53   ├─ /fr/accompagnement/index.html (+2ms) 
+13:38:53   ├─ /en/mentions-legales/index.html (+2ms) 
+13:38:53   ├─ /fr/mentions-legales/index.html (+3ms) 
+13:38:53   ├─ /en/methodologie/index.html (+5ms) 
+13:38:53   ├─ /fr/methodologie/index.html (+4ms) 
+13:38:53   ├─ /en/confidentialite/index.html (+4ms) 
+13:38:53   ├─ /fr/confidentialite/index.html (+4ms) 
+13:38:53   ├─ /en/index.html (+15ms) 
+13:38:53   ├─ /fr/index.html (+12ms) 
+13:38:53   ├─ /index.html (+2ms) 
+13:38:53 ✓ Completed in 4.38s.
+
+13:38:53 [build] ✓ Completed in 5.32s.
+13:38:53 [@astrojs/sitemap] `sitemap-index.xml` created at `dist`
+13:38:53 [build] 158 page(s) built in 5.81s
+13:38:53 [build] Complete!
+
+compute-page-weight — 155 page(s) mesurée(s), moyenne 75.2 Ko, la plus lourde 112.2 Ko (en/fiches/write-product-descriptions/index.html)
+  3 page(s) sans emplacement de poids, laissées telles quelles.
+
+strip-dev-pages: 7 page(s) de contrôle retirée(s) de dist/
+
+> overkill@1.0.0 test:tryout
+> node --test tests/tryout.spec.mjs
+
+TAP version 13
+# Subtest: au moins un essai interactif et un essai figé existent
+ok 1 - au moins un essai interactif et un essai figé existent
+  ---
+  duration_ms: 0.861141
+  ...
+# Subtest: essai interactif — add-autocomplete-to-a-search-bar
+ok 2 - essai interactif — add-autocomplete-to-a-search-bar
+  ---
+  duration_ms: 3134.41052
+  ...
+# Subtest: essai interactif — aggregate-a-column-of-data
+ok 3 - essai interactif — aggregate-a-column-of-data
+  ---
+  duration_ms: 3118.313729
+  ...
+# Subtest: essai interactif — convert-messy-csv-to-clean-data
+ok 4 - essai interactif — convert-messy-csv-to-clean-data
+  ---
+  duration_ms: 3109.229616
+  ...
+# Subtest: essai interactif — detect-anomalies-in-metrics
+ok 5 - essai interactif — detect-anomalies-in-metrics
+  ---
+  duration_ms: 3074.19156
+  ...
+# Subtest: essai interactif — detect-language-of-text
+ok 6 - essai interactif — detect-language-of-text
+  ---
+  duration_ms: 3070.304741
+  ...
+# Subtest: essai interactif — detect-spam-in-contact-form
+ok 7 - essai interactif — detect-spam-in-contact-form
+  ---
+  duration_ms: 3073.65627
+  ...
+# Subtest: essai interactif — estimate-the-cost-of-a-model-call
+ok 8 - essai interactif — estimate-the-cost-of-a-model-call
+  ---
+  duration_ms: 3065.204392
+  ...
+# Subtest: essai interactif — extract-amounts-and-currencies-from-text
+ok 9 - essai interactif — extract-amounts-and-currencies-from-text
+  ---
+  duration_ms: 3058.809802
+  ...
+# Subtest: essai interactif — extract-dates-from-text
+ok 10 - essai interactif — extract-dates-from-text
+  ---
+  duration_ms: 3085.874738
+  ...
+# Subtest: essai interactif — extract-fields-from-a-log-line
+ok 11 - essai interactif — extract-fields-from-a-log-line
+  ---
+  duration_ms: 3037.008512
+  ...
+# Subtest: essai interactif — extract-key-terms-from-a-document
+ok 12 - essai interactif — extract-key-terms-from-a-document
+  ---
+  duration_ms: 3023.523294
+  ...
+# Subtest: essai interactif — extract-product-data-from-a-shop-page
+ok 13 - essai interactif — extract-product-data-from-a-shop-page
+  ---
+  duration_ms: 3072.050215
+  ...
+# Subtest: essai interactif — extract-the-latest-reply-from-an-email-thread
+ok 14 - essai interactif — extract-the-latest-reply-from-an-email-thread
+  ---
+  duration_ms: 3051.84564
+  ...
+# Subtest: essai interactif — extract-tracking-numbers-from-an-email
+ok 15 - essai interactif — extract-tracking-numbers-from-an-email
+  ---
+  duration_ms: 3036.552045
+  ...
+# Subtest: essai interactif — find-duplicate-records
+ok 16 - essai interactif — find-duplicate-records
+  ---
+  duration_ms: 3092.031302
+  ...
+# Subtest: essai interactif — forecast-weekly-sales
+ok 17 - essai interactif — forecast-weekly-sales
+  ---
+  duration_ms: 2999.998665
+  ...
+# Subtest: essai interactif — fuzzy-match-company-names
+ok 18 - essai interactif — fuzzy-match-company-names
+  ---
+  duration_ms: 3046.161713
+  ...
+# Subtest: essai interactif — generate-placeholder-images
+ok 19 - essai interactif — generate-placeholder-images
+  ---
+  duration_ms: 3046.181797
+  ...
+# Subtest: essai interactif — generate-test-data
+ok 20 - essai interactif — generate-test-data
+  ---
+  duration_ms: 3065.575996
+  ...
+# Subtest: essai interactif — mask-personal-data-in-chat
+ok 21 - essai interactif — mask-personal-data-in-chat
+  ---
+  duration_ms: 3048.070693
+  ...
+# Subtest: essai interactif — parse-address-into-fields
+ok 22 - essai interactif — parse-address-into-fields
+  ---
+  duration_ms: 3113.086017
+  ...
+# Subtest: essai interactif — rank-products-by-relevance
+ok 23 - essai interactif — rank-products-by-relevance
+  ---
+  duration_ms: 3044.765241
+  ...
+# Subtest: essai interactif — repair-text-with-broken-encoding
+ok 24 - essai interactif — repair-text-with-broken-encoding
+  ---
+  duration_ms: 3016.558958
+  ...
+# Subtest: essai interactif — route-support-tickets
+ok 25 - essai interactif — route-support-tickets
+  ---
+  duration_ms: 3033.676221
+  ...
+# Subtest: essai interactif — search-in-your-own-documents
+ok 26 - essai interactif — search-in-your-own-documents
+  ---
+  duration_ms: 3031.794824
+  ...
+# Subtest: essai interactif — show-similar-articles
+ok 27 - essai interactif — show-similar-articles
+  ---
+  duration_ms: 3055.712632
+  ...
+# Subtest: essai interactif — tag-articles-by-topic
+ok 28 - essai interactif — tag-articles-by-topic
+  ---
+  duration_ms: 3009.072513
+  ...
+# Subtest: essai interactif — validate-a-form-server-side
+ok 29 - essai interactif — validate-a-form-server-side
+  ---
+  duration_ms: 3005.256808
+  ...
+# Subtest: essai interactif — validate-an-email-address-without-sending-a-message
+ok 30 - essai interactif — validate-an-email-address-without-sending-a-message
+  ---
+  duration_ms: 3004.487806
+  ...
+# Subtest: essai figé — check-a-company-identification-number
+ok 31 - essai figé — check-a-company-identification-number
+  ---
+  duration_ms: 604.286689
+  ...
+# Subtest: essai figé — check-a-file-is-really-the-format-it-claims
+ok 32 - essai figé — check-a-file-is-really-the-format-it-claims
+  ---
+  duration_ms: 594.626362
+  ...
+# Subtest: essai figé — check-a-password-against-a-policy
+ok 33 - essai figé — check-a-password-against-a-policy
+  ---
+  duration_ms: 607.839632
+  ...
+# Subtest: essai figé — check-bank-details-before-a-transfer
+ok 34 - essai figé — check-bank-details-before-a-transfer
+  ---
+  duration_ms: 622.693647
+  ...
+# Subtest: essai figé — convert-a-pdf-to-plain-text
+ok 35 - essai figé — convert-a-pdf-to-plain-text
+  ---
+  duration_ms: 608.271021
+  ...
+# Subtest: essai figé — extract-a-table-from-a-web-page
+ok 36 - essai figé — extract-a-table-from-a-web-page
+  ---
+  duration_ms: 622.935696
+  ...
+# Subtest: essai figé — extract-links-from-a-page
+ok 37 - essai figé — extract-links-from-a-page
+  ---
+  duration_ms: 642.365704
+  ...
+# Subtest: essai figé — extract-main-content-from-a-web-page
+ok 38 - essai figé — extract-main-content-from-a-web-page
+  ---
+  duration_ms: 621.801163
+  ...
+# Subtest: essai figé — extract-metadata-from-a-file
+ok 39 - essai figé — extract-metadata-from-a-file
+  ---
+  duration_ms: 612.956072
+  ...
+# Subtest: essai figé — extract-people-and-companies-from-an-article
+ok 40 - essai figé — extract-people-and-companies-from-an-article
+  ---
+  duration_ms: 618.126979
+  ...
+# Subtest: essai figé — extract-tables-from-a-pdf
+ok 41 - essai figé — extract-tables-from-a-pdf
+  ---
+  duration_ms: 616.42631
+  ...
+# Subtest: essai figé — know-whether-a-pdf-needs-ocr
+ok 42 - essai figé — know-whether-a-pdf-needs-ocr
+  ---
+  duration_ms: 616.563959
+  ...
+# Subtest: essai figé — moderate-user-comments
+ok 43 - essai figé — moderate-user-comments
+  ---
+  duration_ms: 612.098487
+  ...
+# Subtest: essai figé — read-text-from-a-scanned-page
+ok 44 - essai figé — read-text-from-a-scanned-page
+  ---
+  duration_ms: 603.452096
+  ...
+# Subtest: essai figé — summarise-a-long-document
+ok 45 - essai figé — summarise-a-long-document
+  ---
+  duration_ms: 615.396465
+  ...
+# Subtest: essai figé — translate-interface-strings
+ok 46 - essai figé — translate-interface-strings
+  ---
+  duration_ms: 632.004663
+  ...
+# Subtest: essai figé — validate-a-phone-number-and-its-country-code
+ok 47 - essai figé — validate-a-phone-number-and-its-country-code
+  ---
+  duration_ms: 610.301104
+  ...
+# Subtest: essai figé — validate-an-api-payload-against-its-contract
+ok 48 - essai figé — validate-an-api-payload-against-its-contract
+  ---
+  duration_ms: 624.77672
+  ...
+# Subtest: essai figé — validate-an-imported-file-against-a-schema
+ok 49 - essai figé — validate-an-imported-file-against-a-schema
+  ---
+  duration_ms: 616.659291
+  ...
+# Subtest: essai figé — write-product-descriptions
+ok 50 - essai figé — write-product-descriptions
+  ---
+  duration_ms: 615.121806
+  ...
+1..50
+# tests 50
+# suites 0
+# pass 50
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 101278.865894
+
+> overkill@1.0.0 test:guide
+> node --test tests/guide.test.mjs tests/guide.spec.mjs
+
+TAP version 13
+# Subtest: sans JavaScript, la page reste lisible et renvoie aux familles
+ok 1 - sans JavaScript, la page reste lisible et renvoie aux familles
+  ---
+  duration_ms: 647.153137
+  ...
+# Subtest: le compte des questions restantes suit les réponses
+ok 2 - le compte des questions restantes suit les réponses
+  ---
+  duration_ms: 672.477321
+  ...
+# Subtest: « je ne sais pas » sur la famille retire la question des tâches
+ok 3 - « je ne sais pas » sur la famille retire la question des tâches
+  ---
+  duration_ms: 702.024298
+  ...
+# Subtest: un écran refuse de passer sans réponse, et le dit
+ok 4 - un écran refuse de passer sans réponse, et le dit
+  ---
+  duration_ms: 656.030724
+  ...
+# Subtest: une tâche désignée donne un verdict expliqué et la fiche
+ok 5 - une tâche désignée donne un verdict expliqué et la fiche
+  ---
+  duration_ms: 1035.181403
+  ...
+# Subtest: une contrainte qui déplace la réponse le dit, et dit vers quoi
+ok 6 - une contrainte qui déplace la réponse le dit, et dit vers quoi
+  ---
+  duration_ms: 987.125249
+  ...
+# Subtest: une famille sans tâche correspondante propose le message et le mail d’abord
+ok 7 - une famille sans tâche correspondante propose le message et le mail d’abord
+  ---
+  duration_ms: 1052.272177
+  ...
+# Subtest: sans tâche ni famille, le catalogue est filtré par les contraintes
+ok 8 - sans tâche ni famille, le catalogue est filtré par les contraintes
+  ---
+  duration_ms: 958.107311
+  ...
+# Subtest: fr — la charge utile porte les fiches et les familles
+ok 9 - fr — la charge utile porte les fiches et les familles
+  ---
+  duration_ms: 0.853711
+  ...
+# Subtest: fr — chaque fiche est atteignable par sa famille
+ok 10 - fr — chaque fiche est atteignable par sa famille
+  ---
+  duration_ms: 0.832136
+  ...
+# Subtest: fr — tout parcours aboutit, 1296 combinaisons par fiche
+ok 11 - fr — tout parcours aboutit, 1296 combinaisons par fiche
+  ---
+  duration_ms: 92.83541
+  ...
+# Subtest: fr — sans tâche désignée, le message honnête et un catalogue filtré
+ok 12 - fr — sans tâche désignée, le message honnête et un catalogue filtré
+  ---
+  duration_ms: 1.122711
+  ...
+# Subtest: fr — sous contrainte maximale, le verdict tient ou cède au plus frugal
+ok 13 - fr — sous contrainte maximale, le verdict tient ou cède au plus frugal
+  ---
+  duration_ms: 0.358366
+  ...
+# Subtest: en — la charge utile porte les fiches et les familles
+ok 14 - en — la charge utile porte les fiches et les familles
+  ---
+  duration_ms: 0.067892
+  ...
+# Subtest: en — chaque fiche est atteignable par sa famille
+ok 15 - en — chaque fiche est atteignable par sa famille
+  ---
+  duration_ms: 0.109346
+  ...
+# Subtest: en — tout parcours aboutit, 1296 combinaisons par fiche
+ok 16 - en — tout parcours aboutit, 1296 combinaisons par fiche
+  ---
+  duration_ms: 49.664483
+  ...
+# Subtest: en — sans tâche désignée, le message honnête et un catalogue filtré
+ok 17 - en — sans tâche désignée, le message honnête et un catalogue filtré
+  ---
+  duration_ms: 0.781229
+  ...
+# Subtest: en — sous contrainte maximale, le verdict tient ou cède au plus frugal
+ok 18 - en — sous contrainte maximale, le verdict tient ou cède au plus frugal
+  ---
+  duration_ms: 0.259444
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7043.596273
+
+> overkill@1.0.0 test:catalogue
+> node --test tests/catalogue.spec.mjs
+
+TAP version 13
+# Subtest: sans JavaScript, la première page montre sa tranche et la pagination est faite de liens
+ok 1 - sans JavaScript, la première page montre sa tranche et la pagination est faite de liens
+  ---
+  duration_ms: 658.920608
+  ...
+# Subtest: sans JavaScript, la deuxième page montre la suite et son appel à l’action
+ok 2 - sans JavaScript, la deuxième page montre la suite et son appel à l’action
+  ---
+  duration_ms: 634.847265
+  ...
+# Subtest: avec JavaScript, la page rendue est respectée tant qu’on ne filtre pas
+ok 3 - avec JavaScript, la page rendue est respectée tant qu’on ne filtre pas
+  ---
+  duration_ms: 608.282079
+  ...
+# Subtest: un filtre porte sur tout le catalogue et efface la pagination
+ok 4 - un filtre porte sur tout le catalogue et efface la pagination
+  ---
+  duration_ms: 654.866434
+  ...
+# Subtest: la recherche traverse les pages, et l’état reste dans l’URL
+ok 5 - la recherche traverse les pages, et l’état reste dans l’URL
+  ---
+  duration_ms: 798.527557
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3714.561316
+
+> overkill@1.0.0 fixtures
+> node scripts/generate-fixture-entries.mjs
+
+generate-fixture-entries : 205 fiche(s) de test écrites dans content/entries-fixtures/
+  Construire avec OVERKILL_FIXTURES=1 pour les inclure.
+
+> overkill@1.0.0 build:fixtures
+> OVERKILL_FIXTURES=1 OVERKILL_DEV_PAGES=1 astro build && node scripts/compute-page-weight.mjs
+
+[astro] `markdown.remarkPlugins`, `markdown.rehypePlugins`, and `markdown.remarkRehype` are deprecated. Pass them to `unified({...})` from `@astrojs/markdown-remark` directly instead.
+13:40:47 [content] Syncing content
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `add-autocomplete-to-a-search-bar`. Slugs must be unique.
+
+Entries: 
+- content/entries/add-autocomplete-to-a-search-bar.mdx
+- content/entries-fixtures/add-autocomplete-to-a-search-bar.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `aggregate-a-column-of-data`. Slugs must be unique.
+
+Entries: 
+- content/entries/aggregate-a-column-of-data.mdx
+- content/entries-fixtures/aggregate-a-column-of-data.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `check-a-password-against-a-policy`. Slugs must be unique.
+
+Entries: 
+- content/entries/check-a-password-against-a-policy.mdx
+- content/entries-fixtures/check-a-password-against-a-policy.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `check-a-company-identification-number`. Slugs must be unique.
+
+Entries: 
+- content/entries/check-a-company-identification-number.mdx
+- content/entries-fixtures/check-a-company-identification-number.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `check-a-file-is-really-the-format-it-claims`. Slugs must be unique.
+
+Entries: 
+- content/entries/check-a-file-is-really-the-format-it-claims.mdx
+- content/entries-fixtures/check-a-file-is-really-the-format-it-claims.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `check-bank-details-before-a-transfer`. Slugs must be unique.
+
+Entries: 
+- content/entries/check-bank-details-before-a-transfer.mdx
+- content/entries-fixtures/check-bank-details-before-a-transfer.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `convert-a-pdf-to-plain-text`. Slugs must be unique.
+
+Entries: 
+- content/entries/convert-a-pdf-to-plain-text.mdx
+- content/entries-fixtures/convert-a-pdf-to-plain-text.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `convert-messy-csv-to-clean-data`. Slugs must be unique.
+
+Entries: 
+- content/entries/convert-messy-csv-to-clean-data.mdx
+- content/entries-fixtures/convert-messy-csv-to-clean-data.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `detect-anomalies-in-metrics`. Slugs must be unique.
+
+Entries: 
+- content/entries/detect-anomalies-in-metrics.mdx
+- content/entries-fixtures/detect-anomalies-in-metrics.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `detect-language-of-text`. Slugs must be unique.
+
+Entries: 
+- content/entries/detect-language-of-text.mdx
+- content/entries-fixtures/detect-language-of-text.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `detect-spam-in-contact-form`. Slugs must be unique.
+
+Entries: 
+- content/entries/detect-spam-in-contact-form.mdx
+- content/entries-fixtures/detect-spam-in-contact-form.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `estimate-the-cost-of-a-model-call`. Slugs must be unique.
+
+Entries: 
+- content/entries/estimate-the-cost-of-a-model-call.mdx
+- content/entries-fixtures/estimate-the-cost-of-a-model-call.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-a-table-from-a-web-page`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-a-table-from-a-web-page.mdx
+- content/entries-fixtures/extract-a-table-from-a-web-page.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-amounts-and-currencies-from-text`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-amounts-and-currencies-from-text.mdx
+- content/entries-fixtures/extract-amounts-and-currencies-from-text.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-dates-from-text`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-dates-from-text.mdx
+- content/entries-fixtures/extract-dates-from-text.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-fields-from-a-log-line`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-fields-from-a-log-line.mdx
+- content/entries-fixtures/extract-fields-from-a-log-line.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-fields-from-invoice`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-fields-from-invoice.mdx
+- content/entries-fixtures/extract-fields-from-invoice.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-key-terms-from-a-document`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-key-terms-from-a-document.mdx
+- content/entries-fixtures/extract-key-terms-from-a-document.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-links-from-a-page`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-links-from-a-page.mdx
+- content/entries-fixtures/extract-links-from-a-page.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-main-content-from-a-web-page`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-main-content-from-a-web-page.mdx
+- content/entries-fixtures/extract-main-content-from-a-web-page.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-metadata-from-a-file`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-metadata-from-a-file.mdx
+- content/entries-fixtures/extract-metadata-from-a-file.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-people-and-companies-from-an-article`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-people-and-companies-from-an-article.mdx
+- content/entries-fixtures/extract-people-and-companies-from-an-article.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-product-data-from-a-shop-page`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-product-data-from-a-shop-page.mdx
+- content/entries-fixtures/extract-product-data-from-a-shop-page.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-tables-from-a-pdf`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-tables-from-a-pdf.mdx
+- content/entries-fixtures/extract-tables-from-a-pdf.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-the-latest-reply-from-an-email-thread`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-the-latest-reply-from-an-email-thread.mdx
+- content/entries-fixtures/extract-the-latest-reply-from-an-email-thread.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-tracking-numbers-from-an-email`. Slugs must be unique.
+
+Entries: 
+- content/entries/extract-tracking-numbers-from-an-email.mdx
+- content/entries-fixtures/extract-tracking-numbers-from-an-email.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `find-duplicate-records`. Slugs must be unique.
+
+Entries: 
+- content/entries/find-duplicate-records.mdx
+- content/entries-fixtures/find-duplicate-records.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `forecast-weekly-sales`. Slugs must be unique.
+
+Entries: 
+- content/entries/forecast-weekly-sales.mdx
+- content/entries-fixtures/forecast-weekly-sales.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `fuzzy-match-company-names`. Slugs must be unique.
+
+Entries: 
+- content/entries/fuzzy-match-company-names.mdx
+- content/entries-fixtures/fuzzy-match-company-names.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `generate-placeholder-images`. Slugs must be unique.
+
+Entries: 
+- content/entries/generate-placeholder-images.mdx
+- content/entries-fixtures/generate-placeholder-images.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `generate-test-data`. Slugs must be unique.
+
+Entries: 
+- content/entries/generate-test-data.mdx
+- content/entries-fixtures/generate-test-data.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `know-whether-a-pdf-needs-ocr`. Slugs must be unique.
+
+Entries: 
+- content/entries/know-whether-a-pdf-needs-ocr.mdx
+- content/entries-fixtures/know-whether-a-pdf-needs-ocr.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `mask-personal-data-in-chat`. Slugs must be unique.
+
+Entries: 
+- content/entries/mask-personal-data-in-chat.mdx
+- content/entries-fixtures/mask-personal-data-in-chat.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `moderate-user-comments`. Slugs must be unique.
+
+Entries: 
+- content/entries/moderate-user-comments.mdx
+- content/entries-fixtures/moderate-user-comments.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `parse-address-into-fields`. Slugs must be unique.
+
+Entries: 
+- content/entries/parse-address-into-fields.mdx
+- content/entries-fixtures/parse-address-into-fields.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `rank-products-by-relevance`. Slugs must be unique.
+
+Entries: 
+- content/entries/rank-products-by-relevance.mdx
+- content/entries-fixtures/rank-products-by-relevance.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `read-text-from-a-scanned-page`. Slugs must be unique.
+
+Entries: 
+- content/entries/read-text-from-a-scanned-page.mdx
+- content/entries-fixtures/read-text-from-a-scanned-page.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `repair-text-with-broken-encoding`. Slugs must be unique.
+
+Entries: 
+- content/entries/repair-text-with-broken-encoding.mdx
+- content/entries-fixtures/repair-text-with-broken-encoding.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `route-support-tickets`. Slugs must be unique.
+
+Entries: 
+- content/entries/route-support-tickets.mdx
+- content/entries-fixtures/route-support-tickets.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `show-similar-articles`. Slugs must be unique.
+
+Entries: 
+- content/entries/show-similar-articles.mdx
+- content/entries-fixtures/show-similar-articles.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `search-in-your-own-documents`. Slugs must be unique.
+
+Entries: 
+- content/entries/search-in-your-own-documents.mdx
+- content/entries-fixtures/search-in-your-own-documents.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `summarise-a-long-document`. Slugs must be unique.
+
+Entries: 
+- content/entries/summarise-a-long-document.mdx
+- content/entries-fixtures/summarise-a-long-document.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `tag-articles-by-topic`. Slugs must be unique.
+
+Entries: 
+- content/entries/tag-articles-by-topic.mdx
+- content/entries-fixtures/tag-articles-by-topic.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `translate-interface-strings`. Slugs must be unique.
+
+Entries: 
+- content/entries/translate-interface-strings.mdx
+- content/entries-fixtures/translate-interface-strings.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-a-form-server-side`. Slugs must be unique.
+
+Entries: 
+- content/entries/validate-a-form-server-side.mdx
+- content/entries-fixtures/validate-a-form-server-side.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-a-phone-number-and-its-country-code`. Slugs must be unique.
+
+Entries: 
+- content/entries/validate-a-phone-number-and-its-country-code.mdx
+- content/entries-fixtures/validate-a-phone-number-and-its-country-code.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-an-api-payload-against-its-contract`. Slugs must be unique.
+
+Entries: 
+- content/entries/validate-an-api-payload-against-its-contract.mdx
+- content/entries-fixtures/validate-an-api-payload-against-its-contract.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-an-imported-file-against-a-schema`. Slugs must be unique.
+
+Entries: 
+- content/entries/validate-an-imported-file-against-a-schema.mdx
+- content/entries-fixtures/validate-an-imported-file-against-a-schema.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-an-email-address-without-sending-a-message`. Slugs must be unique.
+
+Entries: 
+- content/entries/validate-an-email-address-without-sending-a-message.mdx
+- content/entries-fixtures/validate-an-email-address-without-sending-a-message.mdx
+13:40:47 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `write-product-descriptions`. Slugs must be unique.
+
+Entries: 
+- content/entries/write-product-descriptions.mdx
+- content/entries-fixtures/write-product-descriptions.mdx
+13:40:47 [content] Synced content
+13:40:47 [types] Generated 482ms
+13:40:47 [build] output: "static"
+13:40:47 [build] mode: "static"
+13:40:47 [build] directory: /home/florentin/overkill/dist/
+13:40:47 [build] Collecting build info...
+13:40:47 [build] ✓ Completed in 518ms.
+13:40:47 [build] Building static entrypoints...
+13:40:49 [vite] ✓ built in 1.17s
+13:40:49 [vite] ✓ built in 41ms
+13:40:49 [build] Rearranging server assets...
+
+ generating static routes 
+13:40:49   ├─ /dev/catalogue/index.html (+10ms) 
+13:40:49   ├─ /dev/components/index.html (+302ms) 
+13:40:49   ├─ /dev/editorial/index.html (+5ms) 
+13:40:49   ├─ /dev/entry/index.html (+58ms) 
+13:40:49   ├─ /dev/entry-draft/index.html (+50ms) 
+13:40:50   ├─ /dev/famille/index.html (+5ms) 
+13:40:50   ├─ /dev/tokens/index.html (+3ms) 
+13:40:50   ├─ /en/404/index.html (+2ms) 
+13:40:50   ├─ /fr/404/index.html (+2ms) 
+13:40:50   ├─ /en/catalogue/index.html (+5ms) 
+13:40:50   ├─ /en/catalogue/2/index.html (+6ms) 
+13:40:50   ├─ /en/catalogue/3/index.html (+4ms) 
+13:40:50   ├─ /en/catalogue/4/index.html (+4ms) 
+13:40:50   ├─ /en/catalogue/5/index.html (+5ms) 
+13:40:50   ├─ /en/catalogue/6/index.html (+7ms) 
+13:40:50   ├─ /en/catalogue/7/index.html (+8ms) 
+13:40:50   ├─ /en/catalogue/8/index.html (+6ms) 
+13:40:50   ├─ /en/catalogue/9/index.html (+3ms) 
+13:40:50   ├─ /fr/catalogue/index.html (+4ms) 
+13:40:50   ├─ /fr/catalogue/2/index.html (+3ms) 
+13:40:50   ├─ /fr/catalogue/3/index.html (+6ms) 
+13:40:50   ├─ /fr/catalogue/4/index.html (+4ms) 
+13:40:50   ├─ /fr/catalogue/5/index.html (+4ms) 
+13:40:50   ├─ /fr/catalogue/6/index.html (+5ms) 
+13:40:50   ├─ /fr/catalogue/7/index.html (+10ms) 
+13:40:50   ├─ /fr/catalogue/8/index.html (+5ms) 
+13:40:50   ├─ /fr/catalogue/9/index.html (+4ms) 
+13:40:50   ├─ /en/dernieres-fiches/index.html (+7ms) 
+13:40:50   ├─ /fr/dernieres-fiches/index.html (+4ms) 
+13:40:50   ├─ /en/familles/detect-filter/index.html (+2ms) 
+13:40:50   ├─ /en/familles/extract/index.html (+1ms) 
+13:40:50   ├─ /en/familles/classify-route/index.html (+1ms) 
+13:40:50   ├─ /en/familles/search/index.html (+1ms) 
+13:40:50   ├─ /en/familles/recommend/index.html (+8ms) 
+13:40:50   ├─ /en/familles/predict/index.html (+3ms) 
+13:40:50   ├─ /en/familles/generate/index.html (+2ms) 
+13:40:50   ├─ /en/familles/transform/index.html (+2ms) 
+13:40:50   ├─ /en/familles/recognize-transcribe/index.html (+1ms) 
+13:40:50   ├─ /en/familles/decide-validate/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/detect-filter/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/extract/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/classify-route/index.html (+2ms) 
+13:40:50   ├─ /fr/familles/search/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/recommend/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/predict/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/generate/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/transform/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/recognize-transcribe/index.html (+1ms) 
+13:40:50   ├─ /fr/familles/decide-validate/index.html (+2ms) 
+13:40:50   ├─ /en/familles/index.html (+2ms) 
+13:40:50   ├─ /fr/familles/index.html (+1ms) 
+13:40:50   ├─ /en/fiches/add-a-search-page-to-a-small-website/index.html (+9ms) 
+13:40:50   ├─ /en/fiches/add-autocomplete-to-a-search-bar/index.html (+9ms) 
+13:40:50   ├─ /en/fiches/align-a-transcript-with-its-audio/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/estimate-a-waiting-time/index.html (+8ms) 
+13:40:50   ├─ /en/fiches/answer-questions-from-an-internal-knowledge-base/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/anticipate-a-stock-shortage/index.html (+18ms) 
+13:40:50   ├─ /en/fiches/apply-a-house-style-to-a-text/index.html (+15ms) 
+13:40:50   ├─ /en/fiches/apply-discount-rules-to-a-cart/index.html (+6ms) 
+13:40:50   ├─ /en/fiches/assign-expenses-to-accounting-categories/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/mix-editorial-picks-with-automatic-suggestions/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/block-abusive-login-attempts/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/blur-faces-in-photos/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/build-a-colour-palette-from-an-image/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/generate-share-preview-images/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/write-quiz-questions-from-a-lesson/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/check-a-company-identification-number/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/check-a-configuration-before-deployment/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/check-a-file-is-really-the-format-it-claims/index.html (+11ms) 
+13:40:50   ├─ /en/fiches/check-a-password-against-a-policy/index.html (+6ms) 
+13:40:50   ├─ /en/fiches/check-a-product-catalogue-for-inconsistencies/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/check-an-invoice-against-its-purchase-order/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/check-bank-details-before-a-transfer/index.html (+9ms) 
+13:40:50   ├─ /en/fiches/check-a-contract-contains-the-required-clauses/index.html (+8ms) 
+13:40:50   ├─ /en/fiches/spot-a-drift-in-a-model/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/check-a-postal-address-is-deliverable/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/check-that-a-scan-is-readable/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/check-that-a-translation-file-is-complete/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/rank-comments-to-show-first/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/classify-a-company-by-its-line-of-business/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/convert-messy-csv-to-clean-data/index.html (+6ms) 
+13:40:50   ├─ /en/fiches/extract-contact-details-from-a-web-page/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/extract-links-from-a-page/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/combine-filters-and-keywords-in-a-product-search/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/decide-when-to-retry-a-failed-operation/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/decide-whether-a-change-needs-human-review/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/detect-conflicts-in-a-schedule/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/detect-copied-text-between-documents/index.html (+8ms) 
+13:40:50   ├─ /en/fiches/detect-language-of-text/index.html (+11ms) 
+13:40:50   ├─ /en/fiches/detect-the-language-of-a-recording/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/dispatch-jobs-to-the-right-processing-queue/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/draft-replies-to-common-emails/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/draw-a-diagram-from-a-description/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/estimate-the-carbon-footprint-of-a-delivery/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/estimate-a-second-hand-price/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/estimate-reading-time/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/estimate-attendance-at-an-event/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/estimate-how-long-a-job-takes/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/estimate-the-cost-of-a-model-call/index.html (+11ms) 
+13:40:50   ├─ /en/fiches/estimate-the-no-show-rate-for-a-slot/index.html (+6ms) 
+13:40:50   ├─ /en/fiches/expand-abbreviations-in-a-text/index.html (+6ms) 
+13:40:50   ├─ /en/fiches/explain-why-an-item-was-recommended/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/extract-amounts-and-currencies-from-text/index.html (+45ms) 
+13:40:50   ├─ /en/fiches/extract-dates-from-text/index.html (+10ms) 
+13:40:50   ├─ /en/fiches/extract-measurements-from-a-product-description/index.html (+6ms) 
+13:40:50   ├─ /en/fiches/extract-opening-hours-from-a-business-page/index.html (+10ms) 
+13:40:50   ├─ /en/fiches/extract-structured-data-from-a-resume/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/extract-fields-from-invoice/index.html (+6ms) 
+13:40:50   ├─ /en/fiches/extract-ingredients-and-steps-from-a-recipe/index.html (+11ms) 
+13:40:50   ├─ /en/fiches/extract-key-clauses-from-a-contract/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/extract-key-terms-from-a-document/index.html (+8ms) 
+13:40:50   ├─ /en/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+137ms) 
+13:40:50   ├─ /en/fiches/fill-a-gap-in-a-series-of-measurements/index.html (+11ms) 
+13:40:50   ├─ /en/fiches/filter-out-bot-traffic-from-logs/index.html (+12ms) 
+13:40:50   ├─ /en/fiches/filter-noisy-alerts-before-paging/index.html (+22ms) 
+13:40:50   ├─ /en/fiches/detect-secrets-in-source-code/index.html (+19ms) 
+13:40:50   ├─ /en/fiches/find-duplicate-records/index.html (+17ms) 
+13:40:50   ├─ /en/fiches/find-personal-data-in-a-spreadsheet/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/extract-people-and-companies-from-an-article/index.html (+9ms) 
+13:40:50   ├─ /en/fiches/find-duplicate-images-in-a-media-library/index.html (+5ms) 
+13:40:50   ├─ /en/fiches/find-the-seasonality-in-a-series/index.html (+14ms) 
+13:40:50   ├─ /en/fiches/detect-speech-segments-in-an-audio-file/index.html (+8ms) 
+13:40:50   ├─ /en/fiches/find-visually-similar-images/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/find-where-a-quoted-passage-comes-from/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/fix-spelling-and-grammar/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/flatten-nested-data-into-a-table/index.html (+13ms) 
+13:40:50   ├─ /en/fiches/forecast-site-traffic/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/forecast-staffing-needs-for-a-shift/index.html (+14ms) 
+13:40:50   ├─ /en/fiches/forecast-cash-flow/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/forecast-weekly-sales/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/forgive-typos-in-a-search-box/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/gauge-the-sentiment-of-a-customer-review/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+14ms) 
+13:40:50   ├─ /en/fiches/read-text-from-a-screenshot/index.html (+6ms) 
+13:40:50   ├─ /en/fiches/estimate-a-delivery-date/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/create-default-avatars-for-users/index.html (+12ms) 
+13:40:50   ├─ /en/fiches/promote-fresh-content-in-a-ranking/index.html (+7ms) 
+13:40:50   ├─ /en/fiches/group-free-text-survey-answers-into-themes/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/handle-synonyms-and-jargon-in-a-search-index/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/identify-a-music-track-from-a-clip/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/identify-the-intent-behind-a-user-message/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/keep-a-search-index-in-step-with-changing-data/index.html (+3ms) 
+13:40:50   ├─ /en/fiches/diversify-a-list-of-recommendations/index.html (+4ms) 
+13:40:50   ├─ /en/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+27ms) 
+13:40:51   ├─ /en/fiches/label-audio-clips-by-what-can-be-heard/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/label-contract-clauses-by-type/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/label-log-lines-by-severity/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/make-a-pile-of-scanned-documents-searchable/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/map-fields-between-two-formats/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/map-free-text-to-an-official-code-list/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/mask-personal-data-in-chat/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/match-a-postal-address-to-a-known-place/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/fuzzy-match-company-names/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/match-offers-and-requests/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/moderate-user-comments/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/suggest-a-substitute-for-an-out-of-stock-item/index.html (+7ms) 
+13:40:51   ├─ /en/fiches/personalise-a-home-page-feed/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/personalise-a-mass-mailing/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/plan-maintenance-before-a-breakdown/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/generate-client-code-from-an-api-schema/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/generate-invoice-pdfs/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/generate-placeholder-images/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/generate-test-data/index.html (+16ms) 
+13:40:51   ├─ /en/fiches/extract-product-data-from-a-shop-page/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/extract-quotes-from-an-interview-transcript/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/extract-main-content-from-a-web-page/index.html (+18ms) 
+13:40:51   ├─ /en/fiches/attach-an-uncertainty-range-to-a-forecast/index.html (+7ms) 
+13:40:51   ├─ /en/fiches/normalise-phone-numbers-to-one-format/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/put-products-in-the-right-catalogue-category/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/query-a-database-in-plain-language/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/rank-products-by-relevance/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/read-a-barcode-from-a-photo/index.html (+8ms) 
+13:40:51   ├─ /en/fiches/extract-metadata-from-a-file/index.html (+14ms) 
+13:40:51   ├─ /en/fiches/read-a-formula-from-an-image/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/read-a-qr-code-in-a-camera-stream/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/read-a-utility-meter-from-a-photo/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/read-handwritten-notes/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/read-text-from-a-scanned-page/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/read-checkboxes-on-a-paper-form/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/recognise-a-spoken-command/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/recognise-the-type-of-an-uploaded-document/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/recommend-a-clothing-size/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/recommend-the-next-video-to-watch/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/recommend-a-plan-that-fits-the-usage/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/reconcile-a-bank-statement-with-a-ledger/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/extract-a-table-from-a-scanned-page/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/turn-a-web-page-into-clean-text/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/remove-the-background-from-a-photo/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/repair-text-with-broken-encoding/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/resize-and-crop-images-for-the-web/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/rewrite-a-text-in-plain-language/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/route-a-request-to-the-smallest-model-that-can-handle-it/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/route-support-tickets/index.html (+8ms) 
+13:40:51   ├─ /en/fiches/screen-uploaded-files-for-malware/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/search-a-large-log-archive/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/search-across-past-conversations/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/search-in-one-language-and-find-results-in-another/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/search-in-your-own-documents/index.html (+7ms) 
+13:40:51   ├─ /en/fiches/search-inside-a-single-long-document/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/search-several-sources-from-one-search-box/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/search-through-a-codebase/index.html (+7ms) 
+13:40:51   ├─ /en/fiches/shorten-a-text-to-fit-a-space/index.html (+8ms) 
+13:40:51   ├─ /en/fiches/sort-incoming-email-into-folders/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/sort-photos-by-what-they-show/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/split-bibliography-into-references/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/split-a-long-text-into-passages/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/parse-address-into-fields/index.html (+8ms) 
+13:40:51   ├─ /en/fiches/extract-fields-from-a-log-line/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/detect-fraudulent-payment-attempts/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/spot-a-change-of-trend/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/spot-a-sound-event-in-a-recording/index.html (+7ms) 
+13:40:51   ├─ /en/fiches/extract-tracking-numbers-from-an-email/index.html (+8ms) 
+13:40:51   ├─ /en/fiches/detect-anomalies-in-metrics/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/detect-nudity-in-uploaded-images/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/detect-fake-reviews/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/detect-profanity-in-usernames/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/detect-scam-links-in-messages/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/detect-spam-in-contact-form/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/spot-urgent-messages-in-a-shared-inbox/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/straighten-a-crooked-scan/index.html (+3ms) 
+13:40:51   ├─ /en/fiches/clean-up-a-scanned-page/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/strip-quotes-and-signatures-from-emails/index.html (+7ms) 
+13:40:51   ├─ /en/fiches/subtitle-a-video/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/suggest-a-reviewer-for-a-change/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/suggest-people-to-follow/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/suggest-visually-similar-images/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/suggest-complementary-products/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/recommend-recipes-from-available-ingredients/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/show-similar-articles/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/recommend-to-a-first-time-visitor/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/suggest-the-next-action-in-an-app/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/aggregate-a-column-of-data/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/summarise-a-long-document/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/tag-articles-by-topic/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/tell-whether-a-message-needs-a-human-reply/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/detect-ai-generated-text/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/transcribe-a-meeting-recording/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/translate-interface-strings/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/turn-a-question-into-a-database-query/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/extract-a-table-from-a-web-page/index.html (+11ms) 
+13:40:51   ├─ /en/fiches/block-disposable-email-addresses/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/create-url-slugs-from-titles/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/keep-translations-up-to-date-after-a-change/index.html (+7ms) 
+13:40:51   ├─ /en/fiches/validate-a-form-server-side/index.html (+7ms) 
+13:40:51   ├─ /en/fiches/validate-a-phone-number-and-its-country-code/index.html (+14ms) 
+13:40:51   ├─ /en/fiches/validate-an-api-payload-against-its-contract/index.html (+30ms) 
+13:40:51   ├─ /en/fiches/validate-an-email-address-without-sending-a-message/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/validate-an-imported-file-against-a-schema/index.html (+27ms) 
+13:40:51   ├─ /en/fiches/write-a-monthly-report-from-figures/index.html (+8ms) 
+13:40:51   ├─ /en/fiches/write-alt-text-for-images/index.html (+4ms) 
+13:40:51   ├─ /en/fiches/write-error-messages-for-users/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/write-meta-descriptions-for-pages/index.html (+6ms) 
+13:40:51   ├─ /en/fiches/write-product-descriptions/index.html (+13ms) 
+13:40:51   ├─ /en/fiches/write-release-notes-from-commit-history/index.html (+5ms) 
+13:40:51   ├─ /en/fiches/write-ad-copy-variants-to-test/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/add-a-search-page-to-a-small-website/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/add-autocomplete-to-a-search-bar/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/align-a-transcript-with-its-audio/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/estimate-a-waiting-time/index.html (+8ms) 
+13:40:51   ├─ /fr/fiches/answer-questions-from-an-internal-knowledge-base/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/anticipate-a-stock-shortage/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/apply-a-house-style-to-a-text/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/apply-discount-rules-to-a-cart/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/assign-expenses-to-accounting-categories/index.html (+8ms) 
+13:40:51   ├─ /fr/fiches/mix-editorial-picks-with-automatic-suggestions/index.html (+7ms) 
+13:40:51   ├─ /fr/fiches/block-abusive-login-attempts/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/blur-faces-in-photos/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/build-a-colour-palette-from-an-image/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/generate-share-preview-images/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/write-quiz-questions-from-a-lesson/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/check-a-company-identification-number/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/check-a-configuration-before-deployment/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/check-a-file-is-really-the-format-it-claims/index.html (+7ms) 
+13:40:51   ├─ /fr/fiches/check-a-password-against-a-policy/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/check-a-product-catalogue-for-inconsistencies/index.html (+9ms) 
+13:40:51   ├─ /fr/fiches/check-an-invoice-against-its-purchase-order/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/check-bank-details-before-a-transfer/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/check-a-contract-contains-the-required-clauses/index.html (+8ms) 
+13:40:51   ├─ /fr/fiches/spot-a-drift-in-a-model/index.html (+7ms) 
+13:40:51   ├─ /fr/fiches/check-a-postal-address-is-deliverable/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/check-that-a-scan-is-readable/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/check-that-a-translation-file-is-complete/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/rank-comments-to-show-first/index.html (+3ms) 
+13:40:51   ├─ /fr/fiches/classify-a-company-by-its-line-of-business/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/convert-messy-csv-to-clean-data/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/extract-contact-details-from-a-web-page/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/extract-links-from-a-page/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/combine-filters-and-keywords-in-a-product-search/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/decide-when-to-retry-a-failed-operation/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/decide-whether-a-change-needs-human-review/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/detect-conflicts-in-a-schedule/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/detect-copied-text-between-documents/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/detect-language-of-text/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/detect-the-language-of-a-recording/index.html (+7ms) 
+13:40:51   ├─ /fr/fiches/dispatch-jobs-to-the-right-processing-queue/index.html (+12ms) 
+13:40:51   ├─ /fr/fiches/draft-replies-to-common-emails/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/draw-a-diagram-from-a-description/index.html (+3ms) 
+13:40:51   ├─ /fr/fiches/estimate-the-carbon-footprint-of-a-delivery/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/estimate-a-second-hand-price/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/estimate-reading-time/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/estimate-attendance-at-an-event/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/estimate-how-long-a-job-takes/index.html (+10ms) 
+13:40:51   ├─ /fr/fiches/estimate-the-cost-of-a-model-call/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/estimate-the-no-show-rate-for-a-slot/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/expand-abbreviations-in-a-text/index.html (+7ms) 
+13:40:51   ├─ /fr/fiches/explain-why-an-item-was-recommended/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/extract-amounts-and-currencies-from-text/index.html (+10ms) 
+13:40:51   ├─ /fr/fiches/extract-dates-from-text/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/extract-measurements-from-a-product-description/index.html (+6ms) 
+13:40:51   ├─ /fr/fiches/extract-opening-hours-from-a-business-page/index.html (+5ms) 
+13:40:51   ├─ /fr/fiches/extract-structured-data-from-a-resume/index.html (+4ms) 
+13:40:51   ├─ /fr/fiches/extract-fields-from-invoice/index.html (+10ms) 
+13:40:51   ├─ /fr/fiches/extract-ingredients-and-steps-from-a-recipe/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/extract-key-clauses-from-a-contract/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/extract-key-terms-from-a-document/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+32ms) 
+13:40:52   ├─ /fr/fiches/fill-a-gap-in-a-series-of-measurements/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/filter-out-bot-traffic-from-logs/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/filter-noisy-alerts-before-paging/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/detect-secrets-in-source-code/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/find-duplicate-records/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/find-personal-data-in-a-spreadsheet/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/extract-people-and-companies-from-an-article/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/find-duplicate-images-in-a-media-library/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/find-the-seasonality-in-a-series/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/detect-speech-segments-in-an-audio-file/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/find-visually-similar-images/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/find-where-a-quoted-passage-comes-from/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/fix-spelling-and-grammar/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/flatten-nested-data-into-a-table/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/forecast-site-traffic/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/forecast-staffing-needs-for-a-shift/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/forecast-cash-flow/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/forecast-weekly-sales/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/forgive-typos-in-a-search-box/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/gauge-the-sentiment-of-a-customer-review/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+18ms) 
+13:40:52   ├─ /fr/fiches/read-text-from-a-screenshot/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/estimate-a-delivery-date/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/create-default-avatars-for-users/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/promote-fresh-content-in-a-ranking/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/group-free-text-survey-answers-into-themes/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/handle-synonyms-and-jargon-in-a-search-index/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/identify-a-music-track-from-a-clip/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/identify-the-intent-behind-a-user-message/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/keep-a-search-index-in-step-with-changing-data/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/diversify-a-list-of-recommendations/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+18ms) 
+13:40:52   ├─ /fr/fiches/label-audio-clips-by-what-can-be-heard/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/label-contract-clauses-by-type/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/label-log-lines-by-severity/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/make-a-pile-of-scanned-documents-searchable/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/map-fields-between-two-formats/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/map-free-text-to-an-official-code-list/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/mask-personal-data-in-chat/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/match-a-postal-address-to-a-known-place/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/fuzzy-match-company-names/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/match-offers-and-requests/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/moderate-user-comments/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/suggest-a-substitute-for-an-out-of-stock-item/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/personalise-a-home-page-feed/index.html (+9ms) 
+13:40:52   ├─ /fr/fiches/personalise-a-mass-mailing/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/plan-maintenance-before-a-breakdown/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/generate-client-code-from-an-api-schema/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/generate-invoice-pdfs/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/generate-placeholder-images/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/generate-test-data/index.html (+14ms) 
+13:40:52   ├─ /fr/fiches/extract-product-data-from-a-shop-page/index.html (+9ms) 
+13:40:52   ├─ /fr/fiches/extract-quotes-from-an-interview-transcript/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/extract-main-content-from-a-web-page/index.html (+11ms) 
+13:40:52   ├─ /fr/fiches/attach-an-uncertainty-range-to-a-forecast/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/normalise-phone-numbers-to-one-format/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/put-products-in-the-right-catalogue-category/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/query-a-database-in-plain-language/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/rank-products-by-relevance/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/read-a-barcode-from-a-photo/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/extract-metadata-from-a-file/index.html (+14ms) 
+13:40:52   ├─ /fr/fiches/read-a-formula-from-an-image/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/read-a-qr-code-in-a-camera-stream/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/read-a-utility-meter-from-a-photo/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/read-handwritten-notes/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/read-text-from-a-scanned-page/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/read-checkboxes-on-a-paper-form/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/recognise-a-spoken-command/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/recognise-the-type-of-an-uploaded-document/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/recommend-a-clothing-size/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/recommend-the-next-video-to-watch/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/recommend-a-plan-that-fits-the-usage/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/reconcile-a-bank-statement-with-a-ledger/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/extract-a-table-from-a-scanned-page/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/turn-a-web-page-into-clean-text/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/remove-the-background-from-a-photo/index.html (+17ms) 
+13:40:52   ├─ /fr/fiches/repair-text-with-broken-encoding/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/resize-and-crop-images-for-the-web/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/rewrite-a-text-in-plain-language/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/route-a-request-to-the-smallest-model-that-can-handle-it/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/route-support-tickets/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/screen-uploaded-files-for-malware/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/search-a-large-log-archive/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/search-across-past-conversations/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/search-in-one-language-and-find-results-in-another/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/search-in-your-own-documents/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/search-inside-a-single-long-document/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/search-several-sources-from-one-search-box/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/search-through-a-codebase/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/shorten-a-text-to-fit-a-space/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/sort-incoming-email-into-folders/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/sort-photos-by-what-they-show/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/split-bibliography-into-references/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/split-a-long-text-into-passages/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/parse-address-into-fields/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/extract-fields-from-a-log-line/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/detect-fraudulent-payment-attempts/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/spot-a-change-of-trend/index.html (+8ms) 
+13:40:52   ├─ /fr/fiches/spot-a-sound-event-in-a-recording/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/extract-tracking-numbers-from-an-email/index.html (+12ms) 
+13:40:52   ├─ /fr/fiches/detect-anomalies-in-metrics/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/detect-nudity-in-uploaded-images/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/detect-fake-reviews/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/detect-profanity-in-usernames/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/detect-scam-links-in-messages/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/detect-spam-in-contact-form/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/spot-urgent-messages-in-a-shared-inbox/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/straighten-a-crooked-scan/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/clean-up-a-scanned-page/index.html (+19ms) 
+13:40:52   ├─ /fr/fiches/strip-quotes-and-signatures-from-emails/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/subtitle-a-video/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/suggest-a-reviewer-for-a-change/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/suggest-people-to-follow/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/suggest-visually-similar-images/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/suggest-complementary-products/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/recommend-recipes-from-available-ingredients/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/show-similar-articles/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/recommend-to-a-first-time-visitor/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/suggest-the-next-action-in-an-app/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/aggregate-a-column-of-data/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/summarise-a-long-document/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/tag-articles-by-topic/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/tell-whether-a-message-needs-a-human-reply/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/detect-ai-generated-text/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/transcribe-a-meeting-recording/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/translate-interface-strings/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/turn-a-question-into-a-database-query/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/extract-a-table-from-a-web-page/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/block-disposable-email-addresses/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/create-url-slugs-from-titles/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/keep-translations-up-to-date-after-a-change/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/validate-a-form-server-side/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/validate-a-phone-number-and-its-country-code/index.html (+7ms) 
+13:40:52   ├─ /fr/fiches/validate-an-api-payload-against-its-contract/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/validate-an-email-address-without-sending-a-message/index.html (+3ms) 
+13:40:52   ├─ /fr/fiches/validate-an-imported-file-against-a-schema/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/write-a-monthly-report-from-figures/index.html (+4ms) 
+13:40:52   ├─ /fr/fiches/write-alt-text-for-images/index.html (+9ms) 
+13:40:52   ├─ /fr/fiches/write-error-messages-for-users/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/write-meta-descriptions-for-pages/index.html (+5ms) 
+13:40:52   ├─ /fr/fiches/write-product-descriptions/index.html (+12ms) 
+13:40:52   ├─ /fr/fiches/write-release-notes-from-commit-history/index.html (+6ms) 
+13:40:52   ├─ /fr/fiches/write-ad-copy-variants-to-test/index.html (+4ms) 
+13:40:52   ├─ /en/par-ou-commencer/index.html (+8ms) 
+13:40:52   ├─ /fr/par-ou-commencer/index.html (+6ms) 
+13:40:52   ├─ /en/rss.xml (+9ms) 
+13:40:52   ├─ /fr/rss.xml (+6ms) 
+13:40:52   ├─ /en/search-index.json (+11ms) 
+13:40:52   ├─ /fr/search-index.json (+2ms) 
+13:40:52   ├─ /en/a-propos/index.html (+6ms) 
+13:40:52   ├─ /fr/a-propos/index.html (+4ms) 
+13:40:52   ├─ /en/contribuer/index.html (+4ms) 
+13:40:52   ├─ /fr/contribuer/index.html (+3ms) 
+13:40:52   ├─ /en/credits/index.html (+3ms) 
+13:40:52   ├─ /fr/credits/index.html (+2ms) 
+13:40:52   ├─ /en/accompagnement/index.html (+2ms) 
+13:40:52   ├─ /fr/accompagnement/index.html (+2ms) 
+13:40:52   ├─ /en/mentions-legales/index.html (+3ms) 
+13:40:52   ├─ /fr/mentions-legales/index.html (+2ms) 
+13:40:52   ├─ /en/methodologie/index.html (+3ms) 
+13:40:52   ├─ /fr/methodologie/index.html (+4ms) 
+13:40:52   ├─ /en/confidentialite/index.html (+4ms) 
+13:40:52   ├─ /fr/confidentialite/index.html (+3ms) 
+13:40:52   ├─ /en/index.html (+13ms) 
+13:40:52   ├─ /fr/index.html (+10ms) 
+13:40:52   ├─ /index.html (+2ms) 
+13:40:52 ✓ Completed in 3.79s.
+
+13:40:52 [build] ✓ Completed in 5.05s.
+13:40:53 [@astrojs/sitemap] `sitemap-index.xml` created at `dist`
+13:40:53 [build] 480 page(s) built in 5.62s
+13:40:53 [build] Complete!
+
+compute-page-weight — 477 page(s) mesurée(s), moyenne 58.8 Ko, la plus lourde 93.6 Ko (fr/par-ou-commencer/index.html)
+  3 page(s) sans emplacement de poids, laissées telles quelles.
+
+
+> overkill@1.0.0 test:search
+> node --test tests/search.spec.mjs
+
+TAP version 13
+# Subtest: le catalogue rend toutes les fiches de test, paginées
+ok 1 - le catalogue rend toutes les fiches de test, paginées
+  ---
+  duration_ms: 652.719085
+  ...
+# Subtest: la recherche cherche dès deux caractères et trouve
+ok 2 - la recherche cherche dès deux caractères et trouve
+  ---
+  duration_ms: 1037.57628
+  ...
+# Subtest: la recherche est insensible aux accents et à la casse
+ok 3 - la recherche est insensible aux accents et à la casse
+  ---
+  duration_ms: 1439.471299
+  ...
+# Subtest: la recherche tolère une faute légère
+ok 4 - la recherche tolère une faute légère
+  ---
+  duration_ms: 1422.212666
+  ...
+# Subtest: une recherche sans résultat montre un état vide utile
+ok 5 - une recherche sans résultat montre un état vide utile
+  ---
+  duration_ms: 1002.727959
+  ...
+# Subtest: une recherche en français ne remonte aucune fiche anglaise, et réciproquement
+ok 6 - une recherche en français ne remonte aucune fiche anglaise, et réciproquement
+  ---
+  duration_ms: 22.353734
+  ...
+# Subtest: les quatre filtres se combinent et le compteur suit
+ok 7 - les quatre filtres se combinent et le compteur suit
+  ---
+  duration_ms: 957.194293
+  ...
+# Subtest: l'état des filtres est dans l'URL et se restitue
+ok 8 - l'état des filtres est dans l'URL et se restitue
+  ---
+  duration_ms: 1573.715774
+  ...
+# Subtest: la recherche est aussi reprise depuis l'URL
+ok 9 - la recherche est aussi reprise depuis l'URL
+  ---
+  duration_ms: 1008.728596
+  ...
+# Subtest: le champ de recherche prend le focus au chargement
+ok 10 - le champ de recherche prend le focus au chargement
+  ---
+  duration_ms: 595.370623
+  ...
+# Subtest: sans JavaScript, la liste est complète et les filtres passent par le formulaire
+ok 11 - sans JavaScript, la liste est complète et les filtres passent par le formulaire
+  ---
+  duration_ms: 95.061783
+  ...
+# Subtest: l'index n'est chargé qu'au premier caractère tapé
+ok 12 - l'index n'est chargé qu'au premier caractère tapé
+  ---
+  duration_ms: 1399.108775
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11580.236346
+
+> overkill@1.0.0 build
+> astro build && node scripts/compute-page-weight.mjs && node scripts/strip-dev-pages.mjs
+
+[astro] `markdown.remarkPlugins`, `markdown.rehypePlugins`, and `markdown.remarkRehype` are deprecated. Pass them to `unified({...})` from `@astrojs/markdown-remark` directly instead.
+13:41:06 [content] Syncing content
+13:41:06 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `add-autocomplete-to-a-search-bar`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/add-autocomplete-to-a-search-bar.mdx
+- content/entries/add-autocomplete-to-a-search-bar.mdx
+13:41:06 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `aggregate-a-column-of-data`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/aggregate-a-column-of-data.mdx
+- content/entries/aggregate-a-column-of-data.mdx
+13:41:06 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `check-a-company-identification-number`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/check-a-company-identification-number.mdx
+- content/entries/check-a-company-identification-number.mdx
+13:41:06 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `check-a-password-against-a-policy`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/check-a-password-against-a-policy.mdx
+- content/entries/check-a-password-against-a-policy.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `check-a-file-is-really-the-format-it-claims`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/check-a-file-is-really-the-format-it-claims.mdx
+- content/entries/check-a-file-is-really-the-format-it-claims.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `check-bank-details-before-a-transfer`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/check-bank-details-before-a-transfer.mdx
+- content/entries/check-bank-details-before-a-transfer.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `detect-anomalies-in-metrics`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/detect-anomalies-in-metrics.mdx
+- content/entries/detect-anomalies-in-metrics.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `convert-a-pdf-to-plain-text`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/convert-a-pdf-to-plain-text.mdx
+- content/entries/convert-a-pdf-to-plain-text.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `detect-language-of-text`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/detect-language-of-text.mdx
+- content/entries/detect-language-of-text.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `convert-messy-csv-to-clean-data`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/convert-messy-csv-to-clean-data.mdx
+- content/entries/convert-messy-csv-to-clean-data.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `detect-spam-in-contact-form`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/detect-spam-in-contact-form.mdx
+- content/entries/detect-spam-in-contact-form.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `estimate-the-cost-of-a-model-call`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/estimate-the-cost-of-a-model-call.mdx
+- content/entries/estimate-the-cost-of-a-model-call.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-a-table-from-a-web-page`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-a-table-from-a-web-page.mdx
+- content/entries/extract-a-table-from-a-web-page.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-dates-from-text`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-dates-from-text.mdx
+- content/entries/extract-dates-from-text.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-amounts-and-currencies-from-text`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-amounts-and-currencies-from-text.mdx
+- content/entries/extract-amounts-and-currencies-from-text.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-fields-from-a-log-line`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-fields-from-a-log-line.mdx
+- content/entries/extract-fields-from-a-log-line.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-fields-from-invoice`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-fields-from-invoice.mdx
+- content/entries/extract-fields-from-invoice.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-links-from-a-page`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-links-from-a-page.mdx
+- content/entries/extract-links-from-a-page.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-key-terms-from-a-document`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-key-terms-from-a-document.mdx
+- content/entries/extract-key-terms-from-a-document.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-main-content-from-a-web-page`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-main-content-from-a-web-page.mdx
+- content/entries/extract-main-content-from-a-web-page.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-metadata-from-a-file`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-metadata-from-a-file.mdx
+- content/entries/extract-metadata-from-a-file.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-people-and-companies-from-an-article`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-people-and-companies-from-an-article.mdx
+- content/entries/extract-people-and-companies-from-an-article.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-tables-from-a-pdf`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-tables-from-a-pdf.mdx
+- content/entries/extract-tables-from-a-pdf.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-the-latest-reply-from-an-email-thread`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-the-latest-reply-from-an-email-thread.mdx
+- content/entries/extract-the-latest-reply-from-an-email-thread.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-product-data-from-a-shop-page`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-product-data-from-a-shop-page.mdx
+- content/entries/extract-product-data-from-a-shop-page.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `extract-tracking-numbers-from-an-email`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/extract-tracking-numbers-from-an-email.mdx
+- content/entries/extract-tracking-numbers-from-an-email.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `find-duplicate-records`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/find-duplicate-records.mdx
+- content/entries/find-duplicate-records.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `forecast-weekly-sales`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/forecast-weekly-sales.mdx
+- content/entries/forecast-weekly-sales.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `fuzzy-match-company-names`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/fuzzy-match-company-names.mdx
+- content/entries/fuzzy-match-company-names.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `generate-placeholder-images`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/generate-placeholder-images.mdx
+- content/entries/generate-placeholder-images.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `generate-test-data`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/generate-test-data.mdx
+- content/entries/generate-test-data.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `know-whether-a-pdf-needs-ocr`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/know-whether-a-pdf-needs-ocr.mdx
+- content/entries/know-whether-a-pdf-needs-ocr.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `moderate-user-comments`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/moderate-user-comments.mdx
+- content/entries/moderate-user-comments.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `mask-personal-data-in-chat`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/mask-personal-data-in-chat.mdx
+- content/entries/mask-personal-data-in-chat.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `parse-address-into-fields`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/parse-address-into-fields.mdx
+- content/entries/parse-address-into-fields.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `rank-products-by-relevance`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/rank-products-by-relevance.mdx
+- content/entries/rank-products-by-relevance.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `read-text-from-a-scanned-page`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/read-text-from-a-scanned-page.mdx
+- content/entries/read-text-from-a-scanned-page.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `route-support-tickets`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/route-support-tickets.mdx
+- content/entries/route-support-tickets.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `repair-text-with-broken-encoding`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/repair-text-with-broken-encoding.mdx
+- content/entries/repair-text-with-broken-encoding.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `search-in-your-own-documents`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/search-in-your-own-documents.mdx
+- content/entries/search-in-your-own-documents.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `show-similar-articles`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/show-similar-articles.mdx
+- content/entries/show-similar-articles.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `summarise-a-long-document`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/summarise-a-long-document.mdx
+- content/entries/summarise-a-long-document.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `tag-articles-by-topic`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/tag-articles-by-topic.mdx
+- content/entries/tag-articles-by-topic.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `translate-interface-strings`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/translate-interface-strings.mdx
+- content/entries/translate-interface-strings.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-a-form-server-side`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/validate-a-form-server-side.mdx
+- content/entries/validate-a-form-server-side.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-a-phone-number-and-its-country-code`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/validate-a-phone-number-and-its-country-code.mdx
+- content/entries/validate-a-phone-number-and-its-country-code.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-an-api-payload-against-its-contract`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/validate-an-api-payload-against-its-contract.mdx
+- content/entries/validate-an-api-payload-against-its-contract.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-an-email-address-without-sending-a-message`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/validate-an-email-address-without-sending-a-message.mdx
+- content/entries/validate-an-email-address-without-sending-a-message.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `validate-an-imported-file-against-a-schema`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/validate-an-imported-file-against-a-schema.mdx
+- content/entries/validate-an-imported-file-against-a-schema.mdx
+13:41:07 [WARN] [glob-loader] **entries** contains multiple entries with the same slug: `write-product-descriptions`. Slugs must be unique.
+
+Entries: 
+- content/entries-fixtures/write-product-descriptions.mdx
+- content/entries/write-product-descriptions.mdx
+13:41:07 [content] Synced content
+13:41:07 [types] Generated 441ms
+13:41:07 [build] output: "static"
+13:41:07 [build] mode: "static"
+13:41:07 [build] directory: /home/florentin/overkill/dist/
+13:41:07 [build] Collecting build info...
+13:41:07 [build] ✓ Completed in 478ms.
+13:41:07 [build] Building static entrypoints...
+13:41:07 [vite] ✓ built in 831ms
+13:41:07 [vite] ✓ built in 41ms
+13:41:08 [build] Rearranging server assets...
+
+ generating static routes 
+13:41:08   ├─ /dev/catalogue/index.html (+10ms) 
+13:41:08   ├─ /dev/components/index.html (+300ms) 
+13:41:08   ├─ /dev/editorial/index.html (+6ms) 
+13:41:08   ├─ /dev/entry/index.html (+60ms) 
+13:41:08   ├─ /dev/entry-draft/index.html (+55ms) 
+13:41:08   ├─ /dev/famille/index.html (+5ms) 
+13:41:08   ├─ /dev/tokens/index.html (+3ms) 
+13:41:08   ├─ /en/404/index.html (+2ms) 
+13:41:08   ├─ /fr/404/index.html (+2ms) 
+13:41:08   ├─ /en/catalogue/index.html (+3ms) 
+13:41:08   ├─ /en/catalogue/2/index.html (+2ms) 
+13:41:08   ├─ /en/catalogue/3/index.html (+3ms) 
+13:41:08   ├─ /fr/catalogue/index.html (+3ms) 
+13:41:08   ├─ /fr/catalogue/2/index.html (+4ms) 
+13:41:08   ├─ /fr/catalogue/3/index.html (+2ms) 
+13:41:08   ├─ /en/dernieres-fiches/index.html (+3ms) 
+13:41:08   ├─ /fr/dernieres-fiches/index.html (+2ms) 
+13:41:08   ├─ /en/familles/detect-filter/index.html (+2ms) 
+13:41:08   ├─ /en/familles/extract/index.html (+2ms) 
+13:41:08   ├─ /en/familles/classify-route/index.html (+1ms) 
+13:41:08   ├─ /en/familles/search/index.html (+1ms) 
+13:41:08   ├─ /en/familles/recommend/index.html (+1ms) 
+13:41:08   ├─ /en/familles/predict/index.html (+1ms) 
+13:41:08   ├─ /en/familles/generate/index.html (+1ms) 
+13:41:08   ├─ /en/familles/transform/index.html (+3ms) 
+13:41:08   ├─ /en/familles/recognize-transcribe/index.html (+1ms) 
+13:41:08   ├─ /en/familles/decide-validate/index.html (+1ms) 
+13:41:08   ├─ /fr/familles/detect-filter/index.html (+2ms) 
+13:41:08   ├─ /fr/familles/extract/index.html (+1ms) 
+13:41:08   ├─ /fr/familles/classify-route/index.html (+1ms) 
+13:41:08   ├─ /fr/familles/search/index.html (+1ms) 
+13:41:08   ├─ /fr/familles/recommend/index.html (+6ms) 
+13:41:08   ├─ /fr/familles/predict/index.html (+1ms) 
+13:41:08   ├─ /fr/familles/generate/index.html (+1ms) 
+13:41:08   ├─ /fr/familles/transform/index.html (+6ms) 
+13:41:08   ├─ /fr/familles/recognize-transcribe/index.html (+2ms) 
+13:41:08   ├─ /fr/familles/decide-validate/index.html (+4ms) 
+13:41:08   ├─ /en/familles/index.html (+2ms) 
+13:41:08   ├─ /fr/familles/index.html (+1ms) 
+13:41:08   ├─ /en/fiches/add-autocomplete-to-a-search-bar/index.html (+25ms) 
+13:41:08   ├─ /en/fiches/check-a-company-identification-number/index.html (+18ms) 
+13:41:08   ├─ /en/fiches/check-a-file-is-really-the-format-it-claims/index.html (+23ms) 
+13:41:08   ├─ /en/fiches/check-a-password-against-a-policy/index.html (+14ms) 
+13:41:08   ├─ /en/fiches/check-bank-details-before-a-transfer/index.html (+17ms) 
+13:41:08   ├─ /en/fiches/extract-links-from-a-page/index.html (+19ms) 
+13:41:09   ├─ /en/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+161ms) 
+13:41:09   ├─ /en/fiches/detect-language-of-text/index.html (+47ms) 
+13:41:09   ├─ /en/fiches/estimate-the-cost-of-a-model-call/index.html (+24ms) 
+13:41:09   ├─ /en/fiches/extract-amounts-and-currencies-from-text/index.html (+77ms) 
+13:41:09   ├─ /en/fiches/extract-dates-from-text/index.html (+45ms) 
+13:41:09   ├─ /en/fiches/extract-fields-from-invoice/index.html (+83ms) 
+13:41:09   ├─ /en/fiches/extract-key-terms-from-a-document/index.html (+29ms) 
+13:41:09   ├─ /en/fiches/extract-main-content-from-a-web-page/index.html (+26ms) 
+13:41:09   ├─ /en/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+29ms) 
+13:41:09   ├─ /en/fiches/find-duplicate-records/index.html (+46ms) 
+13:41:09   ├─ /en/fiches/extract-people-and-companies-from-an-article/index.html (+39ms) 
+13:41:09   ├─ /en/fiches/forecast-weekly-sales/index.html (+19ms) 
+13:41:09   ├─ /en/fiches/extract-product-data-from-a-shop-page/index.html (+39ms) 
+13:41:09   ├─ /en/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+25ms) 
+13:41:09   ├─ /en/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+35ms) 
+13:41:09   ├─ /en/fiches/mask-personal-data-in-chat/index.html (+37ms) 
+13:41:09   ├─ /en/fiches/fuzzy-match-company-names/index.html (+23ms) 
+13:41:09   ├─ /en/fiches/moderate-user-comments/index.html (+44ms) 
+13:41:09   ├─ /en/fiches/parse-address-into-fields/index.html (+57ms) 
+13:41:09   ├─ /en/fiches/generate-placeholder-images/index.html (+14ms) 
+13:41:09   ├─ /en/fiches/generate-test-data/index.html (+100ms) 
+13:41:10   ├─ /en/fiches/rank-products-by-relevance/index.html (+35ms) 
+13:41:10   ├─ /en/fiches/extract-metadata-from-a-file/index.html (+22ms) 
+13:41:10   ├─ /en/fiches/read-text-from-a-scanned-page/index.html (+32ms) 
+13:41:10   ├─ /en/fiches/repair-text-with-broken-encoding/index.html (+11ms) 
+13:41:10   ├─ /en/fiches/route-support-tickets/index.html (+41ms) 
+13:41:10   ├─ /en/fiches/search-in-your-own-documents/index.html (+54ms) 
+13:41:10   ├─ /en/fiches/show-similar-articles/index.html (+31ms) 
+13:41:10   ├─ /en/fiches/extract-fields-from-a-log-line/index.html (+16ms) 
+13:41:10   ├─ /en/fiches/extract-tracking-numbers-from-an-email/index.html (+13ms) 
+13:41:10   ├─ /en/fiches/detect-anomalies-in-metrics/index.html (+25ms) 
+13:41:10   ├─ /en/fiches/detect-spam-in-contact-form/index.html (+31ms) 
+13:41:10   ├─ /en/fiches/aggregate-a-column-of-data/index.html (+18ms) 
+13:41:10   ├─ /en/fiches/summarise-a-long-document/index.html (+52ms) 
+13:41:10   ├─ /en/fiches/tag-articles-by-topic/index.html (+49ms) 
+13:41:10   ├─ /en/fiches/translate-interface-strings/index.html (+39ms) 
+13:41:10   ├─ /en/fiches/convert-messy-csv-to-clean-data/index.html (+71ms) 
+13:41:10   ├─ /en/fiches/extract-a-table-from-a-web-page/index.html (+23ms) 
+13:41:10   ├─ /en/fiches/validate-a-form-server-side/index.html (+11ms) 
+13:41:10   ├─ /en/fiches/validate-a-phone-number-and-its-country-code/index.html (+17ms) 
+13:41:10   ├─ /en/fiches/validate-an-api-payload-against-its-contract/index.html (+46ms) 
+13:41:10   ├─ /en/fiches/validate-an-email-address-without-sending-a-message/index.html (+10ms) 
+13:41:10   ├─ /en/fiches/validate-an-imported-file-against-a-schema/index.html (+34ms) 
+13:41:10   ├─ /en/fiches/write-product-descriptions/index.html (+56ms) 
+13:41:10   ├─ /fr/fiches/add-autocomplete-to-a-search-bar/index.html (+20ms) 
+13:41:10   ├─ /fr/fiches/check-a-company-identification-number/index.html (+10ms) 
+13:41:10   ├─ /fr/fiches/check-a-file-is-really-the-format-it-claims/index.html (+17ms) 
+13:41:10   ├─ /fr/fiches/check-a-password-against-a-policy/index.html (+12ms) 
+13:41:10   ├─ /fr/fiches/check-bank-details-before-a-transfer/index.html (+16ms) 
+13:41:10   ├─ /fr/fiches/extract-links-from-a-page/index.html (+16ms) 
+13:41:10   ├─ /fr/fiches/convert-a-pdf-to-plain-text/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+27ms) 
+13:41:10   ├─ /fr/fiches/detect-language-of-text/index.html (+38ms) 
+13:41:10   ├─ /fr/fiches/estimate-the-cost-of-a-model-call/index.html (+23ms) 
+13:41:10   ├─ /fr/fiches/extract-amounts-and-currencies-from-text/index.html (+75ms) 
+13:41:11   ├─ /fr/fiches/extract-dates-from-text/index.html (+45ms) 
+13:41:11   ├─ /fr/fiches/extract-fields-from-invoice/index.html (+53ms) 
+13:41:11   ├─ /fr/fiches/extract-key-terms-from-a-document/index.html (+26ms) 
+13:41:11   ├─ /fr/fiches/extract-main-content-from-a-web-page/index.html (+18ms) 
+13:41:11   ├─ /fr/fiches/extract-tables-from-a-pdf/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+25ms) 
+13:41:11   ├─ /fr/fiches/find-duplicate-records/index.html (+46ms) 
+13:41:11   ├─ /fr/fiches/extract-people-and-companies-from-an-article/index.html (+38ms) 
+13:41:11   ├─ /fr/fiches/forecast-weekly-sales/index.html (+22ms) 
+13:41:11   ├─ /fr/fiches/extract-product-data-from-a-shop-page/index.html (+33ms) 
+13:41:11   ├─ /fr/fiches/extract-the-latest-reply-from-an-email-thread/index.html (+25ms) 
+13:41:11   ├─ /fr/fiches/know-whether-a-pdf-needs-ocr/index.htmlWarning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+ (+30ms) 
+13:41:11   ├─ /fr/fiches/mask-personal-data-in-chat/index.html (+39ms) 
+13:41:11   ├─ /fr/fiches/fuzzy-match-company-names/index.html (+25ms) 
+13:41:11   ├─ /fr/fiches/moderate-user-comments/index.html (+45ms) 
+13:41:11   ├─ /fr/fiches/parse-address-into-fields/index.html (+59ms) 
+13:41:11   ├─ /fr/fiches/generate-placeholder-images/index.html (+13ms) 
+13:41:11   ├─ /fr/fiches/generate-test-data/index.html (+44ms) 
+13:41:11   ├─ /fr/fiches/rank-products-by-relevance/index.html (+28ms) 
+13:41:11   ├─ /fr/fiches/extract-metadata-from-a-file/index.html (+17ms) 
+13:41:11   ├─ /fr/fiches/read-text-from-a-scanned-page/index.html (+33ms) 
+13:41:11   ├─ /fr/fiches/repair-text-with-broken-encoding/index.html (+10ms) 
+13:41:11   ├─ /fr/fiches/route-support-tickets/index.html (+44ms) 
+13:41:11   ├─ /fr/fiches/search-in-your-own-documents/index.html (+53ms) 
+13:41:11   ├─ /fr/fiches/show-similar-articles/index.html (+31ms) 
+13:41:11   ├─ /fr/fiches/extract-fields-from-a-log-line/index.html (+12ms) 
+13:41:11   ├─ /fr/fiches/extract-tracking-numbers-from-an-email/index.html (+14ms) 
+13:41:11   ├─ /fr/fiches/detect-anomalies-in-metrics/index.html (+31ms) 
+13:41:11   ├─ /fr/fiches/detect-spam-in-contact-form/index.html (+33ms) 
+13:41:11   ├─ /fr/fiches/aggregate-a-column-of-data/index.html (+18ms) 
+13:41:11   ├─ /fr/fiches/summarise-a-long-document/index.html (+51ms) 
+13:41:11   ├─ /fr/fiches/tag-articles-by-topic/index.html (+51ms) 
+13:41:12   ├─ /fr/fiches/translate-interface-strings/index.html (+41ms) 
+13:41:12   ├─ /fr/fiches/convert-messy-csv-to-clean-data/index.html (+73ms) 
+13:41:12   ├─ /fr/fiches/extract-a-table-from-a-web-page/index.html (+20ms) 
+13:41:12   ├─ /fr/fiches/validate-a-form-server-side/index.html (+13ms) 
+13:41:12   ├─ /fr/fiches/validate-a-phone-number-and-its-country-code/index.html (+13ms) 
+13:41:12   ├─ /fr/fiches/validate-an-api-payload-against-its-contract/index.html (+22ms) 
+13:41:12   ├─ /fr/fiches/validate-an-email-address-without-sending-a-message/index.html (+10ms) 
+13:41:12   ├─ /fr/fiches/validate-an-imported-file-against-a-schema/index.html (+14ms) 
+13:41:12   ├─ /fr/fiches/write-product-descriptions/index.html (+49ms) 
+13:41:12   ├─ /en/par-ou-commencer/index.html (+4ms) 
+13:41:12   ├─ /fr/par-ou-commencer/index.html (+3ms) 
+13:41:12   ├─ /en/rss.xml (+6ms) 
+13:41:12   ├─ /fr/rss.xml (+2ms) 
+13:41:12   ├─ /en/search-index.json (+2ms) 
+13:41:12   ├─ /fr/search-index.json (+2ms) 
+13:41:12   ├─ /en/a-propos/index.html (+5ms) 
+13:41:12   ├─ /fr/a-propos/index.html (+2ms) 
+13:41:12   ├─ /en/contribuer/index.html (+3ms) 
+13:41:12   ├─ /fr/contribuer/index.html (+2ms) 
+13:41:12   ├─ /en/credits/index.html (+2ms) 
+13:41:12   ├─ /fr/credits/index.html (+3ms) 
+13:41:12   ├─ /en/accompagnement/index.html (+2ms) 
+13:41:12   ├─ /fr/accompagnement/index.html (+2ms) 
+13:41:12   ├─ /en/mentions-legales/index.html (+2ms) 
+13:41:12   ├─ /fr/mentions-legales/index.html (+3ms) 
+13:41:12   ├─ /en/methodologie/index.html (+5ms) 
+13:41:12   ├─ /fr/methodologie/index.html (+3ms) 
+13:41:12   ├─ /en/confidentialite/index.html (+5ms) 
+13:41:12   ├─ /fr/confidentialite/index.html (+5ms) 
+13:41:12   ├─ /en/index.html (+13ms) 
+13:41:12   ├─ /fr/index.html (+12ms) 
+13:41:12   ├─ /index.html (+2ms) 
+13:41:12 ✓ Completed in 4.35s.
+
+13:41:12 [build] ✓ Completed in 5.26s.
+13:41:12 [@astrojs/sitemap] `sitemap-index.xml` created at `dist`
+13:41:12 [build] 158 page(s) built in 5.77s
+13:41:12 [build] Complete!
+
+compute-page-weight — 155 page(s) mesurée(s), moyenne 75.2 Ko, la plus lourde 112.2 Ko (en/fiches/write-product-descriptions/index.html)
+  3 page(s) sans emplacement de poids, laissées telles quelles.
+
+strip-dev-pages: 7 page(s) de contrôle retirée(s) de dist/
