@@ -1,0 +1,35 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Contrôler le corps d'une requête contre le document OpenAPI qui décrit le
+  point d'accès.
+
+  Niveau N0. Un document OpenAPI est le contrat, et à l'intérieur chaque corps
+  de requête est un schéma JSON. Valider une charge utile, c'est donc deux
+  recherches et une validation : trouver l'opération visée par la requête,
+  prendre le schéma qu'elle déclare, l'appliquer. Les trois sont exactes, et le
+  même document se valide de la même façon côté client et côté serveur.
+
+  L'opération est trouvée comme la norme le dit : un chemin exact l'emporte sur
+  un chemin gabarité, si bien que « /factures/resume » est le point d'accès de
+  synthèse et non une facture dont l'identifiant serait « resume ». Se tromper
+  sur cette priorité, c'est valider une requête contre le mauvais schéma et
+  répondre oui.
+
+  Les références sont laissées au validateur. Poser tout le document à la
+  racine du schéma et désigner l'opération par un pointeur JSON suffit à ce que
+  chaque « $ref: '#/components/schemas/…' » se résolve tout seul, aussi profond
+  et aussi récursif soit-il.
+
+  Un décompte est normalisé. Les deux bibliothèques ne signalent pas de la même
+  façon une propriété en trop — `ajv` en rend une par propriété, `jsonschema` une
+  seule pour toutes — si bien que les échecs « additionalProperties » au même
+  endroit sont ramenés à un. Toutes les autres règles restent telles quelles.
+
+  Une conversion est faite à la main, parce que les deux bibliothèques ne sont
+  pas d'accord dessus. OpenAPI 3.0 écrit un null facultatif « nullable: true »,
+  ce qui n'est pas du JSON Schema : `ajv` l'honore, `jsonschema` l'ignore et
+  refuse un null que le contrat permet. Il est réécrit ici dans le « type » que
+  la norme emploie, pour que les deux langages répondent la même chose.

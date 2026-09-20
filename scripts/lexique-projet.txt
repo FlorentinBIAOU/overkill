@@ -542,3 +542,5 @@ jéan
 docx
 xlsx
 puremagic
+nullable
+resume
