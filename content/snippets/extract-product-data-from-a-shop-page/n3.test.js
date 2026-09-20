@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { FakeLLM } from '../_harness/fake-llm.mjs';
 import { FakeSDK } from '../_harness/fake-sdk.mjs';
 import {
-  FIELDS, MAX_CHARACTERS, MODEL, ReadingUnavailable, providerClient, readProduct, toText,
+  FIELDS, MAX_CHARACTERS, MAX_HTML, MODEL, ReadingUnavailable, providerClient, readProduct, toText,
 } from './n3.js';
 
 const PAGE = '<!doctype html><html><head><style>.prix{color:red}</style>'
@@ -156,6 +156,40 @@ test('production : encodages inattendus', async () => {
     client: double({ ...LU, name: 'Moulin a cafe Lumiere' }),
   });
   assert.ok(sansAccent.invented.includes('name'));
+});
+
+test('production : entrée très grande, la page hostile du niveau N0', () => {
+  // La page que le niveau N0 de cette fiche est écrit pour survivre : vingt
+  // mille balises `<script>` jamais refermées. Le nettoyage de ce niveau la
+  // traversait avec le même effondrement d'expression régulière que le N0
+  // évite, **avant** l'appel au modèle. La charte des tests demande qu'une
+  // entrée trop grande soit refusée avant l'appel : le plafond de balisage est
+  // donc appliqué en premier, et les blocs sont balayés.
+  const hostile = '<script type="application/ld+json">'.repeat(20_000);
+  let debut = performance.now();
+  assert.equal(toText(hostile), '');
+  assert.ok(performance.now() - debut < 1_000);
+  // Les mêmes balises, en `<style>` : c'est la seconde branche du motif.
+  debut = performance.now();
+  assert.equal(toText('<style>'.repeat(20_000)), '');
+  assert.ok(performance.now() - debut < 1_000);
+  // Témoin : une page ordinaire, cent fois le cas nominal, reste lisible.
+  const grande = PAGE + '<p>Livraison offerte.</p>'.repeat(10_000);
+  debut = performance.now();
+  const texte = toText(grande);
+  assert.ok(performance.now() - debut < 1_000);
+  assert.ok(texte.includes('Moulin à café Lumière'));
+});
+
+test("production : le plafond de balisage s'applique avant le nettoyage", () => {
+  // Commentaire : « a cap applied after the cleaning protects nothing, since
+  // the cleaning is the part that costs ».
+  const loin = '<p>a</p>'.repeat(Math.floor(MAX_HTML / 8) + 10) + '<p>Moulin à café Lumière</p>';
+  assert.ok(loin.length > MAX_HTML);
+  assert.ok(!toText(loin).includes('Moulin'));
+  const proche = '<p>a</p>'.repeat(10) + '<p>Moulin à café Lumière</p>';
+  assert.ok(proche.length < MAX_HTML);
+  assert.ok(toText(proche).includes('Moulin à café Lumière'));
 });
 
 test('production : valeurs aux limites', async () => {

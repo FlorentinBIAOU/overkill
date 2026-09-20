@@ -47,7 +47,16 @@ CARROUSEL = page(json.dumps([json.loads(produit()), json.loads(
 SANS = page("", CORPS)
 CASSE = page("{ceci n'est pas du JSON", CORPS)
 VIRGULE = page(produit(prix="1 234,56"), CORPS)
-NOMBRE = page(produit(prix=19.9), CORPS)
+# Le prix écrit en nombre JSON, comme le font plusieurs plateformes : deux
+# décimales, et un flottant n'a aucun moyen de s'en souvenir.
+NOMBRE = page(produit(prix="@@PRIX@@").replace('"@@PRIX@@"', "24.90"), CORPS)
+# Deux offres pour le même produit : une par taille.
+DEUX_OFFRES = page(json.dumps({
+    "@context": "https://schema.org", "@type": "Product", "name": "Moulin à café Lumière",
+    "sku": "MC-4501",
+    "offers": [{"@type": "Offer", "price": "19.90", "priceCurrency": "EUR"},
+               {"@type": "Offer", "price": "24.90", "priceCurrency": "EUR"}],
+}, ensure_ascii=False), CORPS)
 MICRODONNEES = page("", '<div itemscope itemtype="https://schema.org/Product">'
                         '<span itemprop="name">Moulin à café Lumière</span></div>')
 
@@ -64,7 +73,7 @@ def test_point_de_rupture_le_bloc_publie_peut_ne_plus_correspondre_a_la_page():
     annonce 24,90 quand le corps de la page affiche 19,90. »
     """
     rapport = read_products(PROMO)
-    assert rapport["products"][0]["price"] == 24.90
+    assert rapport["products"][0]["price"] == "24.90"
     assert "19,90" in PROMO
     assert "24,90" not in PROMO and "24.90" in PROMO
 
@@ -72,7 +81,7 @@ def test_point_de_rupture_le_bloc_publie_peut_ne_plus_correspondre_a_la_page():
 def test_point_de_rupture_temoin_sur_une_page_en_accord_le_prix_est_celui_affiche():
     """« Le témoin : sur la même page en accord avec elle-même, le prix lu est celui du corps. »"""
     rapport = read_products(EN_ACCORD)
-    assert rapport["products"][0]["price"] == 19.90
+    assert rapport["products"][0]["price"] == "19.90"
     assert "19,90 €" in EN_ACCORD
 
 
@@ -85,8 +94,9 @@ def test_les_six_champs_sont_lus_et_normalises():
     """Docstring : « The name, the reference, the brand, the price, the currency and the availability »."""
     assert read_products(EN_ACCORD)["products"][0] == {
         "name": "Moulin à café Lumière", "sku": "MC-4501", "gtin": "3760012345678",
-        "brand": "Lumière", "price": 19.90, "price_text": "19.90",
-        "currency": "EUR", "availability": "InStock",
+        "gtin_key": "gtin13", "brand": "Lumière", "price": "19.90",
+        "price_text": "19.90", "currency": "EUR", "availability": "InStock",
+        "offers": 1,
     }
 
 
@@ -114,14 +124,63 @@ def test_tous_les_produits_de_la_page_sont_rendus_et_la_page_ne_dit_pas_lequel()
 
 def test_un_prix_qui_nest_pas_un_nombre_revient_nul_avec_son_texte():
     """
-    Docstring : « rather than read it as one thousand or as one, the price
-    comes back as None with the raw text beside it ».
+    Docstring : « rather than read it as one thousand or as one, `price` comes
+    back as None with the text the shop wrote in `price_text` ».
     """
     lu = read_products(VIRGULE)["products"][0]
     assert lu["price"] is None
     assert lu["price_text"] == "1 234,56"
-    # Un nombre JSON, lui, est lu comme un nombre.
-    assert read_products(NOMBRE)["products"][0]["price"] == 19.9
+    # Témoin : le même prix écrit comme schema.org le demande est lu.
+    assert read_products(EN_ACCORD)["products"][0]["price"] == "19.90"
+
+
+def test_un_prix_ecrit_en_nombre_json_garde_ses_centimes():
+    """
+    Docstring : « A shop that writes `"price": 24.90` — as a JSON number, which
+    several platforms do — has written two decimals, and a float has no way to
+    remember that ».
+
+    C'est le champ dont toute la raison d'être est de garder les centimes.
+    """
+    assert '"price": 24.90' in NOMBRE, "le prix est bien écrit en nombre JSON"
+    lu = read_products(NOMBRE)["products"][0]
+    assert lu["price"] == "24.90"
+    assert lu["price_text"] == "24.90"
+    # Et aucun champ du document ne ressort en flottant.
+    assert all(not isinstance(v, float) for v in lu.values())
+
+
+def test_seule_la_premiere_offre_est_lue_et_le_rapport_dit_combien_il_y_en_avait():
+    """
+    Docstring : « only the first is read. `offers` in the report says how many
+    there were, so a caller that sees more than one knows the price it got is
+    one of several ».
+    """
+    lu = read_products(DEUX_OFFRES)["products"][0]
+    assert lu["price"] == "19.90"
+    assert lu["offers"] == 2
+    # Témoin : une seule offre, et le compte le dit aussi.
+    assert read_products(EN_ACCORD)["products"][0]["offers"] == 1
+
+
+def test_le_rapport_nomme_la_cle_gtin_qui_a_repondu():
+    """
+    Commentaire : « Their length is an information of its own — eight, twelve,
+    thirteen or fourteen digits — and « what is not read is named » applies to
+    what is read too ».
+    """
+    for cle, valeur in [("gtin13", "3760012345678"), ("gtin8", "37600126"),
+                        ("gtin", "37600123456789")]:
+        bloc = json.loads(produit())
+        del bloc["gtin13"]
+        bloc[cle] = valeur
+        lu = read_products(page(json.dumps(bloc, ensure_ascii=False)))["products"][0]
+        assert (lu["gtin"], lu["gtin_key"]) == (valeur, cle), cle
+    # Témoin : aucune clé GTIN, et le rapport le dit plutôt que de se taire.
+    sans = json.loads(produit())
+    del sans["gtin13"]
+    lu = read_products(page(json.dumps(sans, ensure_ascii=False)))["products"][0]
+    assert (lu["gtin"], lu["gtin_key"]) == (None, None)
 
 
 def test_une_page_muette_et_une_page_cassee_ne_se_confondent_pas():
@@ -139,11 +198,15 @@ def test_les_microdonnees_ne_sont_pas_lues_par_ce_niveau():
     assert "itemprop" in MICRODONNEES
 
 
-def test_aucune_entree_ne_leve():
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """R14 : la raison dit ce que le code a constaté — le type reçu."""
+    assert read_products(None)["reason"] == "expected HTML, not NoneType"
+    assert read_products(b"<html>")["reason"] == "expected HTML, not bytes"
+    assert read_products(0)["reason"] == "expected HTML, not int"
     for entree in [None, 0, 4.2, b"<html>", [], {}, object()]:
         rapport = read_products(entree)
         assert rapport["products"] == []
-        assert isinstance(rapport["reason"], str)
+        assert rapport["reason"].startswith("expected HTML, not ")
 
 
 # ---------------------------------------------------------------------------

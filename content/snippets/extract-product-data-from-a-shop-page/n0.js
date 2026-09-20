@@ -17,7 +17,20 @@
  * nothing in the format says which is which, so every one found is returned
  * and the caller chooses. And a price written « 1 234,56 » is not a number for
  * schema.org, which asks for a dot: rather than read it as one thousand or as
- * one, the price comes back as null with the raw text beside it.
+ * one, `price` comes back as null with the text the shop wrote in `price_text`.
+ *
+ * No number in the document is turned into a float, `price` included. A shop
+ * that writes `"price": 24.90` — as a JSON number, which several platforms do
+ * — has written two decimals, and a float has no way to remember that: it
+ * comes back `24.9`, from the very field whose job is to keep the cents. So
+ * the parser is told to hand every number over as the digits it read, and
+ * `price` is a string of digits the caller turns into whatever its own money
+ * type is.
+ *
+ * An offer is picked the same way a product is not: a page may publish several
+ * — one per size, per colour, per merchant — and only the first is read.
+ * `offers` in the report says how many there were, so a caller that sees more
+ * than one knows the price it got is one of several.
  */
 
 // schema.org writes availability as a URL, a bare name, or an http URL from
@@ -26,6 +39,22 @@ const AVAILABILITY = /^(?:https?:\/\/schema\.org\/)?(\w+)$/;
 
 // A price is a number with a dot, says schema.org. Anything else is text.
 const PRICE = /^-?\d+(?:\.\d+)?$/;
+
+// Which of the GTIN keys answered. Their length is an information of its own —
+// eight, twelve, thirteen or fourteen digits — and « what is not read is
+// named » applies to what is read too.
+const GTIN_KEYS = ['gtin', 'gtin14', 'gtin13', 'gtin12', 'gtin8'];
+
+/**
+ * No number in this document becomes a float. `JSON.parse` hands the reviver
+ * the source text it read, and that is what is kept: a price written 24.90
+ * must come back as 24.90, not as 24.9.
+ */
+const parseKeepingDigits = (block) =>
+  JSON.parse(block, (key, value, context) => (
+    typeof value === 'number' && context && typeof context.source === 'string'
+      ? context.source
+      : value));
 
 /**
  * Every schema.org Product the page declares, in the order they appear.
@@ -44,7 +73,7 @@ export function readProducts(html) {
   let broken = 0;
   for (const block of blocks(html)) {
     try {
-      nodes.push(...flatten(JSON.parse(block)));
+      nodes.push(...flatten(parseKeepingDigits(block)));
     } catch {
       broken += 1;
     }
@@ -106,17 +135,23 @@ function product(node) {
   const brand = node.brand;
   const availability = offer.availability;
   const match = typeof availability === 'string' ? AVAILABILITY.exec(availability) : null;
+  const gtinKey = GTIN_KEYS.find((k) => text(node[k])) ?? null;
   return {
     name: text(node.name),
     sku: text(node.sku),
-    gtin: text(node.gtin ?? node.gtin13 ?? node.gtin8),
+    gtin: gtinKey ? text(node[gtinKey]) : null,
+    gtin_key: gtinKey,
     brand: text(typeof brand === 'object' && brand !== null ? brand.name : brand),
-    // null when the shop did not write a number, with the text it did write
-    // beside it: a price read wrong is worse than a price not read.
-    price: price !== null && PRICE.test(price) ? Number(price) : null,
+    // null when the shop did not write a schema.org number, with the text it
+    // did write beside it: a price read wrong is worse than a price not read.
+    // Digits, never a float — see the header.
+    price: price !== null && PRICE.test(price) ? price : null,
     price_text: price,
     currency: text(offer.priceCurrency),
     availability: match ? match[1] : text(availability),
+    // How many offers the page published for this product. Only the first is
+    // read; a caller that sees more than one knows it.
+    offers: offers.length,
   };
 }
 

@@ -29,9 +29,19 @@
 // can put an N0 answer and an N3 answer in the same table.
 export const FIELDS = ['name', 'sku', 'brand', 'price', 'currency', 'availability'];
 
-// A shop page is markup; this is what is left once the tags are gone.
-const TAGS = /<(script|style)\b[^>]*>[\s\S]*?<\/\1>|<[^>]+>/gi;
+// A shop page is markup; this is what is left once the tags are gone. The
+// pattern carries no nested quantifier on purpose: the one that reads
+// « <(script|style)...>[\s\S]*?</\1> » in a single line is the collapse the N0
+// snippet of this entry was written to avoid. The blocks are scanned instead,
+// in `withoutScripts`.
+const TAGS = /<[^>]+>/g;
 const SPACES = /[ \t\r\f\v]*\n\s*|[ \t]{2,}/g;
+
+// The budget in characters of markup, applied before anything reads the page.
+// The charte asks that an input too large be refused before the call; a cap
+// applied after the cleaning protects nothing, since the cleaning is the part
+// that costs.
+export const MAX_HTML = 400_000;
 
 // The budget, in characters of text. A page that does not fit is cut, not
 // refused: a scraper that throws on a long page returns nothing at all.
@@ -70,9 +80,34 @@ export async function providerClient(sdk, model = MODEL) {
 
 export class ReadingUnavailable extends Error {}
 
+/**
+ * The markup with every script and style block removed, scanned rather than
+ * matched — the same walk as `blocks` in the N0 snippet, and for the same
+ * reason. An unclosed block swallows the rest of the page, which is what a
+ * browser does too.
+ */
+function withoutScripts(html) {
+  const lower = html.toLowerCase();
+  const kept = [];
+  let cursor = 0;
+  while (cursor < html.length) {
+    const starts = [lower.indexOf('<script', cursor), lower.indexOf('<style', cursor)]
+      .filter((i) => i >= 0);
+    if (starts.length === 0) { kept.push(html.slice(cursor)); break; }
+    const start = Math.min(...starts);
+    kept.push(html.slice(cursor, start));
+    const tag = lower.startsWith('<script', start) ? 'script' : 'style';
+    const closing = lower.indexOf(`</${tag}`, start);
+    if (closing < 0) break;
+    cursor = closing;
+  }
+  return kept.join('');
+}
+
 /** The page without its markup, collapsed, and cut to the budget. */
 export function toText(html) {
-  return html.replace(TAGS, ' ').replace(SPACES, '\n').trim().slice(0, MAX_CHARACTERS);
+  return withoutScripts(html.slice(0, MAX_HTML))
+    .replace(TAGS, ' ').replace(SPACES, '\n').trim().slice(0, MAX_CHARACTERS);
 }
 
 /**

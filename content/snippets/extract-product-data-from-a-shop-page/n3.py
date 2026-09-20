@@ -34,9 +34,20 @@ import re
 # can put an N0 answer and an N3 answer in the same table.
 FIELDS = ("name", "sku", "brand", "price", "currency", "availability")
 
-# A shop page is markup; this is what is left once the tags are gone.
-TAGS = re.compile(r"<(script|style)\b[^>]*>.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
+# A shop page is markup; this is what is left once the tags are gone. The
+# pattern carries no nested quantifier on purpose: the one that reads
+# « <(script|style)...>.*?</\1> » in a single line is the collapse the N0
+# snippet of this entry was written to avoid, and it cost tens of seconds of
+# CPU here, before the model was even called. The blocks are scanned instead,
+# in `_without_scripts`.
+TAGS = re.compile(r"<[^>]+>")
 SPACES = re.compile(r"[ \t\r\f\v]*\n\s*|[ \t]{2,}")
+
+# The budget in characters of markup, applied before anything reads the page.
+# The charte asks that an input too large be refused before the call; a cap
+# applied after the cleaning protects nothing, since the cleaning is the part
+# that costs.
+MAX_HTML = 400_000
 
 # The budget, in characters of text. A page that does not fit is cut, not
 # refused: a scraper that raises on a long page returns nothing at all.
@@ -79,9 +90,32 @@ class ReadingUnavailable(Exception):
     """The provider could not be reached, or answered something unusable."""
 
 
+def _without_scripts(html: str) -> str:
+    """
+    The markup with every script and style block removed, scanned rather than
+    matched — the same walk as `_blocks` in the N0 snippet, and for the same
+    reason. An unclosed block swallows the rest of the page, which is what a
+    browser does too.
+    """
+    kept, cursor, lower = [], 0, html.lower()
+    while cursor < len(html):
+        starts = [i for i in (lower.find("<script", cursor), lower.find("<style", cursor)) if i >= 0]
+        if not starts:
+            kept.append(html[cursor:])
+            break
+        start = min(starts)
+        kept.append(html[cursor:start])
+        tag = "script" if lower.startswith("<script", start) else "style"
+        closing = lower.find(f"</{tag}", start)
+        if closing < 0:
+            break
+        cursor = closing
+    return "".join(kept)
+
+
 def to_text(html: str) -> str:
     """The page without its markup, collapsed, and cut to the budget."""
-    return SPACES.sub("\n", TAGS.sub(" ", html)).strip()[:MAX_CHARACTERS]
+    return SPACES.sub("\n", TAGS.sub(" ", _without_scripts(html[:MAX_HTML]))).strip()[:MAX_CHARACTERS]
 
 
 def read_product(html: str, client=None, *, attempts: int = 3) -> dict:

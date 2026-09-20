@@ -5,7 +5,7 @@ import pytest
 
 from _harness.fake_llm import FakeLLM, FakeLLMError
 from _harness.fake_sdk import FakeSDK
-from n3 import (FIELDS, MAX_CHARACTERS, MODEL, ProviderClient, ReadingUnavailable,
+from n3 import (FIELDS, MAX_CHARACTERS, MAX_HTML, MODEL, ProviderClient, ReadingUnavailable,
                 read_product, to_text)
 
 PAGE = (
@@ -164,6 +164,51 @@ def test_production_encodages_inattendus():
     assert read_product(PAGE, double({**LU, "name": "MOULIN À CAFÉ LUMIÈRE"}))[
         "product"]["name"] == "MOULIN À CAFÉ LUMIÈRE"
     assert "name" in read_product(PAGE, double({**LU, "name": "Moulin a cafe Lumiere"}))["invented"]
+
+
+def test_production_entree_tres_grande_la_page_hostile_du_niveau_N0():
+    """
+    La page que le niveau N0 de cette fiche est écrit pour survivre : vingt
+    mille balises `<script>` jamais refermées. Le nettoyage de ce niveau la
+    traversait en quarante secondes de processeur, **avant** l'appel au
+    modèle — c'est-à-dire qu'il réintroduisait, deux fichiers plus loin,
+    l'effondrement que le N0 évite.
+
+    La charte des tests demande qu'une entrée trop grande soit refusée avant
+    l'appel. Le plafond de balisage est donc appliqué en premier, et les blocs
+    sont balayés plutôt que reconnus par une expression régulière.
+    """
+    hostile = '<script type="application/ld+json">' * 20_000
+    debut = time.perf_counter()
+    assert to_text(hostile) == ""
+    assert time.perf_counter() - debut < 1.0
+    # Les mêmes balises, en `<style>` : c'est la seconde branche du motif.
+    hostile_style = "<style>" * 20_000
+    debut = time.perf_counter()
+    assert to_text(hostile_style) == ""
+    assert time.perf_counter() - debut < 1.0
+    # Témoin : une page ordinaire, cent fois le cas nominal, reste lisible.
+    grande = PAGE + "<p>Livraison offerte.</p>" * 10_000
+    debut = time.perf_counter()
+    texte = to_text(grande)
+    assert time.perf_counter() - debut < 1.0
+    assert "Moulin à café Lumière" in texte
+
+
+def test_production_le_plafond_de_balisage_sapplique_avant_le_nettoyage():
+    """
+    Commentaire : « a cap applied after the cleaning protects nothing, since
+    the cleaning is the part that costs ».
+    """
+    # Au-delà du plafond, le balisage n'est pas lu du tout : le nom qui suit
+    # ne peut pas ressortir.
+    loin = "<p>a</p>" * (MAX_HTML // 8 + 10) + "<p>Moulin à café Lumière</p>"
+    assert len(loin) > MAX_HTML
+    assert "Moulin" not in to_text(loin)
+    # Juste en dessous, il l'est.
+    proche = "<p>a</p>" * 10 + "<p>Moulin à café Lumière</p>"
+    assert len(proche) < MAX_HTML
+    assert "Moulin à café Lumière" in to_text(proche)
 
 
 def test_production_valeurs_aux_limites():

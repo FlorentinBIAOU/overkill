@@ -22,7 +22,22 @@ n0: |
   rien dans le format ne dit lequel est lequel : tous ceux qui sont trouvés
   sont rendus, et l'appelant choisit. Et un prix écrit « 1 234,56 » n'est pas
   un nombre pour schema.org, qui demande un point : plutôt que de le lire comme
-  mille ou comme un, le prix revient nul, avec le texte d'origine à côté.
+  mille ou comme un, `price` revient nul, avec le texte écrit par la boutique
+  dans `price_text`.
+
+  Aucun nombre du document ne devient un flottant, `price` compris. Une
+  boutique qui écrit `"price": 24.90` — en nombre JSON, ce que font plusieurs
+  plateformes — a écrit deux décimales, et un flottant n'a aucun moyen de s'en
+  souvenir : il ressort `24.9`, du champ même dont la raison d'être est de
+  garder les centimes. L'analyseur est donc prié de rendre chaque nombre sous
+  la forme des chiffres qu'il a lus, et `price` est une chaîne de chiffres dont
+  l'appelant fait ce que son propre type monétaire demande.
+
+  Une offre est choisie comme un produit ne l'est pas : une page peut en
+  publier plusieurs — une par taille, par couleur, par marchand — et seule la
+  première est lue. `offers` dit dans le rapport combien il y en avait, pour
+  qu'un appelant qui en voit plus d'une sache que le prix obtenu est l'un de
+  plusieurs.
 
 n3: |
   Lire un produit sur une page qui ne publie rien de structuré, en le demandant
@@ -36,11 +51,16 @@ n3: |
   Trois choses que ce code fait et que le modèle ne fait pas, et qui sont le
   vrai travail de ce niveau.
 
-  Il coupe. Une page de boutique fait des centaines de kilooctets de balisage,
-  presque tous en menus, en mouchards et en styles ; les balises sautent, et ce
-  qui reste est plafonné. Le fournisseur facture ce qu'on envoie, donc le
-  plafond est un budget — et la fiche sur l'estimation du coût d'un appel est
-  l'endroit où ce budget se calcule.
+  Il coupe, et il coupe d'abord. Une page de boutique fait des centaines de
+  kilooctets de balisage, presque tous en menus, en mouchards et en styles ; le
+  balisage est plafonné avant d'être lu, les balises sautent, et ce qui reste
+  est plafonné à son tour. Le fournisseur facture ce qu'on envoie, donc le
+  second plafond est un budget — et la fiche sur l'estimation du coût d'un
+  appel est l'endroit où ce budget se calcule. Le premier, lui, protège le
+  serveur : les blocs `script` et `style` sont balayés plutôt que reconnus par
+  une expression régulière, exactement comme au niveau N0 et pour la même
+  raison — vingt mille balises jamais refermées faisaient passer des dizaines
+  de secondes de processeur à ce niveau, avant même l'appel au modèle.
 
   Il refuse une valeur inventée. Chaque chaîne rendue par le modèle est
   cherchée dans le texte qui a été envoyé : un nom, une référence ou un prix
