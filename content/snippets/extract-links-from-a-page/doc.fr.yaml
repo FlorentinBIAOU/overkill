@@ -1,0 +1,47 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Les liens d'une page, ramenés à des adresses absolues comme le fait un navigateur.
+
+  Niveau N0. Un href est un attribut : le lire, c'est analyser, pas déduire. Le
+  travail est ailleurs, et il est à deux endroits.
+
+  Le premier est la base. Un href relatif ne veut rien dire tout seul, et ce à
+  quoi il est relatif n'est pas dans la page : c'est l'adresse d'où la page a
+  été servie, que seul l'appelant connaît. Elle est donc exigée, pas devinée —
+  et l'élément `<base href>`, quand la page en porte un, la remplace, ce qui
+  est la première chose à regarder quand tous les liens sont faux.
+
+  Le second est que les deux langages ne résolvent pas pareil, et cette fiche
+  mesure sept endroits où ils divergent. `urllib.parse.urljoin` suit la
+  RFC 3986 ; `new URL` suit la norme WHATWG, qui est ce que les navigateurs
+  font réellement, et l'écart n'est pas cosmétique : sur `href="\\chemin"`, la
+  RFC 3986 rend un chemin de votre propre site et la norme WHATWG rend l'hôte
+  `chemin`. Comme la question posée est « où le lecteur va-t-il atterrir », ce
+  fichier suit le navigateur : le nettoyage et la normalisation ci-dessous
+  ferment les sept écarts. Ce n'est pas une implémentation complète de la
+  norme WHATWG — `urlstd` en est une, sur PyPI, publiée pour la dernière fois
+  en 2023.
+
+n0.js: |
+  Les liens d'une page, ramenés à des adresses absolues comme le fait un navigateur.
+
+  Niveau N0. Un href est un attribut : le lire, c'est analyser, pas déduire. Le
+  travail est ailleurs, et il est à deux endroits.
+
+  Le premier est la base. Un href relatif ne veut rien dire tout seul, et ce à
+  quoi il est relatif n'est pas dans la page : c'est l'adresse d'où la page a
+  été servie, que seul l'appelant connaît. Elle est donc exigée, pas devinée —
+  et l'élément `<base href>`, quand la page en porte un, la remplace, ce qui
+  est la première chose à regarder quand tous les liens sont faux.
+
+  Le second est que les deux langages ne résolvent pas pareil, et cette fiche
+  mesure sept endroits où ils divergent. `urllib.parse.urljoin` suit la
+  RFC 3986 ; `new URL` suit la norme WHATWG, qui est ce que les navigateurs
+  font réellement, et l'écart n'est pas cosmétique : sur `href="\\chemin"`, la
+  RFC 3986 rend un chemin de votre propre site et la norme WHATWG rend l'hôte
+  `chemin`. Comme la question posée est « où le lecteur va-t-il atterrir », ce
+  fichier est la référence à laquelle l'autre a dû être amené : `new URL` est
+  déjà le navigateur.

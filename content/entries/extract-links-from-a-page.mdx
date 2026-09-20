@@ -1,0 +1,96 @@
+---
+id: extract-links-from-a-page
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Récupérer les liens d’une page"
+  en: "Collect the links of a page"
+
+need:
+  fr: "Lister les adresses citées dans une page web, ramenées à des adresses absolues."
+  en: "List the addresses quoted in a web page, resolved to absolute ones."
+
+scenario:
+  fr: "On voit envoyer une page entière à un modèle pour qu’il en rende « tous les liens ». Un href est pourtant un attribut : il est écrit, en clair, et le lire est une analyse syntaxique. Le seul vrai travail est de dire où chaque lien mène, et c’est là que les choses se compliquent — pas parce que c’est difficile, mais parce que les deux langages de cette fiche ne répondent pas la même chose, et que celui qui a raison n’est pas celui qu’on croit."
+  en: "Sending a whole page to a model to get back “all the links” is a common sight. But an href is an attribute: it is written down, in plain sight, and reading it is parsing. The only real work is saying where each link leads, and that is where it gets complicated — not because it is hard, but because the two languages on this page do not answer the same thing, and the one that is right is not the one you would guess."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Les attributs href, résolus contre la base déclarée comme le fait un navigateur"
+      en: "The href attributes, resolved against the declared base the way a browser does"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : la page est lue dans votre processus, et aucune adresse n’est visitée"
+          - "L’aspiration d’un site tiers relève de ses conditions d’utilisation et du droit applicable, que la technique employée ne change pas"
+        en:
+          - "No specific scope added: the page is read inside your own process, and no address is visited"
+          - "Scraping a third-party site is a matter of its terms of use and of applicable law, which the technique used does not change"
+    code:
+      python: snippets/extract-links-from-a-page/n0.py
+      javascript: snippets/extract-links-from-a-page/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Le code résout contre la base qu’on lui déclare, et il n’a aucun moyen de vérifier cette déclaration : une adresse résolue contre une base fausse reste une adresse valide. Dans le test, la même page rend « https://exemple.fr/blog/article » ou « https://www.exemple.fr/blog/2026/article » selon ce qu’on a déclaré, et rien dans le rapport ne dit laquelle est la bonne — le cas courant est une redirection, où l’on déclare l’adresse demandée au lieu de celle où l’on a atterri. Le témoin est dans le même test : la base employée est rendue dans le rapport, et l’élément `<base href>` de la page la remplace quand elle en porte un."
+      en: "The code resolves against the base it is told, and it has no way of checking that declaration: an address resolved against the wrong base is still a valid address. In the test, the same page returns “https://exemple.fr/blog/article” or “https://www.exemple.fr/blog/2026/article” depending on what was declared, and nothing in the report says which is right — the common cause is a redirect, where the address requested is declared instead of the address landed on. The witness is in the same test: the base used is returned in the report, and the page’s `<base href>` element replaces it when the page carries one."
+    escalate_when:
+      fr: "Les liens de votre page sont posés par son propre JavaScript : ils ne sont pas dans le HTML servi, et aucune analyse du texte ne les inventera. La suite n’est pas un meilleur analyseur, c’est un navigateur sans affichage."
+      en: "Your page’s links are put there by its own JavaScript: they are not in the HTML served, and no amount of parsing the text will invent them. What follows is not a better parser, it is a headless browser."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : l’adresse est écrite dans un attribut que la norme HTML nomme, et la résolution est une suite de règles publiées, pas une inférence. Un modèle appris sur des pages annotées retrouverait, au mieux, ce que l’analyseur lit exactement, et se tromperait sur les pages qui ne ressemblent pas à son échantillon."
+      en: "There is nothing to learn: the address is written in an attribute the HTML standard names, and resolving it is a published set of rules, not an inference. A model trained on annotated pages would recover, at best, what the parser reads exactly, and would be wrong on the pages that do not look like its sample."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec le budget en plus. Une page de presse fait des centaines de kilooctets de balisage ; la faire passer dans un modèle résident coûte des ordres de grandeur de plus que la lecture d’un attribut, pour un résultat qu’on ne peut pas vérifier plus facilement. Et cela ne règle pas le seul cas qui résiste — la page vide que son script n’a pas encore remplie —, puisqu’il n’y a rien à lire dans ce qu’on lui enverrait."
+      en: "The same argument, with budget on top. A news page is hundreds of kilobytes of markup; running it through a resident model costs orders of magnitude more than reading an attribute, for a result that is no easier to check. And it does not settle the one case that resists — the empty page its script has not filled yet — because there is nothing to read in what you would send it."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un modèle généraliste rend des chaînes qui ressemblent à des adresses, et la ressemblance ne suffit pas : une adresse fausse d’un caractère mène ailleurs, ou nulle part. S’y ajoutent une facture par page et une sortie de données pour un travail que l’analyseur de votre langage fait en une milliseconde, avec la résolution que la norme décrit."
+      en: "A general-purpose model returns strings that look like addresses, and looking like one is not enough: an address wrong by one character leads elsewhere, or nowhere. Add to that one bill per page and one data egress, for work your language’s parser does in a millisecond, with the resolution the standard describes."
+
+verdict_rationale:
+  fr: "N0, parce que l’adresse est écrite dans la page et que la résoudre est une suite de règles publiées. Ce que cette fiche apporte tient à la mesure qu’elle a faite : sur trente-huit adresses, `urllib.parse.urljoin` et `new URL` répondent différemment sept fois. La plus frappante est l’antislash — `href=\"\\\\chemin\"` donne un chemin de votre site avec la RFC 3986 et l’hôte `chemin` avec la norme WHATWG, qui est celle des navigateurs. Comme la question posée est « où le lecteur va-t-il atterrir », l’extrait Python a été amené à la réponse du navigateur : nettoyage des bords, antislash, casse de l’hôte, punycode, port par défaut, encodage des espaces et des accents. Les deux extraits rendent désormais le même rapport sur les trente-huit adresses. Le reste est de la discipline : la base est exigée et rendue, l’élément `<base href>` la remplace, et ce qui n’est pas une adresse — `javascript:`, un href vide — est écarté avec sa raison plutôt que rendu comme un lien."
+  en: "N0, because the address is written in the page and resolving it is a published set of rules. What this entry adds comes from the measurement it made: over thirty-eight addresses, urllib.parse.urljoin and new URL answer differently seven times. The most striking is the backslash — href=\"\\\\chemin\" gives a path on your own site under RFC 3986 and the host `chemin` under the WHATWG standard, which is the browsers’. Since the question being asked is “where will the reader land”, the Python snippet was brought up to the browser’s answer: edge cleaning, backslashes, host case, punycode, default port, encoding of spaces and accents. The two snippets now return the same report over all thirty-eight addresses. The rest is discipline: the base is required and returned, the `<base href>` element replaces it, and what is not an address — `javascript:`, an empty href — is dropped with its reason rather than returned as a link."
+
+further_reading:
+  - label: "La norme URL du WHATWG — celle que les navigateurs appliquent"
+    url: "https://url.spec.whatwg.org/"
+  - label: "RFC 3986 — la norme que suit la bibliothèque standard de Python"
+    url: "https://www.rfc-editor.org/rfc/rfc3986"
+  - label: "HTML Standard — l’élément base, et ce qu’il remplace"
+    url: "https://html.spec.whatwg.org/multipage/semantics.html#the-base-element"
+  - label: "Isoler le contenu principal d’une page web — la fiche voisine, quand ce sont les liens qu’il faut jeter"
+    url: "https://isitoverkill.dev/fr/fiches/extract-main-content-from-a-web-page"
+
+sources:
+  - label: "Norme URL du WHATWG (consultée) : le nettoyage des espaces de tête et de queue, la suppression des tabulations et des sauts de ligne, et le traitement de l’antislash comme une barre oblique pour les schémas « spéciaux »"
+    url: "https://url.spec.whatwg.org/#url-parsing"
+  - label: "RFC 3986, section 5 (consultée) : la résolution de référence que met en œuvre `urllib.parse.urljoin`, où l’antislash n’a aucun statut particulier"
+    url: "https://www.rfc-editor.org/rfc/rfc3986#section-5"
+  - label: "HTML Standard, élément base (consulté) : seul le premier `<base href>` du document compte, et il remplace l’adresse du document pour toute résolution"
+    url: "https://html.spec.whatwg.org/multipage/semantics.html#the-base-element"
+  - label: "urlstd sur PyPI (consulté) : version 2023.7.26.1, publiée le 12 septembre 2023, licence MIT ; c’est la mise en œuvre Python de la norme WHATWG, et elle n’a pas été republiée depuis"
+    url: "https://pypi.org/project/urlstd/"
+  - label: "linkedom sur son dépôt (consulté) : version 0.18.13, licence ISC ; il fournit ici l’analyse du document côté JavaScript"
+    url: "https://github.com/WebReflection/linkedom"
+---
