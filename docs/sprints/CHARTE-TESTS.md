@@ -29,7 +29,14 @@ Tout ce que le lecteur voit sur la page de la fiche :
 2. la docstring d'en-tête de chaque extrait, dans ses deux langues
    (`n*.py`, `n*.js`, et la traduction de `doc.fr.yaml`) ;
 3. les commentaires du code qui affirment un fait sur le comportement ;
-4. l'essai de `content/tryouts/`, quand il existe : ses libellés et ses `why`.
+4. l'essai de `content/tryouts/`, quand il existe : ses libellés et ses `why` ;
+5. **les chaînes que le code rend à l'appelant** : `reason`, `why`, `evidence`,
+   `skipped`, `source`, `strategy`. Ce sont elles que l'appelant lit, journalise
+   et sur lesquelles il branche son code, et elles ne sont affichées nulle part
+   sur la page : personne ne les relit si un test ne les cite pas. C'est la
+   règle R14 de la charte de rédaction, vue du testeur, et
+   `node scripts/check-raisons.mjs` exige que chacune soit citée mot pour mot
+   dans un test de la fiche.
 
 Une affirmation dite dans les deux langues ne se teste qu'une fois, mais **dans
 les deux langages** : la fiche montre les deux extraits, elle affirme donc la même
@@ -167,7 +174,11 @@ clients par défaut appelaient une méthode absente du kit — l'erreur était a
 par la boucle de réessai et ressortait en panne de fournisseur.
 
 **T3. Les données de test ne sont pas construites dans la forme du modèle
-testé.** Ajoutez au moins une entrée qui viole l'hypothèse du modèle.
+testé.** Ajoutez au moins une entrée qui viole l'hypothèse du modèle. **Et cela
+ne vaut pas que pour les modèles statistiques : quand le code porte un seuil,
+une table, une liste ou un plafond, le test porte une entrée de chaque côté, et
+une entrée qui n'y figure pas.** Un jeu de tests dont toutes les données ont été
+écrites après le code ne démontre que la cohérence du code avec lui-même.
 *Ce qui l'a fait écrire :* la série « vérité » de `forecast-weekly-sales` était
 une constante, une droite et deux harmoniques — c'est-à-dire les colonnes de la
 matrice de conception. Le test démontrait que les moindres carrés retrouvent
@@ -273,8 +284,9 @@ n'en est pas un.
 node scripts/test-snippets.mjs <id>
 node scripts/check-marquages.mjs
 node scripts/check-adaptateur.mjs
+node scripts/check-raisons.mjs
 ```
 
 Le premier vert, avec les seuls marquages `INFIRMÉ` et `DÉFAUT` que le relevé
 explique — et la fiche reste alors en `status: draft` tant qu'il en porte un.
-Les deux autres verts, toujours.
+Les trois autres verts, toujours.

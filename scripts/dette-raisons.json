@@ -1,0 +1,34 @@
+{
+  "_commentaire": [
+    "Dette de la règle R14 — une raison rendue par le code est une affirmation, et un",
+    "test la cite —, relevée le 2026-09-20. Une fiche listée ici rend au moins une",
+    "raison qu'aucun de ses tests ne lit. check-raisons échoue si une fiche y reste",
+    "alors que toutes ses raisons sont testées : la liste ne peut que diminuer. Les",
+    "fiches refusées au lot 17 en sortent au fur et à mesure de leur correction ; les",
+    "autres sont hors du périmètre du lot 18."
+  ],
+  "dette": [
+    "check-a-company-identification-number",
+    "check-a-file-is-really-the-format-it-claims",
+    "check-bank-details-before-a-transfer",
+    "convert-a-pdf-to-plain-text",
+    "convert-messy-csv-to-clean-data",
+    "estimate-the-cost-of-a-model-call",
+    "extract-a-table-from-a-web-page",
+    "extract-amounts-and-currencies-from-text",
+    "extract-key-terms-from-a-document",
+    "extract-links-from-a-page",
+    "extract-main-content-from-a-web-page",
+    "extract-metadata-from-a-file",
+    "extract-people-and-companies-from-an-article",
+    "extract-product-data-from-a-shop-page",
+    "extract-tables-from-a-pdf",
+    "extract-the-latest-reply-from-an-email-thread",
+    "extract-tracking-numbers-from-an-email",
+    "read-text-from-a-scanned-page",
+    "repair-text-with-broken-encoding",
+    "validate-a-phone-number-and-its-country-code",
+    "validate-an-api-payload-against-its-contract",
+    "validate-an-email-address-without-sending-a-message"
+  ]
+}

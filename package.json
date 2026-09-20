@@ -19,13 +19,13 @@
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:colour": "node scripts/check-colour-usage.mjs",
     "check": "npm run check:fast && npm run check:slow",
-    "check:fast": "npm run check:chain && npm run check:content && npm run check:marquages && npm run check:rupture && npm run check:adaptateur && npm run test:schema && npm run test:harness && npm run test:routes && npm run check:colour && npm run check:illustrations && npm run check:figures && npm run check:fonts && npm run check:contrast && npm run check:french && npm run build && npm run check:links && npm run check:seo && npm run check:weight",
+    "check:fast": "npm run check:chain && npm run check:content && npm run check:marquages && npm run check:rupture && npm run check:raisons && npm run check:adaptateur && npm run test:schema && npm run test:harness && npm run test:routes && npm run check:colour && npm run check:illustrations && npm run check:figures && npm run check:fonts && npm run check:contrast && npm run check:french && npm run build && npm run check:links && npm run check:seo && npm run check:weight",
     "check:slow": "npm run test:snippets && npm run check:third-party && npm run build:dev && npm run test:components && npm run test:pages && npm run check:a11y && npm run check:overflow && npm run build && npm run test:tryout && npm run test:guide && npm run test:catalogue && npm run fixtures && npm run build:fixtures && npm run test:search && npm run build",
     "check:chain": "node scripts/check-chain.mjs",
     "check:french": "bash scripts/check-french.sh",
     "fix:accents": ".venv-tools/bin/python scripts/fix-accents.py",
     "check:content": "node --import tsx scripts/check-content.mjs",
-    "test:schema": "node --import tsx --test tests/schema.test.mjs tests/check-content.test.mjs tests/snippets.test.mjs tests/check-longueur-rupture.test.mjs",
+    "test:schema": "node --import tsx --test tests/schema.test.mjs tests/check-content.test.mjs tests/snippets.test.mjs tests/check-longueur-rupture.test.mjs tests/check-raisons.test.mjs",
     "test:snippets": "node scripts/test-snippets.mjs",
     "manifest": "node scripts/build-snippet-manifest.mjs",
     "test:components": "node --test tests/components.spec.mjs",
@@ -49,6 +49,7 @@
     "check:third-party": "node scripts/check-third-party.mjs /fr /en /fr/catalogue /fr/fiches/mask-personal-data-in-chat /fr/familles/detect-filter /fr/methodologie /fr/contribuer /fr/credits",
     "check:marquages": "node scripts/check-marquages.mjs",
     "check:rupture": "node scripts/check-longueur-rupture.mjs",
+    "check:raisons": "node scripts/check-raisons.mjs",
     "check:adaptateur": "node scripts/check-adaptateur.mjs"
   },
   "dependencies": {

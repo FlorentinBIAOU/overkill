@@ -138,7 +138,7 @@ de modèle, avec `sources: []`.
 
 ---
 
-## Treize règles, et l'erreur qui les a fait écrire
+## Quatorze règles, et l'erreur qui les a fait écrire
 
 Elles viennent de la relecture des vingt-cinq premières fiches, où vingt-quatre ont été
 refusées, et de leur correction. Chacune porte le cas réel qui l'a fait naître, pour que
@@ -220,6 +220,16 @@ la fournir, le contrôle ne contrôle rien.
 argument sans dire qu'il doit être horodaté et signé par le serveur.
 
 **R11. `breaking_point` : deux phrases, un exemple, un témoin.** Voir plus haut.
+**Ce n'est plus une consigne, c'est un contrôle** : `node
+scripts/check-longueur-rupture.mjs`, enchaîné par `npm run check`, compte les
+phrases et les mots de chaque point de rupture publié, dans les deux langues.
+*Ce qui l'a fait écrire :* la relecture du lot 17 a trouvé la règle enfreinte
+vingt-cinq fois sur vingt-cinq, à 79 mots de moyenne, et la dérive était
+régulière — 66 mots sur les quatorze premières fiches, 90 sur les onze
+dernières. Une règle qui porte un nombre et qu'aucun contrôle ne vérifie dérive
+toujours dans le même sens, parce qu'il y a toujours une bonne raison d'ajouter
+une phrase. Celle qu'on veut ajouter a presque toujours sa place dans la
+docstring : c'est le renvoi, le cas voisin, ou l'alternative écartée.
 
 **R12. Tout ce qui a été vérifié pour écrire la fiche va dans `sources`.** Voir plus haut.
 
@@ -227,6 +237,22 @@ argument sans dire qu'il doit être horodaté et signé par le serveur.
 canonique.
 *Ce qui l'a fait écrire :* « Mask personal data » pour un besoin qui ne masque que le
 téléphone, l'adresse électronique et l'IBAN.
+
+**R14. Une raison rendue par le code est une affirmation, et elle se teste comme
+les autres.** Elle ne dit que ce que le code a constaté, jamais la cause qu'il
+suppose. « Ce texte fait moins de deux cents caractères » se teste ; « cette
+page est probablement construite par son JavaScript » ne se teste pas et se
+trouve faux sur la première brève venue. Deux situations que le code distingue
+ont deux raisons ; deux situations qu'il ne distingue pas n'en ont qu'une, et
+elle ne nomme pas de cause. Les champs visés sont ceux que l'appelant lit et
+journalise : `reason`, `why`, `evidence`, `skipped`, `source`, `strategy`.
+Contrôlé par `node scripts/check-raisons.mjs`, qui exige que chacune de ces
+chaînes soit citée mot pour mot dans un test de la fiche.
+*Ce qui l'a fait écrire :* six fiches du lot 17 ont été refusées pour une de ces
+chaînes, alors que la décision prise par le code était juste — une brève de
+presse déclarée « construite par son JavaScript », une réponse correctement
+coupée accusée d'avoir « plus de texte sous la citation qu'au-dessus », une
+famille de suivi qui « ne porte rien à vérifier » alors qu'elle porte une clé.
 
 ---
 
@@ -259,10 +285,12 @@ Une affirmation forte se porte par sa précision, pas par son adverbe.
 ```bash
 node --import tsx scripts/check-content.mjs   # le schéma et le disque
 node scripts/check-figures.mjs                # les chiffres interdits
+node scripts/check-longueur-rupture.mjs       # R11, deux phrases et soixante mots
+node scripts/check-raisons.mjs                # R14, les raisons rendues par le code
 node scripts/test-snippets.mjs <id>           # le code de votre fiche
 ```
 
-Les trois doivent être verts. Si l'un ne l'est pas, la fiche n'est pas finie.
+Les cinq doivent être verts. Si l'un ne l'est pas, la fiche n'est pas finie.
 
 ## Vocabulaire imposé
 
