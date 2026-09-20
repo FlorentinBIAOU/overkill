@@ -1,0 +1,92 @@
+---
+id: extract-main-content-from-a-web-page
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Isoler le contenu principal d’une page web"
+  en: "Extract the main content from a web page"
+
+need:
+  fr: "Obtenir le texte d’un article sans le menu, le bandeau de cookies, les articles voisins et le pied de page."
+  en: "Get an article’s text without the menu, the cookie banner, the related items and the footer."
+
+scenario:
+  fr: "On voit envoyer une page entière à un modèle généraliste avec la consigne « garde l’article, jette le reste ». Séparer le corps d’une page de son habillage porte pourtant un nom depuis vingt ans — le retrait du texte de remplissage —, se mesure sur des corpus publics, et a deux mises en œuvre mûres qui tournent hors ligne en quelques millisecondes. Le vrai sujet n’est pas d’extraire mais de savoir quand il n’y a rien à extraire, ce qu’un modèle, lui, ne dira pas."
+  en: "Sending a whole page to a general-purpose model with the instruction “keep the article, drop the rest” is a common sight. Yet separating a page’s body from its furniture has had a name for twenty years — boilerplate removal — is measured against public corpora, and has two mature implementations that run offline in a few milliseconds. The real subject is not extracting but knowing when there is nothing to extract, which a model will not tell you."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Retrait du texte de remplissage, et mesure de la part des liens"
+      en: "Boilerplate removal, with the share of links measured"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : la page est lue dans votre processus et n’est transmise à personne"
+          - "L’aspiration d’un site tiers relève de ses conditions d’utilisation et du droit applicable, que la technique employée ne change pas"
+        en:
+          - "No specific scope added: the page is read inside your own process and is sent to nobody"
+          - "Scraping a third-party site is a matter of its terms of use and of applicable law, which the technique used does not change"
+    code:
+      python: snippets/extract-main-content-from-a-web-page/n0.py
+      javascript: snippets/extract-main-content-from-a-web-page/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une page dont le corps est construit par son propre JavaScript arrive en coquille vide : le HTML servi ne porte qu’une balise vide et un script, et rien n’en sort. Le témoin est dans le même test : le même article servi en HTML ressort avec ses deux paragraphes, et sans le menu ni le pied de page."
+      en: "A page whose body is built by its own JavaScript arrives as an empty shell: the HTML served holds one empty tag and a script, and nothing comes out of it. The witness is in the same test: the same article served as HTML comes back with both its paragraphs, and without the menu or the footer."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus pour cette page-là. Quand le rapport dit qu’il n’y avait rien à extraire, la suite n’est pas un meilleur extracteur : c’est un navigateur sans affichage, ou le point d’accès que le site emploie lui-même pour remplir sa page."
+      en: "There is no level above this one for that page. When the report says there was nothing to extract, what follows is not a better extractor: it is a headless browser, or the endpoint the site itself uses to fill its page."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "C’est déjà ce que fait ce niveau. Les deux bibliothèques nommées ici ne sont pas des règles écrites à la main mais des classifieurs de blocs, entraînés et évalués sur des corpus publics de pages annotées : la densité de texte contre la densité de liens est un jeu de traits, et le seuil vient de la mesure. Ajouter un niveau « modèle classique » reviendrait à décrire deux fois la même chose."
+      en: "That is already what this level does. The two libraries named here are not hand-written rules but block classifiers, trained and evaluated on public corpora of annotated pages: text density against link density is a feature set, and the threshold comes from measurement. Adding a “classic model” level would be describing the same thing twice."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Un petit modèle spécialisé auto-hébergé devrait recevoir la page entière, soit des centaines de kilooctets par document, pour produire un découpage que deux bibliothèques de quelques mégaoctets produisent sur un processeur en quelques millisecondes. Et il n’aurait rien de plus à dire sur le seul cas qui résiste — la page vide que son JavaScript n’a pas encore remplie —, parce qu’il n’y a rien à lire dans ce qu’on lui enverrait."
+      en: "A small self-hosted specialised model would have to receive the whole page, hundreds of kilobytes per document, to produce a split that two libraries of a few megabytes produce on a CPU in milliseconds. And it would have nothing more to say about the one case that resists — the empty page its JavaScript has not filled yet — because there is nothing to read in what you would send it."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Le coût est le premier argument : une page de presse fait des centaines de kilooctets de balisage, et la découper pour tenir dans un appel demande déjà de savoir quoi garder. Le second est qu’on ne peut pas vérifier le résultat : un extracteur rend des morceaux du document, qu’on retrouve caractère pour caractère dans la source, là où un modèle rend un texte qui lui ressemble. Sur un corpus qu’on archive, la différence est celle entre une citation et une paraphrase."
+      en: "Cost is the first argument: a news page is hundreds of kilobytes of markup, and cutting it down to fit inside one call already requires knowing what to keep. The second is that the result cannot be checked: an extractor returns pieces of the document, found character for character in the source, where a model returns a text that resembles it. On a corpus you archive, that is the difference between a quotation and a paraphrase."
+
+verdict_rationale:
+  fr: "N0, parce que le problème est résolu, mesuré et livré : `trafilatura` d’un côté, le `Readability` de Mozilla de l’autre. Ce que la fiche ajoute tient en deux règles, et toutes deux existent parce que les bibliothèques se taisent là où il faudrait parler. La première refuse de rendre une chaîne vide comme une réponse : sur une page construite par son JavaScript, le rapport dit qu’il n’y avait rien à prendre. La seconde tranche un désaccord mesuré entre les deux : sur une page de catégorie faite de quarante liens, `trafilatura` ne rend rien et `Readability` rend le texte des liens comme un article — la part du texte à l’intérieur des liens est donc mesurée des deux côtés, et au-delà de la moitié la page n’est pas un article."
+  en: "N0, because the problem is solved, measured and shipped: trafilatura on one side, Mozilla’s Readability on the other. What this entry adds fits in two rules, and both exist because the libraries stay silent where they should speak. The first refuses to return an empty string as an answer: on a page built by its own JavaScript, the report says there was nothing to take. The second settles a measured disagreement between them: on a category page made of forty links, trafilatura returns nothing and Readability returns the link text as an article — so the share of the text sitting inside links is measured on both sides, and above half the page is not an article."
+
+further_reading:
+  - label: "trafilatura — la bibliothèque Python, et ses évaluations comparées"
+    url: "https://trafilatura.readthedocs.io/"
+  - label: "Readability — la bibliothèque de Mozilla, telle qu’employée par le mode lecture de Firefox"
+    url: "https://github.com/mozilla/readability"
+  - label: "linkedom — le moteur de document léger qui permet d’exécuter Readability hors d’un navigateur"
+    url: "https://github.com/WebReflection/linkedom"
+  - label: "trafilatura — l’évaluation comparée des extracteurs sur des corpus annotés"
+    url: "https://trafilatura.readthedocs.io/en/latest/evaluation.html"
+
+sources:
+  - label: "trafilatura sur PyPI (consulté) : version 2.2.0, publiée le 31 juillet 2026, licence Apache 2.0"
+    url: "https://pypi.org/project/trafilatura/"
+  - label: "@mozilla/readability sur son dépôt (consulté) : version 0.6.0, publiée le 3 mars 2025, licence Apache 2.0, aucune dépendance ; c’est la bibliothèque du mode lecture de Firefox"
+    url: "https://github.com/mozilla/readability"
+  - label: "linkedom sur son dépôt (consulté) : version 0.18.13, publiée le 7 juillet 2026, licence ISC ; il fournit le document dont Readability a besoin hors navigateur"
+    url: "https://github.com/WebReflection/linkedom"
+---

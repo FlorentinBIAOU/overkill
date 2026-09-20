@@ -63,6 +63,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@mozilla/readability": "0.6.0",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "chrono-node": "2.9.0",
@@ -71,6 +72,7 @@
     "gray-matter": "^4.0.3",
     "ibantools": "4.5.4",
     "libphonenumber-js": "1.13.13",
+    "linkedom": "0.18.13",
     "pagefind": "1.5.2",
     "pdfjs-dist": "5.4.149",
     "playwright": "^1.63.0",

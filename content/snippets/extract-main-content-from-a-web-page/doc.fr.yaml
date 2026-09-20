@@ -1,0 +1,59 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Garder l'article et jeter tout ce qui l'entoure.
+
+  Niveau N0. Séparer le corps d'une page de ses menus, de son pied, de son
+  bandeau de cookies et de son « vous aimerez aussi » est un problème résolu
+  qui porte un nom — le retrait du texte de remplissage — et qui a deux mises
+  en œuvre mûres : `trafilatura` ici, le `Readability` de Mozilla en JavaScript. Les deux travaillent sur
+  l'arbre des balises, en pesant la densité de texte contre la densité de
+  liens, et les deux tournent hors ligne en quelques millisecondes.
+
+  Ce ne sont pas le même algorithme et ils ne rendent pas les mêmes caractères.
+  Les titres diffèrent, les retours à la ligne diffèrent, et l'un garde le
+  titre dans le corps quand l'autre le met à part. Ce sur quoi ils s'accordent
+  est la part qui compte, et le test de cette fiche le dit ainsi : les phrases
+  de l'article sont dedans, la navigation et le pied de page sont dehors.
+
+  Deux choses que ce fichier ajoute. La première est le refus de rendre une
+  chaîne vide comme si c'était une réponse : une page dont le corps est
+  construit par son propre JavaScript arrive ici en coquille vide, et
+  « rien d'extrait » n'est pas la même chose que « cet article est court ».
+
+  La seconde tranche un désaccord entre les deux bibliothèques. Sur une page de
+  catégorie — quarante liens et rien d'autre —, `trafilatura` ne rend rien et
+  `Readability` rend le texte des liens comme si c'était un article. La part du
+  texte de la page qui se trouve à l'intérieur de liens est donc mesurée ici,
+  dans les deux langages, et au-delà de la moitié la page n'est pas un article,
+  quoi qu'en ait dit l'extracteur.
+
+n0.js: |
+  Garder l'article et jeter tout ce qui l'entoure.
+
+  Niveau N0. Séparer le corps d'une page de ses menus, de son pied, de son
+  bandeau de cookies et de son « vous aimerez aussi » est un problème résolu
+  qui porte un nom — le retrait du texte de remplissage — et qui a deux mises
+  en œuvre mûres : le `Readability` de Mozilla ici, `trafilatura` en Python. Les deux travaillent sur
+  l'arbre des balises, en pesant la densité de texte contre la densité de
+  liens, et les deux tournent hors ligne en quelques millisecondes.
+
+  Ce ne sont pas le même algorithme et ils ne rendent pas les mêmes caractères.
+  Les titres diffèrent, les retours à la ligne diffèrent, et l'un garde le
+  titre dans le corps quand l'autre le met à part. Ce sur quoi ils s'accordent
+  est la part qui compte, et le test de cette fiche le dit ainsi : les phrases
+  de l'article sont dedans, la navigation et le pied de page sont dehors.
+
+  Deux choses que ce fichier ajoute. La première est le refus de rendre une
+  chaîne vide comme si c'était une réponse : une page dont le corps est
+  construit par son propre JavaScript arrive ici en coquille vide, et
+  « rien d'extrait » n'est pas la même chose que « cet article est court ».
+
+  La seconde tranche un désaccord entre les deux bibliothèques. Sur une page de
+  catégorie — quarante liens et rien d'autre —, `trafilatura` ne rend rien et
+  `Readability` rend le texte des liens comme si c'était un article. La part du
+  texte de la page qui se trouve à l'intérieur de liens est donc mesurée ici,
+  dans les deux langages, et au-delà de la moitié la page n'est pas un article,
+  quoi qu'en ait dit l'extracteur.
