@@ -13,14 +13,24 @@ n0: |
   partir des huit précédents, et un numéro dont un chiffre est faux échoue.
   C'est la différence entre trouver un candidat et identifier une référence.
 
-  Tout le reste est une forme. « 1Z » suivi de seize caractères est un numéro
-  UPS, et ce préfixe est assez distinctif pour valoir la peine d'être rendu ;
-  dix chiffres nus, c'est la forme d'une lettre de transport DHL Express, et
-  c'est aussi celle d'un numéro de commande, d'un numéro de client et d'un
-  numéro de téléphone sans son zéro initial. Ces familles sont déclarées et
-  nommées, mais elles ne sont pas cherchées si l'appelant ne le demande pas :
-  un niveau qui rend tous les nombres à dix chiffres d'un e-mail comme des
-  références de colis est pire qu'un niveau qui ne rend rien.
+  Un numéro UPS en porte une aussi. La dix-huitième position d'un numéro « 1Z »
+  est une clé calculée sur les quinze caractères qui la précèdent : les lettres
+  deviennent des chiffres, les places impaires comptent une fois et les paires
+  deux, et la clé est ce qui mène le total à la dizaine suivante. UPS ne publie
+  pas ce calcul ; il est écrit ici parce que c'est celui que satisfait l'exemple
+  canonique du transporteur — `1Z999AA10123456784`, dont les quinze caractères
+  font 96, d'où une clé de 4 — et parce qu'un numéro qui y échoue est rendu
+  quand même, avec `checked: false` et sa raison. Rien n'est écarté sur la foi
+  d'une règle non publiée ; seul le mot « vérifié » est retenu.
+
+  Dix chiffres nus, en revanche, ne portent aucune clé : c'est la forme d'une
+  lettre de transport DHL Express, et c'est aussi celle d'un numéro de
+  commande, d'un numéro de client et d'un numéro de téléphone écrit sans
+  espaces. Cette famille est déclarée et nommée, mais elle n'est pas cherchée
+  si l'appelant ne le demande pas : un niveau qui rend tous les nombres à dix
+  chiffres d'un e-mail comme des références de colis est pire qu'un niveau qui
+  ne rend rien. Chaque famille a sa propre raison, parce que « il n'y a rien à
+  vérifier » et « ce n'est pas vérifié ici » ne disent pas la même chose.
 
   Ce qui revient dit donc trois choses : ce qui a été trouvé, de quelle famille
   cela relève, et si quelque chose a réellement été vérifié. Un candidat n'est

@@ -1,17 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { DEFAULT_FAMILIES, FAMILIES, checkDigit, findTrackingNumbers } from './n0.js';
+import {
+  DEFAULT_FAMILIES, FAMILIES, UPS_BODY, checkDigit, findTrackingNumbers, upsCheckDigit,
+} from './n0.js';
 
 // Une confirmation d'expédition ordinaire : le public visé de la fiche.
 const MAIL = `Bonjour,
 
 Votre commande 1234567890 du 10 octobre 2026 est expédiée.
 Numéro de suivi Colissimo : RB123456785GB.
-Suivi UPS : 1Z9999W99999999999.
+Suivi UPS : 1Z9999W99999999997.
 
 Cordialement,
-Le service client`;
+Le service client — 0123456789`;
+
+// Le numéro canonique d'UPS, celui que le transporteur donne en exemple : la
+// somme pondérée de ses quinze caractères fait 96, donc la clé vaut 4.
+const UPS_CANONIQUE = '1Z999AA10123456784';
 
 // Le même, avec un chiffre du numéro de série abîmé par une recopie.
 const ABIME = MAIL.replace('RB123456785GB', 'RB123456784GB');
@@ -25,8 +31,15 @@ const trouves = (texte, familles = DEFAULT_FAMILIES) => findTrackingNumbers(text
 
 test('point de rupture : une famille sans chiffre de contrôle attrape tout', () => {
   const avec = trouves(MAIL, ['upu-s10', 'ups', 'ten-digits']);
+  // Le numéro de commande et le numéro de téléphone du même message, tous deux
+  // rendus comme des colis. Les deux exemples sont ceux de la fiche.
   assert.ok(avec.some(([t, f, c]) => t === '1234567890' && f === 'ten-digits' && c === false));
+  assert.ok(avec.some(([t, f, c]) => t === '0123456789' && f === 'ten-digits' && c === false));
   assert.ok(MAIL.split('\n')[2].includes('1234567890'));
+  assert.ok(MAIL.split('\n').at(-1).includes('0123456789'));
+  // C'est la forme compacte qui est attrapée : le même numéro écrit à la
+  // française, par paires, ne l'est pas. Le point de rupture le dit.
+  assert.deepEqual(trouves('Appelez le 01 23 45 67 89', ['upu-s10', 'ups', 'ten-digits']), []);
 });
 
 test('point de rupture : témoin, ce qui porte un contrôle est vérifié', () => {
@@ -101,9 +114,34 @@ test('une famille inconnue est nommée', () => {
 
 test("chaque résultat dit ce qu'il vaut", () => {
   const ups = findTrackingNumbers(MAIL).found.find((t) => t.family === 'ups');
-  assert.equal(ups.checked, false);
-  assert.equal(ups.why, 'shape only: this family carries nothing to check');
+  assert.equal(ups.checked, true);
+  assert.equal(ups.why, null);
   assert.deepEqual(ups.carriers, ['UPS']);
+});
+
+test("un numéro UPS porte une clé, et elle est calculée", () => {
+  // Commentaire : « The eighteenth character of a `1Z` number is a check digit
+  // over the fifteen that precede it. » « Cette famille ne porte rien à
+  // vérifier » était faux.
+  assert.equal(UPS_BODY, 15);
+  assert.equal(upsCheckDigit(UPS_CANONIQUE.slice(2, 2 + UPS_BODY)), 4);
+  assert.equal(UPS_CANONIQUE.at(-1), '4');
+  const canonique = findTrackingNumbers(UPS_CANONIQUE).found[0];
+  assert.deepEqual([canonique.family, canonique.checked, canonique.why], ['ups', true, null]);
+  const faux = findTrackingNumbers('1Z999AA10123456785').found[0];
+  assert.equal(faux.text, '1Z999AA10123456785');
+  assert.equal(faux.checked, false);
+  assert.equal(faux.why, 'the UPS check digit does not match the rest of the number');
+});
+
+test('chaque famille a sa propre raison', () => {
+  // Docstring de `verify` : « One reason per family, because they are not the
+  // same statement. »
+  const dix = findTrackingNumbers('0123456789', ['ten-digits']).found[0];
+  assert.equal(dix.why, 'shape only: ten digits carry no key to check');
+  const faux = findTrackingNumbers('1Z999AA10123456785').found[0];
+  assert.equal(faux.why, 'the UPS check digit does not match the rest of the number');
+  assert.notEqual(dix.why, faux.why);
 });
 
 test("un numéro collé à autre chose n'est pas un numéro", () => {
@@ -115,11 +153,14 @@ test('la casse compte, parce que la norme la fixe', () => {
   assert.deepEqual(trouves('rb123456785gb'), []);
 });
 
-test('aucune entrée ne lève', () => {
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(findTrackingNumbers(null).reason, 'expected text, not object');
+  assert.equal(findTrackingNumbers(42).reason, 'expected text, not number');
   for (const entree of [null, undefined, 42, [], {}, '']) {
     const rapport = findTrackingNumbers(entree);
     assert.deepEqual(rapport.found, []);
-    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text'));
+    if (typeof entree !== 'string') assert.ok(rapport.reason.startsWith('expected text, not '));
   }
 });
 
@@ -130,7 +171,7 @@ test('aucune entrée ne lève', () => {
 test("production : entrée banale, une confirmation d'expédition", () => {
   assert.deepEqual(trouves(MAIL), [
     ['RB123456785GB', 'upu-s10', true],
-    ['1Z9999W99999999999', 'ups', false],
+    ['1Z9999W99999999997', 'ups', true],
   ]);
 });
 
@@ -139,11 +180,13 @@ test('production : entrée vide', () => {
 });
 
 test('production : entrée très grande et terminaison rapide', () => {
-  const enorme = MAIL.repeat(20_000);
+  // Joints par un saut de ligne : collés bout à bout, le numéro de téléphone
+  // de la fin toucherait le « Bonjour » de la copie suivante.
+  const enorme = Array.from({ length: 20_000 }, () => MAIL).join('\n');
   const debut = performance.now();
   const rapport = findTrackingNumbers(enorme, ['upu-s10', 'ups', 'ten-digits']);
   assert.ok(performance.now() - debut < 60_000);
-  assert.equal(rapport.found.length, 3 * 20_000);
+  assert.equal(rapport.found.length, 4 * 20_000);
 });
 
 test('production : encodages inattendus', () => {

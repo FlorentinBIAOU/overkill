@@ -4,7 +4,8 @@ import subprocess
 import time
 from pathlib import Path
 
-from n0 import DEFAULT_FAMILIES, FAMILIES, check_digit, find_tracking_numbers
+from n0 import (DEFAULT_FAMILIES, FAMILIES, UPS_BODY, check_digit,
+                find_tracking_numbers, ups_check_digit)
 
 ICI = Path(__file__).parent
 
@@ -13,17 +14,22 @@ MAIL = """Bonjour,
 
 Votre commande 1234567890 du 10 octobre 2026 est expédiée.
 Numéro de suivi Colissimo : RB123456785GB.
-Suivi UPS : 1Z9999W99999999999.
+Suivi UPS : 1Z9999W99999999997.
 
 Cordialement,
-Le service client"""
+Le service client — 0123456789"""
+
+# Le numéro canonique d'UPS, celui que le transporteur donne en exemple : la
+# somme pondérée de ses quinze caractères fait 96, donc la clé vaut 4.
+UPS_CANONIQUE = "1Z999AA10123456784"
 
 # Le même, avec un chiffre du numéro de série abîmé par une recopie.
 ABIME = MAIL.replace("RB123456785GB", "RB123456784GB")
 
 TOUS = [MAIL, ABIME, "", "SA123456785GB", "RB123456785GB RB123456785FR",
         "rb123456785gb", "XRB123456785GBX", "1Z9999W9999999999",
-        "Le 1234567890 et le 12345678901", "RB123456780GB"]
+        "Le 1234567890 et le 12345678901", "RB123456780GB",
+        UPS_CANONIQUE, "1Z999AA10123456785", "Appelez le 01 23 45 67 89"]
 
 
 def trouves(texte, familles=DEFAULT_FAMILIES):
@@ -42,9 +48,16 @@ def test_point_de_rupture_une_famille_sans_chiffre_de_controle_attrape_tout():
     et c'est aussi celle d'un numéro de commande. »
     """
     avec = trouves(MAIL, ("upu-s10", "ups", "ten-digits"))
+    # Le numéro de commande et le numéro de téléphone du même message, tous
+    # deux rendus comme des colis. Les deux exemples sont ceux de la fiche.
     assert ("1234567890", "ten-digits", False) in avec
-    # Le numéro de commande de la première ligne, rendu comme un colis.
+    assert ("0123456789", "ten-digits", False) in avec
     assert "1234567890" in MAIL.split("\n")[2]
+    assert "0123456789" in MAIL.split("\n")[-1]
+    # C'est la forme compacte qui est attrapée : le même numéro écrit à la
+    # française, par paires, ne l'est pas. Le point de rupture le dit.
+    espace = trouves("Appelez le 01 23 45 67 89", ("upu-s10", "ups", "ten-digits"))
+    assert espace == []
 
 
 def test_point_de_rupture_temoin_ce_qui_porte_un_controle_est_verifie():
@@ -142,9 +155,42 @@ def test_une_famille_inconnue_est_nommee():
 def test_chaque_resultat_dit_ce_quil_vaut():
     trouve = find_tracking_numbers(MAIL)["found"]
     ups = [t for t in trouve if t["family"] == "ups"][0]
-    assert ups["checked"] is False
-    assert ups["why"] == "shape only: this family carries nothing to check"
+    assert ups["checked"] is True
+    assert ups["why"] is None
     assert ups["carriers"] == ["UPS"]
+
+
+def test_un_numero_ups_porte_une_cle_et_elle_est_calculee():
+    """
+    Commentaire : « The eighteenth character of a `1Z` number is a check digit
+    over the fifteen that precede it. »
+
+    « Cette famille ne porte rien à vérifier » était faux : UPS en porte une.
+    Le calcul est reproduit sur l'exemple canonique du transporteur, celui dont
+    la somme pondérée fait 96.
+    """
+    assert UPS_BODY == 15
+    assert ups_check_digit(UPS_CANONIQUE[2:2 + UPS_BODY]) == 4
+    assert UPS_CANONIQUE[-1] == "4"
+    canonique = find_tracking_numbers(UPS_CANONIQUE)["found"][0]
+    assert (canonique["family"], canonique["checked"], canonique["why"]) == ("ups", True, None)
+    # Un chiffre de clé changé : trouvé quand même, et refusé avec sa raison.
+    faux = find_tracking_numbers("1Z999AA10123456785")["found"][0]
+    assert faux["text"] == "1Z999AA10123456785"
+    assert faux["checked"] is False
+    assert faux["why"] == "the UPS check digit does not match the rest of the number"
+
+
+def test_chaque_famille_a_sa_propre_raison():
+    """
+    Docstring de `_verify` : « One reason per family, because they are not the
+    same statement. » « Dix chiffres » ne porte aucune clé ; UPS en porte une.
+    """
+    dix = find_tracking_numbers("0123456789", ("ten-digits",))["found"][0]
+    assert dix["why"] == "shape only: ten digits carry no key to check"
+    faux = find_tracking_numbers("1Z999AA10123456785")["found"][0]
+    assert faux["why"] == "the UPS check digit does not match the rest of the number"
+    assert dix["why"] != faux["why"]
 
 
 def test_un_numero_colle_a_autre_chose_nest_pas_un_numero():
@@ -156,12 +202,15 @@ def test_la_casse_compte_parce_que_la_norme_la_fixe():
     assert trouves("rb123456785gb") == []
 
 
-def test_aucune_entree_ne_leve():
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """R14 : la raison dit ce que le code a constaté — le type reçu."""
+    assert find_tracking_numbers(None)["reason"] == "expected text, not NoneType"
+    assert find_tracking_numbers(b"octets")["reason"] == "expected text, not bytes"
     for entree in [None, 42, [], {}, b"octets", ""]:
         rapport = find_tracking_numbers(entree)
         assert rapport["found"] == []
         if not isinstance(entree, str):
-            assert rapport["reason"].startswith("expected text")
+            assert rapport["reason"].startswith("expected text, not ")
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +221,7 @@ def test_aucune_entree_ne_leve():
 def test_production_entree_banale_une_confirmation_dexpedition():
     """T5 : l'entrée ordinaire du public visé."""
     assert trouves(MAIL) == [("RB123456785GB", "upu-s10", True),
-                             ("1Z9999W99999999999", "ups", False)]
+                             ("1Z9999W99999999997", "ups", True)]
 
 
 def test_production_entree_vide():
@@ -180,11 +229,13 @@ def test_production_entree_vide():
 
 
 def test_production_entree_tres_grande_et_terminaison_rapide():
-    enorme = MAIL * 20_000
+    # Joints par un saut de ligne : collés bout à bout, le numéro de
+    # téléphone de la fin toucherait le « Bonjour » de la copie suivante.
+    enorme = "\n".join([MAIL] * 20_000)
     debut = time.perf_counter()
     rapport = find_tracking_numbers(enorme, ("upu-s10", "ups", "ten-digits"))
     assert time.perf_counter() - debut < 60.0
-    assert len(rapport["found"]) == 3 * 20_000
+    assert len(rapport["found"]) == 4 * 20_000
 
 
 def test_production_encodages_inattendus():

@@ -31,8 +31,33 @@ const RESERVED = new Set(['J', 'K', 'S', 'T', 'W']);
 // number's eight digits.
 export const WEIGHTS = [8, 6, 4, 2, 3, 5, 9, 7];
 
-// Each family: what it looks like, who uses it, and whether anything in the
-// number itself can be verified.
+// The eighteenth character of a `1Z` number is a check digit over the fifteen
+// that precede it: letters become digits, the odd places count once and the
+// even ones twice, and the key is what brings the total to the next ten.
+//
+// UPS does not publish this. It is written here because it is the algorithm
+// the carrier's own canonical example satisfies — `1Z999AA10123456784`, whose
+// fifteen characters add up to 96, hence a key of 4 — and because a number
+// that fails it is still returned, with `checked: false` and the reason.
+// Nothing is dropped on the strength of an unpublished rule; only the word
+// « verified » is withheld.
+export const UPS_BODY = 15;
+
+/** The check digit of the fifteen characters after « 1Z ». */
+export function upsCheckDigit(body) {
+  let total = 0;
+  [...body].forEach((character, index) => {
+    const place = index + 1;
+    const value = /[0-9]/.test(character)
+      ? Number(character)
+      : (character.charCodeAt(0) - 63) % 10;
+    total += place % 2 === 1 ? value : value * 2;
+  });
+  return (10 - (total % 10)) % 10;
+}
+
+// Each family: what it looks like, who uses it, and what the number itself
+// proves when there is something in it to check.
 export const FAMILIES = {
   'upu-s10': {
     pattern: /(?<![0-9A-Za-z])([A-Z]{2})([0-9]{8})([0-9])([A-Z]{2})(?![0-9A-Za-z])/g,
@@ -42,7 +67,7 @@ export const FAMILIES = {
   ups: {
     pattern: /(?<![0-9A-Za-z])1Z[0-9A-Z]{16}(?![0-9A-Za-z])/g,
     carriers: ['UPS'],
-    verifiable: false,
+    verifiable: true,
   },
   'ten-digits': {
     pattern: /(?<![0-9A-Za-z])[0-9]{10}(?![0-9A-Za-z])/g,
@@ -92,9 +117,23 @@ export function findTrackingNumbers(text, families = DEFAULT_FAMILIES) {
   return { found, reason: null };
 }
 
-/** What the number itself proves, which is nothing outside S10. */
+/**
+ * What the number itself proves.
+ *
+ * One reason per family, because they are not the same statement. « Ten
+ * digits » carries no key at all: nothing in the number can contradict it. A
+ * UPS number carries one, and this snippet computes it.
+ */
 function verify(name, match) {
-  if (name !== 'upu-s10') return [false, 'shape only: this family carries nothing to check'];
+  if (name === 'ten-digits') return [false, 'shape only: ten digits carry no key to check'];
+  if (name === 'ups') {
+    const numero = match[0];
+    const dernier = numero.at(-1);
+    if (!/[0-9]/.test(dernier) || upsCheckDigit(numero.slice(2, 2 + UPS_BODY)) !== Number(dernier)) {
+      return [false, 'the UPS check digit does not match the rest of the number'];
+    }
+    return [true, null];
+  }
   const [, service, serial, digit] = match;
   if (RESERVED.has(service[0])) return [false, 'reserved'];
   if (checkDigit(serial) !== Number(digit)) {
