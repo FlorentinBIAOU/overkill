@@ -1,0 +1,94 @@
+---
+id: validate-an-imported-file-against-a-schema
+family: decide-validate
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Valider un fichier importé contre un schéma"
+  en: "Validate an imported file against a schema"
+
+need:
+  fr: "Vérifier qu’un fichier JSON reçu d’un partenaire respecte le contrat convenu, et dire précisément ce qui ne va pas."
+  en: "Check that a JSON file received from a partner follows the agreed contract, and say exactly what is wrong with it."
+
+scenario:
+  fr: "On voit des chaînes d’import confier un fichier reçu à un modèle généraliste, avec la consigne de « vérifier qu’il est bien formé ». Le contrat existe pourtant déjà sous une forme exécutable : JSON Schema est une norme publiée, un validateur l’applique, et chaque échec revient avec le chemin de la valeur et le nom de la règle enfreinte. La difficulté n’est pas de valider, c’est d’écrire le schéma — et c’est précisément le travail qu’un appel de modèle ne fait pas à votre place."
+  en: "Import pipelines are routinely seen handing a received file to a general-purpose model with instructions to “check it is well-formed”. The contract already exists in executable form, though: JSON Schema is a published standard, a validator applies it, and every failure comes back with the path of the value and the name of the rule it broke. The hard part is not validating, it is writing the schema — and that is exactly the work a model call does not do for you."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "JSON Schema 2020-12, formats assertés, toutes les erreurs rendues"
+      en: "JSON Schema 2020-12, formats asserted, every error returned"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le fichier est lu dans votre processus et n’est transmis à personne"
+          - "Le rapport d’erreurs porte les valeurs refusées : ce qu’il journalise est ce que contenait le fichier"
+        en:
+          - "No specific scope added: the file is read inside your own process and is sent to nobody"
+          - "The error report carries the refused values: what it logs is what the file held"
+    code:
+      python: snippets/validate-an-imported-file-against-a-schema/n0.py
+      javascript: snippets/validate-an-imported-file-against-a-schema/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Un nombre JSON est un flottant binaire, et « multipleOf: 0.01 » — la façon naturelle d’écrire un montant en euros et centimes — refuse 1 363 des 10 000 montants de 0,00 à 99,99, dont 19,99, 4,35 et 1 234,56. Le témoin est dans le même test : les mêmes 10 000 valeurs, écrites en centimes entiers, passent toutes."
+      en: "A JSON number is a binary float, and “multipleOf: 0.01” — the natural way to write an amount in euros and cents — refuses 1,363 of the 10,000 amounts from 0.00 to 99.99, among them 19.99, 4.35 and 1,234.56. The witness is in the same test: those same 10,000 values, written as whole numbers of cents, all pass."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où la règle à vérifier n’est plus dans le fichier — ce SIREN existe-t-il, ce client est-il à jour de ses paiements —, ce n’est plus une validation de schéma, c’est une consultation."
+      en: "There is no level above this one. The day the rule to check is no longer in the file — does this company number exist, is this customer up to date on payments — it is no longer schema validation, it is a lookup."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : le schéma est le savoir, écrit à la main parce que c’est un accord entre deux parties, et le validateur ne fait que l’appliquer. Un modèle classique entraîné sur des fichiers étiquetés valides ou non apprendrait la forme des fichiers que vous avez déjà reçus, ce qui est l’inverse du besoin : un contrat sert justement à refuser ce qu’on n’a jamais vu."
+      en: "There is nothing to learn: the schema is the knowledge, written by hand because it is an agreement between two parties, and the validator only applies it. A classic model trained on files labelled valid or not would learn the shape of the files you have already received, which is the opposite of the need: a contract exists precisely to refuse what you have never seen."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, et une objection de forme : ce niveau doit rendre un chemin exact — « /4321/montant » — et le nom d’une règle, parce que c’est ce qu’un opérateur corrige. Un petit modèle spécialisé rend un score sur un document, pas une adresse dans ce document, et il faudrait de toute façon écrire le schéma pour savoir sur quoi l’entraîner."
+      en: "The same argument, with an objection about shape: this level has to return an exact path — “/4321/montant” — and the name of a rule, because that is what an operator fixes. A small specialised model returns a score over a document, not an address inside it, and you would have to write the schema anyway to know what to train it on."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un modèle généraliste sait lire un schéma et un document, et il rendra un avis vraisemblable sur leur accord. Ce que la fiche lui reproche est ailleurs : il faudrait lui envoyer le fichier — des données d’un partenaire, souvent personnelles —, payer un appel par enregistrement sur des lots de dizaines de milliers de lignes, et accepter que deux passages sur le même fichier puissent ne pas rendre la même liste d’erreurs. Le validateur, lui, est le même programme que celui du partenaire qui a produit le fichier."
+      en: "A general-purpose model can read a schema and a document, and it will return a plausible opinion on whether they agree. What this entry holds against it is elsewhere: you would have to send it the file — a partner’s data, often personal — pay one call per record across batches of tens of thousands of rows, and accept that two passes over the same file may not return the same list of errors. The validator, meanwhile, is the same program the partner who produced the file ran."
+
+verdict_rationale:
+  fr: "N0, parce que le contrat est déjà exécutable et que le validateur est le même des deux côtés de l’échange. Trois choses valent d’être copiées de l’extrait, parce qu’aucune n’est le réglage par défaut : les formats sont assertés — sinon `jsonschema` accepte « 2026-02-30 » sans un mot, et `ajv` refuse de compiler le schéma —, toutes les erreurs sont collectées et non la première, et le schéma compilé est gardé, ce qui divise le temps par cinquante-cinq en Python et par six mille en JavaScript sur la mesure de la fiche. Le point de rupture n’est pas dans le validateur mais dans le modèle de données : un montant décimal ne s’exprime pas dans un flottant binaire, et il s’écrit en centimes entiers."
+  en: "N0, because the contract is already executable and the validator is the same program on both sides of the exchange. Three things in the snippet are worth copying, because none of them is the default: formats are asserted — otherwise jsonschema accepts 2026-02-30 without a word, and ajv refuses to compile the schema — every error is collected rather than the first, and the compiled schema is kept, which divides the time by fifty-five in Python and by six thousand in JavaScript on this entry’s measurement. The breaking point is not in the validator but in the data model: a decimal amount has no exact form in a binary float, and it is written as a whole number of cents."
+
+further_reading:
+  - label: "JSON Schema — la spécification 2020-12 et son vocabulaire de validation"
+    url: "https://json-schema.org/draft/2020-12/json-schema-validation"
+  - label: "jsonschema — la bibliothèque Python"
+    url: "https://python-jsonschema.readthedocs.io/"
+  - label: "ajv — la bibliothèque JavaScript, et ses points d’entrée par dialecte"
+    url: "https://ajv.js.org/json-schema.html"
+  - label: "RFC 6901 — JSON Pointer, la façon de nommer une valeur dans un document"
+    url: "https://www.rfc-editor.org/rfc/rfc6901"
+
+sources:
+  - label: "JSON Schema 2020-12, section 7 (consultée) : « format » est un mot-clé d’annotation par défaut, et son assertion est laissée à l’implémentation"
+    url: "https://json-schema.org/draft/2020-12/json-schema-validation"
+  - label: "jsonschema sur PyPI (consulté) : version 4.26.0, publiée le 7 janvier 2026, licence MIT"
+    url: "https://pypi.org/project/jsonschema/"
+  - label: "ajv, documentation des dialectes (consultée) : le point d’entrée par défaut est draft-07, et le dialecte 2020-12 s’importe depuis « ajv/dist/2020 »"
+    url: "https://ajv.js.org/json-schema.html"
+  - label: "ajv-formats sur npm (consulté) : version 3.0.1, publiée le 30 mars 2024, licence MIT ; c’est le paquet qui enregistre « date », « email » et les autres"
+    url: "https://github.com/ajv-validator/ajv-formats"
+---

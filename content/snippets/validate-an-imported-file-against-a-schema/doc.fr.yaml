@@ -1,0 +1,61 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Valider un document importé contre le schéma qu'il est censé suivre.
+
+  Niveau N0. JSON Schema est une norme publiée, et un validateur est un
+  programme qui l'applique : chaque échec revient avec l'endroit où il s'est
+  produit et la règle qu'il a enfreinte. Il n'y a rien à deviner et rien à
+  apprendre — un schéma est le contrat, écrit une fois, et le même document se
+  valide toujours de la même façon.
+
+  `jsonschema` l'applique ici, `ajv` en JavaScript. Deux choses qu'ils font tous les
+  deux et qui surprennent, et que ce fichier règle au lieu d'en hériter.
+
+  `format` est une annotation, pas une assertion. Les deux bibliothèques y
+  réagissent différemment, et les deux réactions surprennent quelqu'un :
+  `jsonschema` accepte « 12/01/2026 » et « 2026-02-30 » contre
+  `"format": "date"` sans un mot, tandis qu'`ajv` refuse purement et simplement
+  de compiler le schéma tant que les formats ne sont pas enregistrés. Les
+  enregistrer, plus bas, est ce qui met les deux d'accord — et fait refuser ces
+  deux dates aux deux.
+
+  Et un validateur s'arrête au premier échec tant qu'on ne lui dit pas le
+  contraire. Un import se vérifie une fois et se corrige une fois : toutes les
+  erreurs sont donc collectées, plafonnées, et le rapport dit combien ont été
+  laissées de côté plutôt que de faire comme s'il n'y en avait pas.
+
+  Ce qui revient, c'est un chemin et un nom de règle par échec. La formulation
+  du message appartient à la bibliothèque et diffère entre les deux ; le chemin
+  et la règle sont ce sur quoi votre code doit se brancher.
+
+n0.js: |
+  Valider un document importé contre le schéma qu'il est censé suivre.
+
+  Niveau N0. JSON Schema est une norme publiée, et un validateur est un
+  programme qui l'applique : chaque échec revient avec l'endroit où il s'est
+  produit et la règle qu'il a enfreinte. Il n'y a rien à deviner et rien à
+  apprendre — un schéma est le contrat, écrit une fois, et le même document se
+  valide toujours de la même façon.
+
+  `ajv` l'applique ici, `jsonschema` en Python. Deux choses qu'ils font tous les
+  deux et qui surprennent, et que ce fichier règle au lieu d'en hériter.
+
+  `format` est une annotation, pas une assertion. Les deux bibliothèques y
+  réagissent différemment, et les deux réactions surprennent quelqu'un :
+  `jsonschema` accepte « 12/01/2026 » et « 2026-02-30 » contre
+  `"format": "date"` sans un mot, tandis qu'`ajv` refuse purement et simplement
+  de compiler le schéma tant que les formats ne sont pas enregistrés. Les
+  enregistrer, plus bas, est ce qui met les deux d'accord — et fait refuser ces
+  deux dates aux deux.
+
+  Et un validateur s'arrête au premier échec tant qu'on ne lui dit pas le
+  contraire. Un import se vérifie une fois et se corrige une fois : toutes les
+  erreurs sont donc collectées, plafonnées, et le rapport dit combien ont été
+  laissées de côté plutôt que de faire comme s'il n'y en avait pas.
+
+  Ce qui revient, c'est un chemin et un nom de règle par échec. La formulation
+  du message appartient à la bibliothèque et diffère entre les deux ; le chemin
+  et la règle sont ce sur quoi votre code doit se brancher.
