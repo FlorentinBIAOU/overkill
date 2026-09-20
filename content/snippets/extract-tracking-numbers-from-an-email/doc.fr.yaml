@@ -1,0 +1,27 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Les références de colis qu'un e-mail porte, et ce que chacune vaut.
+
+  Niveau N0. Un numéro de suivi n'est pas du texte libre : c'est un
+  identifiant dont une norme fixe la forme, et la norme internationale — UPU
+  S10, employée par tous les opérateurs postaux et donc par Colissimo et
+  Chronopost — y met un chiffre de contrôle. Deux lettres, huit chiffres, un
+  chiffre de contrôle, deux lettres de pays : le onzième caractère se calcule à
+  partir des huit précédents, et un numéro dont un chiffre est faux échoue.
+  C'est la différence entre trouver un candidat et identifier une référence.
+
+  Tout le reste est une forme. « 1Z » suivi de seize caractères est un numéro
+  UPS, et ce préfixe est assez distinctif pour valoir la peine d'être rendu ;
+  dix chiffres nus, c'est la forme d'une lettre de transport DHL Express, et
+  c'est aussi celle d'un numéro de commande, d'un numéro de client et d'un
+  numéro de téléphone sans son zéro initial. Ces familles sont déclarées et
+  nommées, mais elles ne sont pas cherchées si l'appelant ne le demande pas :
+  un niveau qui rend tous les nombres à dix chiffres d'un e-mail comme des
+  références de colis est pire qu'un niveau qui ne rend rien.
+
+  Ce qui revient dit donc trois choses : ce qui a été trouvé, de quelle famille
+  cela relève, et si quelque chose a réellement été vérifié. Un candidat n'est
+  jamais rendu comme une identification.

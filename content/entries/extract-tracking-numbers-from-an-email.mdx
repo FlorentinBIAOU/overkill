@@ -1,0 +1,90 @@
+---
+id: extract-tracking-numbers-from-an-email
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Repérer un numéro de suivi dans un e-mail"
+  en: "Spot a tracking number in an email"
+
+need:
+  fr: "Retrouver la référence de colis dans une confirmation d’expédition et savoir de quel transporteur elle relève."
+  en: "Find the parcel reference in a shipping confirmation and tell which carrier it belongs to."
+
+scenario:
+  fr: "On voit envoyer chaque confirmation d’expédition à un modèle pour qu’il en sorte « le numéro de suivi ». Un numéro de suivi est pourtant un identifiant, pas une notion : la norme internationale des opérateurs postaux en fixe la forme et y met un chiffre de contrôle, si bien qu’on peut vérifier un numéro sans interroger personne. La vraie question n’est donc pas de le trouver, c’est de savoir ce qu’on a trouvé — un identifiant vérifié, ou une suite de chiffres qui ressemble à tout le reste du message."
+  en: "Sending every shipping confirmation to a model to get “the tracking number” out of it is a common sight. But a tracking number is an identifier, not a notion: the postal operators’ international standard fixes its shape and puts a check digit in it, so a number can be verified without asking anyone. So the real question is not finding it, it is knowing what was found — a verified identifier, or a run of digits that looks like everything else in the message."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "La forme de la norme, et son chiffre de contrôle quand elle en a un"
+      en: "The standard’s shape, and its check digit where there is one"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le message est lu dans votre processus et aucun transporteur n’est interrogé"
+          - "Un numéro de suivi relie une adresse de livraison à une personne : ce niveau est celui qui garde ce lien chez vous"
+        en:
+          - "No specific scope added: the message is read inside your own process and no carrier is queried"
+          - "A tracking number ties a delivery address to a person: this is the level that keeps that link at home"
+    code:
+      python: snippets/extract-tracking-numbers-from-an-email/n0.py
+      javascript: snippets/extract-tracking-numbers-from-an-email/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une famille qui ne porte pas de chiffre de contrôle attrape tout ce qui a sa forme : dans le test, demander la famille « dix chiffres » — celle des lettres de transport DHL Express — rend aussi le numéro de commande et le numéro de téléphone du même message, et rien dans le nombre lui-même ne permet de les départager. C’est pourquoi cette famille n’est pas cherchée par défaut. Le témoin est dans le même test : le numéro postal de la même ligne revient vérifié, et le même numéro avec un chiffre recopié de travers revient refusé, avec sa raison."
+      en: "A family that carries no check digit catches everything with its shape: in the test, asking for the “ten digits” family — the shape of a DHL Express air waybill — also returns the order number and the phone number of the same message, and nothing in the number itself can tell them apart. That is why that family is not searched by default. The witness is in the same test: the postal number on the same line comes back verified, and the same number with one digit copied wrong comes back refused, with its reason."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus qui ait un sens ici. Quand vous avez besoin de savoir où est le colis, et non de quel numéro il s’agit, la suite n’est pas un modèle : c’est l’interface de suivi du transporteur, appelée avec le numéro que ce niveau a vérifié."
+      en: "There is no level above this one that means anything here. When you need to know where the parcel is, rather than which number it is, what follows is not a model: it is the carrier’s tracking interface, called with the number this level verified."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : la forme est publiée, et le chiffre de contrôle est une multiplication par huit poids suivie d’un reste. Un classifieur appris sur des e-mails annotés retrouverait les formes qu’il a vues et se tromperait sur celles qu’il n’a pas vues, sans jamais pouvoir dire ce que le chiffre de contrôle dit : que ce numéro-là n’a pas été abîmé en le recopiant."
+      en: "There is nothing to learn: the shape is published, and the check digit is a multiplication by eight weights followed by a remainder. A classifier trained on annotated emails would recover the shapes it has seen and be wrong about the ones it has not, without ever being able to say what the check digit says: that this particular number was not damaged in the copying."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec le budget en plus. Le travail se compte en microsecondes par message, sur des boîtes qui en reçoivent des milliers par jour ; un modèle résident coûterait des ordres de grandeur de plus pour une réponse moins vérifiable que huit multiplications."
+      en: "The same argument, with budget on top. The work is measured in microseconds per message, over mailboxes receiving thousands a day; a resident model would cost orders of magnitude more for an answer less checkable than eight multiplications."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Un appel de modèle par message pour lire un identifiant dont la norme est publique est la sur-ingénierie que ce site existe pour nommer. Et la sortie de données porte ici sur une correspondance qui relie un nom, une adresse de livraison et une commande — le genre de message qu’on ne transmet pas à un tiers pour lui faire lire treize caractères qu’un test de deux lignes vérifie."
+      en: "One model call per message to read an identifier whose standard is public is the over-engineering this site exists to name. And the data egress here covers correspondence that ties a name, a delivery address and an order — the kind of message you do not hand to a third party to have it read thirteen characters a two-line test verifies."
+
+verdict_rationale:
+  fr: "N0, parce que la norme UPU S10 fixe la forme et le calcul : le onzième caractère se déduit des huit chiffres qui le précèdent, par une somme pondérée par 8, 6, 4, 2, 3, 5, 9, 7 et un reste modulo onze. L’extrait reproduit l’exemple que la norme donne elle-même, et le test mesure ce que ce contrôle vaut : sur les soixante-douze substitutions d’un chiffre et les sept transpositions de deux chiffres voisins du numéro d’exemple, aucune ne passe. Le reste de la fiche est une discipline de vocabulaire. Une famille sans chiffre de contrôle est une forme, pas une identification, et le rapport le dit à chaque ligne ; les familles qui n’ont rien à vérifier ne sont pas cherchées si l’appelant ne les demande pas ; et les indicatifs de service que la norme réserve — JA à JZ, KA à KZ, SA à SZ, TA à TZ, WA à WZ — ne sont pas des numéros, quelle que soit leur allure."
+  en: "N0, because the UPU S10 standard fixes both the shape and the arithmetic: the eleventh character follows from the eight digits before it, by a sum weighted 8, 6, 4, 2, 3, 5, 9, 7 and a remainder modulo eleven. The snippet reproduces the worked example the standard itself gives, and the test measures what that check is worth: over the seventy-two single-digit substitutions and the seven adjacent transpositions of the example number, none gets through. The rest of this entry is discipline about words. A family with no check digit is a shape, not an identification, and the report says so on every line; the families with nothing to verify are not searched unless the caller asks for them; and the service indicators the standard reserves — JA to JZ, KA to KZ, SA to SZ, TA to TZ, WA to WZ — are not numbers, whatever they look like."
+
+further_reading:
+  - label: "UPU S10 — la norme des identifiants postaux, et son chiffre de contrôle"
+    url: "https://www.upu.int/en/universal-postal-union/activities/standards"
+  - label: "Vérifier un numéro d’identification d’entreprise — la fiche voisine, sur un autre chiffre de contrôle"
+    url: "https://isitoverkill.dev/fr/fiches/check-a-company-identification-number"
+  - label: "Vérifier des coordonnées bancaires avant un virement — la même idée sur un IBAN"
+    url: "https://isitoverkill.dev/fr/fiches/check-bank-details-before-a-transfer"
+
+sources:
+  - label: "UPU S10-12, section 5.4 (consultée) : « the 11th character is a check digit calculated in accordance with the following algorithm, called weighted modulus 11 » — les facteurs 8 6 4 2 3 5 9 7, le reste soustrait de onze, 10 rendu 0 et 11 rendu 5, et l’exemple du numéro de série 47312482 dont le chiffre de contrôle est 9"
+    url: "https://www.upu.int/UPU/media/upu/files/postalSolutions/programmesAndServices/standards/S10-12.pdf"
+  - label: "UPU S10-12, section 5.2 (consultée) : « character combinations JA–JZ; KA–KZ; SA–SZ; TA–TZ and WA–WZ are reserved and cannot be assigned as valid service indicator values »"
+    url: "https://www.upu.int/UPU/media/upu/files/postalSolutions/programmesAndServices/standards/S10-12.pdf"
+  - label: "UPU, page des normes (consultée) : S10 est la norme qui définit l’identifiant à treize caractères employé par les opérateurs postaux"
+    url: "https://www.upu.int/en/universal-postal-union/activities/standards"
+---
