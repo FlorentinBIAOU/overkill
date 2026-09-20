@@ -1,0 +1,29 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Ce qu'un appel de modèle coûtera, avant de le faire, à partir de vos chiffres.
+
+  Niveau N0. Un fournisseur facture des jetons, publie un prix par million
+  d'entre eux, et l'arithmétique entre les deux est une multiplication. Ce qui
+  vaut une fiche n'est pas la multiplication : c'est tout ce que ce code refuse
+  de deviner.
+
+  Il ne nomme jamais un prix. Les tarifs changent tous les trimestres et
+  diffèrent selon le modèle, la région et le contrat ; les deux prix sont des
+  paramètres, et tout montant rendu est dans l'unité dans laquelle vous les
+  avez passés. Un extrait qui porterait un prix serait faux avant d'être lu.
+
+  Il dit si les jetons ont été comptés ou estimés. Les compter demande le
+  tokeniseur de votre fournisseur ; les estimer depuis un nombre de caractères
+  demande un rapport, et un rapport n'est pas une constante de la nature : il
+  dépend de la langue, de la ponctuation, du fait que le texte soit de la prose
+  ou du JSON. Les deux sont permis ici, et le rapport dit lequel a servi, parce
+  qu'une estimation présentée comme un comptage est exactement la faute que
+  cette fiche existe pour éviter.
+
+  Et il répond à la question qui tranche : `break_even_items` est le nombre
+  d'appels à partir duquel la facture atteint le coût unique de ce que l'appel
+  remplacerait. C'est ce nombre-là, et non le prix par million, qui dit si
+  l'appel vaut la peine.

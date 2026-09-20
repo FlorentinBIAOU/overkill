@@ -1,0 +1,94 @@
+---
+id: estimate-the-cost-of-a-model-call
+family: decide-validate
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Estimer le coût d’un appel de modèle"
+  en: "Estimate the cost of a model call"
+
+need:
+  fr: "Savoir, avant d’appeler, ce qu’un traitement coûtera en jetons et donc en facture, pour le comparer à ce qu’il remplace."
+  en: "Know, before calling, what a job will cost in tokens and so on the bill, to compare it with what it replaces."
+
+scenario:
+  fr: "On voit lancer un traitement sur un fonds entier et découvrir la facture à la fin du mois. Le calcul se fait pourtant d’avance : le fournisseur publie un prix par million de jetons, le tokeniseur est déterministe, et la multiplication n’a rien de mystérieux. Ce qui manque n’est pas l’arithmétique, c’est la comparaison — le coût par appel ne veut rien dire tant qu’on ne l’a pas mis en face du coût unique de ce que l’appel remplacerait. C’est ce nombre-là que cette fiche rend, et c’est celui qui tranche."
+  en: "Launching a job over a whole corpus and discovering the bill at the end of the month is a common sight. But the arithmetic can be done beforehand: the provider publishes a price per million tokens, the tokeniser is deterministic, and the multiplication holds no mystery. What is missing is not the arithmetic, it is the comparison — the cost per call means nothing until it is set against the one-off cost of whatever the call would replace. That is the number this entry returns, and it is the one that decides."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "La multiplication, faite sur vos chiffres, avec le seuil de bascule"
+      en: "The multiplication, done on your figures, with the break-even count"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le calcul se fait chez vous, et rien n’est envoyé au fournisseur"
+          - "Compter les jetons d’un document avec le tokeniseur du fournisseur se fait aussi chez vous ; c’est l’appel lui-même qui fait sortir les données, pas le comptage"
+        en:
+          - "No specific scope added: the arithmetic happens on your machine, and nothing is sent to the provider"
+          - "Counting a document’s tokens with the provider’s tokeniser also happens on your machine; it is the call itself that sends the data out, not the counting"
+    code:
+      python: snippets/estimate-the-cost-of-a-model-call/n0.py
+      javascript: snippets/estimate-the-cost-of-a-model-call/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une estimation vaut ce que vaut le rapport qu’on a déclaré, et le code ne peut pas le vérifier : dans le test, les mêmes 4 800 caractères estimés à quatre caractères par jeton font 1 200 jetons, et à deux caractères et demi, 1 920 — les deux rapports sont plausibles, l’un pour de l’anglais courant, l’autre pour du texte accentué ou du JSON. Le témoin est dans le même test : le rapport rendu dit toujours si les jetons ont été comptés ou estimés, et la seule façon de sortir de l’incertitude est de compter avec le tokeniseur du fournisseur et de passer le nombre obtenu."
+      en: "An estimate is worth what the declared ratio is worth, and the code cannot check it: in the test, the same 4,800 characters estimated at four characters per token make 1,200 tokens, and at two and a half, 1,920 — both ratios are plausible, one for ordinary English, the other for accented text or JSON. The witness is in the same test: the report always says whether the tokens were counted or estimated, and the only way out of the uncertainty is to count with the provider’s tokeniser and pass the number obtained."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus, et ce serait une plaisanterie : la seule chose qui manque à ce calcul est le nombre exact de jetons, et ce nombre s’obtient avec le tokeniseur du fournisseur, sur votre machine, sans appeler personne."
+      en: "There is no level above this one, and it would be a joke: the only thing this arithmetic lacks is the exact token count, and that number comes from the provider’s tokeniser, on your machine, without calling anyone."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : une facture est une multiplication, et le seul terme incertain — le nombre de jetons — se compte exactement avec l’outil que le fournisseur publie. Un modèle appris à prédire un nombre de jetons approcherait ce qu’un tokeniseur donne exactement, et il faudrait le réentraîner à chaque changement de tokeniseur."
+      en: "There is nothing to learn: a bill is a multiplication, and the only uncertain term — the number of tokens — is counted exactly with the tool the provider publishes. A model trained to predict a token count would approximate what a tokeniser gives exactly, and it would have to be retrained at every change of tokeniser."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument. Le tokeniseur n’est pas un modèle : c’est une table de fusions de sous-mots et un parcours de texte, qui tient dans quelques mégaoctets et tourne en quelques millisecondes. Il n’y a pas de niveau à ouvrir au-dessus d’un compte exact."
+      en: "The same argument. A tokeniser is not a model: it is a table of subword merges and a pass over the text, which fits in a few megabytes and runs in milliseconds. There is no level to open above an exact count."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Demander à un modèle ce que coûtera un appel de modèle est le point d’orgue de ce site : la question se paie elle-même, la réponse n’est pas vérifiable sans faire le calcul, et les tarifs qu’un modèle a appris datent de son entraînement. Ce sont ceux d’il y a six mois, et personne ne saura lesquels."
+      en: "Asking a model what a model call will cost is this site’s closing joke: the question bills itself, the answer cannot be checked without doing the arithmetic, and the prices a model learned date from its training. They are the prices of six months ago, and nobody will know which ones."
+
+verdict_rationale:
+  fr: "N0, évidemment, et l’intérêt de la fiche est dans ce que le code s’interdit. Il ne porte aucun prix : les tarifs changent tous les trimestres et diffèrent selon le modèle, la région et le contrat, si bien qu’un chiffre écrit ici serait faux avant d’être lu. Les deux prix sont des paramètres, tous les montants rendus sont dans l’unité que l’appelant leur a donnée, et un test relit le fichier pour vérifier qu’aucun symbole monétaire ni aucun code de devise n’y figure. Il ne passe par aucun flottant : les montants sont des entiers mis à l’échelle, rendus en chaînes de chiffres, et la règle d’arrondi est annoncée — c’est la même discipline que la fiche voisine sur la somme d’une colonne. Il dit si les jetons ont été comptés ou estimés, parce qu’une estimation présentée comme un comptage est exactement la faute que la fiche existe pour éviter. Et il rend le seuil de bascule : le nombre d’appels à partir duquel la facture atteint le coût unique de ce que l’appel remplace. Ce nombre est la question de ce site tout entier, réduite à une division."
+  en: "N0, of course, and what makes this entry worth reading is what the code refuses to do. It carries no price: tariffs change every quarter and differ by model, region and contract, so a figure written here would be wrong before it was read. The two prices are parameters, every amount returned is in the unit the caller gave them, and a test reads the file back to check that no currency symbol or currency code appears in it. It goes through no float: amounts are scaled integers, returned as strings of digits, and the rounding rule is stated — the same discipline as the neighbouring entry on summing a column. It says whether the tokens were counted or estimated, because an estimate presented as a count is exactly the mistake this entry exists to avoid. And it returns the break-even count: the number of calls at which the bill reaches the one-off cost of what the call replaces. That number is this whole site’s question, reduced to a division."
+
+further_reading:
+  - label: "tiktoken — le tokeniseur d’OpenAI, à exécuter chez vous pour compter exactement"
+    url: "https://github.com/openai/tiktoken"
+  - label: "gpt-tokenizer — l’équivalent en JavaScript, dont les tables sont dans le paquet"
+    url: "https://github.com/niieani/gpt-tokenizer"
+  - label: "Faire la somme ou la moyenne d’une colonne — la fiche voisine, même discipline arithmétique"
+    url: "https://isitoverkill.dev/fr/fiches/aggregate-a-column-of-data"
+  - label: "La méthodologie du site — ce que l’échelle à quatre niveaux compare, et pourquoi le seuil de bascule la résume"
+    url: "https://isitoverkill.dev/fr/methodologie"
+
+sources:
+  - label: "tiktoken sur PyPI (consulté) : version 0.14.0, publiée le 17 août 2026, licence MIT"
+    url: "https://pypi.org/project/tiktoken/"
+  - label: "tiktoken, `tiktoken/load.py` et `tiktoken_ext/openai_public.py` (consultés) : les tables d’encodage sont téléchargées depuis une adresse https au premier usage, et mises en cache dans le dossier que désigne `TIKTOKEN_CACHE_DIR` — c’est une condition d’exploitation, pas un détail"
+    url: "https://github.com/openai/tiktoken/blob/main/tiktoken/load.py"
+  - label: "gpt-tokenizer sur son dépôt (consulté) : version 4.0.0, publiée le 16 août 2026, licence MIT, aucune dépendance ; les tables sont livrées avec le paquet, ce qui permet de compter hors ligne"
+    url: "https://github.com/niieani/gpt-tokenizer"
+  - label: "js-tiktoken sur son dépôt (consulté) : version 1.0.21, publiée le 9 août 2025, licence MIT ; c’est l’autre portage JavaScript du tokeniseur"
+    url: "https://github.com/dqbd/tiktoken"
+---
