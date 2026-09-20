@@ -26,6 +26,15 @@ const ARTICLE = `<!doctype html><html lang="fr"><head><title>${TITRE}</title></h
 const APPLICATION = '<!doctype html><html lang="fr"><head><title>Application</title></head>'
   + '<body><div id="root"></div><script src="/app.js"></script></body></html>';
 
+// Une brève de presse, servie en HTML statique : un titre et une phrase. Elle
+// est l'entrée qui a fait tomber cette fiche à la relecture — l'extraction y
+// réussit parfaitement, et le rapport annonçait qu'il n'y avait rien à prendre.
+const BREVE = '<!doctype html><html lang="fr"><head><title>Grève à la SNCF</title></head><body>'
+  + '<nav>Accueil Trafic</nav><article><h1>Grève à la SNCF</h1>'
+  + '<p>Le trafic sera perturbé jeudi sur les lignes du sud-ouest, et la direction'
+  + ' annonce un train sur deux en gare.</p>'
+  + '</article><footer>Mentions légales</footer></body></html>';
+
 // Une page qui n'est pas un article : une liste de liens.
 const CATEGORIE = '<!doctype html><html><head><title>Boulangeries</title></head><body><ul>'
   + Array.from({ length: 40 }, (unused, i) => `<li><a href="/a${i}">Boulangerie numéro ${i}</a></li>`).join('')
@@ -40,7 +49,7 @@ test("point de rupture : une page construite par son JavaScript n'a rien à extr
   assert.equal(rapport.characters, 0);
   assert.equal(
     rapport.reason,
-    'almost nothing was extracted: this page may be built by its own JavaScript',
+    'nothing was extracted: this page may be built by its own JavaScript',
   );
   assert.ok(APPLICATION.includes('app.js'));
 });
@@ -82,16 +91,54 @@ test("les commentaires des lecteurs ne font pas partie de l'article", () => {
   assert.ok(avec.includes('brioche'));
 });
 
+test("une page courte et une page vide ne reçoivent pas la même raison", () => {
+  // Docstring : « Nothing at all came out — the page is a shell […] Or
+  // something came out and it is short, in which case the reason says how
+  // short, and nothing else: a short page is a short page, not a broken one. »
+  //
+  // C'est l'entrée qui a fait tomber cette fiche : une brève de presse servie
+  // en HTML statique, extraite parfaitement, et déclarée « construite par son
+  // JavaScript ».
+  const breve = readArticle(BREVE);
+  assert.equal(breve.title, 'Grève à la SNCF');
+  assert.ok(breve.text.startsWith('Le trafic sera perturbé jeudi'));
+  assert.ok(breve.text.endsWith('un train sur deux en gare.'));
+  // `Readability` met le titre dans `title` et non dans le corps, là où
+  // `trafilatura` le garde dans le texte : cent neuf caractères ici, cent
+  // vingt-cinq en Python. C'est la divergence que la docstring annonce.
+  assert.equal(breve.characters, 109);
+  assert.equal(breve.reason, 'this page is short: 109 characters');
+  // Et l'autre situation, qui n'est pas celle-là, garde son diagnostic.
+  assert.equal(
+    readArticle(APPLICATION).reason,
+    'nothing was extracted: this page may be built by its own JavaScript',
+  );
+  assert.ok(breve.characters < MIN_CHARACTERS);
+  assert.ok(BREVE.includes('un train sur deux en gare'));
+});
+
+test('la part de liens est une part', () => {
+  // Docstring de `linkShare` : « Both sides are stripped, and the result is
+  // capped at one […] a share above one is not a share. »
+  const imbrique = '<html><head><title>t</title></head><body>'
+    + '<a href="/a"><a href="/b">Boulangerie Martin</a></a></body></html>';
+  assert.equal(readArticle(imbrique).reason, 'this page is a list of links, not an article');
+  assert.equal(readArticle(ARTICLE).reason, null);
+});
+
 test('le plancher est réglable et son effet est visible', () => {
   assert.notEqual(readArticle(ARTICLE, { minCharacters: 10_000 }).reason, null);
   assert.equal(readArticle(ARTICLE, { minCharacters: 1 }).reason, null);
 });
 
-test('aucune entrée ne lève', () => {
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(readArticle(null).reason, 'expected HTML, not null');
+  assert.equal(readArticle(0).reason, 'expected HTML, not number');
   for (const entree of [null, undefined, 0, 4.2, [], {}, Symbol('x')]) {
     const rapport = readArticle(entree);
     assert.equal(rapport.text, '');
-    assert.equal(typeof rapport.reason, 'string');
+    assert.ok(rapport.reason.startsWith('expected HTML, not '));
   }
 });
 
@@ -131,12 +178,26 @@ test('production : encodages inattendus', () => {
 });
 
 test('production : valeurs aux limites', () => {
-  const corps = 'a'.repeat(MIN_CHARACTERS);
-  const page = `<html><head><title>t</title></head><body><article><p>${corps}</p></article></body></html>`;
-  const lu = readArticle(page);
-  assert.ok(lu.reason === null || lu.characters < MIN_CHARACTERS);
-  const court = page.replace(corps, 'a'.repeat(MIN_CHARACTERS - 1));
-  assert.notEqual(readArticle(court).reason, null);
+  // Exactement le plancher, un caractère en dessous, un au-dessus, et le cas
+  // vide. Chacun affirme sa raison, séparément : l'ancienne version reliait
+  // les deux branches par un « ou », ce qui la faisait passer quel que soit le
+  // comportement du code.
+  const page = (longueur) => '<html><head><title>t</title></head><body><article>'
+    + `<p>${'a'.repeat(longueur)}</p></article></body></html>`;
+
+  assert.deepEqual(readArticle(page(MIN_CHARACTERS - 1)), {
+    title: 't',
+    text: 'a'.repeat(MIN_CHARACTERS - 1),
+    characters: MIN_CHARACTERS - 1,
+    reason: `this page is short: ${MIN_CHARACTERS - 1} characters`,
+  });
+  const auSeuil = readArticle(page(MIN_CHARACTERS));
+  assert.deepEqual([auSeuil.characters, auSeuil.reason], [MIN_CHARACTERS, null]);
+  const auDessus = readArticle(page(MIN_CHARACTERS + 1));
+  assert.deepEqual([auDessus.characters, auDessus.reason], [MIN_CHARACTERS + 1, null]);
+  const vide = readArticle('<html><head><title>t</title></head><body></body></html>');
+  assert.equal(vide.characters, 0);
+  assert.equal(vide.reason, 'nothing was extracted: this page may be built by its own JavaScript');
 });
 
 test("production : une page illisible dans un lot n'empêche pas les autres", () => {

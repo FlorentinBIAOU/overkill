@@ -19,9 +19,12 @@ n0.py: |
   de l'article sont dedans, la navigation et le pied de page sont dehors.
 
   Deux choses que ce fichier ajoute. La première est le refus de rendre une
-  chaîne vide comme si c'était une réponse : une page dont le corps est
-  construit par son propre JavaScript arrive ici en coquille vide, et
-  « rien d'extrait » n'est pas la même chose que « cet article est court ».
+  chaîne vide comme si c'était une réponse, et de confondre deux situations en
+  le faisant. Une page dont le corps est construit par son propre JavaScript
+  arrive ici en coquille vide, et ce n'est pas la même chose qu'une brève de
+  presse de cent vingt-cinq caractères sortie entière. Les deux ont deux
+  raisons : l'une dit que rien n'est sorti, l'autre dit combien ce qui est
+  sorti est court, et ne dit rien de pourquoi.
 
   La seconde tranche un désaccord entre les deux bibliothèques. Sur une page de
   catégorie — quarante liens et rien d'autre —, `trafilatura` ne rend rien et
@@ -47,9 +50,12 @@ n0.js: |
   de l'article sont dedans, la navigation et le pied de page sont dehors.
 
   Deux choses que ce fichier ajoute. La première est le refus de rendre une
-  chaîne vide comme si c'était une réponse : une page dont le corps est
-  construit par son propre JavaScript arrive ici en coquille vide, et
-  « rien d'extrait » n'est pas la même chose que « cet article est court ».
+  chaîne vide comme si c'était une réponse, et de confondre deux situations en
+  le faisant. Une page dont le corps est construit par son propre JavaScript
+  arrive ici en coquille vide, et ce n'est pas la même chose qu'une brève de
+  presse de cent vingt-cinq caractères sortie entière. Les deux ont deux
+  raisons : l'une dit que rien n'est sorti, l'autre dit combien ce qui est
+  sorti est court, et ne dit rien de pourquoi.
 
   La seconde tranche un désaccord entre les deux bibliothèques. Sur une page de
   catégorie — quarante liens et rien d'autre —, `trafilatura` ne rend rien et

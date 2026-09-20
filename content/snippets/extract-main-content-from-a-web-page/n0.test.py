@@ -33,6 +33,15 @@ ARTICLE = (
 APPLICATION = ('<!doctype html><html lang="fr"><head><title>Application</title></head>'
                '<body><div id="root"></div><script src="/app.js"></script></body></html>')
 
+# Une brève de presse, servie en HTML statique : un titre et une phrase. Elle
+# est l'entrée qui a fait tomber cette fiche à la relecture — l'extraction y
+# réussit parfaitement, et le rapport annonçait qu'il n'y avait rien à prendre.
+BREVE = ('<!doctype html><html lang="fr"><head><title>Grève à la SNCF</title></head><body>'
+         '<nav>Accueil Trafic</nav><article><h1>Grève à la SNCF</h1>'
+         '<p>Le trafic sera perturbé jeudi sur les lignes du sud-ouest, et la direction'
+         ' annonce un train sur deux en gare.</p>'
+         '</article><footer>Mentions légales</footer></body></html>')
+
 # Une page qui n'est pas un article : une liste de liens.
 CATEGORIE = ('<!doctype html><html><head><title>Boulangeries</title></head><body><ul>'
              + "".join(f'<li><a href="/a{i}">Boulangerie numéro {i}</a></li>' for i in range(40))
@@ -53,7 +62,7 @@ def test_point_de_rupture_une_page_construite_par_son_javascript_na_rien_a_extra
     rapport = read_article(APPLICATION)
     assert rapport["characters"] == 0
     assert rapport["reason"] == (
-        "almost nothing was extracted: this page may be built by its own JavaScript")
+        "nothing was extracted: this page may be built by its own JavaScript")
     # La page n'est pas vide pour autant : elle porte son titre et son script.
     assert "app.js" in APPLICATION
 
@@ -116,17 +125,59 @@ def test_les_commentaires_des_lecteurs_ne_font_pas_partie_de_larticle():
     assert "brioche" in avec
 
 
+def test_une_page_courte_et_une_page_vide_ne_recoivent_pas_la_meme_raison():
+    """
+    Docstring : « Nothing at all came out — the page is a shell […] Or
+    something came out and it is short, in which case the reason says how
+    short, and nothing else: a short page is a short page, not a broken one. »
+
+    C'est l'entrée qui a fait tomber cette fiche : une brève de presse de cent
+    vingt-cinq caractères, servie en HTML statique, extraite parfaitement, et
+    déclarée « construite par son JavaScript ».
+    """
+    breve = read_article(BREVE)
+    assert breve["title"] == "Grève à la SNCF"
+    assert breve["text"].startswith("Grève à la SNCF\nLe trafic sera perturbé jeudi")
+    assert breve["text"].endswith("un train sur deux en gare.")
+    assert breve["characters"] == 125
+    assert breve["reason"] == "this page is short: 125 characters"
+    # Et l'autre situation, qui n'est pas celle-là, garde son diagnostic.
+    assert read_article(APPLICATION)["reason"] == (
+        "nothing was extracted: this page may be built by its own JavaScript")
+    # Témoin : la brève est bien plus courte que le plancher, et pourtant
+    # complète — la phrase de la page y est en entier.
+    assert breve["characters"] < MIN_CHARACTERS
+    assert "un train sur deux en gare" in BREVE
+
+
+def test_la_part_de_liens_est_une_part():
+    """
+    Docstring de `_link_share` : « Both sides are stripped, and the result is
+    capped at one […] a share above one is not a share. »
+    """
+    # Des liens imbriqués, ce qu'un analyseur permissif produit sur du HTML mal
+    # formé : le texte intérieur est compté deux fois.
+    imbrique = ('<html><head><title>t</title></head><body>'
+                '<a href="/a"><a href="/b">Boulangerie Martin</a></a></body></html>')
+    assert read_article(imbrique)["reason"] == "this page is a list of links, not an article"
+    # Témoin : un article ordinaire reste très en dessous du seuil.
+    assert read_article(ARTICLE)["reason"] is None
+
+
 def test_le_plancher_est_reglable_et_son_effet_est_visible():
     """R7 : ce que le réglage par défaut produit, et ce que le changer produit."""
     assert read_article(ARTICLE, min_characters=10_000)["reason"] is not None
     assert read_article(ARTICLE, min_characters=1)["reason"] is None
 
 
-def test_aucune_entree_ne_leve():
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """R14 : la raison dit ce que le code a constaté — le type reçu."""
+    assert read_article(None)["reason"] == "expected HTML, not NoneType"
+    assert read_article(b"<html>")["reason"] == "expected HTML, not bytes"
     for entree in [None, 0, 4.2, b"<html>", [], {}, object()]:
         rapport = read_article(entree)
         assert rapport["text"] == ""
-        assert isinstance(rapport["reason"], str)
+        assert rapport["reason"].startswith("expected HTML, not ")
 
 
 # ---------------------------------------------------------------------------
@@ -170,12 +221,28 @@ def test_production_encodages_inattendus():
 
 
 def test_production_valeurs_aux_limites():
-    # Exactement le plancher, juste en dessous.
-    corps = "a" * MIN_CHARACTERS
-    page = f"<html><head><title>t</title></head><body><article><p>{corps}</p></article></body></html>"
-    assert read_article(page)["reason"] is None or read_article(page)["characters"] < MIN_CHARACTERS
-    court = page.replace(corps, "a" * (MIN_CHARACTERS - 1))
-    assert read_article(court)["reason"] is not None
+    """
+    Exactement le plancher, un caractère en dessous, un au-dessus, et le cas
+    vide. Chacun affirme sa raison, séparément : l'ancienne version reliait les
+    deux branches par un « ou », ce qui la faisait passer quel que soit le
+    comportement du code.
+    """
+    def page(longueur: int) -> str:
+        corps = "a" * longueur
+        return (f"<html><head><title>t</title></head><body><article>"
+                f"<p>{corps}</p></article></body></html>")
+
+    assert read_article(page(MIN_CHARACTERS - 1)) == {
+        "title": "t", "text": "a" * (MIN_CHARACTERS - 1), "characters": MIN_CHARACTERS - 1,
+        "reason": f"this page is short: {MIN_CHARACTERS - 1} characters"}
+    au_seuil = read_article(page(MIN_CHARACTERS))
+    assert (au_seuil["characters"], au_seuil["reason"]) == (MIN_CHARACTERS, None)
+    au_dessus = read_article(page(MIN_CHARACTERS + 1))
+    assert (au_dessus["characters"], au_dessus["reason"]) == (MIN_CHARACTERS + 1, None)
+    # Et le zéro, qui est l'autre branche.
+    vide = read_article("<html><head><title>t</title></head><body></body></html>")
+    assert vide["characters"] == 0
+    assert vide["reason"] == "nothing was extracted: this page may be built by its own JavaScript"
 
 
 def test_production_une_page_illisible_dans_un_lot_nempeche_pas_les_autres():
