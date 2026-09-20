@@ -267,6 +267,22 @@
   need:
     fr: "Récupérer sous forme de lignes et de colonnes les tableaux d'un document conçu pour l'impression."
     en: "Recover, as rows and columns, the tables inside a document laid out for print."
+- id: extract-links-from-a-page
+  family: extract
+  title:
+    fr: "Récupérer les liens d'une page"
+    en: "Collect the links of a page"
+  need:
+    fr: "Lister les adresses citées dans une page ou un message, ramenées à des adresses absolues."
+    en: "List the addresses quoted in a page or a message, resolved to absolute ones."
+- id: extract-metadata-from-a-file
+  family: extract
+  title:
+    fr: "Lire les métadonnées d'un fichier"
+    en: "Read a file's metadata"
+  need:
+    fr: "Obtenir la date, l'auteur, les dimensions ou la position qu'un fichier transporte, avant de le publier ou de l'archiver."
+    en: "Get the date, the author, the dimensions or the position a file carries, before publishing or filing it."
 - id: extract-people-and-companies-from-an-article
   family: extract
   title:
@@ -331,6 +347,14 @@
   need:
     fr: "Transformer des lignes de journal hétérogènes en champs nommés pour pouvoir les filtrer et les compter."
     en: "Turn heterogeneous log lines into named fields so they can be filtered and counted."
+- id: extract-a-table-from-a-web-page
+  family: extract
+  title:
+    fr: "Transformer un tableau HTML en données"
+    en: "Turn an HTML table into data"
+  need:
+    fr: "Récupérer les lignes et les colonnes d'un tableau publié dans une page web, cellules fusionnées comprises."
+    en: "Get the rows and the columns of a table published in a web page, merged cells included."
 - id: extract-tracking-numbers-from-an-email
   family: extract
   title:
@@ -1201,6 +1225,22 @@
   need:
     fr: "Relever et corriger les fautes d'un texte avant publication, sans en changer le sens."
     en: "Find and fix the mistakes in a text before publication, without changing its meaning."
+- id: estimate-the-cost-of-a-model-call
+  family: decide-validate
+  title:
+    fr: "Estimer le coût d'un appel de modèle"
+    en: "Estimate the cost of a model call"
+  need:
+    fr: "Savoir, avant d'appeler, ce qu'un traitement coûtera en jetons et donc en facture, pour le comparer à ce qu'il remplace."
+    en: "Know, before calling, what a job will cost in tokens and so on the bill, to compare it with what it replaces."
+- id: aggregate-a-column-of-data
+  family: transform
+  title:
+    fr: "Faire la somme ou la moyenne d'une colonne"
+    en: "Sum or average a column of data"
+  need:
+    fr: "Additionner, compter ou moyenner une colonne d'un fichier, sans qu'une ligne illisible fausse le total en silence."
+    en: "Add up, count or average a column of a file, without one unreadable row quietly skewing the total."
 - id: flatten-nested-data-into-a-table
   family: transform
   title:
