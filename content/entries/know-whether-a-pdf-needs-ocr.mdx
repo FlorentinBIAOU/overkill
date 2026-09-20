@@ -1,0 +1,117 @@
+---
+id: know-whether-a-pdf-needs-ocr
+family: recognize-transcribe
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Savoir si un PDF a besoin d’OCR"
+  en: "Know whether a PDF needs OCR"
+
+need:
+  fr: "Décider, dans une pile de PDF, quelles pages envoyer à la reconnaissance de caractères et lesquelles se lisent déjà."
+  en: "Decide, across a pile of PDFs, which pages to send to character recognition and which ones already read."
+
+scenario:
+  fr: "On voit des chaînes de traitement envoyer chaque PDF reçu à l’OCR, ou désormais à un modèle de vision, sans avoir regardé ce que le fichier contient. Une grande partie des PDF d’un fonds documentaire porte pourtant déjà son texte, exact, écrit par le logiciel qui les a produits : le lire ne coûte rien et ne peut pas se tromper, puisqu’aucune reconnaissance n’a eu lieu. La question n’est donc pas « comment lire ce PDF » mais « quelles pages faut-il payer », et elle se pose page par page, parce qu’un contrat exporté d’un traitement de texte avec une page de signature scannée est un seul fichier qui contient les deux."
+  en: "Processing pipelines are routinely seen sending every PDF they receive to OCR, or now to a vision model, without ever looking at what the file holds. A large share of the PDFs in any document store already carry their text, exactly, written by the software that produced them: reading it costs nothing and cannot be wrong, because no recognition happened. So the question is not “how do I read this PDF” but “which pages do I have to pay for”, and it is asked page by page, because a contract exported from a word processor with a scanned signature page is one file holding both."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Caractères et images comptés page par page, par une bibliothèque PDF"
+      en: "Characters and images counted page by page, by a PDF library"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le document est lu dans votre processus et n’est transmis à personne"
+          - "Le tri décide de ce qui sortira ensuite : une page déclarée lisible ne partira pas chez un prestataire d’OCR, une page déclarée à l’OCR y partira"
+        en:
+          - "No specific scope added: the document is read inside your own process and is sent to nobody"
+          - "The triage decides what leaves next: a page called readable will not go to an OCR provider, a page sent to OCR will"
+    code:
+      python: snippets/know-whether-a-pdf-needs-ocr/n0.py
+      javascript: snippets/know-whether-a-pdf-needs-ocr/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Une couche texte illisible compte comme du texte : une page dont la police ne porte pas de table de caractères s’extrait en « #$%&!*+,-./0123 » là où elle affiche un paragraphe, et ses 183 caractères la rangent parmi les pages lisibles. Le témoin est dans le même test : une page de contrat ordinaire en rend 224 et reçoit exactement le même verdict."
+      en: "An unreadable text layer counts as text: a page whose font carries no character map extracts as “#$%&!*+,-./0123” where it shows a paragraph, and its 183 characters file it among the readable pages. The witness is in the same test: an ordinary contract page yields 224 and gets exactly the same verdict."
+    escalate_when:
+      fr: "Vous relisez des pages déclarées lisibles et vous trouvez du texte qui n’est pas du texte : des suites de ponctuation, des lettres sans mots, une page entière qu’aucune recherche plein texte ne retrouve."
+      en: "You read back pages that were called readable and find text that is not text: runs of punctuation, letters that form no words, a whole page that no full-text search ever finds."
+
+  - level: N1
+    available: true
+    name:
+      fr: "Paires de lettres, apprises sur vos propres pages lisibles"
+      en: "Letter pairs, learned from your own readable pages"
+    cost: négligeable
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le modèle est ajusté sur vos documents, dans votre infrastructure, et n’est transmis à personne"
+          - "Le lot d’entraînement est fait de vos pages : ce qu’il contient reste dans le modèle sous forme de fréquences de paires de lettres"
+        en:
+          - "No specific scope added: the model is fitted on your documents, inside your own infrastructure, and is sent to nobody"
+          - "The training set is made of your pages: what they hold stays in the model as letter-pair frequencies"
+    code:
+      python: snippets/know-whether-a-pdf-needs-ocr/n1.py
+      javascript: snippets/know-whether-a-pdf-needs-ocr/n1.js
+      verification: executed
+    breaking_point:
+      fr: "Il sépare les lettres du bruit, pas le sens du non-sens : un tableau de montants — « 12/01/2026 1 250,00 4 300,50 » — marque −4,10 pour un seuil à −2,69, exactement comme la page cassée, alors que c’est du texte parfaitement lu. Le témoin est dans le même test : une page de contrat marque −2,39."
+      en: "It separates letters from noise, not sense from nonsense: a table of amounts — 12/01/2026 1 250,00 4 300,50 — scores −4.10 against a threshold of −2.69, exactly like the broken page, although it is text read perfectly. The witness is in the same test: a contract page scores −2.39."
+    escalate_when:
+      fr: "Vos documents ne sont pas de la prose — bordereaux, tableaux, formulaires à champs courts — et le score refuse des pages que personne n’a besoin de relire."
+      en: "Your documents are not prose — slips, tables, forms of short fields — and the score turns down pages nobody needs to look at again."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Un classifieur d’images de page — scan contre page numérique — existe et fonctionne, mais il demande de rendre chaque page en image avant de décider, c’est-à-dire de payer le travail le plus lourd de la chaîne pour savoir s’il faut le faire. Les deux nombres que lit le niveau N0 sont dans le fichier, sans rendu, et ils répondent à la même question."
+      en: "A page-image classifier — scan against born-digital — exists and works, but it requires rendering every page to an image before deciding, that is, paying for the heaviest step in the chain in order to find out whether to run it. The two numbers level N0 reads are already in the file, with no rendering, and they answer the same question."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Envoyer l’image de chaque page à un modèle de vision pour savoir s’il faut l’envoyer à un modèle de vision est le seul niveau qui se contredit en une phrase : l’appel qu’on cherche à éviter est celui qu’il faut passer pour décider. Il ajoute en outre une sortie de données par page sur un fonds que le tri avait précisément pour but de garder chez vous."
+      en: "Sending each page’s image to a vision model to find out whether to send it to a vision model is the one level that contradicts itself in a sentence: the call you are trying to avoid is the call you have to make in order to decide. It also adds one data egress per page across a store the triage existed to keep at home."
+
+verdict_rationale:
+  fr: "N0, parce que la décision tient dans deux nombres que le fichier porte déjà — les caractères rendus et les images tracées —, et que le prix de se tromper est asymétrique : payer l’OCR d’une page lisible coûte de l’argent, déclarer lisible une page scannée perd son contenu. Le seuil de 120 caractères existe pour cette raison, et la fiche montre ce qu’il change : une page scannée qui porte un en-tête de 28 caractères est un scan, là où la règle « y a-t-il du texte », avec un seuil bas, la déclare lisible. Montez à N1 le jour où vous trouvez, parmi les pages déclarées lisibles, du texte qui n’en est pas : il se note sur les paires de lettres de vos propres pages, et il attrape la page cassée que N0 laisse passer."
+  en: "N0, because the decision fits in two numbers the file already carries — the characters it yields and the images it draws — and because being wrong costs asymmetrically: paying to OCR a readable page costs money, calling a scanned page readable loses its content. The 120-character threshold exists for that reason, and this entry shows what it changes: a scanned page carrying a 28-character header is a scan, where the “is there any text” rule, with a low threshold, calls it readable. Move up to N1 the day you find, among the pages called readable, text that is not text: it scores letter pairs against your own pages, and it catches the broken page N0 lets through."
+
+further_reading:
+  - label: "pypdf — la bibliothèque de lecture PDF en Python"
+    url: "https://pypdf.readthedocs.io/"
+  - label: "pdf.js — la bibliothèque de lecture PDF de Mozilla"
+    url: "https://mozilla.github.io/pdf.js/"
+  - label: "ISO 32000-1 (PDF 1.7), la spécification publiée par Adobe"
+    url: "https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf"
+  - label: "Lire le texte d’une page scannée — la fiche qui traite l’étape suivante"
+    url: "https://isitoverkill.dev/fr/fiches/read-text-from-a-scanned-page"
+
+sources:
+  - label: "pypdf, documentation de extract_text (consultée) : ce que la bibliothèque rend, et ce qu’elle ne reconstruit pas"
+    url: "https://pypdf.readthedocs.io/en/stable/user/extract-text.html"
+  - label: "pdf.js, API getTextContent et getOperatorList (consultée) : les éléments de texte d’une page et les opérateurs de tracé, dont ceux qui peignent une image"
+    url: "https://mozilla.github.io/pdf.js/api/draft/module-pdfjsLib-PDFPageProxy.html"
+  - label: "ISO 32000-1, section 9.10 (consultée) : la table ToUnicode, et ce qui arrive à l’extraction quand elle manque"
+    url: "https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf"
+---

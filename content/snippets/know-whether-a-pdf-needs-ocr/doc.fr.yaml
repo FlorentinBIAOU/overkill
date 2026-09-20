@@ -1,0 +1,84 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Trier une pile de PDF entre les pages qui ont besoin d'OCR et celles qui n'en
+  ont pas besoin.
+
+  Niveau N0. L'OCR et les modèles de vision se facturent à la page, et la
+  plupart des pages d'un fonds documentaire n'ont besoin ni de l'un ni de
+  l'autre : un PDF écrit par un logiciel de comptabilité, un traitement de
+  texte ou un pilote d'impression porte déjà son texte, exact, à côté de ses
+  instructions de tracé. Lire ce texte ne coûte rien et ne peut pas se tromper,
+  puisqu'aucune reconnaissance n'a eu lieu.
+
+  La décision se prend donc page par page, et non document par document. Un
+  contrat exporté d'un traitement de texte avec une page de signature scannée à
+  la fin, c'est un seul fichier qui contient deux sortes de pages, et envoyer
+  l'ensemble à l'OCR fait payer les pages qui se lisaient déjà.
+
+  Deux nombres par page suffisent, et c'est cette part qu'un modèle remplacerait
+  par une devinette : combien de caractères hors espaces la page rend, et
+  combien d'images elle trace. Du texte et pas d'image, c'est une page à
+  laisser tranquille. Une image et presque pas de texte, c'est un scan — et
+  « presque » compte, parce qu'une page scannée porte souvent un en-tête ou un
+  numéro de page en vrai texte, qu'une règle qui demande seulement « y a-t-il
+  du texte » range parmi les pages lisibles.
+
+  `pypdf` lit la page ici, `pdf.js` en JavaScript. Ni l'un ni l'autre n'est chargé de
+  reconnaître quoi que ce soit.
+
+n0.js: |
+  Trier une pile de PDF entre les pages qui ont besoin d'OCR et celles qui n'en
+  ont pas besoin.
+
+  Niveau N0. L'OCR et les modèles de vision se facturent à la page, et la
+  plupart des pages d'un fonds documentaire n'ont besoin ni de l'un ni de
+  l'autre : un PDF écrit par un logiciel de comptabilité, un traitement de
+  texte ou un pilote d'impression porte déjà son texte, exact, à côté de ses
+  instructions de tracé. Lire ce texte ne coûte rien et ne peut pas se tromper,
+  puisqu'aucune reconnaissance n'a eu lieu.
+
+  La décision se prend donc page par page, et non document par document. Un
+  contrat exporté d'un traitement de texte avec une page de signature scannée à
+  la fin, c'est un seul fichier qui contient deux sortes de pages, et envoyer
+  l'ensemble à l'OCR fait payer les pages qui se lisaient déjà.
+
+  Deux nombres par page suffisent, et c'est cette part qu'un modèle remplacerait
+  par une devinette : combien de caractères hors espaces la page rend, et
+  combien d'images elle trace. Du texte et pas d'image, c'est une page à
+  laisser tranquille. Une image et presque pas de texte, c'est un scan — et
+  « presque » compte, parce qu'une page scannée porte souvent un en-tête ou un
+  numéro de page en vrai texte, qu'une règle qui demande seulement « y a-t-il
+  du texte » range parmi les pages lisibles.
+
+  `pdf.js` lit la page ici, `pypdf` en Python. Ni l'un ni l'autre n'est chargé de
+  reconnaître quoi que ce soit.
+
+n1: |
+  Distinguer une couche texte utilisable d'une couche cassée, sur les pages qui
+  prétendent en avoir une.
+
+  Niveau N1. Le niveau N0 compte des caractères, et une couche texte faite des
+  mauvais caractères en compte tout autant : un PDF dont la police ne porte pas
+  de table de caractères, ou en porte une fausse, s'extrait en index de glyphes
+  lus comme de l'ASCII — « #$%&!*+,-./0123 » là où la page affiche un
+  paragraphe. N0 déclare cette page lisible, et elle ne l'est pas.
+
+  Distinguer la langue de cela, c'est le travail d'un modèle de caractères, et
+  c'est le plus petit qui existe : la fréquence de chaque paire de lettres.
+  « qu » et « es » sont fréquents en français, « q# » et « &! » ne le sont pas,
+  et une page se note à la ressemblance de ses paires avec celles des pages que
+  vous tenez déjà pour bonnes.
+
+  Rien n'est livré avec ce modèle. On donne à `fit` le texte de vos propres
+  pages lisibles — N0 vient de les lister —, si bien que la référence est faite
+  de vos documents, dans votre langue, avec votre vocabulaire. Le seuil vient du
+  même endroit : la note la plus basse du lot d'entraînement, avec une marge,
+  plutôt qu'un nombre choisi ici.
+
+  Ce que cela ne sait pas faire, c'est lire. Une page de chiffres, un tableau de
+  montants, un formulaire à champs courts : ce sont de vrais textes qu'aucun
+  modèle de lettres n'appellera de la langue, et la note le dit. Il sépare les
+  lettres du bruit, pas le sens du non-sens.

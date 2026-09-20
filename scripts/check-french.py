@@ -111,8 +111,11 @@ def _prose_mdx(texte: str) -> str:
             continue
         base = ligne_m.start()
 
-        # Commentaire YAML : rédigé en français, donc relu.
-        c = re.search(r"#(.*)$", ligne)
+        # Commentaire YAML : rédigé en français, donc relu. Un commentaire
+        # ouvre la ligne ; un « # » au milieu d'une valeur n'en est pas un, et
+        # le chercher partout faisait relire en français la fin d'une valeur
+        # anglaise dès qu'une valeur française citait un caractère « # ».
+        c = re.match(r"\s*#(.*)$", ligne)
         if c:
             for i in range(base + c.start(1), base + c.end(1)):
                 garde[i] = True
