@@ -1,0 +1,49 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Réparer un texte décodé avec le mauvais jeu de caractères.
+
+  Niveau N0. « CrÃ©dit Agricole » n'est pas du texte abîmé : c'est
+  « Crédit Agricole » dont les octets UTF-8 ont été lus comme du
+  Windows-1252. L'opération est exactement inversible — réécrire les
+  caractères en octets Windows-1252, relire ces octets en UTF-8 — et c'est une
+  identité sur les octets, pas un jugement.
+
+  `ftfy` le fait en Python, et depuis dix ans. Il connaît aussi les variantes :
+  deux tours du même accident, un Windows-1252 qui aurait dû être du
+  cyrillique, un UTF-8 lu en UTF-16. Il n'en existe pas de portage en
+  JavaScript, si bien que l'extrait de ce langage écrit lui-même la transformation principale, en une trentaine de lignes. Les deux
+  s'accordent sur trente-neuf des quarante et une chaînes de cette fiche ; les
+  deux sur lesquelles ils se séparent relèvent de la même règle, celle de
+  `ftfy` : un « Ã » suivi d'une espace ordinaire est lu comme le « à » dont
+  l'espace insécable a été perdue en route. Elle répare un cas réel de plus, et
+  réécrit une phrase correcte de plus.
+
+  Deux choses que ce fichier fait exprès. Il appelle `fix_encoding` et non `fix_text` : le second redresse aussi les guillemets, ce qui transforme « L'été à Nice », déjà correct, en une version à apostrophe droite — une réécriture silencieuse de la typographie française. Et il rend
+  `changed` au lieu de réparer en place, parce qu'une réparation que personne
+  n'a notée ne se distingue pas d'une donnée qui a toujours été ainsi.
+
+n0.js: |
+  Réparer un texte décodé avec le mauvais jeu de caractères.
+
+  Niveau N0. « CrÃ©dit Agricole » n'est pas du texte abîmé : c'est
+  « Crédit Agricole » dont les octets UTF-8 ont été lus comme du
+  Windows-1252. L'opération est exactement inversible — réécrire les
+  caractères en octets Windows-1252, relire ces octets en UTF-8 — et c'est une
+  identité sur les octets, pas un jugement.
+
+  `ftfy` le fait en Python, et depuis dix ans. Il connaît aussi les variantes :
+  deux tours du même accident, un Windows-1252 qui aurait dû être du
+  cyrillique, un UTF-8 lu en UTF-16. Il n'en existe pas de portage en
+  JavaScript, si bien que ce fichier écrit lui-même la transformation principale, en une trentaine de lignes. Les deux
+  s'accordent sur trente-neuf des quarante et une chaînes de cette fiche ; les
+  deux sur lesquelles ils se séparent relèvent de la même règle, celle de
+  `ftfy` : un « Ã » suivi d'une espace ordinaire est lu comme le « à » dont
+  l'espace insécable a été perdue en route. Elle répare un cas réel de plus, et
+  réécrit une phrase correcte de plus.
+
+  Deux choses que ce fichier fait exprès. Il ne répare que l'encodage et laisse les guillemets tranquilles : le `fix_text` plus large de `ftfy` les redresse, ce qui transforme « L'été à Nice », déjà correct, en une version à apostrophe droite — une réécriture silencieuse de la typographie française. Et il rend
+  `changed` au lieu de réparer en place, parce qu'une réparation que personne
+  n'a notée ne se distingue pas d'une donnée qui a toujours été ainsi.

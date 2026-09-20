@@ -1,0 +1,94 @@
+---
+id: repair-text-with-broken-encoding
+family: transform
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Réparer un texte au mauvais encodage"
+  en: "Repair text with broken encoding"
+
+need:
+  fr: "Remettre d’aplomb des valeurs sorties d’un import où « CrÃ©dit Agricole » a remplacé « Crédit Agricole »."
+  en: "Straighten out values from an import where “CrÃ©dit Agricole” has replaced “Crédit Agricole”."
+
+scenario:
+  fr: "On voit passer les colonnes abîmées d’un import à un modèle généraliste, avec la consigne de « corriger l’encodage ». « CrÃ©dit Agricole » n’est pourtant pas du texte abîmé : ce sont les octets UTF-8 de « Crédit Agricole » lus comme du Windows-1252, et les réécrire dans l’autre sens est une identité sur les octets. Demander la même chose à un modèle, c’est remplacer une opération inversible par une réécriture qu’on ne peut plus distinguer d’une invention — sur les données mêmes qu’on prétendait réparer."
+  en: "Broken columns from an import are routinely handed to a general-purpose model with instructions to “fix the encoding”. But “CrÃ©dit Agricole” is not damaged text: it is the UTF-8 bytes of “Crédit Agricole” read as Windows-1252, and writing them back the other way is a byte identity. Asking a model for the same thing replaces an invertible operation with a rewrite you can no longer tell apart from an invention — on the very data you claimed to be repairing."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Aller-retour Windows-1252 vers UTF-8, avec un drapeau sur ce qui a changé"
+      en: "Windows-1252 to UTF-8 round trip, with a flag on what changed"
+    cost: nul
+    latency: "<1 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le texte est réécrit dans votre processus et n’est transmis à personne"
+          - "La réparation modifie une donnée enregistrée : le drapeau rendu est ce qui permet d’en garder la trace"
+        en:
+          - "No specific scope added: the text is rewritten inside your own process and is sent to nobody"
+          - "The repair modifies stored data: the flag returned is what lets you keep a record of it"
+    code:
+      python: snippets/repair-text-with-broken-encoding/n0.py
+      javascript: snippets/repair-text-with-broken-encoding/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Le réparateur ne sait pas que le texte parle de l’encodage : la phrase d’un ticket, « on voit « Ã© » au lieu de « é » », ressort en « on voit « é » au lieu de « é » », et l’exemple qu’elle citait a disparu. Le témoin est dans le même test : vingt chaînes déjà correctes, dont « Île-de-France », « São Paulo » et « Ångström », ressortent inchangées."
+      en: "The repair has no idea the text is about encoding: a sentence from a support ticket, “we see « Ã© » instead of « é »”, comes back as “we see « é » instead of « é »”, and the example it was quoting is gone. The witness is in the same test: twenty already-correct strings, among them Île-de-France, São Paulo and Ångström, come back untouched."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus. Le jour où le texte porte le caractère de remplacement — « Cr�dit » —, l’octet a été jeté avant que ce code le voie : aucun niveau de cette fiche ne le fait revenir, et la réponse est de réimporter la source."
+      en: "There is no level above this one. The day the text carries the replacement character — “Cr�dit” — the byte was thrown away before this code ever saw it: no level on this page brings it back, and the answer is to import the source again."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : la transformation est une table de 256 octets et une norme, appliquée dans un sens ou dans l’autre, et elle est exactement inversible. Un classifieur entraîné sur des paires abîmé-correct approcherait une bijection, et le seul endroit où il pourrait faire mieux — décider si une chaîne donnée doit être réparée — est précisément celui où une erreur écrit une donnée fausse dans votre base."
+      en: "There is nothing to learn: the transformation is a 256-byte table and a standard, applied one way or the other, and it is exactly invertible. A classifier trained on broken-correct pairs would approximate a bijection, and the one place where it might do better — deciding whether a given string should be repaired at all — is exactly where a mistake writes wrong data into your database."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec un modèle à charger. Et une objection propre à ce besoin : la réparation s’applique à une colonne entière, souvent des millions de lignes, dans un traitement par lots où le coût par ligne est la seule chose qui compte. Un aller-retour d’octets se mesure en microsecondes ; une inférence par ligne, non."
+      en: "The same argument, with a model to load. And one objection specific to this need: the repair runs over a whole column, often millions of rows, in a batch job where the cost per row is the only thing that matters. A byte round trip is measured in microseconds; one inference per row is not."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "C’est le niveau que cette fiche existe pour refuser. Un modèle à qui l’on demande de réparer un texte rend un texte plausible, et il n’existe aucun moyen de distinguer, dans sa sortie, ce qu’il a décodé de ce qu’il a deviné — sur un nom propre, une référence ou une adresse, la différence est la donnée elle-même. L’aller-retour d’octets, lui, se vérifie : on le rejoue dans l’autre sens et on retrouve l’entrée."
+      en: "This is the level this entry exists to refuse. A model asked to repair a text returns a plausible text, and there is no way to tell, in its output, what it decoded from what it guessed — on a proper noun, a reference or an address, that difference is the data itself. The byte round trip can be checked: replay it the other way and you get the input back."
+
+verdict_rationale:
+  fr: "N0, parce que la réparation est une identité sur les octets : on la rejoue dans l’autre sens et on retombe sur l’entrée, ce qu’aucun niveau au-dessus ne permet. Deux choix de la fiche méritent d’être copiés. Le premier est d’appeler la fonction étroite plutôt que la large — `fix_text` redresse aussi les guillemets, et transforme « L’été à Nice », déjà correct, en une version à apostrophe droite. Le second est de rendre un drapeau au lieu de réécrire en place : le point de rupture montre pourquoi, et une réparation que personne n’a notée ne se distingue pas d’une donnée qui a toujours été ainsi."
+  en: "N0, because the repair is a byte identity: replay it the other way and you land back on the input, which nothing above this level allows. Two of this entry’s choices are worth copying. The first is calling the narrow function rather than the wide one — fix_text also straightens quotation marks, and turns “L’été à Nice”, already correct, into a version with a straight apostrophe. The second is returning a flag instead of rewriting in place: the breaking point shows why, and a repair nobody recorded is indistinguishable from data that was always like that."
+
+further_reading:
+  - label: "ftfy — la bibliothèque Python, sa documentation et ce qu’elle sait défaire"
+    url: "https://ftfy.readthedocs.io/en/latest/"
+  - label: "ftfy — l’explication de la méthode, par son autrice"
+    url: "https://github.com/rspeer/python-ftfy"
+  - label: "Unicode — le caractère de remplacement U+FFFD et sa raison d’être"
+    url: "https://www.unicode.org/versions/Unicode15.0.0/ch05.pdf"
+  - label: "WHATWG Encoding — la table windows-1252 telle que l’appliquent les navigateurs"
+    url: "https://encoding.spec.whatwg.org/index-windows-1252.txt"
+
+sources:
+  - label: "ftfy sur PyPI (consulté) : version 6.3.1, publiée le 26 octobre 2024, licence Apache 2.0"
+    url: "https://pypi.org/project/ftfy/"
+  - label: "ftfy, documentation de fix_encoding et fix_text (consultée) : la seconde applique aussi uncurl_quotes, ce que le test de cette fiche reproduit sur « L’été à Nice »"
+    url: "https://ftfy.readthedocs.io/en/latest/"
+  - label: "WHATWG Encoding, index windows-1252 (consulté) : les trente-deux positions 0x80–0x9F qui distinguent windows-1252 de latin-1, recopiées dans l’extrait JavaScript"
+    url: "https://encoding.spec.whatwg.org/index-windows-1252.txt"
+  - label: "Recherche d’un équivalent de ftfy en JavaScript (registre npm, consulté) : aucun paquet de réparation d’encodage de ce genre ; les résultats voisins détectent l’encodage (chardet) ou le convertissent (encoding-japanese), ce qui est un autre travail"
+    url: "https://www.npmjs.com/search?q=mojibake"
+---
