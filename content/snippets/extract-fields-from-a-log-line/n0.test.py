@@ -4,7 +4,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from n0 import PATTERNS, PIECES, compile_pattern, parse_lines
+from n0 import LOOSE, PATTERNS, PIECES, compile_pattern, loose_pieces, parse_lines
 
 ICI = Path(__file__).parent
 
@@ -19,7 +19,23 @@ APACHE = [
 
 SYSLOG = "<34>Oct 10 13:55:36 serveur1 sshd[1234]: Failed password for jean from 203.0.113.7"
 
-# Le même motif, avec l'horodatage décrit par un morceau trop lâche.
+# Ce que contient vraiment /var/log/syslog, /var/log/auth.log ou la sortie de
+# journalctl : le collecteur retire la priorité entre chevrons avant d'écrire.
+SYSLOG_FICHIER = [
+    "Oct 10 13:55:36 serveur1 sshd[1234]: Failed password for root",
+    "Oct 10 13:55:36 serveur1 systemd[1]: Started Session 3 of user jean.",
+    "Oct 10 13:55:37 serveur1 CRON[4521]: pam_unix(cron:session): session opened",
+]
+
+# Une ligne d'accès dont la requête porte un guillemet échappé, ce qu'écrit
+# mod_log_config et ce que produisent les scanners tous les jours.
+APACHE_GUILLEMET = (
+    r'203.0.113.9 - - [10/Oct/2026:13:55:39 +0200] "GET /a\"b HTTP/1.1"'
+    r' 404 512 "-" "curl/8.5.0"'
+)
+
+# Le même motif, avec l'horodatage ET l'étiquette décrits par un morceau trop
+# lâche. Les deux sont relâchés : c'est ce que le point de rupture publie.
 LACHE = "<%{INT:priority}>%{DATA:timestamp} %{WORD:host} %{DATA:tag}: %{GREEDY:message}"
 
 # Une trace d'exception : une ligne qui correspond, et cinq qui ne
@@ -39,16 +55,29 @@ TRACE = [
 
 def test_point_de_rupture_un_motif_trop_lache_decoupe_faux_sans_rien_signaler():
     """
-    « Le motif qui décrit l'horodatage par « %{DATA:timestamp} » rend timestamp
-    « Oct », host « 10 » et tag « 13:55:36 serveur1 sshd[1234] », et la ligne
-    n'est pas rejetée. »
+    « Le motif qui décrit l'horodatage et l'étiquette par « %{DATA} » rend
+    timestamp « Oct », host « 10 » et tag « 13:55:36 serveur1 sshd[1234] », et
+    la ligne n'est pas rejetée. »
+
+    Les deux morceaux sont relâchés, et c'est ce que le motif exécuté fait :
+    ne relâcher que l'horodatage donne un autre découpage, tout aussi faux mais
+    différent, et la fiche publie celui qui est mesuré ici.
     """
+    assert LACHE.count("%{DATA:") == 2, "l'horodatage et l'étiquette"
     rapport = parse_lines([SYSLOG], LACHE)
     assert rapport["rejected"] == []
     champ = rapport["parsed"][0]
     assert champ["timestamp"] == "Oct"
     assert champ["host"] == "10"
     assert champ["tag"] == "13:55:36 serveur1 sshd[1234]"
+    # Et le rapport nomme les morceaux qui peuvent couper n'importe où.
+    assert rapport["loose_pieces"] == ["timestamp", "tag"]
+    # Ne relâcher que l'horodatage découpe faux autrement : c'est pour cela que
+    # la phrase de la fiche parle des deux.
+    un_seul = "<%{INT:priority}>%{DATA:timestamp} %{WORD:host} %{NOTCOLON:tag}: %{GREEDY:message}"
+    autre = parse_lines([SYSLOG], un_seul)["parsed"][0]
+    assert (autre["timestamp"], autre["host"], autre["tag"]) == (
+        "Oct 10", "13:55:36", "serveur1 sshd[1234]")
 
 
 def test_point_de_rupture_temoin_le_motif_de_la_fiche_rend_les_quatre_champs_justes():
@@ -63,6 +92,51 @@ def test_point_de_rupture_temoin_le_motif_de_la_fiche_rend_les_quatre_champs_jus
 # ---------------------------------------------------------------------------
 # Les autres affirmations du niveau
 # ---------------------------------------------------------------------------
+
+
+def test_le_motif_syslog_lit_les_lignes_dun_fichier_de_journal():
+    """
+    Commentaire : « The syslog priority between angle brackets exists on the
+    wire […] and the collector strips it before writing. »
+
+    R1 : l'entrée ordinaire du lecteur est une ligne de `/var/log/syslog`, pas
+    un paquet UDP. Le motif livré les rejetait toutes.
+    """
+    rapport = parse_lines(SYSLOG_FICHIER, "syslog-3164")
+    assert rapport["rejected"] == []
+    assert [c["host"] for c in rapport["parsed"]] == ["serveur1"] * 3
+    assert [c["tag"] for c in rapport["parsed"]] == ["sshd[1234]", "systemd[1]", "CRON[4521]"]
+    # La priorité est nulle quand la ligne n'en porte pas, et lue quand elle
+    # en porte une : c'est le même motif pour le fil et pour le fichier.
+    assert [c["priority"] for c in rapport["parsed"]] == [None, None, None]
+    assert parse_lines([SYSLOG], "syslog-3164")["parsed"][0]["priority"] == "34"
+
+
+def test_une_requete_avec_un_guillemet_echappe_nest_pas_rejetee():
+    """
+    Commentaire du morceau `QUOTED` : « `mod_log_config` writes a `\"` inside
+    the request and the agent, and scanners produce them every day. »
+    """
+    rapport = parse_lines([APACHE_GUILLEMET], "apache-combined")
+    assert rapport["rejected"] == []
+    assert rapport["parsed"][0]["request"] == r'GET /a\"b HTTP/1.1'
+    assert rapport["parsed"][0]["status"] == "404"
+    # Témoin : la même ligne sans guillemet échappé est lue comme avant.
+    assert parse_lines([APACHE[1]], "apache-combined")["rejected"] == []
+
+
+def test_les_morceaux_laches_hors_de_la_derniere_position_sont_nommes():
+    """
+    Docstring : « `loose_pieces` names the pieces that can cut anywhere.
+    Nothing is rejected because of them — that is exactly the problem. »
+    """
+    assert LOOSE == ("DATA", "GREEDY")
+    assert loose_pieces(r"%{DATA:a} %{WORD:b} %{GREEDY:c}") == ["a"]
+    # Un morceau lâche en dernière position s'arrête où la ligne s'arrête :
+    # c'est à cela qu'il sert, et il n'est pas signalé.
+    assert loose_pieces(PATTERNS["syslog-3164"]) == []
+    assert loose_pieces(PATTERNS["nginx-error"]) == []
+    assert loose_pieces(PATTERNS["apache-combined"]) == []
 
 
 def test_une_ligne_qui_ne_correspond_pas_est_rendue_jamais_perdue():
@@ -122,6 +196,7 @@ def test_un_motif_peut_etre_ecrit_par_lappelant():
     rapport = parse_lines(["utilisateur=jean action=connexion duree=42"],
                           r"utilisateur=%{WORD:user} action=%{WORD:action} duree=%{INT:ms}")
     assert rapport["parsed"][0] == {"line": 1, "user": "jean", "action": "connexion", "ms": "42"}
+    assert rapport["loose_pieces"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +216,7 @@ def test_production_entree_banale_trois_lignes_dun_journal_dacces():
 
 def test_production_entree_vide():
     assert parse_lines([], "apache-combined") == {
-        "parsed": [], "rejected": [], "reason": None}
+        "parsed": [], "rejected": [], "loose_pieces": [], "reason": None}
     assert parse_lines([""], "apache-combined")["rejected"] == [{"line": 1, "text": ""}]
 
 
@@ -212,6 +287,8 @@ def test_python_et_javascript_rendent_le_meme_decoupage():
     assert node, "node est requis pour comparer les deux implémentations"
     cas = [
         (APACHE, "apache-combined"),
+        ([APACHE_GUILLEMET], "apache-combined"),
+        (SYSLOG_FICHIER, "syslog-3164"),
         (APACHE + ["pas une ligne de journal"], "apache-combined"),
         ([SYSLOG], "syslog-3164"),
         ([SYSLOG], LACHE),

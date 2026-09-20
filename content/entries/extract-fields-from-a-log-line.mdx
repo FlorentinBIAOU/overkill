@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/extract-fields-from-a-log-line/n0.js
       verification: executed
     breaking_point:
-      fr: "Un motif trop lâche découpe faux sans rien signaler : sur « <34>Oct 10 13:55:36 serveur1 sshd[1234]: … », décrire l’horodatage par « %{DATA:timestamp} » rend timestamp « Oct », host « 10 » et tag « 13:55:36 serveur1 sshd[1234] », et la ligne n’est pas rejetée. Le témoin est dans le même test : le motif de la fiche, qui décrit la date comme une date, rend les quatre champs justes."
-      en: "A pattern that is too loose splits the line wrongly and says nothing: on “<34>Oct 10 13:55:36 serveur1 sshd[1234]: …”, describing the timestamp as “%{DATA:timestamp}” returns timestamp “Oct”, host “10” and tag “13:55:36 serveur1 sshd[1234]”, and the line is not rejected. The witness is in the same test: this entry’s pattern, which describes the date as a date, returns all four fields correctly."
+      fr: "Un motif trop lâche découpe faux sans rien rejeter : décrire l’horodatage **et** l’étiquette par « %{DATA} » rend timestamp « Oct », host « 10 » et tag « 13:55:36 serveur1 sshd[1234] ». Témoin dans le même test : le motif de la fiche rend les quatre champs justes, et `loose_pieces` nomme les morceaux fautifs."
+      en: "A pattern that is too loose splits the line wrongly and rejects nothing: describing the timestamp **and** the tag as “%{DATA}” returns timestamp “Oct”, host “10” and tag “13:55:36 serveur1 sshd[1234]”. Witness in the same test: this entry’s pattern returns all four fields correctly, and `loose_pieces` names the offending pieces."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus. Le jour où la liste des lignes rejetées grossit, ce n’est pas un modèle qu’il faut : c’est lire ces lignes, qui sont d’un format que vous n’aviez pas prévu, et écrire le motif qui leur correspond."
       en: "There is no level above this one. The day the list of rejected lines grows, a model is not what you need: it is reading those lines, which are in a format you had not planned for, and writing the pattern that fits them."
