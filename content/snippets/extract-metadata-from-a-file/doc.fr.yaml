@@ -1,0 +1,26 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Ce qu'un document bureautique dit de lui-même, avant que vous ne l'envoyiez.
+
+  Niveau N0. Un .docx, un .xlsx ou un .pptx est un ZIP, et deux de ses entrées
+  ne sont que des métadonnées : `docProps/core.xml` porte l'auteur, la dernière
+  personne à l'avoir enregistré, le numéro de révision et les deux dates ;
+  `docProps/app.xml` porte l'entreprise, le responsable, le modèle et le temps
+  d'édition total. Les lire, c'est décompresser et analyser, avec la
+  bibliothèque standard des deux côtés.
+
+  L'intéressant n'est pas la lecture, c'est ce à quoi elle sert. Un document
+  envoyé à un client porte le nom de tous ceux qui y ont touché, le modèle
+  interne dont il est issu, et le temps qu'il a pris. Rien de cela ne se voit à
+  l'écran, tout cela voyage avec le fichier, et c'est la raison d'être de cette
+  fiche.
+
+  Une règle que le code tient. Il lit deux parties et il nomme les autres : un
+  document qui porte des commentaires, des marques de révision ou des
+  identifiants de session en dit plus que ces deux fichiers, et répondre
+  « aucun auteur » d'un document dont les auteurs sont dans
+  `word/comments.xml` serait pire que de ne rien dire. Ce qui n'est pas lu est
+  listé, pas ignoré.

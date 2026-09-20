@@ -1,0 +1,94 @@
+---
+id: extract-metadata-from-a-file
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Lire les métadonnées d’un fichier"
+  en: "Read a file’s metadata"
+
+need:
+  fr: "Obtenir la date, l’auteur et ce qu’un document transporte d’autre, avant de le publier ou de l’archiver."
+  en: "Get the date, the author and whatever else a document carries, before publishing it or filing it away."
+
+scenario:
+  fr: "On voit envoyer un document à un modèle en lui demandant « qui a écrit ça et quand ». Le document le dit pourtant lui-même, en clair, dans deux fichiers XML qu’il transporte : un .docx est un ZIP, et deux de ses entrées ne contiennent que cela. Le sujet de cette fiche n’est donc pas la lecture, qui est un décompactage, c’est ce que la lecture révèle — un contrat envoyé à un client porte le nom de tous ceux qui y ont touché, le modèle interne dont il est issu et le temps qu’il a pris, et rien de tout cela ne se voit à l’écran."
+  en: "Sending a document to a model and asking “who wrote this and when” is a common sight. But the document says so itself, in plain text, in two XML files it carries: a .docx is a ZIP, and two of its entries hold nothing else. So this entry is not about the reading, which is an unzip, but about what the reading reveals — a contract sent to a client carries the name of everyone who touched it, the internal template it came from and how long it took, and none of that shows on screen."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Les deux parties de métadonnées du conteneur, lues et les autres nommées"
+      en: "The container’s two metadata parts, read, and the others named"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le document est ouvert dans votre processus et n’est transmis à personne"
+          - "Ce que cette fiche fait lire est précisément ce qu’un document publié transmet sans qu’on le sache : des noms de personnes, une organisation, des horodatages"
+        en:
+          - "No specific scope added: the document is opened inside your own process and is sent to nobody"
+          - "What this entry makes you read is exactly what a published document passes on unnoticed: people’s names, an organisation, timestamps"
+    code:
+      python: snippets/extract-metadata-from-a-file/n0.py
+      javascript: snippets/extract-metadata-from-a-file/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Les deux parties lues ne sont pas toutes les métadonnées du document : dans le test, le même contrat auquel on ajoute ses commentaires rend exactement les mêmes champs, alors que `word/comments.xml` porte le nom de qui les a écrits et `word/settings.xml` des identifiants de session. Ces parties sont nommées dans le rapport plutôt que lues ou tues. Le témoin est dans le même test : le document sans elles rend une liste vide, et le silence veut alors dire quelque chose."
+      en: "The two parts read are not all of a document’s metadata: in the test, the same contract with its comments added returns exactly the same fields, although `word/comments.xml` carries the name of whoever wrote them and `word/settings.xml` carries session identifiers. Those parts are named in the report rather than read or kept quiet. The witness is in the same test: the document without them returns an empty list, and the silence then means something."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus : lire ce qui est écrit ne s’améliore pas. Le jour où il ne s’agit plus de lire mais de retirer, c’est un autre travail — reconstruire l’archive sans ces parties —, et il commence par savoir lesquelles sont là, ce que cette fiche rend."
+      en: "There is no level above this one: reading what is written does not get better. The day the job is no longer to read but to remove, that is other work — rebuilding the archive without those parts — and it starts by knowing which ones are there, which is what this entry returns."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Il n’y a rien à apprendre : les noms des champs sont fixés par la norme OOXML, et leur emplacement aussi. Un modèle appris sur des documents annotés retrouverait, au mieux, ce que l’analyseur XML lit exactement, et il se tromperait sur les champs que votre suite bureautique écrit et que son échantillon ne contenait pas."
+      en: "There is nothing to learn: the field names are fixed by the OOXML specification, and so is where they sit. A model trained on annotated documents would recover, at best, what the XML parser reads exactly, and it would be wrong about the fields your office suite writes and its sample did not contain."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Même argument, avec le budget en plus. Le travail utile de cette fiche se compte en millisecondes et en deux fichiers de quelques centaines d’octets ; faire tourner un modèle résident pour lire un attribut nommé par une norme publiée est sans rapport avec la question posée."
+      en: "The same argument, with budget on top. The useful work here is measured in milliseconds and in two files of a few hundred bytes; running a resident model to read an attribute named by a published specification has nothing to do with the question asked."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Envoyer le document chez un tiers pour savoir ce qu’il révèle de vous est la contradiction la plus directe de cette fiche : le fichier qu’on hésite à publier serait transmis en entier, avec les noms, l’entreprise et le modèle interne, pour obtenir une liste que l’analyseur XML rend exactement. Et le résultat serait une paraphrase de champs qu’il faudrait vérifier un par un."
+      en: "Sending the document to a third party to find out what it reveals about you is the most direct contradiction of this entry: the file you hesitate to publish would be handed over whole, names, company and internal template included, to obtain a list the XML parser returns exactly. And the result would be a paraphrase of fields you would have to check one by one."
+
+verdict_rationale:
+  fr: "N0, parce que le document porte ces valeurs en clair, dans deux fichiers XML nommés par une norme publiée, à l’intérieur d’un ZIP. La bibliothèque standard suffit côté Python — `zipfile` et `xml.etree` — et côté JavaScript il fallait deux paquets sans dépendance, `fflate` pour l’archive et `fast-xml-parser` qui était déjà là. Trois choses portent la fiche au-delà du décompactage. Les parties non lues sont nommées : un document dont les auteurs sont dans ses commentaires ne doit pas répondre « aucun auteur ». Seules les deux parties de métadonnées sont décompressées, et seulement sous un plafond déclaré : une entrée de ZIP peut promettre cent mégaoctets dans un kilooctet. Et un écart entre les deux langages a été fermé plutôt que subi : l’analyseur XML de JavaScript laisse « &#232; » tel quel là où celui de Python le décode, ce qui aurait fait deux auteurs différents pour le même fichier."
+  en: "N0, because the document carries these values in plain text, in two XML files named by a published specification, inside a ZIP. The standard library is enough on the Python side — zipfile and xml.etree — and on the JavaScript side two dependency-free packages were needed, fflate for the archive and fast-xml-parser, which was already there. Three things carry this entry beyond the unzip. The parts not read are named: a document whose authors are in its comments must not answer “no author”. Only the two metadata parts are decompressed, and only under a declared cap: a ZIP entry can promise a hundred megabytes in a kilobyte. And one gap between the two languages was closed rather than endured: JavaScript’s XML parser leaves “&#232;” as written where Python’s decodes it, which would have made two different authors for the same file."
+
+further_reading:
+  - label: "ECMA-376 — la norme OOXML, et les propriétés du paquet"
+    url: "https://ecma-international.org/publications-and-standards/standards/ecma-376/"
+  - label: "Microsoft — l’inspecteur de document, qui retire ces champs depuis le logiciel"
+    url: "https://support.microsoft.com/fr-fr/office/supprimer-les-donn%C3%A9es-masqu%C3%A9es-et-les-informations-personnelles-en-inspectant-les-documents-les-pr%C3%A9sentations-ou-les-classeurs-356b7b5d-77af-44fe-a07f-9aa4d085966f"
+  - label: "fflate — le lecteur d’archive employé côté JavaScript"
+    url: "https://github.com/101arrowz/fflate"
+  - label: "Savoir si un fichier est vraiment du format qu’il annonce — la fiche voisine, quand la question est le conteneur lui-même"
+    url: "https://isitoverkill.dev/fr/fiches/check-a-file-is-really-the-format-it-claims"
+
+sources:
+  - label: "ECMA-376, partie 2 (consultée) : les propriétés de paquet — `docProps/core.xml` pour l’auteur, la révision et les dates, `docProps/app.xml` pour l’entreprise, le modèle et `TotalTime`, défini comme le temps d’édition total en minutes"
+    url: "https://ecma-international.org/publications-and-standards/standards/ecma-376/"
+  - label: "Dublin Core (consulté) : `dc:creator`, `dc:title` et `dc:description` de `core.xml` sont les éléments du Dublin Core, ce qui explique leurs noms"
+    url: "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/"
+  - label: "fflate sur son dépôt (consulté) : version 0.8.3, publiée le 16 mai 2026, licence MIT, aucune dépendance ; son option de filtrage permet de ne décompresser que les deux parties lues"
+    url: "https://github.com/101arrowz/fflate"
+  - label: "fast-xml-parser sur son dépôt (consulté) : version 5.2.5, licence MIT ; l’option `htmlEntities` est ce qui décode les références numériques, que l’analyseur laisse sinon telles quelles"
+    url: "https://github.com/NaturalIntelligence/fast-xml-parser"
+---

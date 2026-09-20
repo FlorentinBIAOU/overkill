@@ -69,6 +69,7 @@
     "chrono-node": "2.9.0",
     "email-reply-parser": "2.3.9",
     "fast-xml-parser": "5.2.5",
+    "fflate": "0.8.3",
     "file-type": "22.1.1",
     "gray-matter": "^4.0.3",
     "ibantools": "4.5.4",
