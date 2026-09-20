@@ -24,3 +24,16 @@ n0: |
   « aucun auteur » d'un document dont les auteurs sont dans
   `word/comments.xml` serait pire que de ne rien dire. Ce qui n'est pas lu est
   listé, pas ignoré.
+
+  Deux listes le disent, parce qu'une réponse silencieuse ne doit jamais passer
+  pour un document vide. `other_parts` nomme les parties que ce niveau n'ouvre
+  pas du tout — les commentaires, les marques de révision, les réglages.
+  `unread_parts` nomme celles qu'il voulait ouvrir et n'a pas pu, avec la
+  raison : un XML mal formé, une partie au-dessus du plafond de taille. Sans
+  elles, un document dont le `docProps/core.xml` a été tronqué en transit
+  répond « aucun auteur », c'est-à-dire la seule réponse que cette fiche existe
+  pour refuser.
+
+  Le nom des parties est fixé par ECMA-376, donc la marque n'est cherchée que
+  dans les dossiers du format : une image que l'auteur a nommée
+  `media/settings-du-client.png` n'est pas une partie de réglages.

@@ -68,9 +68,22 @@ NU = docx(("[Content_Types].xml", TYPES), ("word/document.xml", DOC))
 PAS_OOXML = docx(("lisezmoi.txt", "bonjour"))
 CASSE = docx(("[Content_Types].xml", TYPES), (CORE_PART, "<cp:coreProperties"),
              ("word/document.xml", DOC))
+# Le cœur des métadonnées tronqué en transit, le reste du document intact :
+# c'est le rapport qui disait « aucun auteur » sans rien d'autre.
+CORE_TRONQUE = docx(("[Content_Types].xml", TYPES), (CORE_PART, CORE[:200]),
+                    (APP_PART, APP), ("word/document.xml", DOC))
+# Le même cœur, au-dessus du plafond : une valeur anormale, donc celle qui doit
+# remonter.
+CORE_ENORME = docx(("[Content_Types].xml", TYPES),
+                   (CORE_PART, "<a>" + "x" * (MAX_PART_BYTES + 10) + "</a>"),
+                   (APP_PART, APP), ("word/document.xml", DOC))
+# Une image que l'auteur a nommée comme une partie du format.
+IMAGE_MAL_NOMMEE = docx(*BASE, ("word/media/settings-du-client.png", "PNG"),
+                        ("media/settings-du-client.png", "PNG"))
 
 TOUS = [COMPLET, AVEC_COMMENTAIRES, NU, PAS_OOXML, CASSE, b"xxxx", b"",
-        docx(*BASE, ("docProps/custom.xml", "<Properties/>"))]
+        docx(*BASE, ("docProps/custom.xml", "<Properties/>")),
+        CORE_TRONQUE, CORE_ENORME, IMAGE_MAL_NOMMEE]
 
 
 # ---------------------------------------------------------------------------
@@ -124,34 +137,76 @@ def test_un_champ_absent_nest_pas_rendu_vide():
 
 def test_un_document_sans_metadonnees_rend_un_dictionnaire_vide_pas_une_erreur():
     rapport = read_document_metadata(NU)
-    assert rapport == {"format": "ooxml", "fields": {}, "other_parts": [], "reason": None}
+    assert rapport == {"format": "ooxml", "fields": {}, "other_parts": [],
+                       "unread_parts": [], "reason": None}
 
 
 def test_ce_qui_nest_pas_un_document_est_nomme():
-    assert read_document_metadata(b"xxxx")["reason"].startswith("not a ZIP")
+    """R14 : les deux refus sont deux situations distinctes, donc deux raisons."""
+    assert read_document_metadata(b"xxxx")["reason"] == (
+        "not a ZIP container, so not an OOXML document")
     assert read_document_metadata(PAS_OOXML)["reason"] == "a ZIP, but not an OOXML document"
 
 
-def test_une_partie_illisible_nempeche_pas_de_lire_les_autres():
-    """T8 : un XML cassé ne fait pas tomber le document."""
-    rapport = read_document_metadata(CASSE)
-    assert rapport["format"] == "ooxml" and rapport["fields"] == {}
-    assert rapport["reason"] is None
+def test_une_partie_illisible_est_nommee_pas_tue():
+    """
+    Docstring : « `unread_parts` names the ones it meant to open and could not,
+    with why […] a document whose `docProps/core.xml` was truncated in transit
+    answers « no author », which is the one answer this entry exists to
+    refuse. »
 
-
-def test_une_partie_qui_promet_plus_que_le_plafond_nest_pas_decompressee():
-    gros = docx(*BASE[:1], (CORE_PART, "<a>" + "x" * (MAX_PART_BYTES + 10) + "</a>"),
-                ("word/document.xml", DOC))
-    rapport = read_document_metadata(gros)
+    C'est la règle de la fiche — ce qui n'est pas lu est nommé — appliquée à la
+    partie centrale, ce qu'elle ne faisait pas.
+    """
+    rapport = read_document_metadata(CORE_TRONQUE)
     assert rapport["format"] == "ooxml"
-    assert rapport["fields"] == {}
+    assert rapport["unread_parts"] == [{"part": CORE_PART, "why": "malformed XML"}]
+    # Le reste du document est lu quand même : c'est T8.
+    assert rapport["fields"]["company"] == "Cabinet Lumière"
+    assert "author" not in rapport["fields"]
+    # Témoin : un document qui ne déclare vraiment aucun auteur ne porte pas de
+    # partie non lue, et les deux rapports ne se confondent plus.
+    nu = read_document_metadata(NU)
+    assert (nu["fields"], nu["unread_parts"]) == ({}, [])
+    # Et l'autre forme d'illisibilité, la partie qui n'ouvre même pas.
+    assert read_document_metadata(CASSE)["unread_parts"] == [
+        {"part": CORE_PART, "why": "malformed XML"}]
 
 
-def test_aucune_entree_ne_leve():
+def test_une_partie_qui_promet_plus_que_le_plafond_est_nommee():
+    """
+    Docstring : « a part above the size cap ». Une taille anormale est
+    précisément ce qui doit remonter.
+    """
+    rapport = read_document_metadata(CORE_ENORME)
+    assert rapport["format"] == "ooxml"
+    assert rapport["unread_parts"] == [{"part": CORE_PART, "why": "over the size cap"}]
+    assert "author" not in rapport["fields"]
+    # Le reste du document est lu : seule la partie trop grosse est écartée.
+    assert rapport["fields"]["company"] == "Cabinet Lumière"
+
+
+def test_une_image_nommee_comme_une_partie_du_format_nen_est_pas_une():
+    """
+    Commentaire : « ECMA-376 fixes where those parts live, so the mark is only
+    looked for inside those folders: a picture the author named
+    `media/settings-du-client.png` is not a settings part. »
+    """
+    autres = read_document_metadata(IMAGE_MAL_NOMMEE)["other_parts"]
+    assert "media/settings-du-client.png" not in autres
+    # Le dossier `word/` est bien celui du format, lui : ce qui s'y trouve est
+    # nommé, et c'est voulu.
+    assert "word/media/settings-du-client.png" in autres
+
+
+def test_aucune_entree_ne_leve_et_la_raison_nomme_ce_qui_a_ete_recu():
+    """R14 : la raison dit ce que le code a constaté — le type reçu."""
+    assert read_document_metadata(None)["reason"] == "expected bytes, not NoneType"
+    assert read_document_metadata("texte")["reason"] == "expected bytes, not str"
     for entree in [None, 42, "texte", [], {}]:
         rapport = read_document_metadata(entree)
         assert rapport["fields"] == {}
-        assert rapport["reason"].startswith("expected bytes")
+        assert rapport["reason"].startswith("expected bytes, not ")
 
 
 # ---------------------------------------------------------------------------

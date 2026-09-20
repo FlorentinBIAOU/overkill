@@ -20,7 +20,7 @@
  * What is not read is listed, not ignored.
  */
 
-import { XMLParser } from 'fast-xml-parser';
+import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { strFromU8, unzipSync } from 'fflate';
 
 // The two parts read, and the fields taken from each. The names are the local
@@ -32,6 +32,8 @@ export const FIELDS = {
   title: 'title',
   creator: 'author',
   lastModifiedBy: 'last_modified_by',
+  // « revision » is the number of times the document was saved, as OOXML
+  // defines it — not a version number, although it is read as one.
   revision: 'revision',
   created: 'created',
   modified: 'modified',
@@ -51,6 +53,10 @@ export const FIELDS = {
 
 // Parts that carry names, dates or identifiers this rung does not read. They
 // are listed so that a quiet answer is never mistaken for an empty document.
+// ECMA-376 fixes where those parts live, so the mark is only looked for inside
+// those folders: a picture the author named `media/settings-du-client.png` is
+// not a settings part.
+const OOXML_FOLDERS = ['word/', 'xl/', 'ppt/', 'docProps/'];
 const OTHER_PARTS = ['comments', 'people', 'settings', 'custom.xml', 'revisions'];
 
 // A ZIP entry can promise far more than the archive weighs. Only the two parts
@@ -70,17 +76,32 @@ const PARSER = new XMLParser({
  *
  * `data` is the bytes of the file. Nothing is written, and nothing but the two
  * metadata parts is decompressed.
+ *
+ * Two lists say what was not read, because a quiet answer must never pass for
+ * an empty document. `other_parts` names the parts this rung does not open at
+ * all — the comments, the tracked changes, the settings. `unread_parts` names
+ * the ones it meant to open and could not, with why: a part whose XML is
+ * malformed, and a part above the size cap. Without them, a document whose
+ * `docProps/core.xml` was truncated in transit answers « no author », which is
+ * the one answer this entry exists to refuse.
+ *
+ * `XMLValidator` is what makes the first case an answer here. `XMLParser` is
+ * lenient: on a truncated part it returns an object with an empty author
+ * rather than throwing, and the Python side, whose parser raises, would not
+ * say the same thing.
  */
 export function readDocumentMetadata(data) {
   if (!(data instanceof Uint8Array)) {
     return report(null, {}, [], `expected bytes, not ${typeof data}`);
   }
   const names = [];
+  const sizes = new Map();
   let parts;
   try {
     parts = unzipSync(data, {
       filter: (file) => {
         names.push(file.name);
+        sizes.set(file.name, file.originalSize);
         return (file.name === CORE_PART || file.name === APP_PART)
           && file.originalSize <= MAX_PART_BYTES;
       },
@@ -93,15 +114,24 @@ export function readDocumentMetadata(data) {
   }
 
   const fields = {};
+  const unread = [];
   for (const part of [CORE_PART, APP_PART]) {
-    if (!parts[part]) continue;
+    if (!names.includes(part)) continue; // the document does not carry it
+    if (!parts[part]) {
+      unread.push({ part, why: 'over the size cap' });
+      continue;
+    }
+    const texteXml = strFromU8(parts[part]);
     let root;
     try {
-      const parsed = PARSER.parse(strFromU8(parts[part]));
+      if (XMLValidator.validate(texteXml) !== true) throw new Error('malformed');
+      const parsed = PARSER.parse(texteXml);
       // The first key is the XML declaration when the part carries one.
       root = Object.entries(parsed).find(([key]) => !key.startsWith('?'))?.[1];
     } catch {
-      continue; // a part we cannot read is a part we do not claim
+      // A part we cannot read is a part we do not claim — and we say so.
+      unread.push({ part, why: 'malformed XML' });
+      continue;
     }
     for (const [local, value] of Object.entries(root ?? {})) {
       const texte = typeof value === 'object' ? '' : String(value).trim();
@@ -110,12 +140,15 @@ export function readDocumentMetadata(data) {
   }
 
   const others = names
-    .filter((name) => OTHER_PARTS.some((mark) => name.includes(mark))
+    .filter((name) => OOXML_FOLDERS.some((folder) => name.startsWith(folder))
+      && OTHER_PARTS.some((mark) => name.includes(mark))
       && name !== CORE_PART && name !== APP_PART)
     .sort();
-  return report('ooxml', fields, others, null);
+  return report('ooxml', fields, others, null, unread);
 }
 
-function report(format, fields, otherParts, reason) {
-  return { format, fields, other_parts: otherParts, reason };
+function report(format, fields, otherParts, reason, unread = []) {
+  return {
+    format, fields, other_parts: otherParts, unread_parts: unread, reason,
+  };
 }

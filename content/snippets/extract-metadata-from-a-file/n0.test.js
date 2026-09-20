@@ -65,6 +65,24 @@ const AVEC_COMMENTAIRES = docx({
 const NU = docx({ '[Content_Types].xml': TYPES, 'word/document.xml': DOC });
 const PAS_OOXML = docx({ 'lisezmoi.txt': 'bonjour' });
 const CASSE = docx({ '[Content_Types].xml': TYPES, [CORE_PART]: '<cp:coreProperties', 'word/document.xml': DOC });
+// Le cœur des métadonnées tronqué en transit, le reste du document intact :
+// c'est le rapport qui disait « aucun auteur » sans rien d'autre.
+const CORE_TRONQUE = docx({
+  '[Content_Types].xml': TYPES, [CORE_PART]: CORE.slice(0, 200), [APP_PART]: APP,
+  'word/document.xml': DOC,
+});
+// Le même cœur, au-dessus du plafond : une valeur anormale, donc celle qui
+// doit remonter.
+const CORE_ENORME = docx({
+  '[Content_Types].xml': TYPES, [CORE_PART]: `<a>${'x'.repeat(MAX_PART_BYTES + 10)}</a>`,
+  [APP_PART]: APP, 'word/document.xml': DOC,
+});
+// Une image que l'auteur a nommée comme une partie du format.
+const IMAGE_MAL_NOMMEE = docx({
+  ...BASE,
+  'word/media/settings-du-client.png': 'PNG',
+  'media/settings-du-client.png': 'PNG',
+});
 
 // ---------------------------------------------------------------------------
 // Point de rupture
@@ -105,37 +123,62 @@ test("un champ absent n'est pas rendu vide", () => {
 
 test("un document sans métadonnées rend un dictionnaire vide, pas une erreur", () => {
   assert.deepEqual(readDocumentMetadata(NU),
-    { format: 'ooxml', fields: {}, other_parts: [], reason: null });
+    {
+      format: 'ooxml', fields: {}, other_parts: [], unread_parts: [], reason: null,
+    });
 });
 
 test("ce qui n'est pas un document est nommé", () => {
-  assert.ok(readDocumentMetadata(new Uint8Array([120, 120, 120, 120])).reason.startsWith('not a ZIP'));
+  // R14 : les deux refus sont deux situations distinctes, donc deux raisons.
+  assert.equal(readDocumentMetadata(new Uint8Array([120, 120, 120, 120])).reason,
+    'not a ZIP container, so not an OOXML document');
   assert.equal(readDocumentMetadata(PAS_OOXML).reason, 'a ZIP, but not an OOXML document');
 });
 
-test("une partie illisible n'empêche pas de lire les autres", () => {
-  const rapport = readDocumentMetadata(CASSE);
+test('une partie illisible est nommée, pas tue', () => {
+  // Docstring : « `unread_parts` names the ones it meant to open and could
+  // not, with why […] a document whose `docProps/core.xml` was truncated in
+  // transit answers « no author », which is the one answer this entry exists
+  // to refuse. »
+  //
+  // `XMLValidator` est ce qui rend ce cas comparable au Python : `XMLParser`
+  // est indulgent et rendrait un auteur vide sans lever.
+  const rapport = readDocumentMetadata(CORE_TRONQUE);
   assert.equal(rapport.format, 'ooxml');
-  assert.deepEqual(rapport.fields, {});
-  assert.equal(rapport.reason, null);
+  assert.deepEqual(rapport.unread_parts, [{ part: CORE_PART, why: 'malformed XML' }]);
+  assert.equal(rapport.fields.company, 'Cabinet Lumière');
+  assert.ok(!('author' in rapport.fields));
+  const nu = readDocumentMetadata(NU);
+  assert.deepEqual([nu.fields, nu.unread_parts], [{}, []]);
+  assert.deepEqual(readDocumentMetadata(CASSE).unread_parts,
+    [{ part: CORE_PART, why: 'malformed XML' }]);
 });
 
-test("une partie qui promet plus que le plafond n'est pas décompressée", () => {
-  const gros = docx({
-    '[Content_Types].xml': TYPES,
-    [CORE_PART]: `<a>${'x'.repeat(MAX_PART_BYTES + 10)}</a>`,
-    'word/document.xml': DOC,
-  });
-  const rapport = readDocumentMetadata(gros);
+test('une partie qui promet plus que le plafond est nommée', () => {
+  // Docstring : « a part above the size cap ».
+  const rapport = readDocumentMetadata(CORE_ENORME);
   assert.equal(rapport.format, 'ooxml');
-  assert.deepEqual(rapport.fields, {});
+  assert.deepEqual(rapport.unread_parts, [{ part: CORE_PART, why: 'over the size cap' }]);
+  assert.ok(!('author' in rapport.fields));
+  assert.equal(rapport.fields.company, 'Cabinet Lumière');
 });
 
-test('aucune entrée ne lève', () => {
+test("une image nommée comme une partie du format n'en est pas une", () => {
+  // Commentaire : « ECMA-376 fixes where those parts live, so the mark is only
+  // looked for inside those folders. »
+  const autres = readDocumentMetadata(IMAGE_MAL_NOMMEE).other_parts;
+  assert.ok(!autres.includes('media/settings-du-client.png'));
+  assert.ok(autres.includes('word/media/settings-du-client.png'));
+});
+
+test('aucune entrée ne lève, et la raison nomme ce qui a été reçu', () => {
+  // R14 : la raison dit ce que le code a constaté — le type reçu.
+  assert.equal(readDocumentMetadata(null).reason, 'expected bytes, not object');
+  assert.equal(readDocumentMetadata('texte').reason, 'expected bytes, not string');
   for (const entree of [null, undefined, 42, 'texte', [], {}]) {
     const rapport = readDocumentMetadata(entree);
     assert.deepEqual(rapport.fields, {});
-    assert.ok(rapport.reason.startsWith('expected bytes'));
+    assert.ok(rapport.reason.startsWith('expected bytes, not '));
   }
 });
 
@@ -151,7 +194,8 @@ test('production : entrée banale, un contrat envoyé à un client', () => {
 });
 
 test('production : entrée vide', () => {
-  assert.ok(readDocumentMetadata(new Uint8Array()).reason.startsWith('not a ZIP'));
+  assert.equal(readDocumentMetadata(new Uint8Array()).reason,
+    'not a ZIP container, so not an OOXML document');
 });
 
 test('production : entrée très grande et terminaison rapide', () => {

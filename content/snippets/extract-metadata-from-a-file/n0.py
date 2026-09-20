@@ -32,6 +32,8 @@ import zipfile
 CORE_PART, APP_PART = "docProps/core.xml", "docProps/app.xml"
 FIELDS = {
     "title": "title", "creator": "author", "lastModifiedBy": "last_modified_by",
+    # « revision » is the number of times the document was saved, as OOXML
+    # defines it — not a version number, although it is read as one.
     "revision": "revision", "created": "created", "modified": "modified",
     "keywords": "keywords", "subject": "subject", "description": "description",
     "category": "category", "Company": "company", "Manager": "manager",
@@ -43,6 +45,10 @@ FIELDS = {
 
 # Parts that carry names, dates or identifiers this rung does not read. They
 # are listed so that a quiet answer is never mistaken for an empty document.
+# ECMA-376 fixes where those parts live, so the mark is only looked for inside
+# those folders: a picture the author named `media/settings-du-client.png` is
+# not a settings part.
+OOXML_FOLDERS = ("word/", "xl/", "ppt/", "docProps/")
 OTHER_PARTS = ("comments", "people", "settings", "custom.xml", "revisions")
 
 # A ZIP entry can promise far more than the archive weighs. Only the two parts
@@ -56,6 +62,14 @@ def read_document_metadata(data) -> dict:
 
     `data` is the bytes of the file. Nothing is written, and nothing but the
     two metadata parts is decompressed.
+
+    Two lists say what was not read, because a quiet answer must never pass for
+    an empty document. `other_parts` names the parts this rung does not open at
+    all — the comments, the tracked changes, the settings. `unread_parts` names
+    the ones it meant to open and could not, with why: a part whose XML is
+    malformed, and a part above the size cap. Without them, a document whose
+    `docProps/core.xml` was truncated in transit answers « no author », which
+    is the one answer this entry exists to refuse.
     """
     if not isinstance(data, (bytes, bytearray)):
         return _report(None, {}, [], f"expected bytes, not {type(data).__name__}")
@@ -68,23 +82,31 @@ def read_document_metadata(data) -> dict:
                for name in names):
         return _report(None, {}, [], "a ZIP, but not an OOXML document")
 
-    fields = {}
+    fields, unread = {}, []
     for part in (CORE_PART, APP_PART):
-        if part not in names or archive.getinfo(part).file_size > MAX_PART_BYTES:
+        if part not in names:
+            continue  # the document does not carry it, which is not a failure
+        if archive.getinfo(part).file_size > MAX_PART_BYTES:
+            unread.append({"part": part, "why": "over the size cap"})
             continue
         try:
             root = ElementTree.fromstring(archive.read(part))
-        except ElementTree.ParseError:
-            continue  # a part we cannot read is a part we do not claim
+        except (ElementTree.ParseError, zipfile.BadZipFile, OSError, ValueError):
+            # A part we cannot read is a part we do not claim — and we say so.
+            unread.append({"part": part, "why": "malformed XML"})
+            continue
         for element in root:
             local = element.tag.split("}")[-1]
             if local in FIELDS and (element.text or "").strip():
                 fields[FIELDS[local]] = element.text.strip()
 
     others = sorted(name for name in names
-                    if any(mark in name for mark in OTHER_PARTS) and name not in (CORE_PART, APP_PART))
-    return _report("ooxml", fields, others, None)
+                    if name.startswith(OOXML_FOLDERS)
+                    and any(mark in name for mark in OTHER_PARTS)
+                    and name not in (CORE_PART, APP_PART))
+    return _report("ooxml", fields, others, None, unread)
 
 
-def _report(kind, fields: dict, others: list, reason) -> dict:
-    return {"format": kind, "fields": fields, "other_parts": others, "reason": reason}
+def _report(kind, fields: dict, others: list, reason, unread=()) -> dict:
+    return {"format": kind, "fields": fields, "other_parts": others,
+            "unread_parts": list(unread), "reason": reason}
