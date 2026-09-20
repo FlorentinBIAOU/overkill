@@ -254,7 +254,9 @@ def test_chaque_page_est_lue_et_lappelant_peut_en_choisir():
 def test_un_fichier_qui_nest_pas_un_pdf_donne_une_raison():
     rapport = read_tables(b"ceci n'est pas un PDF")
     assert rapport["tables"] == []
-    assert rapport["reason"].startswith("this file could not be opened as a PDF")
+    # R14 : la raison dit ce que le code a constaté, et elle porte l'erreur
+    # que la bibliothèque a rendue.
+    assert rapport["reason"].startswith("this file could not be opened as a PDF: ")
 
 
 # ---------------------------------------------------------------------------

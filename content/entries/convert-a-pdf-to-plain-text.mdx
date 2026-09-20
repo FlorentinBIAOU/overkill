@@ -44,8 +44,8 @@ rungs:
       javascript: snippets/convert-a-pdf-to-plain-text/n0.js
       verification: executed
     breaking_point:
-      fr: "Le texte extrait est le texte imprimé, pas le texte écrit : « quatre généra- » et « tions de clients », coupés en fin de ligne, restent deux morceaux. Le témoin est dans le même test, et c’est la raison de ne pas les recoller : « Boulogne- » et « Billancourt » sont coupés de la même façon sur la même page, et ce sont deux mots."
-      en: "The extracted text is the printed text, not the written one: “quatre généra-” and “tions de clients”, cut at the end of a line, stay two pieces. The witness is in the same test, and it is the reason not to glue them: “Boulogne-” and “Billancourt” are cut the same way on the same page, and they are two words."
+      fr: "Un tableau à exactement deux colonnes est lu comme deux colonnes, donc transposé : les libellés d’abord, les montants ensuite. Au-delà de deux bandes, la page est lue dans l’ordre imprimé et `reason` le dit — c’est le témoin, dans le même test, sur une facture à quatre colonnes."
+      en: "A table of exactly two columns is read as two columns, so it comes back transposed: the labels first, the amounts after. Above two bands the page is read in printed order and `reason` says so — that is the witness, in the same test, on a four-column invoice."
     escalate_when:
       fr: "Il n’y a pas de niveau au-dessus. Le jour où le rapport rend zéro colonne et un texte vide, le PDF ne porte pas de texte du tout : c’est un scan, et la question devient la reconnaissance de caractères."
       en: "There is no level above this one. The day the report returns zero columns and an empty text, the PDF carries no text at all: it is a scan, and the question becomes character recognition."

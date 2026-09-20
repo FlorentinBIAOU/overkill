@@ -10,7 +10,6 @@
   "dette": [
     "check-a-company-identification-number",
     "check-bank-details-before-a-transfer",
-    "convert-a-pdf-to-plain-text",
     "convert-messy-csv-to-clean-data",
     "estimate-the-cost-of-a-model-call",
     "extract-a-table-from-a-web-page",
@@ -19,7 +18,6 @@
     "extract-links-from-a-page",
     "extract-metadata-from-a-file",
     "extract-people-and-companies-from-an-article",
-    "extract-tables-from-a-pdf",
     "extract-the-latest-reply-from-an-email-thread",
     "extract-tracking-numbers-from-an-email",
     "read-text-from-a-scanned-page",

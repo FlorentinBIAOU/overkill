@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import zlib from 'node:zlib';
 
-import { MIN_GUTTER, SAME_LINE, findColumns, readText } from './n0.js';
+import { MAX_COLUMNS, MIN_GUTTER, SAME_LINE, findColumns, readText } from './n0.js';
 
 /** Les PDF de ce test, fabriqués pour lui, compressés pour tenir dans le fichier. */
 const pdf = (...morceaux) => zlib.inflateSync(Buffer.from(morceaux.join(''), 'base64'));
@@ -57,6 +57,17 @@ const DEUX_PAGES = pdf(
   + 'uTjmG/24ld5xDqk/em31x6+k/uig+ukL9R80roIIsiBqf5AmCem/gjbGyKH+jdzH0mEnxuJRJ5ZkaSeWZoNO'
   + 'bMyylzHGog6XxdE/XPKdKFH71S3Ed4SMFqKUBfY8JdlRWz8jG8RZ0OtNP86Cvy1BwMQ=');
 
+// Une facture ordinaire à quatre colonnes, sans un seul filet : c'est le
+// document le plus banal du public visé, et il ressortait transposé.
+const FACTURE = pdf(
+  'eNptVNFumzAUfecr7kukTSrDNoYGqarUtEWVlqhZwlu1B5c4mSNiT8ZU2b5+18CapC5CiJx7zj3H5jqT5UMZ0288okDAvO6jmxtI'
+  + 'qj+/JST3wonG7CBZip1sgSFhBbe3kdQbT2SBYOAl39WmhZfU039iF9NpB/RMmH4q9E8rkTr4JAu5UWJmjvBCEMiKDKacYb+VbE1n'
+  + 'azTy+tKgon+hkI0B/Y222mG3FviH2PzMfS71zv2CPOWe0DorxSGaVZHvRglU235XCKa/JnA9ReQAX9Z3qznMJSxM1yj9Far9BSvP'
+  + 'exZlYDsJG8xZWmllG8+7g8KXQJCxXlAwSgjMsKnZaRnPVNMIXeNSXaBgvFeUonadlaChvIsZYXlMONpuOsDnXug3tAOPf2yQjytZ'
+  + 'yS0G0vVlJnrGeJCt2mnhlLlcaJqeOD86oZ1yl034GWFp1RGeqiBFPpQX9zHPCA0z/K/3+wwCarGVYYqRxUL7sUKLq4IE5vzdvCCE'
+  + 'hOZjHb8Hfgij7CfOI4WGzmMl5VckdCbjrviZp9B2FoYOj5Uf0XEIx2HNgqPSD3yy7l5d/9ODFJKZaOVQeZLNm3SqFmcjf7RyG6Fz'
+  + 'RN4vyLMszWALJ6yAoaJPWDYNMEqzAGOcBljB8hPmrFCNtP0y1uqvhBzPsTH+b2E8nK0T1vU5iyKPJpPH5zL6BzDKI3I=');
+
 const GAUCHE = 'La boulangerie Martin fête\nses cent ans cette année. Le\n'
   + 'four à bois, classé, tourne\nencore tous les matins.';
 const DROITE = 'Clémentine Martin a repris\nle commerce en 2019. La\n'
@@ -70,14 +81,64 @@ const TEXTE_CESURE = 'La boulangerie Martin, installée à Boulogne-\n'
 // Point de rupture
 // ---------------------------------------------------------------------------
 
-test('point de rupture : une césure reste une césure', async () => {
+test("point de rupture : une page de tableau est lue dans l'ordre imprimé", async () => {
+  // « Sur une page dont le corps est un tableau, les gouttières entre les
+  // colonnes dépassent celles d'un texte : lire les bandes de haut en bas
+  // rendrait toutes les références, puis toutes les désignations, puis tous
+  // les prix. Ces pages sont lues dans l'ordre du dessin, et `reason` le dit. »
+  const page = (await readText(FACTURE)).pages[0];
+  assert.equal(page.columns, 3);
+  assert.equal(page.reason, 'this page looks like a table: read in page order');
+  const lignes = page.text.split('\n');
+  assert.deepEqual(lignes.slice(4, 7), [
+    'Reference Designation Quantite Prix HT',
+    'MC-4501 Moulin a cafe 2 19,90',
+    'MC-9000 Bouilloire 1 34,00',
+  ]);
+  assert.ok(lignes[5].includes('MC-4501') && lignes[5].includes('19,90'));
+  // Témoin : la page à deux colonnes de prose, elle, est bien réordonnée.
+  const colonnes = (await readText(COLONNES)).pages[0];
+  assert.equal(colonnes.reason, null);
+  assert.equal(colonnes.text, `${GAUCHE}\n\n${DROITE}`);
+});
+
+test('un tableau à deux colonnes reste transposé, et la fiche le dit', () => {
+  // Docstring : « a table of exactly two columns […] is still read as two
+  // columns, and still transposed. That is the first line of the breaking
+  // point, not a footnote. »
+  assert.equal(MAX_COLUMNS, 2);
+  const deuxColonnes = [{ text: 'Total', x: 0.0, end: 40.0, y: 0.0 },
+    { text: '19,90', x: 200.0, end: 240.0, y: 0.0 },
+    { text: 'Remise', x: 0.0, end: 45.0, y: -12.0 },
+    { text: '2,00', x: 200.0, end: 235.0, y: -12.0 }];
+  assert.equal(findColumns(deuxColonnes).length, 2);
+});
+
+test("la gouttière minimale est un réglage de l'appelant", async () => {
+  const serres = [{ text: 'a', x: 0.0, end: 100.0, y: 0.0 },
+    { text: 'b', x: 110.0, end: 300.0, y: 0.0 }];
+  assert.equal(findColumns(serres).length, 1);
+  assert.equal(findColumns(serres, { minGutter: 10.0 }).length, 2);
+  assert.equal((await readText(COLONNES, { minGutter: 500.0 })).pages[0].columns, 1);
+});
+
+test('les lignes coupées en fin de ligne sont comptées', async () => {
+  // Docstring : « it counts those lines in `hyphenated_lines` so the caller
+  // can decide for its own ».
+  assert.equal((await readText(CESURE)).pages[0].hyphenated_lines, 2);
+  assert.equal((await readText(COLONNES)).pages[0].hyphenated_lines, 0);
+});
+
+test('une césure reste une césure', async () => {
+  // Docstring : « a word cut at the end of a line stays cut […] would also
+  // glue « Boulogne- » and « Billancourt », which is a different town. »
   const texte = (await readText(CESURE)).pages[0].text;
   assert.equal(texte, TEXTE_CESURE);
   assert.ok(texte.includes('généra-\ntions'));
   assert.ok(texte.includes('Boulogne-\nBillancourt'));
 });
 
-test('point de rupture : témoin, le reste du texte est rendu tel quel', async () => {
+test('témoin de la césure : le reste du texte est rendu tel quel', async () => {
   const texte = (await readText(CESURE)).pages[0].text;
   assert.ok(texte.includes('a vu passer quatre'));
   assert.equal(texte.split('\n').length - 1, 2);
@@ -102,6 +163,8 @@ test("une page à une colonne est rendue dans l'ordre", async () => {
 });
 
 test('le nombre de colonnes est rendu', async () => {
+  // Docstring : « It says what was found, not what was done ».
+  assert.equal((await readText(FACTURE)).pages[0].columns, 3);
   assert.deepEqual((await readText(DEUX_PAGES)).pages.map((p) => p.columns), [2, 1]);
   const scan = (await readText(SCAN)).pages[0];
   assert.equal(scan.columns, 0);
@@ -126,7 +189,9 @@ test("chaque page est lue, et l'appelant peut en choisir", async () => {
 test("un fichier qui n'est pas un PDF donne une raison", async () => {
   const rapport = await readText(Buffer.from("ceci n'est pas un PDF"));
   assert.deepEqual(rapport.pages, []);
-  assert.ok(rapport.reason.startsWith('this file could not be opened as a PDF'));
+  // R14 : la raison dit ce que le code a constaté, et elle porte l'erreur que
+  // la bibliothèque a rendue.
+  assert.ok(rapport.reason.startsWith('this file could not be opened as a PDF: '));
 });
 
 // ---------------------------------------------------------------------------

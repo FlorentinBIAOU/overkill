@@ -6,9 +6,12 @@ n0.py: |
   Sortir le texte d'un PDF, dans l'ordre où il se lit.
 
   Niveau N0. Un PDF ne range pas un texte : il range des instructions pour
-  dessiner des glyphes à des coordonnées. Les lire est ce que font `pypdf` et `pdftotext`, et
-  `pdf.js` en JavaScript — aucun n'a besoin d'un modèle, puisque les caractères
-  sont dans le fichier, exactement, et qu'aucune reconnaissance n'a lieu.
+  dessiner des glyphes à des coordonnées. Les retransformer en caractères est
+  ce que font `pypdf` et `pdftotext`, et `pdf.js` en JavaScript. Cet extrait
+  n'appelle aucun des trois : il passe par `pdfplumber`, qui est celui qui rend
+  aussi la position de chaque mot, et c'est la position que travaille la suite
+  de ce fichier. Aucun d'eux n'a besoin d'un modèle : les caractères sont dans
+  le fichier, exactement, et aucune reconnaissance n'a lieu.
 
   Ce qu'ils ne font pas, c'est décider dans quel ordre ces caractères se
   lisent. Un traitement de texte qui exporte deux colonnes les dessine souvent
@@ -18,18 +21,40 @@ n0.py: |
   ne se trouve — et chacune est lue de haut en bas avant que la suivante
   commence.
 
+  Une page à plus de deux bandes n'est pas réordonnée du tout. Deux colonnes,
+  c'est ce qu'exporte un traitement de texte ; trois ou plus, sur une page que
+  personne ici n'a composée, c'est un tableau, un formulaire ou un tarif, et
+  les gouttières d'un tableau sont aussi larges que celles d'un texte. Lire ses
+  bandes de haut en bas rendrait toutes les références, puis toutes les
+  désignations, puis tous les prix, et le lien entre MC-4501 et 19,90 aurait
+  disparu. Ces pages sont lues dans l'ordre du dessin, et `reason` le dit sur
+  la page concernée. La suite est la fiche `extract-tables-from-a-pdf`, qui lit
+  la grille au lieu de la prose.
+
+  Le compte de bandes est tout ce dont cette règle dispose, et c'est ce qui est
+  portable : le nombre de mots d'une ligne dépend de la façon dont l'extracteur
+  a découpé les suites de caractères, et `pdfplumber` et `pdf.js` ne les
+  découpent pas pareil. Un tableau à exactement deux colonnes — un libellé à
+  gauche, un montant à droite — est donc toujours lu comme deux colonnes, et
+  toujours transposé. C'est la première ligne du point de rupture, pas une note
+  de bas de page.
+
   Une chose est laissée telle quelle, délibérément : un mot coupé en fin de
   ligne reste coupé. Recoller « généra- » et « tions » tient en une ligne de
   code, et recollerait aussi « Boulogne- » et « Billancourt », qui est une
-  autre ville. L'appelant connaît son corpus ; cette fonction ne devine pas.
+  autre ville. L'appelant connaît son corpus ; cette fonction ne devine pas, et
+  elle compte ces lignes dans `hyphenated_lines` pour qu'il décide du sien.
 
 n0.js: |
   Sortir le texte d'un PDF, dans l'ordre où il se lit.
 
   Niveau N0. Un PDF ne range pas un texte : il range des instructions pour
-  dessiner des glyphes à des coordonnées. Les lire est ce que font `pdf.js`, et
-  `pypdf` ou `pdftotext` en Python — aucun n'a besoin d'un modèle, puisque les caractères
-  sont dans le fichier, exactement, et qu'aucune reconnaissance n'a lieu.
+  dessiner des glyphes à des coordonnées. Les retransformer en caractères est
+  ce que fait `pdf.js` ici, et ce que font `pypdf` ou `pdftotext` en Python —
+  l'extrait Python de cette fiche n'appelle ni l'un ni l'autre, il passe par
+  `pdfplumber`, qui est celui qui rend aussi la position de chaque mot. Aucun
+  d'eux n'a besoin d'un modèle : les caractères sont dans le fichier,
+  exactement, et aucune reconnaissance n'a lieu.
 
   Ce qu'ils ne font pas, c'est décider dans quel ordre ces caractères se
   lisent. Un traitement de texte qui exporte deux colonnes les dessine souvent
@@ -39,7 +64,26 @@ n0.js: |
   ne se trouve — et chacune est lue de haut en bas avant que la suivante
   commence.
 
+  Une page à plus de deux bandes n'est pas réordonnée du tout. Deux colonnes,
+  c'est ce qu'exporte un traitement de texte ; trois ou plus, sur une page que
+  personne ici n'a composée, c'est un tableau, un formulaire ou un tarif, et
+  les gouttières d'un tableau sont aussi larges que celles d'un texte. Lire ses
+  bandes de haut en bas rendrait toutes les références, puis toutes les
+  désignations, puis tous les prix, et le lien entre MC-4501 et 19,90 aurait
+  disparu. Ces pages sont lues dans l'ordre du dessin, et `reason` le dit sur
+  la page concernée. La suite est la fiche `extract-tables-from-a-pdf`, qui lit
+  la grille au lieu de la prose.
+
+  Le compte de bandes est tout ce dont cette règle dispose, et c'est ce qui est
+  portable : le nombre de mots d'une ligne dépend de la façon dont l'extracteur
+  a découpé les suites de caractères, et `pdfplumber` et `pdf.js` ne les
+  découpent pas pareil. Un tableau à exactement deux colonnes — un libellé à
+  gauche, un montant à droite — est donc toujours lu comme deux colonnes, et
+  toujours transposé. C'est la première ligne du point de rupture, pas une note
+  de bas de page.
+
   Une chose est laissée telle quelle, délibérément : un mot coupé en fin de
   ligne reste coupé. Recoller « généra- » et « tions » tient en une ligne de
   code, et recollerait aussi « Boulogne- » et « Billancourt », qui est une
-  autre ville. L'appelant connaît son corpus ; cette fonction ne devine pas.
+  autre ville. L'appelant connaît son corpus ; cette fonction ne devine pas, et
+  elle compte ces lignes dans `hyphenated_lines` pour qu'il décide du sien.

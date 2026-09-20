@@ -7,7 +7,7 @@ import time
 import zlib
 from pathlib import Path
 
-from n0 import MIN_GUTTER, SAME_LINE, find_columns, read_text
+from n0 import MAX_COLUMNS, MIN_GUTTER, SAME_LINE, find_columns, read_text
 
 ICI = Path(__file__).parent
 
@@ -17,7 +17,7 @@ def _pdf(*morceaux: str) -> bytes:
     return zlib.decompress(base64.b64decode("".join(morceaux)))
 
 
-# Cinq documents minimaux, tous de vrais PDF. Le test JavaScript porte
+# Six documents minimaux, tous de vrais PDF. Le test JavaScript porte
 # exactement les mêmes octets.
 COLONNES = _pdf(
     "eNptU8tq20AU3esr7sbQQmpp9LIMIVCnNoU6NCSCLkIXY+nKnSDNuDOjkPYns+gPlHblfEXvyIrcVhZCjI7O"
@@ -77,16 +77,103 @@ TEXTE_CESURE = ("La boulangerie Martin, installée à Boulogne-\n"
                 "tions de clients depuis 1926.")
 
 
+# Une facture ordinaire à quatre colonnes, sans un seul filet : c'est le
+# document le plus banal du public visé, et il ressortait transposé.
+FACTURE = _pdf(
+    "eNptVNFumzAUfecr7kukTSrDNoYGqarUtEWVlqhZwlu1B5c4mSNiT8ZU2b5+18CapC5CiJx7zj3H5jqT5UMZ0288okDAvO6jmxtI"
+    "qj+/JST3wonG7CBZip1sgSFhBbe3kdQbT2SBYOAl39WmhZfU039iF9NpB/RMmH4q9E8rkTr4JAu5UWJmjvBCEMiKDKacYb+VbE1n"
+    "azTy+tKgon+hkI0B/Y222mG3FviH2PzMfS71zv2CPOWe0DorxSGaVZHvRglU235XCKa/JnA9ReQAX9Z3qznMJSxM1yj9Far9BSvP"
+    "exZlYDsJG8xZWmllG8+7g8KXQJCxXlAwSgjMsKnZaRnPVNMIXeNSXaBgvFeUonadlaChvIsZYXlMONpuOsDnXug3tAOPf2yQjytZ"
+    "yS0G0vVlJnrGeJCt2mnhlLlcaJqeOD86oZ1yl034GWFp1RGeqiBFPpQX9zHPCA0z/K/3+wwCarGVYYqRxUL7sUKLq4IE5vzdvCCE"
+    "hOZjHb8Hfgij7CfOI4WGzmMl5VckdCbjrviZp9B2FoYOj5Uf0XEIx2HNgqPSD3yy7l5d/9ODFJKZaOVQeZLNm3SqFmcjf7RyG6Fz"
+    "RN4vyLMszWALJ6yAoaJPWDYNMEqzAGOcBljB8hPmrFCNtP0y1uqvhBzPsTH+b2E8nK0T1vU5iyKPJpPH5zL6BzDKI3I=")
+
 # ---------------------------------------------------------------------------
 # Point de rupture
 # ---------------------------------------------------------------------------
 
 
-def test_point_de_rupture_une_cesure_reste_une_cesure():
+def test_point_de_rupture_une_page_de_tableau_est_lue_dans_lordre_imprime():
     """
-    « « quatre généra- » et « tions de clients » restent deux morceaux, parce
-    que les recoller ferait aussi de « Boulogne- » et « Billancourt » un seul
-    mot. »
+    « Sur une page dont le corps est un tableau, les gouttières entre les
+    colonnes dépassent celles d'un texte : lire les bandes de haut en bas
+    rendrait toutes les références, puis toutes les désignations, puis tous les
+    prix. Ces pages sont lues dans l'ordre du dessin, et `reason` le dit. »
+    """
+    page = read_text(FACTURE)["pages"][0]
+    # Trois bandes trouvées, et elles ne sont pas lues comme des colonnes.
+    assert page["columns"] == 3
+    assert page["reason"] == "this page looks like a table: read in page order"
+    lignes = page["text"].split("\n")
+    assert lignes[4:7] == [
+        "Reference Designation Quantite Prix HT",
+        "MC-4501 Moulin a cafe 2 19,90",
+        "MC-9000 Bouilloire 1 34,00",
+    ]
+    # Le lien entre la référence et le prix tient : ils sont sur la même ligne.
+    assert "MC-4501" in lignes[5] and "19,90" in lignes[5]
+    # Témoin : la page à deux colonnes de prose, elle, est bien réordonnée.
+    colonnes = read_text(COLONNES)["pages"][0]
+    assert colonnes["reason"] is None
+    assert colonnes["text"] == f"{GAUCHE}\n\n{DROITE}"
+
+
+def test_un_tableau_a_deux_colonnes_reste_transpose_et_la_fiche_le_dit():
+    """
+    Docstring : « a table of exactly two columns — a label on the left, an
+    amount on the right — is still read as two columns, and still transposed.
+    That is the first line of the breaking point, not a footnote. »
+
+    Le compte de bandes est le seul signal portable : le nombre de mots d'une
+    ligne dépend de la façon dont l'extracteur a découpé les suites de
+    caractères, et `pdfplumber` et `pdf.js` ne les découpent pas pareil.
+    """
+    assert MAX_COLUMNS == 2
+    deux_colonnes = [{"text": "Total", "x": 0.0, "end": 40.0, "y": 0.0},
+                     {"text": "19,90", "x": 200.0, "end": 240.0, "y": 0.0},
+                     {"text": "Remise", "x": 0.0, "end": 45.0, "y": -12.0},
+                     {"text": "2,00", "x": 200.0, "end": 235.0, "y": -12.0}]
+    assert len(find_columns(deux_colonnes)) == 2
+    # Ce que la lecture par colonnes en ferait : les deux libellés, puis les
+    # deux montants. C'est le défaut que cette fiche nomme et ne corrige pas.
+    from n0 import _column_text
+
+    bandes = find_columns(deux_colonnes)
+    assert [_column_text(deux_colonnes, b) for b in bandes] == [
+        "Total\nRemise", "19,90\n2,00"]
+
+
+def test_la_gouttiere_minimale_est_un_reglage_de_lappelant():
+    """
+    Remarque de production : un appelant qui constate une mauvaise découpe doit
+    avoir un levier. `min_gutter` en est un, comme `min_characters` ailleurs.
+    """
+    # Avec la valeur par défaut, une gouttière étroite ne sépare rien.
+    serres = [{"text": "a", "x": 0.0, "end": 100.0, "y": 0.0},
+              {"text": "b", "x": 110.0, "end": 300.0, "y": 0.0}]
+    assert len(find_columns(serres)) == 1
+    # Avec une gouttière plus petite, elle sépare.
+    assert len(find_columns(serres, min_gutter=10.0)) == 2
+    # Et le réglage passe bien par `read_text` : à gouttière très large, la
+    # page à deux colonnes n'en fait plus qu'une.
+    assert read_text(COLONNES, min_gutter=500.0)["pages"][0]["columns"] == 1
+
+
+def test_les_lignes_coupees_en_fin_de_ligne_sont_comptees():
+    """
+    Docstring : « it counts those lines in `hyphenated_lines` so the caller can
+    decide for its own ».
+    """
+    assert read_text(CESURE)["pages"][0]["hyphenated_lines"] == 2
+    # Témoin : une page sans césure n'en compte aucune.
+    assert read_text(COLONNES)["pages"][0]["hyphenated_lines"] == 0
+
+
+def test_une_cesure_reste_une_cesure():
+    """
+    Docstring : « a word cut at the end of a line stays cut. Gluing « généra- »
+    and « tions » back together […] would also glue « Boulogne- » and
+    « Billancourt », which is a different town. »
     """
     texte = read_text(CESURE)["pages"][0]["text"]
     assert texte == TEXTE_CESURE
@@ -95,8 +182,8 @@ def test_point_de_rupture_une_cesure_reste_une_cesure():
     assert "Boulogne-\nBillancourt" in texte
 
 
-def test_point_de_rupture_temoin_le_reste_du_texte_est_rendu_tel_quel():
-    """« Le témoin : tout le reste de la page ressort au caractère près. »"""
+def test_temoin_le_reste_du_texte_est_rendu_tel_quel():
+    """Le témoin de la césure : tout le reste de la page ressort au caractère près."""
     texte = read_text(CESURE)["pages"][0]["text"]
     assert "a vu passer quatre" in texte
     assert texte.count("\n") == 2
@@ -136,8 +223,14 @@ def test_une_page_a_une_colonne_est_rendue_dans_lordre():
 
 
 def test_le_nombre_de_colonnes_est_rendu():
-    """Docstring : « `columns` […] is what tells a caller that the page was not a simple column of prose »."""
+    """
+    Docstring : « `columns` […] is what tells a caller that the page was not a
+    simple column of prose. It says what was found, not what was done. »
+    """
     assert [p["columns"] for p in read_text(DEUX_PAGES)["pages"]] == [2, 1]
+    # Sur la facture, trois bandes sont bien rendues, alors que la lecture, elle,
+    # s'est faite en une seule.
+    assert read_text(FACTURE)["pages"][0]["columns"] == 3
     assert read_text(SCAN)["pages"][0]["columns"] == 0
     assert read_text(SCAN)["pages"][0]["text"] == ""
 
@@ -165,7 +258,9 @@ def test_chaque_page_est_lue_et_lappelant_peut_en_choisir():
 def test_un_fichier_qui_nest_pas_un_pdf_donne_une_raison():
     rapport = read_text(b"ceci n'est pas un PDF")
     assert rapport["pages"] == []
-    assert rapport["reason"].startswith("this file could not be opened as a PDF")
+    # R14 : la raison dit ce que le code a constaté, et elle porte l'erreur
+    # que la bibliothèque a rendue.
+    assert rapport["reason"].startswith("this file could not be opened as a PDF: ")
 
 
 # ---------------------------------------------------------------------------

@@ -176,7 +176,9 @@ test("chaque page est lue, et l'appelant peut en choisir", async () => {
 test("un fichier qui n'est pas un PDF donne une raison", async () => {
   const rapport = await readTables(Buffer.from("ceci n'est pas un PDF"));
   assert.deepEqual(rapport.tables, []);
-  assert.ok(rapport.reason.startsWith('this file could not be opened as a PDF'));
+  // R14 : la raison dit ce que le code a constaté, et elle porte l'erreur que
+  // la bibliothèque a rendue.
+  assert.ok(rapport.reason.startsWith('this file could not be opened as a PDF: '));
 });
 
 // ---------------------------------------------------------------------------
