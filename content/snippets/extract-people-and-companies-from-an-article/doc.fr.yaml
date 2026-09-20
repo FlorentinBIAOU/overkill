@@ -1,0 +1,50 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0: |
+  Les noms propres d'un article, typés seulement là où quelque chose le prouve.
+
+  Niveau N0. En français comme en anglais, un nom propre porte une majuscule :
+  trouver les candidats est donc un balayage. Dire ce que chacun *est* — une
+  personne, une entreprise, un lieu — est l'autre moitié, la difficile, et rien
+  dans les lettres elles-mêmes ne le dit : « Boulanger » est un nom de famille
+  autant qu'une enseigne, « Orange » une entreprise autant qu'un fruit, « Lyon »
+  une ville autant qu'un patronyme.
+
+  Ce niveau ne type donc un nom que lorsque la phrase le prouve. « M. » ou
+  « Mme » devant prouve une personne ; une forme juridique comme « SARL » ou
+  « Ltd » derrière, ou « la société » devant, prouve une entreprise. Tout le
+  reste revient en `unknown`, qui est ce que la phrase autorise réellement.
+  Deviner d'après la forme du mot, c'est ainsi que « Boulanger a livré le
+  colis » devient une boulangerie.
+
+  Deux limites sont comptées plutôt que cachées. Un mot capitalisé seul en tête
+  de phrase n'est pas rendu, parce que la plupart ne sont que le premier mot de
+  la phrase ; `skipped_at_sentence_start` dit combien ont été passés. Et les
+  marqueurs ci-dessous sont français et anglais : c'est une liste déclarée,
+  faite pour être étendue, et un texte qui n'en porte aucun revient
+  entièrement `unknown`.
+
+n2: |
+  Typer les noms avec un petit modèle pré-entraîné, sur votre machine.
+
+  Niveau N2. C'est le niveau qui répond à la moitié dont le niveau N0 est
+  incapable : ce qu'un nom *est*, quand la phrase ne le dit pas. Le modèle pèse
+  quelques dizaines de mégaoctets, il tourne sur un processeur en quelques
+  millisecondes, et rien ne quitte la machine — ce qui compte davantage ici
+  qu'ailleurs, puisque ce qu'on extrait est une liste de personnes.
+
+  Ce qui vous appartient à ce niveau n'est pas le modèle. C'est le plafond, le
+  lot, la correspondance entre son jeu d'étiquettes et le vôtre, et la réponse
+  à « que fait le code d'une étiquette qu'on ne sait pas traduire ». Le
+  pipeline français de spaCy porte quatre étiquettes — personne, organisation,
+  lieu, et une quatrième qui veut dire « autre chose » — là où cette fiche a
+  trois sens. `MISC` est donc écarté plutôt que deviné, et compté, pour que
+  l'appelant voie ce qui a été jeté.
+
+  La limite à garder en tête est la forme de la réponse, pas sa qualité : le
+  pipeline rend une étiquette pour chaque nom qu'il trouve, et rien à côté.
+  Il n'y a pas de seuil à monter ni d'« unknown » sur quoi retomber. Le niveau
+  N0 répond `unknown` quand la phrase ne prouve rien ; ici, on affirme toujours
+  quelque chose.

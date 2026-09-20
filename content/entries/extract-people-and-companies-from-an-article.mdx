@@ -1,0 +1,121 @@
+---
+id: extract-people-and-companies-from-an-article
+family: extract
+status: published
+verdict: N2
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Repérer les personnes et organisations citées dans un article"
+  en: "Find the people and organisations named in an article"
+
+need:
+  fr: "Lister les noms propres mentionnés dans un texte et savoir à quel type d’entité chacun correspond."
+  en: "List the proper names mentioned in a text and tell what kind of entity each one is."
+
+scenario:
+  fr: "On voit envoyer chaque article à un modèle généraliste pour qu’il en rende « les personnes et les entreprises ». L’énoncé contient pourtant deux travaux très inégaux : trouver les noms, qui est un balayage de majuscules, et dire ce que chacun est, qui n’est écrit nulle part — « Boulanger » est un nom de famille autant qu’une enseigne. Le premier ne demande rien ; le second se règle avec un modèle de quelques dizaines de mégaoctets qui tourne chez vous, sur des données qui sont des noms de personnes et n’ont aucune raison de sortir."
+  en: "Sending every article to a general-purpose model to get back “the people and the companies” is a common sight. But the need holds two very unequal jobs: finding the names, which is a scan for capitals, and saying what each one is, which is written nowhere — “Boulanger” is a family name as much as a shop sign. The first needs nothing; the second is settled by a model of a few tens of megabytes running on your own machine, over data that is a list of people’s names and has no business leaving it."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Les majuscules, et un type seulement là où la phrase le prouve"
+      en: "The capitals, and a type only where the sentence proves it"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: none
+      footprint: negligible
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le texte est lu dans votre processus et n’est transmis à personne"
+          - "Une liste de noms de personnes est un traitement de données personnelles, quel que soit le niveau employé pour la produire"
+        en:
+          - "No specific scope added: the text is read inside your own process and is sent to nobody"
+          - "A list of people’s names is personal data processing, whichever level produced it"
+    code:
+      python: snippets/extract-people-and-companies-from-an-article/n0.py
+      javascript: snippets/extract-people-and-companies-from-an-article/n0.js
+      verification: executed
+    breaking_point:
+      fr: "Sans marqueur, la phrase ne prouve rien : dans « Le colis a été livré par Boulanger », le nom revient `unknown`, et c’est un nom de famille autant qu’une enseigne. Le témoin est dans le même test, et il tranche dans les deux sens : la même phrase avec « la société » devant donne une entreprise, et avec « M. » devant, une personne."
+      en: "With no marker, the sentence proves nothing: in “Le colis a été livré par Boulanger”, the name comes back `unknown`, and it is a family name as much as a shop sign. The witness is in the same test, and it settles both ways: the same sentence with “la société” in front gives a company, and with “M.” in front, a person."
+    escalate_when:
+      fr: "Vos textes ne portent pas ces marqueurs. La prose de presse nomme les gens et les entreprises sans jamais écrire « la société », et c’est le cas ordinaire : la part d’`unknown` dans le rapport vous le dira avant vous."
+      en: "Your texts do not carry those markers. Press prose names people and companies without ever writing “la société”, and that is the ordinary case: the share of `unknown` in the report will tell you before you notice."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Le modèle classique de ce problème est un champ aléatoire conditionnel sur des traits de mots — `sklearn-crfsuite` le fait —, et il demande un corpus annoté entité par entité dans la langue traitée. C’est précisément ce que vous n’avez pas : annoter quelques milliers de phrases coûte plus cher que tout le reste de cette fiche. Les pipelines du niveau au-dessus existent parce que cette annotation a été faite une fois, publiquement, et qu’elle est livrée avec eux."
+      en: "The classic model for this problem is a conditional random field over word features — sklearn-crfsuite does it — and it needs a corpus annotated entity by entity in the language handled. That is precisely what you do not have: annotating a few thousand sentences costs more than everything else on this page. The pipelines of the level above exist because that annotation was done once, publicly, and ships with them."
+
+  - level: N2
+    available: true
+    name:
+      fr: "Un pipeline de reconnaissance d’entités chargé localement"
+      en: "An entity recognition pipeline loaded locally"
+    cost: négligeable
+    latency: "~100 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: statistical
+      vendor_lock: library
+      footprint: moderate
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le modèle tourne chez vous et le texte ne sort pas"
+          - "Licence du modèle à lire séparément de celle de la bibliothèque : les pipelines français de spaCy sont publiés sous LGPL-LR, quand spaCy est sous MIT"
+        en:
+          - "No specific scope added: the model runs on your machine and the text does not leave it"
+          - "The model’s licence is to be read apart from the library’s: spaCy’s French pipelines are published under LGPL-LR, where spaCy itself is MIT"
+    code:
+      python: snippets/extract-people-and-companies-from-an-article/n2.py
+      javascript: snippets/extract-people-and-companies-from-an-article/n2.js
+      verification: stubbed
+    breaking_point:
+      fr: "Le pipeline rend une étiquette pour chaque nom qu’il trouve, et rien à côté : pas de score, donc pas de seuil à monter et pas d’`unknown` sur quoi retomber. Dans l’essai de cette fiche, « Lyon » rendu comme une entreprise entre dans la liste comme une entreprise, et tout ce que le code peut vérifier — que le nom figure bien dans le texte envoyé, que l’étiquette se traduit — passe. Le témoin est dans le même test : sur ce même nom, le niveau N0 répond `unknown`, ce qui est exactement ce que la phrase prouve."
+      en: "The pipeline returns a label for every name it finds, and nothing beside it: no score, so no threshold to raise and no `unknown` to fall back on. In this entry’s tryout, “Lyon” returned as a company enters the list as a company, and everything the code can check — that the name really is in the text sent, that the label can be mapped — passes. The witness is in the same test: on that same name, level N0 answers `unknown`, which is exactly what the sentence proves."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus qui vaille la peine ici. Ce qui manque à ce niveau — savoir qu’il ne sait pas — ne s’achète pas à l’appel."
+      en: "There is no level above this one worth taking here. What this level lacks — knowing that it does not know — is not something a paid call provides."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Envoyer un article entier chez un tiers pour en rendre la liste des personnes qu’il cite, par document et sur un fonds qui se compte en milliers, est le cas où le coût et le périmètre réglementaire vont dans le même sens. Et le résultat n’est pas plus vérifiable qu’au niveau N2 : un modèle généraliste ajoute volontiers des noms qui ne sont pas dans le texte, là où le pipeline local rend des portions du document."
+      en: "Sending a whole article to a third party to get the list of people it names, per document and over an archive counted in thousands, is the case where cost and regulatory scope point the same way. And the result is no more checkable than at level N2: a general-purpose model will happily add names that are not in the text, where the local pipeline returns spans of the document."
+
+verdict_rationale:
+  fr: "N2, parce que la moitié difficile de l’énoncé — dire ce qu’un nom est — n’est écrite nulle part dans le texte, et qu’un modèle de quelques dizaines de mégaoctets qui tourne chez vous la règle. Ce n’est pas un renoncement à la frugalité, c’est où elle mène : le pipeline est local, gratuit, déterministe, et il ne fait pas sortir une liste de noms de personnes. Le niveau N0 garde tout son emploi, et il fait deux choses que le modèle ne fait pas. Il répond `unknown` quand la phrase ne prouve rien, quand le pipeline affirme toujours quelque chose. Et il compte ce qu’il a laissé passer — les noms d’un seul mot en tête de phrase — au lieu de les taire. Une décision est assumée au passage : « et » n’est pas admis à l’intérieur d’un nom, ce qui coupe « Marks and Spencer » en deux morceaux, parce que l’admettre fusionnait « Alex Ferguson et Acme » en une seule entité — inventer une entité à partir de deux est pire que rendre un nom en deux morceaux."
+  en: "N2, because the hard half of the need — saying what a name is — is written nowhere in the text, and a model of a few tens of megabytes running on your machine settles it. That is not a retreat from frugality, it is where frugality leads: the pipeline is local, free, deterministic, and it does not send a list of people’s names anywhere. Level N0 keeps its full use, and it does two things the model does not. It answers `unknown` when the sentence proves nothing, where the pipeline always claims something. And it counts what it let pass — the one-word names at the start of a sentence — instead of keeping quiet about them. One decision is owned along the way: “et” is not allowed inside a name, which cuts “Marks and Spencer” into two pieces, because allowing it merged “Alex Ferguson et Acme” into a single entity — inventing one entity out of two is worse than returning one name in two pieces."
+
+further_reading:
+  - label: "spaCy — les pipelines français, leurs étiquettes et leur licence"
+    url: "https://spacy.io/models/fr"
+  - label: "Transformers.js — faire tourner un modèle de reconnaissance d’entités dans Node"
+    url: "https://github.com/huggingface/transformers.js"
+  - label: "sklearn-crfsuite — le champ aléatoire conditionnel, et le corpus annoté qu’il réclame"
+    url: "https://sklearn-crfsuite.readthedocs.io/"
+  - label: "Masquer les données personnelles dans un échange — la fiche voisine, quand le but est de les cacher et non de les lister"
+    url: "https://isitoverkill.dev/fr/fiches/mask-personal-data-in-chat"
+
+sources:
+  - label: "spaCy, modèles français (consulté) : `fr_core_news_sm` 3.8.0, licence LGPL-LR, quatre étiquettes d’entités — LOC, MISC, ORG, PER"
+    url: "https://spacy.io/models/fr"
+  - label: "spaCy sur PyPI (consulté) : version 3.8.16, publiée le 24 août 2026, licence MIT — celle de la bibliothèque, pas celle des modèles"
+    url: "https://pypi.org/project/spacy/"
+  - label: "@huggingface/transformers, consulté sur le registre npm : version 4.3.0, publiée le 16 septembre 2026, licence Apache 2.0 ; c’est par lui qu’un pipeline de reconnaissance d’entités tourne dans Node"
+    url: "https://github.com/huggingface/transformers.js"
+  - label: "compromise sur son dépôt (consulté) : « a considerate, common-sense baseline for english grammar » ; les variantes d’autres langues y sont décrites comme des travaux en cours, et `fr-compromise` en est à la version 0.3.1"
+    url: "https://github.com/spencermountain/compromise"
+  - label: "sklearn-crfsuite sur PyPI (consulté) : version 0.5.0, publiée le 18 juin 2024, licence MIT"
+    url: "https://pypi.org/project/sklearn-crfsuite/"
+---
