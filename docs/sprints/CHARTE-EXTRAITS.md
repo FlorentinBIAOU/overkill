@@ -136,6 +136,37 @@ Ce qu'il ne prouve pas : que le modèle répond bien. Dites-le, ne le cachez pas
 
 ---
 
+## Les montants
+
+**Un montant ne devient jamais un flottant, se rend en chaîne de chiffres, et ne
+s'arrondit qu'une fois, après la dernière agrégation.** Un arrondi qui précède
+une multiplication ou une somme est une erreur multipliée.
+
+Cette décision engageait le site au-delà d'une fiche et vivait dans un rapport
+de lot ; c'est pour cela qu'elle a été enfreinte deux fois. `aggregate-a-column-of-data`
+la tient, `extract-amounts-and-currencies-from-text` aussi ; mais
+`extract-product-data-from-a-shop-page` rendait un prix en flottant et perdait
+les centimes dans le champ censé les garder, et `estimate-the-cost-of-a-model-call`
+arrondissait le coût par appel avant de le multiplier par le nombre d'appels —
+cent mille appels revenaient à « 0,00 ».
+
+---
+
+## Ce qui sort de votre processus
+
+Le champ `data_egress` du bloc `risks` est affiché comme badge et sert de filtre
+au catalogue : il dit ce que le code fait, pas ce que vous vouliez qu'il fasse.
+Un extrait dont le code porte une primitive réseau, un client de fournisseur ou
+l'adresse d'un service ne déclare pas `none` ; le schéma propose `own-infra` et
+`third-party`. Contrôlé par `node scripts/check-egress.mjs`.
+
+Et le corollaire, dans le sens où il coûte cher : **un niveau qui dépend d'un
+service extérieur dit ce qu'il fait quand ce service ne répond pas**, dans la
+fiche comme dans un test. Un chemin d'inscription qui lève parce qu'une liste de
+fuites est indisponible refuse un client pour une panne qui n'est pas la sienne.
+
+---
+
 ## Chiffres
 
 Aucun extrait, aucun commentaire et aucun test ne contient :

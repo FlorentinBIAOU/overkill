@@ -232,6 +232,16 @@ une phrase. Celle qu'on veut ajouter a presque toujours sa place dans la
 docstring : c'est le renvoi, le cas voisin, ou l'alternative écartée.
 
 **R12. Tout ce qui a été vérifié pour écrire la fiche va dans `sources`.** Voir plus haut.
+Et son pendant : **tout nombre écrit dans une fiche — pourcentage, effectif,
+décompte, facteur — est soit asserté à l'égalité stricte dans un test, soit
+remplacé par un ordre de grandeur en toutes lettres** (« près de sept mille »,
+« moins d'un demi pour cent »). Il n'y a pas de troisième forme : un générateur
+à graine fixe est reproductible à l'unité, il n'y a aucune raison d'écrire une
+fourchette. Contrôlé par `node scripts/check-chiffres-tenus.mjs`, qui exige que
+chaque nombre publié apparaisse dans un test de la fiche.
+*Ce qui l'a fait écrire :* `check-bank-details-before-a-transfer` publiait
+« 0,6 % » et « 6 887 » là où ses deux suites rendent 0,450 % et 6 882, avec des
+tests qui assertaient `0.002 < x < 0.02` — une fourchette large d'une décade.
 
 **R13. Le titre anglais décrit le même besoin que `need`.** L'anglais est la version
 canonique.

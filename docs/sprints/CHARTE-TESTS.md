@@ -106,6 +106,14 @@ rouges sur la machine du relecteur pour des marges de deux et de trois. Une
 classe de latence se justifie dans le relevé, par une mesure écrite, jamais par
 une assertion serrée.
 
+Et **un défaut de production trouvé sur un niveau est cherché sur tous les
+niveaux de la même fiche, et l'entrée qui l'a révélé entre dans le jeu de tests
+de chacun.** Le lot 17 en donne le cas d'école :
+`extract-product-data-from-a-shop-page` écrivait douze lignes de balayage
+linéaire en N0 pour éviter un effondrement d'expression régulière, avec le
+commentaire qui l'explique, et nettoyait le même HTML hostile à l'expression
+régulière en N3, deux fichiers plus loin, en quarante-deux secondes.
+
 Et un cas manque à ce tableau tant qu'on ne l'y met pas : **l'entrée ordinaire
 de la population visée**. Les suites du lot 15 testaient très bien le NFD, la
 marque d'ordre des octets et l'emoji, et pas `Boulogne-Billancourt` ni
@@ -268,10 +276,21 @@ testeur au rédacteur :
 | 3 | N3 breaking_point | « … » | non testable : raison | — |
 | 4 | N0 production | entrée vide | DÉFAUT : ce qui se passe | test_… |
 
+## Dix entrées ordinaires
 ## Non testable, et pourquoi
 ## Infirmé, et ce que le code fait réellement
 ## Défauts de production
 ```
+
+La section **« Dix entrées ordinaires »** est la seule trace possible de la
+règle R1, et elle coûte dix minutes : dix entrées que le rédacteur n'a pas
+fabriquées pour la fiche — copiées d'un vrai document, d'un vrai journal, d'un
+vrai courriel —, ce que l'extrait en a rendu, et la ligne du point de rupture
+qui en découle. Cinq refus du lot 17 auraient été évités en collant une facture
+sans filets dans le relevé de `extract-tables-from-a-pdf`, une ligne de
+`/var/log/syslog` dans celui de `extract-fields-from-a-log-line`, une phrase
+commençant par « Après » dans celui de
+`extract-people-and-companies-from-an-article`.
 
 Statuts permis : `démontrée`, `INFIRMÉE`, `DÉFAUT`, `non testable`. « Plausible »
 n'en est pas un.

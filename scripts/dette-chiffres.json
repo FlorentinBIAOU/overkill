@@ -1,0 +1,21 @@
+{
+  "_commentaire": [
+    "Dette de la règle « tout nombre publié est tenu par un test », relevée le",
+    "2026-09-20. Une fiche listée ici publie au moins un nombre qu'aucun de ses",
+    "tests ne porte. check-chiffres-tenus échoue si une fiche y reste alors que",
+    "tous ses nombres sont tenus : la liste ne peut que diminuer. Les fiches",
+    "refusées au lot 17 en sortent au fur et à mesure de leur correction ; les",
+    "autres sont hors du périmètre du lot 18."
+  ],
+  "dette": [
+    "check-a-password-against-a-policy",
+    "check-bank-details-before-a-transfer",
+    "forecast-weekly-sales",
+    "fuzzy-match-company-names",
+    "know-whether-a-pdf-needs-ocr",
+    "repair-text-with-broken-encoding",
+    "show-similar-articles",
+    "summarise-a-long-document",
+    "validate-an-api-payload-against-its-contract"
+  ]
+}
