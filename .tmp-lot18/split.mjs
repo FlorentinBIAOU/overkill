@@ -1,5 +1,0 @@
-const lot18 = new Set(['check-bank-details-before-a-transfer','validate-an-email-address-without-sending-a-message','check-a-file-is-really-the-format-it-claims','know-whether-a-pdf-needs-ocr','repair-text-with-broken-encoding','validate-an-api-payload-against-its-contract','check-a-password-against-a-policy','extract-product-data-from-a-shop-page','extract-main-content-from-a-web-page','extract-tables-from-a-pdf','convert-a-pdf-to-plain-text','extract-fields-from-a-log-line','extract-the-latest-reply-from-an-email-thread','extract-key-terms-from-a-document','extract-people-and-companies-from-an-article','extract-metadata-from-a-file','extract-a-table-from-a-web-page','extract-tracking-numbers-from-an-email','estimate-the-cost-of-a-model-call']);
-import { readFileSync } from 'node:fs';
-const ids = readFileSync('.tmp-lot18/fiches-raisons.txt','utf8').trim().split('\n');
-console.log('dans le lot 18 :', ids.filter(i=>lot18.has(i)).join(', '));
-console.log('\nhors lot 18 :', ids.filter(i=>!lot18.has(i)).join(', '));

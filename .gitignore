@@ -15,3 +15,4 @@ content/entries-fixtures/
 # Environnement et systeme
 .env
 .DS_Store
+.tmp-lot18/
