@@ -1,0 +1,51 @@
+# Traductions de la docstring d'en-tête, servies sur les pages françaises.
+# Une clé par niveau quand les deux langages disent la même chose, une clé par
+# fichier — « n0.js » — quand ils diffèrent. Le code, lui, n'est pas traduit.
+
+n0.py: |
+  Lire les tableaux d'un PDF, et dire comment ils ont été lus.
+
+  Niveau N0. Un tableau dans un PDF n'est pas un tableau : c'est du texte posé
+  à des coordonnées, parfois avec des traits tracés autour. Il en découle deux
+  lectures, et elles ne se valent pas.
+
+  Quand le tableau est tracé, les filets disent où sont les cellules, et la
+  lecture est exacte. C'est `pdfplumber` qui le fait ici, et c'est la seule
+  chose que cette fiche n'écrit pas elle-même : trouver les filets, les
+  apparier en grille et affecter les mots aux cases est son travail, et elle le
+  fait bien.
+
+  Quand il n'y a pas de filet, il faut deviner les colonnes d'après la position
+  des mots. Cette part-là est écrite plus bas, dans les deux langages, pour
+  qu'ils répondent la même chose — il n'existe pas d'équivalent de `pdfplumber`
+  en JavaScript, et le repli de `pdfplumber` lui-même coupe une cellule plus
+  large que sa colonne, transformant « Prix HT » en « Prix H ».
+
+  Laquelle des deux lectures a répondu figure dans le rapport, parce que
+  l'appelant ne devrait pas avoir à se le demander : `strategy` vaut « lines »
+  quand la page disait où étaient les cellules, et « text » quand c'est le code
+  qui a décidé.
+
+n0.js: |
+  Lire les tableaux d'un PDF, et dire comment ils ont été lus.
+
+  Niveau N0. Un tableau dans un PDF n'est pas un tableau : c'est du texte posé
+  à des coordonnées, parfois avec des traits tracés autour. Il en découle deux
+  lectures, et elles ne se valent pas.
+
+  Quand le tableau est tracé, les filets disent où sont les cellules, et la
+  lecture est exacte. C'est ce que fait `pdfplumber` du côté Python de cette
+  fiche, et il n'en existe pas d'équivalent en JavaScript : aucun paquet ne lit
+  les filets d'un PDF pour les apparier en grille. Ce fichier ne fait donc que
+  l'autre lecture, celle qui devine les colonnes d'après la position des mots,
+  et `strategy` le dit sur chaque tableau qu'il rend.
+
+  La conséquence est mesurée dans le test, et c'est la raison pour laquelle
+  cette fiche rend la stratégie employée : sur un tableau tracé dont la
+  désignation se replie sur deux lignes, l'extrait Python rend trois lignes
+  avec les deux dans la même case, et celui-ci en rend quatre avec la seconde
+  ligne toute seule.
+
+  Le regroupement plus bas est le même code dans les deux langages, pour que
+  sur un tableau sans filets — le cas ordinaire d'une facture reçue par
+  courriel — les deux répondent exactement la même chose.

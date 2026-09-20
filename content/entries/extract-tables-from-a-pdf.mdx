@@ -1,0 +1,92 @@
+---
+id: extract-tables-from-a-pdf
+family: extract
+status: published
+verdict: N0
+updated: 2026-09-20
+contributors: [florentin-biaou]
+
+title:
+  fr: "Extraire les tableaux d’un PDF"
+  en: "Extract the tables from a PDF"
+
+need:
+  fr: "Récupérer les lignes et les colonnes d’un tableau imprimé dans un PDF — une facture, un relevé, un bordereau."
+  en: "Get the rows and columns of a table printed inside a PDF — an invoice, a statement, a delivery note."
+
+scenario:
+  fr: "On voit envoyer un PDF entier à un modèle de vision avec la consigne « rends-moi le tableau en CSV ». Un tableau dans un PDF n’est pourtant pas une image : c’est du texte posé à des coordonnées, souvent avec les filets qui disent où sont les cellules, et une bibliothèque lit les deux. La question n’est donc pas de reconnaître le tableau mais de savoir, sur chaque document, si la grille a été lue ou devinée — parce que les deux lectures ne donnent pas le même résultat, et que la seconde se trompe en silence."
+  en: "Sending a whole PDF to a vision model with the instruction “give me the table as CSV” is a common sight. But a table in a PDF is not an image: it is text placed at coordinates, often with the rules that say where the cells are, and a library reads both. So the question is not recognising the table but knowing, for each document, whether the grid was read or guessed — because the two readings do not give the same result, and the second one is quietly wrong."
+
+rungs:
+  - level: N0
+    available: true
+    name:
+      fr: "Les filets quand la page en a, la position des mots sinon"
+      en: "The rules where the page has them, the position of the words otherwise"
+    cost: nul
+    latency: "~10 ms"
+    risks:
+      data_egress: none
+      deterministic: true
+      testability: unit
+      vendor_lock: library
+      footprint: low
+      regulatory:
+        fr:
+          - "Aucun périmètre spécifique ajouté : le document est lu dans votre processus et n’est transmis à personne"
+          - "Une facture ou un relevé porte des données personnelles : les garder chez vous est ce que ce niveau permet, et c’est ce que le niveau au-dessus coûterait"
+        en:
+          - "No specific scope added: the document is read inside your own process and is sent to nobody"
+          - "An invoice or a statement carries personal data: keeping it at home is what this level allows, and what the level above would cost"
+    code:
+      python: snippets/extract-tables-from-a-pdf/n0.py
+      javascript: snippets/extract-tables-from-a-pdf/n0.js
+      verification: executed
+    breaking_point:
+      fr: "La lecture devinée coupe une cellule repliée : sur la même facture, le tableau tracé rend trois lignes en gardant « Moulin à café Lumière » et « modèle 2026, édition limitée » dans la même case, quand la lecture sans filets en rend quatre et laisse la seconde ligne toute seule. Le témoin est dans le même test : c’est le même document, et `strategy` dit laquelle des deux lectures a répondu."
+      en: "The guessed reading cuts a wrapped cell in two: on the same invoice, the ruled table returns three rows keeping “Moulin à café Lumière” and “modèle 2026, édition limitée” in one cell, while the reading without rules returns four and leaves the second line on its own. The witness is in the same test: it is the same document, and `strategy` says which of the two readings answered."
+    escalate_when:
+      fr: "Il n’y a pas de niveau au-dessus dans cette fiche. Le jour où le PDF ne porte plus de texte du tout — un relevé scanné —, la question n’est plus la grille mais la reconnaissance de caractères, et c’est une autre fiche."
+      en: "There is no level above this one on this page. The day the PDF carries no text at all — a scanned statement — the question is no longer the grid but character recognition, and that is another entry."
+
+  - level: N1
+    available: false
+    unavailable_reason:
+      fr: "Détecter la grille d’un tableau est déjà de la vision par ordinateur classique, et c’est ce que font les outils du domaine : `camelot`, l’autre bibliothèque de référence en Python, propose un mode qui rend la page en image et y cherche les segments par transformations morphologiques, avec OpenCV. Il n’est pas mis en niveau distinct parce qu’il répond à la même question que le mode tracé de `pdfplumber` — où sont les filets — sur des pages où ces filets existent, et qu’il demande d’installer OpenCV pour y arriver."
+      en: "Detecting a table’s grid is already classic computer vision, and it is what the tools in the field do: camelot, the other reference library in Python, offers a mode that renders the page to an image and looks for segments by morphological transformations, using OpenCV. It is not given a level of its own because it answers the same question as pdfplumber’s ruled mode — where are the rules — on pages where those rules exist, and because it asks you to install OpenCV to get there."
+
+  - level: N2
+    available: false
+    unavailable_reason:
+      fr: "Les modèles de reconnaissance de structure de tableau existent et ils sont bons sur les documents où le texte n’est plus lisible — des photographies, des scans anciens. Ce n’est pas le cas traité ici : sur un PDF qui porte son texte, ils demandent de rendre la page en image, de la faire passer dans un modèle de plusieurs centaines de mégaoctets, puis de réaffecter les mots aux cases trouvées, pour retrouver une grille que les filets donnent exactement."
+      en: "Table structure recognition models exist and they are good on documents where the text is no longer readable — photographs, old scans. That is not the case handled here: on a PDF that carries its text, they require rendering the page to an image, running it through a model of several hundred megabytes, then reassigning the words to the cells found, to recover a grid the rules give exactly."
+
+  - level: N3
+    available: false
+    unavailable_reason:
+      fr: "Le document est une facture, un relevé ou un bordereau : l’envoyer à un tiers est une sortie de données personnelles, par document, sur des lots qui se comptent en milliers. Et le résultat n’est pas vérifiable de la même façon : un extracteur rend des morceaux du document, qu’on retrouve caractère pour caractère dans le fichier, là où un modèle rend un tableau qui lui ressemble — sur des montants, la différence porte un nom."
+      en: "The document is an invoice, a statement or a delivery note: sending it to a third party is personal data leaving, one document at a time, across batches counted in thousands. And the result cannot be checked the same way: an extractor returns pieces of the document, found character for character in the file, where a model returns a table that resembles it — on amounts, that difference has a name."
+
+verdict_rationale:
+  fr: "N0, parce que le texte et les filets sont dans le fichier et qu’une bibliothèque les lit : `pdfplumber` trouve les cellules là où la page les a tracées, et la lecture est exacte. Ce que la fiche ajoute est le repli — deviner les colonnes d’après la position des mots quand il n’y a pas de filet — écrit ici dans les deux langages plutôt qu’emprunté, parce que celui de `pdfplumber` coupe une cellule plus large que sa colonne et rend « Prix H » pour « Prix HT ». Et surtout, le rapport dit laquelle des deux lectures a répondu : c’est la seule façon honnête de rendre une grille dont on ne sait pas si elle était écrite ou déduite."
+  en: "N0, because the text and the rules are in the file and a library reads them: pdfplumber finds the cells where the page drew them, and the reading is exact. What this entry adds is the fallback — guessing the columns from where the words sit when there is no rule — written here in both languages rather than borrowed, because pdfplumber’s own cuts a cell wider than its column and returns “Prix H” for “Prix HT”. And above all, the report says which of the two readings answered: that is the only honest way to return a grid you cannot otherwise tell was written or inferred."
+
+further_reading:
+  - label: "pdfplumber — la bibliothèque Python, et ses réglages d’extraction de tableau"
+    url: "https://github.com/jsvine/pdfplumber"
+  - label: "camelot — l’autre bibliothèque Python, et ses deux modes"
+    url: "https://camelot-py.readthedocs.io/en/latest/user/how-it-works.html"
+  - label: "pdf.js — la bibliothèque de lecture PDF de Mozilla, et son contenu textuel"
+    url: "https://mozilla.github.io/pdf.js/"
+  - label: "Savoir si un PDF a besoin d’OCR — la fiche qui traite l’étape d’avant"
+    url: "https://isitoverkill.dev/fr/fiches/know-whether-a-pdf-needs-ocr"
+
+sources:
+  - label: "pdfplumber sur son dépôt (consulté) : version 0.11.10, publiée le 15 juin 2026, licence MIT ; les stratégies « lines » et « text » de extract_tables y sont documentées"
+    url: "https://github.com/jsvine/pdfplumber"
+  - label: "camelot, « How it works » (consultée) : le mode « lattice » « processes it to get horizontal and vertical line segments by applying a set of morphological transformations (erosion and dilation) using OpenCV » ; le mode « stream » groupe les mots « based on their y axis overlaps »"
+    url: "https://camelot-py.readthedocs.io/en/latest/user/how-it-works.html"
+  - label: "Registre npm, recherche « pdf table extract » (consultée) : aucun paquet ne lit les filets d’un PDF pour en tirer une grille ; les résultats voisins rendent le texte avec ses coordonnées"
+    url: "https://www.npmjs.com/search?q=pdf%20table%20extract"
+---
